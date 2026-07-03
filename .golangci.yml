@@ -1,36 +1,49 @@
 version: "2"
-
 run:
-  timeout: 5m
   issues-exit-code: 1
   tests: true
-
 linters:
-  disable-all: true
+  default: none
   enable:
-    # Quality / Best Practices
-    - revive
+    - errcheck
     - goconst
-    - misspell
-    - unparam
-    - nakedret
-    # Security
     - gosec
-
-linters-settings:
-  govet:
-    enable-all: true
-    disable:
-      - fieldalignment
-  revive:
-    rules:
-      - name: exported
-        severity: warning
-        disabled: true
-      - name: package-comments
-        disabled: true
-
+    - govet
+    - ineffassign
+    - misspell
+    - nakedret
+    - revive
+    - staticcheck
+    - unparam
+    - unused
+  settings:
+    govet:
+      disable:
+        - fieldalignment
+      enable-all: true
+    revive:
+      rules:
+        - name: exported
+          severity: warning
+          disabled: true
+        - name: package-comments
+          disabled: true
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
 issues:
-  exclude-use-default: false
   max-issues-per-linter: 0
   max-same-issues: 0
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
