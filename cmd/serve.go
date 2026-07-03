@@ -75,6 +75,7 @@ var serveCmd = &cobra.Command{
 
 		// 3. Initialize queries and services
 		queries := db.New(dbConn)
+		go docker.StartEventMonitor(cmd.Context(), queries, dockerClient)
 		authSvc := auth.NewService(queries)
 		authInterceptor := auth.NewInterceptor(queries)
 

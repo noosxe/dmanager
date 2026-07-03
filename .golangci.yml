@@ -29,21 +29,21 @@ linters:
         - name: package-comments
           disabled: true
   exclusions:
-    generated: lax
     paths:
-      - third_party$
-      - builtin$
-      - examples$
+      - third_party
+      - builtin
+      - examples
+      - .system_generated
+    rules:
+      - path: \.sql\.go
+        linters:
+          - errcheck
+      - path: \.pb\.go
+        linters:
+          - errcheck
+          - gosec
+          - goimports
+          - gofmt
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
-formatters:
-  enable:
-    - gofmt
-    - goimports
-  exclusions:
-    generated: lax
-    paths:
-      - third_party$
-      - builtin$
-      - examples$

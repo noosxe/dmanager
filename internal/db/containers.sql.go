@@ -11,6 +11,15 @@ import (
 	"time"
 )
 
+const deleteContainer = `-- name: DeleteContainer :exec
+DELETE FROM containers WHERE id = ?
+`
+
+func (q *Queries) DeleteContainer(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, deleteContainer, id)
+	return err
+}
+
 const deleteOrphanContainers = `-- name: DeleteOrphanContainers :exec
 DELETE FROM containers WHERE id NOT IN (/*SLICE:active_ids*/?)
 `
