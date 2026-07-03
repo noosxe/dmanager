@@ -8,8 +8,8 @@ import (
 	"time"
 
 	connect "connectrpc.com/connect"
+	cerrdefs "github.com/containerd/errdefs"
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/client"
 
 	"dmanager/internal/auth"
 	"dmanager/internal/db"
@@ -51,7 +51,7 @@ func (s *Service) StartContainer(ctx context.Context, req *connect.Request[v1.St
 
 	inspectBefore, err := s.dockerClient.ContainerInspect(ctx, containerID)
 	if err != nil {
-		if client.IsErrNotFound(err) {
+		if cerrdefs.IsNotFound(err) {
 			return nil, connect.NewError(connect.CodeNotFound, errors.New("container not found on Docker host"))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to inspect container: %w", err))
@@ -138,7 +138,7 @@ func (s *Service) StopContainer(ctx context.Context, req *connect.Request[v1.Sto
 
 	inspectBefore, err := s.dockerClient.ContainerInspect(ctx, containerID)
 	if err != nil {
-		if client.IsErrNotFound(err) {
+		if cerrdefs.IsNotFound(err) {
 			return nil, connect.NewError(connect.CodeNotFound, errors.New("container not found on Docker host"))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to inspect container: %w", err))

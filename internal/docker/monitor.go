@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
@@ -22,7 +21,7 @@ func StartEventMonitor(ctx context.Context, queries *db.Queries, dockerClient *c
 		filter := filters.NewArgs()
 		filter.Add("type", "container")
 
-		eventChan, errChan := dockerClient.Events(ctx, types.EventsOptions{ //nolint:staticcheck
+		eventChan, errChan := dockerClient.Events(ctx, events.ListOptions{ //nolint:staticcheck
 			Filters: filter,
 		})
 
@@ -41,7 +40,7 @@ func StartEventMonitor(ctx context.Context, queries *db.Queries, dockerClient *c
 					case <-ctx.Done():
 						return
 					case <-time.After(1 * time.Second):
-						eventChan, errChan = dockerClient.Events(ctx, types.EventsOptions{ //nolint:staticcheck
+						eventChan, errChan = dockerClient.Events(ctx, events.ListOptions{ //nolint:staticcheck
 							Filters: filter,
 						})
 					}
