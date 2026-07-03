@@ -1,3 +1,4 @@
+// Package cmd contains the CLI command setup and execution handlers.
 package cmd
 
 import (
@@ -11,11 +12,12 @@ var rootCmd = &cobra.Command{
 	Use:   "dmanager",
 	Short: "dmanager is a Docker Container Manager web application",
 	Long:  `A self-contained Docker Container Manager web application that discovers local containers, allows start/stop operations, and conducts scheduled image update checks.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		fmt.Println("dmanager CLI. Use --help to view available commands.")
 	},
 }
 
+// Execute runs the root command and handles command-line routing.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
