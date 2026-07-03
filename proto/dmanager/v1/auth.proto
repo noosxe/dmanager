@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package dmanager.v1;
+
+option go_package = "dmanager/internal/gen/proto/dmanager/v1;dmanagerv1";
+
+service AuthService {
+  // Check the setup and auth status of the server (Unauthenticated).
+  rpc GetServerStatus(GetServerStatusRequest) returns (GetServerStatusResponse);
+
+  // Setup the primary administrator account (Unauthenticated, only if user count is 0).
+  rpc SetupAdmin(SetupAdminRequest) returns (SetupAdminResponse);
+
+  // Authenticate user credentials and establish a session cookie (Unauthenticated).
+  rpc Login(LoginRequest) returns (LoginResponse);
+
+  // Expire the session token and clear the browser cookie (Authenticated).
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+
+  // Retrieve current active user profile details (Authenticated).
+  rpc GetMe(GetMeRequest) returns (GetMeResponse);
+}
+
+message GetServerStatusRequest {}
+
+message GetServerStatusResponse {
+  // Returns true if no users exist in the database, triggering onboarding.
+  bool needs_setup = 1;
+}
+
+message SetupAdminRequest {
+  string username = 1;
+  string password = 2;
+}
+
+message SetupAdminResponse {
+  string username = 1;
+  string role = 2;
+}
+
+message LoginRequest {
+  string username = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  string username = 1;
+  string role = 2;
+}
+
+message LogoutRequest {}
+
+message LogoutResponse {}
+
+message GetMeRequest {}
+
+message GetMeResponse {
+  int64 user_id = 1;
+  string username = 2;
+  string role = 3;
+}

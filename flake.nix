@@ -33,6 +33,9 @@
             pkgs.nix-direnv
             pkgs.sqlc
             pkgs.goose
+            pkgs.buf
+            pkgs.protoc-gen-go
+            pkgs.protoc-gen-connect-go
           ];
 
           shellHook = ''

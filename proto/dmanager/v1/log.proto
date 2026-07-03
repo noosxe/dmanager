@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package dmanager.v1;
+
+option go_package = "dmanager/internal/gen/proto/dmanager/v1;dmanagerv1";
+
+service LogService {
+  // Transmit local browser log queues for centralized ingestion (Unauthenticated/Authenticated).
+  rpc SyncLogs(SyncLogsRequest) returns (SyncLogsResponse);
+}
+
+message ClientLogEntry {
+  string level = 1;      // "DEBUG", "INFO", "WARN", "ERROR"
+  string message = 2;    // Log statement
+  string timestamp = 3;  // RFC3339 formatted client clock timestamp
+  string component = 4;  // React component or service identifier (e.g. "TanStackRouter")
+  string metadata = 5;   // Serialized JSON log parameters or stack trace
+}
+
+message SyncLogsRequest {
+  repeated ClientLogEntry entries = 1;
+}
+
+message SyncLogsResponse {
+  int32 processed_count = 1;
+}

@@ -4,7 +4,7 @@ This document outlines the development plan for the `dmanager` application. The 
 
 ```mermaid
 graph TD
-    S1["STORY-001: DB Schema & Migrations (DONE)"] --> S2[STORY-002: Backend Authentication]
+    S1["STORY-001: DB Schema & Migrations (DONE)"] --> S2["STORY-002: Backend Authentication (DONE)"]
     S2 --> S3[STORY-003: CLI Serve Command]
     S3 --> S4[STORY-004: Docker Client & Container Discovery]
     S4 --> S5[STORY-005: Event Monitor & DB Sync Daemon]
@@ -44,7 +44,7 @@ graph TD
 
 ---
 
-### STORY-002: Backend Authentication Services
+### STORY-002: Backend Authentication Services [DONE]
 - **Scope:** Backend Security & DB
 - **Estimated Size:** Medium (~250 LOC)
 - **Dependencies:** `STORY-001`
