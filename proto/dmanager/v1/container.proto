@@ -22,6 +22,9 @@ service ContainerService {
 
   // Stream live console outputs (stdout/stderr) from a container (Authenticated).
   rpc GetContainerLogs(GetContainerLogsRequest) returns (stream GetContainerLogsResponse);
+
+  // Stream real-time container states/events (Authenticated).
+  rpc StreamContainers(StreamContainersRequest) returns (stream StreamContainersResponse);
 }
 
 message Container {
@@ -93,4 +96,12 @@ message GetContainerLogsResponse {
   string log_line = 1;
   string timestamp = 2; // Log line timestamp if metadata is available
   string stream_type = 3; // "stdout" or "stderr"
+}
+
+message StreamContainersRequest {}
+
+message StreamContainersResponse {
+  string action = 1; // "save" or "delete"
+  Container container = 2; // only present if action is "save"
+  string container_id = 3; // always present
 }

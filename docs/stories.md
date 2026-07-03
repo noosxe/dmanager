@@ -8,7 +8,7 @@ graph TD
     S2 --> S3["STORY-003: CLI Serve Command (DONE)"]
     S3 --> S4["STORY-004: Docker Client & Container Discovery (DONE)"]
     S4 --> S5["STORY-005: Event Monitor & DB Sync Daemon (DONE)"]
-    S5 --> S6[STORY-006: Container ConnectRPC Sync Stream]
+    S5 --> S6["STORY-006: Container ConnectRPC Sync Stream (DONE)"]
     S6 --> S7[STORY-007: Container Start/Stop API]
     S7 --> S8[STORY-008: Container Re-Creation Upgrade API]
     S8 --> S9[STORY-009: Log Streaming API]
@@ -125,7 +125,7 @@ graph TD
 
 ---
 
-### STORY-006: Container ConnectRPC Sync Stream
+### STORY-006: Container ConnectRPC Sync Stream [DONE]
 - **Scope:** API / Real-Time Streaming
 - **Estimated Size:** Medium (~200 LOC)
 - **Dependencies:** `STORY-005`
