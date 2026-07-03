@@ -5,7 +5,7 @@
 
 ## Development Workflow & PR Guidelines
 
-- **Documentation First**: Design documents, requirements, and schemas must always be updated *first* before implementing any feature. Keeping implementation and documentation strictly in sync is critical.
+- **Documentation First**: Design documents, requirements, and schemas must always be updated *first* before implementing any feature. Keeping implementation and documentation strictly in sync is critical. After implementing a story, the agent must update the stories tracker document (`docs/stories.md`) to mark the completed story as done.
 - **Consulting Documentation**: The agent must use the documentation as the primary source of truth to understand the application. You must consult existing documentation first during any feature development workflow, and ensure documents are continuously maintained in a useful, accurate state.
 - **Manageable PR Sizes**: Keep Pull Requests small and focused to ensure they are easily reviewable by humans. Avoid large changes (such as updates exceeding 1,000 lines of code or massive multi-file changes). Break features down into small, logical, and incrementally reviewable PRs.
 
