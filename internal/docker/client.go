@@ -1,7 +1,7 @@
 package docker
 
 import (
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 )
 
 // NewClient initializes the standard Docker client using client.NewClientWithOpts.
@@ -12,7 +12,6 @@ func NewClient(host string) (*client.Client, error) {
 	} else {
 		opts = append(opts, client.FromEnv)
 	}
-	opts = append(opts, client.WithAPIVersionNegotiation())
 
-	return client.NewClientWithOpts(opts...)
+	return client.New(opts...)
 }

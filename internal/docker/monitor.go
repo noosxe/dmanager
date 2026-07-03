@@ -8,10 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/events"
-	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/api/types/events"
+	"github.com/moby/moby/client"
 
 	"dmanager/internal/db"
 )
@@ -19,12 +17,12 @@ import (
 // StartEventMonitor starts a background goroutine to monitor Docker events.
 func StartEventMonitor(ctx context.Context, queries *db.Queries, dockerClient *client.Client, onEvent func(action string, containerID string)) {
 	go func() {
-		filter := filters.NewArgs()
-		filter.Add("type", "container")
+		filter := make(client.Filters).Add("type", "container")
 
-		eventChan, errChan := dockerClient.Events(ctx, types.EventsOptions{ //nolint:staticcheck
+		res := dockerClient.Events(ctx, client.EventsListOptions{
 			Filters: filter,
 		})
+		eventChan, errChan := res.Messages, res.Err
 
 		for {
 			select {
@@ -41,9 +39,10 @@ func StartEventMonitor(ctx context.Context, queries *db.Queries, dockerClient *c
 					case <-ctx.Done():
 						return
 					case <-time.After(1 * time.Second):
-						eventChan, errChan = dockerClient.Events(ctx, types.EventsOptions{ //nolint:staticcheck
+						res = dockerClient.Events(ctx, client.EventsListOptions{
 							Filters: filter,
 						})
+						eventChan, errChan = res.Messages, res.Err
 					}
 				}
 			case event := <-eventChan:
@@ -72,21 +71,21 @@ func handleEvent(ctx context.Context, queries *db.Queries, dockerClient *client.
 
 	if action == "create" || action == "start" || action == "stop" || action == "die" || action == "update" {
 		log.Printf("Docker event: container %s state changed (%s). Inspecting...", containerID, action)
-		inspect, err := dockerClient.ContainerInspect(ctx, containerID)
+		inspect, err := dockerClient.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
 		if err != nil {
 			log.Printf("Failed to inspect container %s: %v", containerID, err)
 			return
 		}
 
-		name := strings.TrimPrefix(inspect.Name, "/")
+		name := strings.TrimPrefix(inspect.Container.Name, "/")
 		image := ""
-		if inspect.Config != nil {
-			image = inspect.Config.Image
+		if inspect.Container.Config != nil {
+			image = inspect.Container.Config.Image
 		}
-		imageID := inspect.Image
+		imageID := inspect.Container.Image
 		state := ""
-		if inspect.State != nil {
-			state = inspect.State.Status
+		if inspect.Container.State != nil {
+			state = string(inspect.Container.State.Status)
 		}
 
 		var autoUpdate int64 = 0

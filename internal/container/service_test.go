@@ -12,7 +12,7 @@ import (
 	"time"
 
 	connect "connectrpc.com/connect"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 	_ "github.com/ncruces/go-sqlite3/driver"
 
 	"dmanager/internal/auth"
@@ -84,10 +84,9 @@ func TestSyncContainers(t *testing.T) {
 	defer server.Close()
 
 	// 2. Create Docker client pointing to the mock server
-	dockerClient, err := client.NewClientWithOpts(
+	dockerClient, err := client.New(
 		client.WithHost(server.URL),
 		client.WithHTTPClient(server.Client()),
-		client.WithAPIVersionNegotiation(),
 	)
 	if err != nil {
 		t.Fatalf("failed to create docker client: %v", err)
@@ -178,10 +177,9 @@ func TestSyncContainers(t *testing.T) {
 	}))
 	defer server.Close()
 
-	dockerClient, err = client.NewClientWithOpts(
+	dockerClient, err = client.New(
 		client.WithHost(server.URL),
 		client.WithHTTPClient(server.Client()),
-		client.WithAPIVersionNegotiation(),
 	)
 	if err != nil {
 		t.Fatalf("failed to recreate docker client: %v", err)
@@ -383,10 +381,9 @@ func TestContainerActions(t *testing.T) {
 	}))
 	defer server.Close()
 
-	dockerClient, err := client.NewClientWithOpts(
+	dockerClient, err := client.New(
 		client.WithHost(server.URL),
 		client.WithHTTPClient(server.Client()),
-		client.WithAPIVersionNegotiation(),
 	)
 	if err != nil {
 		t.Fatalf("failed to create docker client: %v", err)

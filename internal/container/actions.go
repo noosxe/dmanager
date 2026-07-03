@@ -8,8 +8,8 @@ import (
 	"time"
 
 	connect "connectrpc.com/connect"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/client"
+	cerrdefs "github.com/containerd/errdefs"
+	"github.com/moby/moby/client"
 
 	"dmanager/internal/auth"
 	"dmanager/internal/db"
@@ -49,26 +49,26 @@ func (s *Service) StartContainer(ctx context.Context, req *connect.Request[v1.St
 		return nil, connect.NewError(connect.CodeInternal, errors.New("docker client not initialized"))
 	}
 
-	inspectBefore, err := s.dockerClient.ContainerInspect(ctx, containerID)
+	inspectBefore, err := s.dockerClient.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
 	if err != nil {
-		if client.IsErrNotFound(err) {
+		if cerrdefs.IsNotFound(err) {
 			return nil, connect.NewError(connect.CodeNotFound, errors.New("container not found on Docker host"))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to inspect container: %w", err))
 	}
-	previousState := inspectBefore.State.Status
+	previousState := inspectBefore.Container.State.Status
 
 	// 4. Start the container
-	if startErr := s.dockerClient.ContainerStart(ctx, containerID, container.StartOptions{}); startErr != nil {
+	if _, startErr := s.dockerClient.ContainerStart(ctx, containerID, client.ContainerStartOptions{}); startErr != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start container: %w", startErr))
 	}
 
 	// 5. Inspect container state after starting
-	inspectAfter, err := s.dockerClient.ContainerInspect(ctx, containerID)
+	inspectAfter, err := s.dockerClient.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to inspect container after start: %w", err))
 	}
-	currentState := inspectAfter.State.Status
+	currentState := inspectAfter.Container.State.Status
 
 	// 6. Update database record with the new state
 	params := db.SaveContainerParams{
@@ -76,7 +76,7 @@ func (s *Service) StartContainer(ctx context.Context, req *connect.Request[v1.St
 		Name:              existing.Name,
 		Image:             existing.Image,
 		ImageID:           existing.ImageID,
-		State:             currentState,
+		State:             string(currentState),
 		AutoUpdate:        existing.AutoUpdate,
 		UpdateAvailable:   existing.UpdateAvailable,
 		LatestImageDigest: existing.LatestImageDigest,
@@ -100,8 +100,8 @@ func (s *Service) StartContainer(ctx context.Context, req *connect.Request[v1.St
 
 	return connect.NewResponse(&v1.StartContainerResponse{
 		Id:            containerID,
-		PreviousState: previousState,
-		CurrentState:  currentState,
+		PreviousState: string(previousState),
+		CurrentState:  string(currentState),
 	}), nil
 }
 
@@ -136,30 +136,30 @@ func (s *Service) StopContainer(ctx context.Context, req *connect.Request[v1.Sto
 		return nil, connect.NewError(connect.CodeInternal, errors.New("docker client not initialized"))
 	}
 
-	inspectBefore, err := s.dockerClient.ContainerInspect(ctx, containerID)
+	inspectBefore, err := s.dockerClient.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
 	if err != nil {
-		if client.IsErrNotFound(err) {
+		if cerrdefs.IsNotFound(err) {
 			return nil, connect.NewError(connect.CodeNotFound, errors.New("container not found on Docker host"))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to inspect container: %w", err))
 	}
-	previousState := inspectBefore.State.Status
+	previousState := inspectBefore.Container.State.Status
 
 	// 4. Stop the container with a graceful timeout of 15 seconds
 	timeoutSeconds := 15
-	stopOpts := container.StopOptions{
+	stopOpts := client.ContainerStopOptions{
 		Timeout: &timeoutSeconds,
 	}
-	if stopErr := s.dockerClient.ContainerStop(ctx, containerID, stopOpts); stopErr != nil {
+	if _, stopErr := s.dockerClient.ContainerStop(ctx, containerID, stopOpts); stopErr != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to stop container: %w", stopErr))
 	}
 
 	// 5. Inspect container state after stopping
-	inspectAfter, err := s.dockerClient.ContainerInspect(ctx, containerID)
+	inspectAfter, err := s.dockerClient.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to inspect container after stop: %w", err))
 	}
-	currentState := inspectAfter.State.Status
+	currentState := inspectAfter.Container.State.Status
 
 	// 6. Update database record with the new state
 	params := db.SaveContainerParams{
@@ -167,7 +167,7 @@ func (s *Service) StopContainer(ctx context.Context, req *connect.Request[v1.Sto
 		Name:              existing.Name,
 		Image:             existing.Image,
 		ImageID:           existing.ImageID,
-		State:             currentState,
+		State:             string(currentState),
 		AutoUpdate:        existing.AutoUpdate,
 		UpdateAvailable:   existing.UpdateAvailable,
 		LatestImageDigest: existing.LatestImageDigest,
@@ -191,7 +191,7 @@ func (s *Service) StopContainer(ctx context.Context, req *connect.Request[v1.Sto
 
 	return connect.NewResponse(&v1.StopContainerResponse{
 		Id:            containerID,
-		PreviousState: previousState,
-		CurrentState:  currentState,
+		PreviousState: string(previousState),
+		CurrentState:  string(currentState),
 	}), nil
 }
