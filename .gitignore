@@ -1,0 +1,45 @@
+# Nix / Dev Shell
+.direnv/
+.envrc
+
+# Go Binaries and Build Artifacts
+/dmanager
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*.prof
+
+# Node / Frontend Bundles
+node_modules/
+dist/
+.pnpm-debug.log*
+
+# Database
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Local Config and Secrets
+config.toml
+.env
+.env.local
+.env.*.local
+
+# IDEs and Text Editors
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*~
+
+# Operating System Metadata
+.DS_Store
+Thumbs.db
