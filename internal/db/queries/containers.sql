@@ -42,3 +42,6 @@ WHERE id = ?;
 
 -- name: DeleteOrphanContainers :exec
 DELETE FROM containers WHERE id NOT IN (sqlc.slice('active_ids'));
+
+-- name: DeleteContainer :exec
+DELETE FROM containers WHERE id = ?;
