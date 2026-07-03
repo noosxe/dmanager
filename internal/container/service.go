@@ -5,6 +5,7 @@ import (
 	"time"
 
 	connect "connectrpc.com/connect"
+	"github.com/docker/docker/client"
 
 	"dmanager/internal/db"
 	dmanagerv1 "dmanager/internal/gen/proto/dmanager/v1"
@@ -14,15 +15,17 @@ import (
 // Service implements the dmanagerv1connect.ContainerServiceHandler interface.
 type Service struct {
 	dmanagerv1connect.UnimplementedContainerServiceHandler
-	db     db.DBTX
-	broker *Broker
+	db           db.DBTX
+	broker       *Broker
+	dockerClient *client.Client
 }
 
 // NewService creates a new Container service.
-func NewService(dbConn db.DBTX, broker *Broker) *Service {
+func NewService(dbConn db.DBTX, broker *Broker, dockerClient *client.Client) *Service {
 	return &Service{
-		db:     dbConn,
-		broker: broker,
+		db:           dbConn,
+		broker:       broker,
+		dockerClient: dockerClient,
 	}
 }
 

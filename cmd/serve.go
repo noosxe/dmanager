@@ -114,7 +114,7 @@ var serveCmd = &cobra.Command{
 		mux.Handle(authPath, authHandler)
 
 		// Register ContainerService
-		containerSvc := container.NewService(dbConn, containerBroker)
+		containerSvc := container.NewService(dbConn, containerBroker, dockerClient)
 		containerPath, containerHandler := dmanagerv1connect.NewContainerServiceHandler(
 			containerSvc,
 			connect.WithInterceptors(authInterceptor),

@@ -9,7 +9,7 @@ graph TD
     S3 --> S4["STORY-004: Docker Client & Container Discovery (DONE)"]
     S4 --> S5["STORY-005: Event Monitor & DB Sync Daemon (DONE)"]
     S5 --> S6["STORY-006: Container ConnectRPC Sync Stream (DONE)"]
-    S6 --> S7[STORY-007: Container Start/Stop API]
+    S6 --> S7["STORY-007: Container Start/Stop API (DONE)"]
     S7 --> S8[STORY-008: Container Re-Creation Upgrade API]
     S8 --> S9[STORY-009: Log Streaming API]
     S2 --> F1[STORY-010: Frontend Routing & Auth Page]
@@ -142,7 +142,7 @@ graph TD
 
 ---
 
-### STORY-007: Container Start/Stop API Operations
+### STORY-007: Container Start/Stop API Operations [DONE]
 - **Scope:** Container Operations
 - **Estimated Size:** Small (~150 LOC)
 - **Dependencies:** `STORY-004`

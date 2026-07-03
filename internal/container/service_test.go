@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/docker/docker/client"
 	_ "github.com/ncruces/go-sqlite3/driver"
 
+	"dmanager/internal/auth"
 	"dmanager/internal/db"
 	v1 "dmanager/internal/gen/proto/dmanager/v1"
 	"dmanager/internal/gen/proto/dmanager/v1/dmanagerv1connect"
@@ -24,6 +26,10 @@ const (
 	stateStopped     = "stopped"
 	testContainer1ID = "test-container-1"
 	testContainer2ID = "test-container-2"
+	stateExited      = "exited"
+	testActionID     = "c-action-1"
+	testImageNginx   = "nginx:latest"
+	testImageID123   = "sha256:123"
 )
 
 func newTestDB(t *testing.T) (*sql.DB, *db.Queries) {
@@ -232,7 +238,7 @@ func TestListContainers(t *testing.T) {
 	}
 
 	// Create service
-	svc := NewService(dbConn, NewBroker())
+	svc := NewService(dbConn, NewBroker(), nil)
 
 	// Call ListContainers
 	resp, err := svc.ListContainers(ctx, connect.NewRequest(&v1.ListContainersRequest{}))
@@ -274,7 +280,7 @@ func TestListContainers(t *testing.T) {
 func TestStreamContainers(t *testing.T) {
 	dbConn, _ := newTestDB(t)
 	broker := NewBroker()
-	svc := NewService(dbConn, broker)
+	svc := NewService(dbConn, broker, nil)
 
 	mux := http.NewServeMux()
 	path, handler := dmanagerv1connect.NewContainerServiceHandler(svc)
@@ -317,5 +323,155 @@ func TestStreamContainers(t *testing.T) {
 		}
 	} else {
 		t.Errorf("failed to receive event: %v", stream.Err())
+	}
+}
+
+func TestContainerActions(t *testing.T) {
+	dbConn, queries := newTestDB(t)
+	broker := NewBroker()
+
+	// Insert mock container into DB
+	err := queries.SaveContainer(context.Background(), db.SaveContainerParams{
+		ID:              testActionID,
+		Name:            "action-container",
+		Image:           testImageNginx,
+		ImageID:         testImageID123,
+		State:           stateExited,
+		AutoUpdate:      0,
+		UpdateAvailable: 0,
+		UpdatedAt:       time.Now(),
+	})
+	if err != nil {
+		t.Fatalf("failed to insert test container: %v", err)
+	}
+
+	var startCalled, stopCalled, inspectCalled int
+	var inspectState string
+
+	// Create mocked Docker API server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/_ping") {
+			w.Header().Set("API-Version", "1.45")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("OK"))
+			return
+		}
+		if r.Method == "GET" && strings.HasSuffix(r.URL.Path, "/containers/"+testActionID+"/json") {
+			inspectCalled++
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = fmt.Fprintf(w, `{"Id": "%s", "State": {"Status": "%s"}}`, testActionID, inspectState)
+			return
+		}
+		if r.Method == "POST" && strings.HasSuffix(r.URL.Path, "/containers/"+testActionID+"/start") {
+			startCalled++
+			inspectState = stateRunning // update state for next inspect
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		if r.Method == "POST" && strings.HasSuffix(r.URL.Path, "/containers/"+testActionID+"/stop") {
+			stopCalled++
+			// Check if query param t=15 is passed
+			q := r.URL.Query()
+			if q.Get("t") != "15" {
+				t.Errorf("expected timeout query param t=15, got %s", q.Get("t"))
+			}
+			inspectState = stateExited // update state for next inspect
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	dockerClient, err := client.NewClientWithOpts(
+		client.WithHost(server.URL),
+		client.WithHTTPClient(server.Client()),
+		client.WithAPIVersionNegotiation(),
+	)
+	if err != nil {
+		t.Fatalf("failed to create docker client: %v", err)
+	}
+
+	svc := NewService(dbConn, broker, dockerClient)
+
+	// Contexts
+	adminCtx := auth.WithUser(context.Background(), db.User{
+		Role: roleAdmin,
+	})
+	viewerCtx := auth.WithUser(context.Background(), db.User{
+		Role: "viewer",
+	})
+	unauthCtx := context.Background()
+
+	// 1. Test StartContainer Auth check - Unauthenticated
+	_, startErr := svc.StartContainer(unauthCtx, connect.NewRequest(&v1.StartContainerRequest{Id: testActionID}))
+	if startErr == nil || connect.CodeOf(startErr) != connect.CodeUnauthenticated {
+		t.Errorf("expected Unauthenticated error, got: %v", startErr)
+	}
+
+	// 2. Test StartContainer Auth check - Viewer
+	_, startErr = svc.StartContainer(viewerCtx, connect.NewRequest(&v1.StartContainerRequest{Id: testActionID}))
+	if startErr == nil || connect.CodeOf(startErr) != connect.CodePermissionDenied {
+		t.Errorf("expected PermissionDenied error, got: %v", startErr)
+	}
+
+	// 3. Test StartContainer Validation Check - Empty ID
+	_, startErr = svc.StartContainer(adminCtx, connect.NewRequest(&v1.StartContainerRequest{Id: ""}))
+	if startErr == nil || connect.CodeOf(startErr) != connect.CodeInvalidArgument {
+		t.Errorf("expected InvalidArgument error, got: %v", startErr)
+	}
+
+	// 4. Test StartContainer - Container not in DB
+	_, startErr = svc.StartContainer(adminCtx, connect.NewRequest(&v1.StartContainerRequest{Id: "non-existent"}))
+	if startErr == nil || connect.CodeOf(startErr) != connect.CodeNotFound {
+		t.Errorf("expected NotFound error (DB), got: %v", startErr)
+	}
+
+	// 5. Test StartContainer - Success
+	inspectState = stateExited
+	startCalled = 0
+	inspectCalled = 0
+	startResp, startErr := svc.StartContainer(adminCtx, connect.NewRequest(&v1.StartContainerRequest{Id: testActionID}))
+	if startErr != nil {
+		t.Fatalf("StartContainer failed: %v", startErr)
+	}
+	if startResp.Msg.Id != testActionID || startResp.Msg.PreviousState != stateExited || startResp.Msg.CurrentState != stateRunning {
+		t.Errorf("unexpected StartContainer response: %+v", startResp.Msg)
+	}
+	if startCalled != 1 || inspectCalled != 2 {
+		t.Errorf("unexpected call counts: startCalled=%d, inspectCalled=%d", startCalled, inspectCalled)
+	}
+
+	// Verify DB state updated
+	dbC, err := queries.GetContainer(context.Background(), testActionID)
+	if err != nil {
+		t.Fatalf("failed to query DB: %v", err)
+	}
+	if dbC.State != stateRunning {
+		t.Errorf("expected DB state to be updated to running, got: %s", dbC.State)
+	}
+
+	// 6. Test StopContainer - Success
+	inspectState = stateRunning
+	stopCalled = 0
+	inspectCalled = 0
+	stopResp, stopErr := svc.StopContainer(adminCtx, connect.NewRequest(&v1.StopContainerRequest{Id: testActionID}))
+	if stopErr != nil {
+		t.Fatalf("StopContainer failed: %v", stopErr)
+	}
+	if stopResp.Msg.Id != testActionID || stopResp.Msg.PreviousState != stateRunning || stopResp.Msg.CurrentState != stateExited {
+		t.Errorf("unexpected StopContainer response: %+v", stopResp.Msg)
+	}
+	if stopCalled != 1 || inspectCalled != 2 {
+		t.Errorf("unexpected call counts: stopCalled=%d, inspectCalled=%d", stopCalled, inspectCalled)
+	}
+
+	// Verify DB state updated
+	dbC, err = queries.GetContainer(context.Background(), testActionID)
+	if err != nil {
+		t.Fatalf("failed to query DB: %v", err)
+	}
+	if dbC.State != stateExited {
+		t.Errorf("expected DB state to be updated to exited, got: %s", dbC.State)
 	}
 }
