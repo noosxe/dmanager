@@ -16,6 +16,7 @@ import (
 
 	"dmanager/internal/db"
 	v1 "dmanager/internal/gen/proto/dmanager/v1"
+	"dmanager/internal/gen/proto/dmanager/v1/dmanagerv1connect"
 )
 
 const (
@@ -231,7 +232,7 @@ func TestListContainers(t *testing.T) {
 	}
 
 	// Create service
-	svc := NewService(dbConn)
+	svc := NewService(dbConn, NewBroker())
 
 	// Call ListContainers
 	resp, err := svc.ListContainers(ctx, connect.NewRequest(&v1.ListContainersRequest{}))
@@ -267,5 +268,54 @@ func TestListContainers(t *testing.T) {
 	}
 	if c1.AutoUpdate != true || c1.UpdateAvailable != false {
 		t.Errorf("unexpected flags on mapped container 1: %+v", c1)
+	}
+}
+
+func TestStreamContainers(t *testing.T) {
+	dbConn, _ := newTestDB(t)
+	broker := NewBroker()
+	svc := NewService(dbConn, broker)
+
+	mux := http.NewServeMux()
+	path, handler := dmanagerv1connect.NewContainerServiceHandler(svc)
+	mux.Handle(path, handler)
+
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	client := dmanagerv1connect.NewContainerServiceClient(server.Client(), server.URL)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Publish events repeatedly in a goroutine until the context is cancelled to avoid subscription race conditions
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(50 * time.Millisecond):
+				broker.Publish(&v1.StreamContainersResponse{
+					Action:      "delete",
+					ContainerId: "test-delete-id",
+				})
+			}
+		}
+	}()
+
+	stream, err := client.StreamContainers(ctx, connect.NewRequest(&v1.StreamContainersRequest{}))
+	if err != nil {
+		t.Fatalf("failed to call StreamContainers: %v", err)
+	}
+	defer func() { _ = stream.Close() }()
+
+	// Wait and receive the event
+	if stream.Receive() {
+		msg := stream.Msg()
+		if msg.Action != "delete" || msg.ContainerId != "test-delete-id" {
+			t.Errorf("unexpected event: %+v", msg)
+		}
+	} else {
+		t.Errorf("failed to receive event: %v", stream.Err())
 	}
 }

@@ -14,13 +14,50 @@ import (
 // Service implements the dmanagerv1connect.ContainerServiceHandler interface.
 type Service struct {
 	dmanagerv1connect.UnimplementedContainerServiceHandler
-	db db.DBTX
+	db     db.DBTX
+	broker *Broker
 }
 
 // NewService creates a new Container service.
-func NewService(dbConn db.DBTX) *Service {
+func NewService(dbConn db.DBTX, broker *Broker) *Service {
 	return &Service{
-		db: dbConn,
+		db:     dbConn,
+		broker: broker,
+	}
+}
+
+// MapContainerRecord maps a database container record to a Protobuf Container structure.
+func MapContainerRecord(r db.Container) *dmanagerv1.Container {
+	latestImageDigest := ""
+	if digest, ok := r.LatestImageDigest.(string); ok {
+		latestImageDigest = digest
+	}
+
+	lastCheckedAtStr := ""
+	if t, ok := r.LastCheckedAt.(time.Time); ok {
+		lastCheckedAtStr = t.Format(time.RFC3339)
+	} else if sVal, ok := r.LastCheckedAt.(string); ok {
+		lastCheckedAtStr = sVal
+	}
+
+	lastUpdatedAtStr := ""
+	if t, ok := r.LastUpdatedAt.(time.Time); ok {
+		lastUpdatedAtStr = t.Format(time.RFC3339)
+	} else if sVal, ok := r.LastUpdatedAt.(string); ok {
+		lastUpdatedAtStr = sVal
+	}
+
+	return &dmanagerv1.Container{
+		Id:                r.ID,
+		Name:              r.Name,
+		Image:             r.Image,
+		ImageId:           r.ImageID,
+		State:             r.State,
+		AutoUpdate:        r.AutoUpdate != 0,
+		UpdateAvailable:   r.UpdateAvailable != 0,
+		LatestImageDigest: latestImageDigest,
+		LastCheckedAt:     lastCheckedAtStr,
+		LastUpdatedAt:     lastUpdatedAtStr,
 	}
 }
 
@@ -34,37 +71,7 @@ func (s *Service) ListContainers(ctx context.Context, req *connect.Request[dmana
 
 	protoContainers := make([]*dmanagerv1.Container, len(records))
 	for i, r := range records {
-		latestImageDigest := ""
-		if digest, ok := r.LatestImageDigest.(string); ok {
-			latestImageDigest = digest
-		}
-
-		lastCheckedAtStr := ""
-		if t, ok := r.LastCheckedAt.(time.Time); ok {
-			lastCheckedAtStr = t.Format(time.RFC3339)
-		} else if sVal, ok := r.LastCheckedAt.(string); ok {
-			lastCheckedAtStr = sVal
-		}
-
-		lastUpdatedAtStr := ""
-		if t, ok := r.LastUpdatedAt.(time.Time); ok {
-			lastUpdatedAtStr = t.Format(time.RFC3339)
-		} else if sVal, ok := r.LastUpdatedAt.(string); ok {
-			lastUpdatedAtStr = sVal
-		}
-
-		protoContainers[i] = &dmanagerv1.Container{
-			Id:                r.ID,
-			Name:              r.Name,
-			Image:             r.Image,
-			ImageId:           r.ImageID,
-			State:             r.State,
-			AutoUpdate:        r.AutoUpdate != 0,
-			UpdateAvailable:   r.UpdateAvailable != 0,
-			LatestImageDigest: latestImageDigest,
-			LastCheckedAt:     lastCheckedAtStr,
-			LastUpdatedAt:     lastUpdatedAtStr,
-		}
+		protoContainers[i] = MapContainerRecord(r)
 	}
 
 	res := connect.NewResponse(&dmanagerv1.ListContainersResponse{

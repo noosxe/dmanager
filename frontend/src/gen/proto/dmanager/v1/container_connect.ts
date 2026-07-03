@@ -17,6 +17,8 @@ import {
   StartContainerResponse,
   StopContainerRequest,
   StopContainerResponse,
+  StreamContainersRequest,
+  StreamContainersResponse,
 } from "./container_pb.js";
 
 /**
@@ -89,6 +91,17 @@ export const ContainerService = {
       name: "GetContainerLogs",
       I: GetContainerLogsRequest,
       O: GetContainerLogsResponse,
+      kind: MethodKind.ServerStreaming,
+    },
+    /**
+     * Stream real-time container states/events (Authenticated).
+     *
+     * @generated from rpc dmanager.v1.ContainerService.StreamContainers
+     */
+    streamContainers: {
+      name: "StreamContainers",
+      I: StreamContainersRequest,
+      O: StreamContainersResponse,
       kind: MethodKind.ServerStreaming,
     },
   },

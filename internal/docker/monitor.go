@@ -17,7 +17,7 @@ import (
 )
 
 // StartEventMonitor starts a background goroutine to monitor Docker events.
-func StartEventMonitor(ctx context.Context, queries *db.Queries, dockerClient *client.Client) {
+func StartEventMonitor(ctx context.Context, queries *db.Queries, dockerClient *client.Client, onEvent func(action string, containerID string)) {
 	go func() {
 		filter := filters.NewArgs()
 		filter.Add("type", "container")
@@ -47,13 +47,13 @@ func StartEventMonitor(ctx context.Context, queries *db.Queries, dockerClient *c
 					}
 				}
 			case event := <-eventChan:
-				handleEvent(ctx, queries, dockerClient, event)
+				handleEvent(ctx, queries, dockerClient, event, onEvent)
 			}
 		}
 	}()
 }
 
-func handleEvent(ctx context.Context, queries *db.Queries, dockerClient *client.Client, event events.Message) {
+func handleEvent(ctx context.Context, queries *db.Queries, dockerClient *client.Client, event events.Message, onEvent func(action string, containerID string)) {
 	action := event.Action
 	containerID := event.Actor.ID
 	if containerID == "" {
@@ -64,6 +64,8 @@ func handleEvent(ctx context.Context, queries *db.Queries, dockerClient *client.
 		log.Printf("Docker event: container %s deleted. Removing from DB", containerID)
 		if err := queries.DeleteContainer(ctx, containerID); err != nil {
 			log.Printf("Failed to delete container %s from DB: %v", containerID, err)
+		} else if onEvent != nil {
+			onEvent("delete", containerID)
 		}
 		return
 	}
@@ -121,6 +123,8 @@ func handleEvent(ctx context.Context, queries *db.Queries, dockerClient *client.
 
 		if err := queries.SaveContainer(ctx, params); err != nil {
 			log.Printf("Failed to save container %s to DB: %v", containerID, err)
+		} else if onEvent != nil {
+			onEvent("save", containerID)
 		}
 	}
 }

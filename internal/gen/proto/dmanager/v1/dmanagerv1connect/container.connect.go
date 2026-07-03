@@ -51,6 +51,9 @@ const (
 	// ContainerServiceGetContainerLogsProcedure is the fully-qualified name of the ContainerService's
 	// GetContainerLogs RPC.
 	ContainerServiceGetContainerLogsProcedure = "/dmanager.v1.ContainerService/GetContainerLogs"
+	// ContainerServiceStreamContainersProcedure is the fully-qualified name of the ContainerService's
+	// StreamContainers RPC.
+	ContainerServiceStreamContainersProcedure = "/dmanager.v1.ContainerService/StreamContainers"
 )
 
 // ContainerServiceClient is a client for the dmanager.v1.ContainerService service.
@@ -67,6 +70,8 @@ type ContainerServiceClient interface {
 	CheckContainerUpdates(context.Context, *connect.Request[v1.CheckContainerUpdatesRequest]) (*connect.Response[v1.CheckContainerUpdatesResponse], error)
 	// Stream live console outputs (stdout/stderr) from a container (Authenticated).
 	GetContainerLogs(context.Context, *connect.Request[v1.GetContainerLogsRequest]) (*connect.ServerStreamForClient[v1.GetContainerLogsResponse], error)
+	// Stream real-time container states/events (Authenticated).
+	StreamContainers(context.Context, *connect.Request[v1.StreamContainersRequest]) (*connect.ServerStreamForClient[v1.StreamContainersResponse], error)
 }
 
 // NewContainerServiceClient constructs a client for the dmanager.v1.ContainerService service. By
@@ -116,6 +121,12 @@ func NewContainerServiceClient(httpClient connect.HTTPClient, baseURL string, op
 			connect.WithSchema(containerServiceMethods.ByName("GetContainerLogs")),
 			connect.WithClientOptions(opts...),
 		),
+		streamContainers: connect.NewClient[v1.StreamContainersRequest, v1.StreamContainersResponse](
+			httpClient,
+			baseURL+ContainerServiceStreamContainersProcedure,
+			connect.WithSchema(containerServiceMethods.ByName("StreamContainers")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -127,6 +138,7 @@ type containerServiceClient struct {
 	setContainerAutoUpdate *connect.Client[v1.SetContainerAutoUpdateRequest, v1.SetContainerAutoUpdateResponse]
 	checkContainerUpdates  *connect.Client[v1.CheckContainerUpdatesRequest, v1.CheckContainerUpdatesResponse]
 	getContainerLogs       *connect.Client[v1.GetContainerLogsRequest, v1.GetContainerLogsResponse]
+	streamContainers       *connect.Client[v1.StreamContainersRequest, v1.StreamContainersResponse]
 }
 
 // ListContainers calls dmanager.v1.ContainerService.ListContainers.
@@ -159,6 +171,11 @@ func (c *containerServiceClient) GetContainerLogs(ctx context.Context, req *conn
 	return c.getContainerLogs.CallServerStream(ctx, req)
 }
 
+// StreamContainers calls dmanager.v1.ContainerService.StreamContainers.
+func (c *containerServiceClient) StreamContainers(ctx context.Context, req *connect.Request[v1.StreamContainersRequest]) (*connect.ServerStreamForClient[v1.StreamContainersResponse], error) {
+	return c.streamContainers.CallServerStream(ctx, req)
+}
+
 // ContainerServiceHandler is an implementation of the dmanager.v1.ContainerService service.
 type ContainerServiceHandler interface {
 	// Retrieve all discovered containers on the host system (Authenticated).
@@ -173,6 +190,8 @@ type ContainerServiceHandler interface {
 	CheckContainerUpdates(context.Context, *connect.Request[v1.CheckContainerUpdatesRequest]) (*connect.Response[v1.CheckContainerUpdatesResponse], error)
 	// Stream live console outputs (stdout/stderr) from a container (Authenticated).
 	GetContainerLogs(context.Context, *connect.Request[v1.GetContainerLogsRequest], *connect.ServerStream[v1.GetContainerLogsResponse]) error
+	// Stream real-time container states/events (Authenticated).
+	StreamContainers(context.Context, *connect.Request[v1.StreamContainersRequest], *connect.ServerStream[v1.StreamContainersResponse]) error
 }
 
 // NewContainerServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -218,6 +237,12 @@ func NewContainerServiceHandler(svc ContainerServiceHandler, opts ...connect.Han
 		connect.WithSchema(containerServiceMethods.ByName("GetContainerLogs")),
 		connect.WithHandlerOptions(opts...),
 	)
+	containerServiceStreamContainersHandler := connect.NewServerStreamHandler(
+		ContainerServiceStreamContainersProcedure,
+		svc.StreamContainers,
+		connect.WithSchema(containerServiceMethods.ByName("StreamContainers")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/dmanager.v1.ContainerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ContainerServiceListContainersProcedure:
@@ -232,6 +257,8 @@ func NewContainerServiceHandler(svc ContainerServiceHandler, opts ...connect.Han
 			containerServiceCheckContainerUpdatesHandler.ServeHTTP(w, r)
 		case ContainerServiceGetContainerLogsProcedure:
 			containerServiceGetContainerLogsHandler.ServeHTTP(w, r)
+		case ContainerServiceStreamContainersProcedure:
+			containerServiceStreamContainersHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -263,4 +290,8 @@ func (UnimplementedContainerServiceHandler) CheckContainerUpdates(context.Contex
 
 func (UnimplementedContainerServiceHandler) GetContainerLogs(context.Context, *connect.Request[v1.GetContainerLogsRequest], *connect.ServerStream[v1.GetContainerLogsResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.ContainerService.GetContainerLogs is not implemented"))
+}
+
+func (UnimplementedContainerServiceHandler) StreamContainers(context.Context, *connect.Request[v1.StreamContainersRequest], *connect.ServerStream[v1.StreamContainersResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.ContainerService.StreamContainers is not implemented"))
 }

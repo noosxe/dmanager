@@ -19,6 +19,7 @@ import (
 	"dmanager/internal/container"
 	"dmanager/internal/db"
 	"dmanager/internal/docker"
+	dmanagerv1 "dmanager/internal/gen/proto/dmanager/v1"
 	"dmanager/internal/gen/proto/dmanager/v1/dmanagerv1connect"
 )
 
@@ -75,7 +76,30 @@ var serveCmd = &cobra.Command{
 
 		// 3. Initialize queries and services
 		queries := db.New(dbConn)
-		go docker.StartEventMonitor(cmd.Context(), queries, dockerClient)
+		containerBroker := container.NewBroker()
+
+		go docker.StartEventMonitor(cmd.Context(), queries, dockerClient, func(action string, containerID string) {
+			switch action {
+			case "save":
+				dbQueries := db.New(dbConn)
+				c, err := dbQueries.GetContainer(context.Background(), containerID)
+				if err != nil {
+					log.Printf("Failed to fetch container %s for stream event broadcast: %v", containerID, err)
+					return
+				}
+				containerBroker.Publish(&dmanagerv1.StreamContainersResponse{
+					Action:      "save",
+					ContainerId: containerID,
+					Container:   container.MapContainerRecord(c),
+				})
+			case "delete":
+				containerBroker.Publish(&dmanagerv1.StreamContainersResponse{
+					Action:      "delete",
+					ContainerId: containerID,
+				})
+			}
+		})
+
 		authSvc := auth.NewService(queries)
 		authInterceptor := auth.NewInterceptor(queries)
 
@@ -90,7 +114,7 @@ var serveCmd = &cobra.Command{
 		mux.Handle(authPath, authHandler)
 
 		// Register ContainerService
-		containerSvc := container.NewService(dbConn)
+		containerSvc := container.NewService(dbConn, containerBroker)
 		containerPath, containerHandler := dmanagerv1connect.NewContainerServiceHandler(
 			containerSvc,
 			connect.WithInterceptors(authInterceptor),

@@ -753,6 +753,102 @@ func (x *GetContainerLogsResponse) GetStreamType() string {
 	return ""
 }
 
+type StreamContainersRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamContainersRequest) Reset() {
+	*x = StreamContainersRequest{}
+	mi := &file_proto_dmanager_v1_container_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamContainersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamContainersRequest) ProtoMessage() {}
+
+func (x *StreamContainersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_container_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamContainersRequest.ProtoReflect.Descriptor instead.
+func (*StreamContainersRequest) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_container_proto_rawDescGZIP(), []int{13}
+}
+
+type StreamContainersResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Action        string                 `protobuf:"bytes,1,opt,name=action,proto3" json:"action,omitempty"`                              // "save" or "delete"
+	Container     *Container             `protobuf:"bytes,2,opt,name=container,proto3" json:"container,omitempty"`                        // only present if action is "save"
+	ContainerId   string                 `protobuf:"bytes,3,opt,name=container_id,json=containerId,proto3" json:"container_id,omitempty"` // always present
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamContainersResponse) Reset() {
+	*x = StreamContainersResponse{}
+	mi := &file_proto_dmanager_v1_container_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamContainersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamContainersResponse) ProtoMessage() {}
+
+func (x *StreamContainersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_container_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamContainersResponse.ProtoReflect.Descriptor instead.
+func (*StreamContainersResponse) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_container_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *StreamContainersResponse) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
+func (x *StreamContainersResponse) GetContainer() *Container {
+	if x != nil {
+		return x.Container
+	}
+	return nil
+}
+
+func (x *StreamContainersResponse) GetContainerId() string {
+	if x != nil {
+		return x.ContainerId
+	}
+	return ""
+}
+
 var File_proto_dmanager_v1_container_proto protoreflect.FileDescriptor
 
 const file_proto_dmanager_v1_container_proto_rawDesc = "" +
@@ -811,14 +907,20 @@ const file_proto_dmanager_v1_container_proto_rawDesc = "" +
 	"\blog_line\x18\x01 \x01(\tR\alogLine\x12\x1c\n" +
 	"\ttimestamp\x18\x02 \x01(\tR\ttimestamp\x12\x1f\n" +
 	"\vstream_type\x18\x03 \x01(\tR\n" +
-	"streamType2\xe6\x04\n" +
+	"streamType\"\x19\n" +
+	"\x17StreamContainersRequest\"\x8b\x01\n" +
+	"\x18StreamContainersResponse\x12\x16\n" +
+	"\x06action\x18\x01 \x01(\tR\x06action\x124\n" +
+	"\tcontainer\x18\x02 \x01(\v2\x16.dmanager.v1.ContainerR\tcontainer\x12!\n" +
+	"\fcontainer_id\x18\x03 \x01(\tR\vcontainerId2\xc9\x05\n" +
 	"\x10ContainerService\x12Y\n" +
 	"\x0eListContainers\x12\".dmanager.v1.ListContainersRequest\x1a#.dmanager.v1.ListContainersResponse\x12Y\n" +
 	"\x0eStartContainer\x12\".dmanager.v1.StartContainerRequest\x1a#.dmanager.v1.StartContainerResponse\x12V\n" +
 	"\rStopContainer\x12!.dmanager.v1.StopContainerRequest\x1a\".dmanager.v1.StopContainerResponse\x12q\n" +
 	"\x16SetContainerAutoUpdate\x12*.dmanager.v1.SetContainerAutoUpdateRequest\x1a+.dmanager.v1.SetContainerAutoUpdateResponse\x12n\n" +
 	"\x15CheckContainerUpdates\x12).dmanager.v1.CheckContainerUpdatesRequest\x1a*.dmanager.v1.CheckContainerUpdatesResponse\x12a\n" +
-	"\x10GetContainerLogs\x12$.dmanager.v1.GetContainerLogsRequest\x1a%.dmanager.v1.GetContainerLogsResponse0\x01B4Z2dmanager/internal/gen/proto/dmanager/v1;dmanagerv1b\x06proto3"
+	"\x10GetContainerLogs\x12$.dmanager.v1.GetContainerLogsRequest\x1a%.dmanager.v1.GetContainerLogsResponse0\x01\x12a\n" +
+	"\x10StreamContainers\x12$.dmanager.v1.StreamContainersRequest\x1a%.dmanager.v1.StreamContainersResponse0\x01B4Z2dmanager/internal/gen/proto/dmanager/v1;dmanagerv1b\x06proto3"
 
 var (
 	file_proto_dmanager_v1_container_proto_rawDescOnce sync.Once
@@ -832,7 +934,7 @@ func file_proto_dmanager_v1_container_proto_rawDescGZIP() []byte {
 	return file_proto_dmanager_v1_container_proto_rawDescData
 }
 
-var file_proto_dmanager_v1_container_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_proto_dmanager_v1_container_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_proto_dmanager_v1_container_proto_goTypes = []any{
 	(*Container)(nil),                      // 0: dmanager.v1.Container
 	(*ListContainersRequest)(nil),          // 1: dmanager.v1.ListContainersRequest
@@ -847,26 +949,31 @@ var file_proto_dmanager_v1_container_proto_goTypes = []any{
 	(*CheckContainerUpdatesResponse)(nil),  // 10: dmanager.v1.CheckContainerUpdatesResponse
 	(*GetContainerLogsRequest)(nil),        // 11: dmanager.v1.GetContainerLogsRequest
 	(*GetContainerLogsResponse)(nil),       // 12: dmanager.v1.GetContainerLogsResponse
+	(*StreamContainersRequest)(nil),        // 13: dmanager.v1.StreamContainersRequest
+	(*StreamContainersResponse)(nil),       // 14: dmanager.v1.StreamContainersResponse
 }
 var file_proto_dmanager_v1_container_proto_depIdxs = []int32{
 	0,  // 0: dmanager.v1.ListContainersResponse.containers:type_name -> dmanager.v1.Container
-	1,  // 1: dmanager.v1.ContainerService.ListContainers:input_type -> dmanager.v1.ListContainersRequest
-	3,  // 2: dmanager.v1.ContainerService.StartContainer:input_type -> dmanager.v1.StartContainerRequest
-	5,  // 3: dmanager.v1.ContainerService.StopContainer:input_type -> dmanager.v1.StopContainerRequest
-	7,  // 4: dmanager.v1.ContainerService.SetContainerAutoUpdate:input_type -> dmanager.v1.SetContainerAutoUpdateRequest
-	9,  // 5: dmanager.v1.ContainerService.CheckContainerUpdates:input_type -> dmanager.v1.CheckContainerUpdatesRequest
-	11, // 6: dmanager.v1.ContainerService.GetContainerLogs:input_type -> dmanager.v1.GetContainerLogsRequest
-	2,  // 7: dmanager.v1.ContainerService.ListContainers:output_type -> dmanager.v1.ListContainersResponse
-	4,  // 8: dmanager.v1.ContainerService.StartContainer:output_type -> dmanager.v1.StartContainerResponse
-	6,  // 9: dmanager.v1.ContainerService.StopContainer:output_type -> dmanager.v1.StopContainerResponse
-	8,  // 10: dmanager.v1.ContainerService.SetContainerAutoUpdate:output_type -> dmanager.v1.SetContainerAutoUpdateResponse
-	10, // 11: dmanager.v1.ContainerService.CheckContainerUpdates:output_type -> dmanager.v1.CheckContainerUpdatesResponse
-	12, // 12: dmanager.v1.ContainerService.GetContainerLogs:output_type -> dmanager.v1.GetContainerLogsResponse
-	7,  // [7:13] is the sub-list for method output_type
-	1,  // [1:7] is the sub-list for method input_type
-	1,  // [1:1] is the sub-list for extension type_name
-	1,  // [1:1] is the sub-list for extension extendee
-	0,  // [0:1] is the sub-list for field type_name
+	0,  // 1: dmanager.v1.StreamContainersResponse.container:type_name -> dmanager.v1.Container
+	1,  // 2: dmanager.v1.ContainerService.ListContainers:input_type -> dmanager.v1.ListContainersRequest
+	3,  // 3: dmanager.v1.ContainerService.StartContainer:input_type -> dmanager.v1.StartContainerRequest
+	5,  // 4: dmanager.v1.ContainerService.StopContainer:input_type -> dmanager.v1.StopContainerRequest
+	7,  // 5: dmanager.v1.ContainerService.SetContainerAutoUpdate:input_type -> dmanager.v1.SetContainerAutoUpdateRequest
+	9,  // 6: dmanager.v1.ContainerService.CheckContainerUpdates:input_type -> dmanager.v1.CheckContainerUpdatesRequest
+	11, // 7: dmanager.v1.ContainerService.GetContainerLogs:input_type -> dmanager.v1.GetContainerLogsRequest
+	13, // 8: dmanager.v1.ContainerService.StreamContainers:input_type -> dmanager.v1.StreamContainersRequest
+	2,  // 9: dmanager.v1.ContainerService.ListContainers:output_type -> dmanager.v1.ListContainersResponse
+	4,  // 10: dmanager.v1.ContainerService.StartContainer:output_type -> dmanager.v1.StartContainerResponse
+	6,  // 11: dmanager.v1.ContainerService.StopContainer:output_type -> dmanager.v1.StopContainerResponse
+	8,  // 12: dmanager.v1.ContainerService.SetContainerAutoUpdate:output_type -> dmanager.v1.SetContainerAutoUpdateResponse
+	10, // 13: dmanager.v1.ContainerService.CheckContainerUpdates:output_type -> dmanager.v1.CheckContainerUpdatesResponse
+	12, // 14: dmanager.v1.ContainerService.GetContainerLogs:output_type -> dmanager.v1.GetContainerLogsResponse
+	14, // 15: dmanager.v1.ContainerService.StreamContainers:output_type -> dmanager.v1.StreamContainersResponse
+	9,  // [9:16] is the sub-list for method output_type
+	2,  // [2:9] is the sub-list for method input_type
+	2,  // [2:2] is the sub-list for extension type_name
+	2,  // [2:2] is the sub-list for extension extendee
+	0,  // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_proto_dmanager_v1_container_proto_init() }
@@ -880,7 +987,7 @@ func file_proto_dmanager_v1_container_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_dmanager_v1_container_proto_rawDesc), len(file_proto_dmanager_v1_container_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   13,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

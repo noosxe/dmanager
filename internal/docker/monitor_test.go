@@ -101,7 +101,10 @@ func TestStartEventMonitor(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	StartEventMonitor(ctx, queries, dockerClient)
+	eventsChan := make(chan string, 10)
+	StartEventMonitor(ctx, queries, dockerClient, func(action string, containerID string) {
+		eventsChan <- fmt.Sprintf("%s:%s", action, containerID)
+	})
 
 	inspectState = "running"
 	eventCh <- `{"Type":"container","Action":"start","Actor":{"ID":"container-1"}}`
@@ -120,6 +123,15 @@ func TestStartEventMonitor(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("Failed to verify container start event: %v", err)
+	}
+
+	select {
+	case evt := <-eventsChan:
+		if evt != "save:container-1" {
+			t.Errorf("Expected save:container-1, got %s", evt)
+		}
+	case <-time.After(2 * time.Second):
+		t.Error("timeout waiting for save event callback")
 	}
 
 	if c.Name != "my-container-1" || c.Image != "nginx:latest" || c.ImageID != "sha256:image-1-id" {
@@ -152,6 +164,15 @@ func TestStartEventMonitor(t *testing.T) {
 		t.Fatalf("Failed to verify container stop event: %v", err)
 	}
 
+	select {
+	case evt := <-eventsChan:
+		if evt != "save:container-1" {
+			t.Errorf("Expected save:container-1, got %s", evt)
+		}
+	case <-time.After(2 * time.Second):
+		t.Error("timeout waiting for stop save event callback")
+	}
+
 	if c.AutoUpdate != 1 {
 		t.Errorf("Expected auto_update = 1 to be preserved, got %d", c.AutoUpdate)
 	}
@@ -170,6 +191,15 @@ func TestStartEventMonitor(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("Failed to verify container destroy event: %v", err)
+	}
+
+	select {
+	case evt := <-eventsChan:
+		if evt != "delete:container-1" {
+			t.Errorf("Expected delete:container-1, got %s", evt)
+		}
+	case <-time.After(2 * time.Second):
+		t.Error("timeout waiting for delete event callback")
 	}
 
 	close(eventCh)
