@@ -4,7 +4,7 @@ go 1.25.7
 
 require (
 	connectrpc.com/connect v1.20.0
-	github.com/docker/docker v27.0.3+incompatible
+	github.com/docker/docker v27.5.1+incompatible
 	github.com/knadh/koanf/parsers/yaml v1.1.0
 	github.com/knadh/koanf/providers/confmap v1.0.0
 	github.com/knadh/koanf/providers/env/v2 v2.0.0
