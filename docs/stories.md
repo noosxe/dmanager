@@ -26,6 +26,7 @@ graph TD
 - **Scope:** Backend Database Infrastructure
 - **Estimated Size:** Small (~100 LOC)
 - **Dependencies:** None
+- **Token Estimate:** Input: ~50k | Output: ~3k | Total: ~53k (Actual: ~52k)
 - **Goal:** Set up the database migrations framework and generate initial SQL query wrappers using goose and SQLC.
 - **Tasks:**
   1. Create database migration script `internal/db/migrations/00001_init.sql` based on [docs/schema.md](file:///home/mechsoull/Projects/dmanager/docs/schema.md).
@@ -48,6 +49,7 @@ graph TD
 - **Scope:** Backend Security & DB
 - **Estimated Size:** Medium (~250 LOC)
 - **Dependencies:** `STORY-001`
+- **Token Estimate:** Input: ~90k | Output: ~6k | Total: ~96k (Actual: ~95k)
 - **Goal:** Implement secure session-based authentication handlers using ConnectRPC.
 - **Tasks:**
   1. Implement `AuthService` interface defined in [docs/protocol.md](file:///home/mechsoull/Projects/dmanager/docs/protocol.md).
@@ -69,6 +71,7 @@ graph TD
 - **Scope:** CLI & Server Setup
 - **Estimated Size:** Small (~150 LOC)
 - **Dependencies:** `STORY-002`
+- **Token Estimate:** Input: ~45k - 60k | Output: ~2k - 3k | Total: ~47k - 63k
 - **Goal:** Add the `serve` command to the Cobra CLI, parsing configuration and starting the HTTP/gRPC-web server.
 - **Tasks:**
   1. Create a `cmd/serve.go` sub-command under cobra.
@@ -89,6 +92,7 @@ graph TD
 - **Scope:** Docker Integration
 - **Estimated Size:** Small (~150 LOC)
 - **Dependencies:** `STORY-003`
+- **Token Estimate:** Input: ~50k - 70k | Output: ~3k - 4k | Total: ~53k - 74k
 - **Goal:** Initialize the standard Docker SDK client and provide a simple non-streaming API to query local container metadata.
 - **Tasks:**
   1. Add Docker SDK Go package dependency.
@@ -107,6 +111,7 @@ graph TD
 - **Scope:** Daemon / Synchronization
 - **Estimated Size:** Medium (~250 LOC)
 - **Dependencies:** `STORY-004`
+- **Token Estimate:** Input: ~75k - 100k | Output: ~5k - 7k | Total: ~80k - 107k
 - **Goal:** Implement a long-running background monitor that listens to Docker events API, processes container changes, and syncs container states into the SQLite database.
 - **Tasks:**
   1. Implement background daemon thread initialized at server startup.
@@ -124,6 +129,7 @@ graph TD
 - **Scope:** API / Real-Time Streaming
 - **Estimated Size:** Medium (~200 LOC)
 - **Dependencies:** `STORY-005`
+- **Token Estimate:** Input: ~80k - 110k | Output: ~5k - 8k | Total: ~85k - 118k
 - **Goal:** Expose the real-time container states stream via ConnectRPC server streaming.
 - **Tasks:**
   1. Implement `StreamContainers` server stream handler.
@@ -140,6 +146,7 @@ graph TD
 - **Scope:** Container Operations
 - **Estimated Size:** Small (~150 LOC)
 - **Dependencies:** `STORY-004`
+- **Token Estimate:** Input: ~60k - 80k | Output: ~3k - 5k | Total: ~63k - 85k
 - **Goal:** Support remote command actions to start or stop targeted containers using the Docker SDK.
 - **Tasks:**
   1. Implement `StartContainer` ConnectRPC handler invoking Docker API.
@@ -156,6 +163,7 @@ graph TD
 - **Scope:** Docker Integration
 - **Estimated Size:** Large (~300 LOC)
 - **Dependencies:** `STORY-007`
+- **Token Estimate:** Input: ~120k - 160k | Output: ~8k - 12k | Total: ~128k - 172k
 - **Goal:** Implement the "Upgrade Container" operation, pulling the latest tag digest and re-creating the container with exact parameters preserved.
 - **Tasks:**
   1. Implement `UpgradeContainer` RPC.
@@ -174,6 +182,7 @@ graph TD
 - **Scope:** Real-Time Streams
 - **Estimated Size:** Medium (~200 LOC)
 - **Dependencies:** `STORY-004`
+- **Token Estimate:** Input: ~70k - 90k | Output: ~4k - 6k | Total: ~74k - 96k
 - **Goal:** Establish a streaming handler that yields stdout/stderr logs of a container over ConnectRPC.
 - **Tasks:**
   1. Implement `StreamLogs` server stream.
@@ -192,6 +201,7 @@ graph TD
 - **Scope:** Frontend Auth
 - **Estimated Size:** Medium (~250 LOC)
 - **Dependencies:** `STORY-002`
+- **Token Estimate:** Input: ~80k - 120k | Output: ~6k - 9k | Total: ~86k - 129k
 - **Goal:** Initialize React Router, design a premium glassmorphic login interface, and store the authentication token.
 - **Tasks:**
   1. Set up TanStack Router rules (protected dashboard routes vs. public login route).
@@ -211,6 +221,7 @@ graph TD
 - **Scope:** Frontend UI
 - **Estimated Size:** Large (~350 LOC)
 - **Dependencies:** `STORY-010`
+- **Token Estimate:** Input: ~140k - 180k | Output: ~9k - 13k | Total: ~149k - 193k
 - **Goal:** Build the main dashboard framework displaying a premium grid view of discovered containers with status cards.
 - **Tasks:**
   1. Create navigation sidebar (dashboard links, user actions, profile card).
@@ -228,6 +239,7 @@ graph TD
 - **Scope:** Frontend State
 - **Estimated Size:** Medium (~250 LOC)
 - **Dependencies:** `STORY-006`, `STORY-007`
+- **Token Estimate:** Input: ~90k - 130k | Output: ~5k - 8k | Total: ~95k - 138k
 - **Goal:** Integrate ConnectRPC clients to stream real-time updates and trigger container actions (start/stop).
 - **Tasks:**
   1. Add `@connectrpc/connect` and transport configs.
@@ -244,6 +256,7 @@ graph TD
 - **Scope:** Frontend UI
 - **Estimated Size:** Medium (~200 LOC)
 - **Dependencies:** `STORY-009`
+- **Token Estimate:** Input: ~80k - 110k | Output: ~4k - 7k | Total: ~84k - 117k
 - **Goal:** Build a container logs console drawer using `xterm.js` to render streamed terminal outputs.
 - **Tasks:**
   1. Install `xterm` and `@xterm/addon-fit`.
