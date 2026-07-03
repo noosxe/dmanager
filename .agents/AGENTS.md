@@ -3,6 +3,12 @@
 - **Nix Dev Shell**: All terminal commands, builds, tests, and execution of workspace tools must be performed within the Nix development shell environment. If executing commands directly via a terminal tool, ensure they run inside `nix develop --command <cmd>` or that the shell has been initialized with the flake.
 - **Error Handling**: In case of any environmental setup issues, package resolution errors, or other system problems, stop immediately, report the exact details to the user, and ask for assistance.
 
+## Development Workflow & PR Guidelines
+
+- **Documentation First**: Design documents, requirements, and schemas must always be updated *first* before implementing any feature. Keeping implementation and documentation strictly in sync is critical.
+- **Consulting Documentation**: The agent must use the documentation as the primary source of truth to understand the application. You must consult existing documentation first during any feature development workflow, and ensure documents are continuously maintained in a useful, accurate state.
+- **Manageable PR Sizes**: Keep Pull Requests small and focused to ensure they are easily reviewable by humans. Avoid large changes (such as updates exceeding 1,000 lines of code or massive multi-file changes). Break features down into small, logical, and incrementally reviewable PRs.
+
 ## Git Workflow & Code Quality Guidelines
 
 ### 1. Branching Strategy
