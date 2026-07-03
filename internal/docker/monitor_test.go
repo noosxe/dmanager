@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 	_ "github.com/ncruces/go-sqlite3/driver"
 
 	"dmanager/internal/db"
@@ -88,10 +88,9 @@ func TestStartEventMonitor(t *testing.T) {
 	}))
 	defer server.Close()
 
-	dockerClient, err := client.NewClientWithOpts(
+	dockerClient, err := client.New(
 		client.WithHost(server.URL),
 		client.WithHTTPClient(server.Client()),
-		client.WithAPIVersionNegotiation(),
 	)
 	if err != nil {
 		t.Fatalf("failed to create docker client: %v", err)

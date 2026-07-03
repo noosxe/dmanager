@@ -5,7 +5,7 @@ import (
 	"time"
 
 	connect "connectrpc.com/connect"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 
 	"dmanager/internal/db"
 	dmanagerv1 "dmanager/internal/gen/proto/dmanager/v1"
