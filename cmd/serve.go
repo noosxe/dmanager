@@ -15,13 +15,15 @@ import (
 	"github.com/spf13/cobra"
 
 	"dmanager/internal/auth"
+	"dmanager/internal/config"
 	"dmanager/internal/db"
 	"dmanager/internal/gen/proto/dmanager/v1/dmanagerv1connect"
 )
 
 var (
-	port   string
-	dbPath string
+	port       string
+	dbPath     string
+	configPath string
 )
 
 var serveCmd = &cobra.Command{
@@ -29,8 +31,25 @@ var serveCmd = &cobra.Command{
 	Short: "Start the dmanager backend daemon",
 	Long:  "Starts the ConnectRPC server hosting the dmanager services.",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Load configuration
+		cfg, err := config.Load(configPath)
+		if err != nil {
+			return fmt.Errorf("failed to load configuration: %w", err)
+		}
+
+		// Apply CLI overrides if explicitly changed
+		dbFile := cfg.Server.DBPath
+		if cmd.Flags().Changed("db") {
+			dbFile = dbPath
+		}
+
+		listenPort := cfg.Server.Port
+		if cmd.Flags().Changed("port") {
+			listenPort = port
+		}
+
 		// 1. Open SQLite database
-		dbConn, err := db.Open(dbPath)
+		dbConn, err := db.Open(dbFile)
 		if err != nil {
 			return fmt.Errorf("failed to open database: %w", err)
 		}
@@ -57,11 +76,11 @@ var serveCmd = &cobra.Command{
 		mux.Handle(authPath, authHandler)
 
 		// Apply CORS middleware
-		handler := withCORS(mux)
+		handler := withCORS(cfg.Server.AllowedOrigins, mux)
 
 		// 5. Create HTTP Server
 		server := &http.Server{
-			Addr:         ":" + port,
+			Addr:         ":" + listenPort,
 			Handler:      handler,
 			ReadTimeout:  15 * time.Second,
 			WriteTimeout: 15 * time.Second,
@@ -82,7 +101,7 @@ var serveCmd = &cobra.Command{
 			shutdownErr <- server.Shutdown(ctx)
 		}()
 
-		log.Printf("Starting dmanager server on port %s...", port)
+		log.Printf("Starting dmanager server on port %s...", listenPort)
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return fmt.Errorf("server listen and serve failed: %w", err)
 		}
@@ -97,9 +116,22 @@ var serveCmd = &cobra.Command{
 	},
 }
 
-func withCORS(next http.Handler) http.Handler {
+func withCORS(allowedOrigins []string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
+		origin := r.Header.Get("Origin")
+		if len(allowedOrigins) > 0 && origin != "" {
+			matched := false
+			for _, allowed := range allowedOrigins {
+				if allowed == "*" || allowed == origin {
+					matched = true
+					break
+				}
+			}
+			if matched {
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+			}
+		}
+
 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Connect-Protocol-Version, Connect-Timeout")
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -112,6 +144,7 @@ func withCORS(next http.Handler) http.Handler {
 }
 
 func init() {
+	serveCmd.Flags().StringVarP(&configPath, "config", "c", "", "path to yaml configuration file")
 	serveCmd.Flags().StringVarP(&port, "port", "p", "8080", "port to listen on")
 	serveCmd.Flags().StringVarP(&dbPath, "db", "d", "dmanager.db", "path to sqlite database file")
 	rootCmd.AddCommand(serveCmd)
