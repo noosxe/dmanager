@@ -3,26 +3,8 @@ name: Backend CI
 on:
   push:
     branches: [ main ]
-    paths:
-      - 'cmd/**'
-      - 'internal/**'
-      - 'proto/**'
-      - '*.go'
-      - 'go.mod'
-      - 'go.sum'
-      - '.github/workflows/backend.yml'
-      - '.golangci.yml'
   pull_request:
     branches: [ main ]
-    paths:
-      - 'cmd/**'
-      - 'internal/**'
-      - 'proto/**'
-      - '*.go'
-      - 'go.mod'
-      - 'go.sum'
-      - '.github/workflows/backend.yml'
-      - '.golangci.yml'
 
 jobs:
   lint:
