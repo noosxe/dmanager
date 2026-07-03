@@ -37,6 +37,7 @@ Before staging or committing any code, agents must verify local code standards:
   * Ensure the React application successfully builds (`pnpm build`).
 - **Testing**: Run relevant tests (`go test` and `pnpm test`) to prevent regressions.
 - **Untracked Files**: Check `git status` for new/untracked files. Verify if they are intended to be committed. If they are temporary/local files, update the root `.gitignore` file instead of committing them.
+- **Secrets & Sensitive Data Prevention**: Under no circumstances should agents commit private keys, passwords, credentials, API keys, certificates, or local configuration files with sensitive data (such as config.yaml or .env files). If local testing requires placeholders or mock credentials, ensure they are configured to be ignored by updating the root .gitignore file.
 
 ### 4. Code Pull Requests (PRs)
 - **Automatic PR Creation**: After a successful branch push, check if the GitHub CLI tool (`gh`) is available in the environment. If it is, automatically generate a Pull Request to merge the branch into `main`.
