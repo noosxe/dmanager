@@ -849,6 +849,110 @@ func (x *StreamContainersResponse) GetContainerId() string {
 	return ""
 }
 
+type UpgradeContainerRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpgradeContainerRequest) Reset() {
+	*x = UpgradeContainerRequest{}
+	mi := &file_proto_dmanager_v1_container_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpgradeContainerRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpgradeContainerRequest) ProtoMessage() {}
+
+func (x *UpgradeContainerRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_container_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpgradeContainerRequest.ProtoReflect.Descriptor instead.
+func (*UpgradeContainerRequest) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_container_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *UpgradeContainerRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type UpgradeContainerResponse struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	PreviousImageId string                 `protobuf:"bytes,2,opt,name=previous_image_id,json=previousImageId,proto3" json:"previous_image_id,omitempty"`
+	CurrentImageId  string                 `protobuf:"bytes,3,opt,name=current_image_id,json=currentImageId,proto3" json:"current_image_id,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *UpgradeContainerResponse) Reset() {
+	*x = UpgradeContainerResponse{}
+	mi := &file_proto_dmanager_v1_container_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpgradeContainerResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpgradeContainerResponse) ProtoMessage() {}
+
+func (x *UpgradeContainerResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_container_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpgradeContainerResponse.ProtoReflect.Descriptor instead.
+func (*UpgradeContainerResponse) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_container_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *UpgradeContainerResponse) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *UpgradeContainerResponse) GetPreviousImageId() string {
+	if x != nil {
+		return x.PreviousImageId
+	}
+	return ""
+}
+
+func (x *UpgradeContainerResponse) GetCurrentImageId() string {
+	if x != nil {
+		return x.CurrentImageId
+	}
+	return ""
+}
+
 var File_proto_dmanager_v1_container_proto protoreflect.FileDescriptor
 
 const file_proto_dmanager_v1_container_proto_rawDesc = "" +
@@ -912,7 +1016,13 @@ const file_proto_dmanager_v1_container_proto_rawDesc = "" +
 	"\x18StreamContainersResponse\x12\x16\n" +
 	"\x06action\x18\x01 \x01(\tR\x06action\x124\n" +
 	"\tcontainer\x18\x02 \x01(\v2\x16.dmanager.v1.ContainerR\tcontainer\x12!\n" +
-	"\fcontainer_id\x18\x03 \x01(\tR\vcontainerId2\xc9\x05\n" +
+	"\fcontainer_id\x18\x03 \x01(\tR\vcontainerId\")\n" +
+	"\x17UpgradeContainerRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\x80\x01\n" +
+	"\x18UpgradeContainerResponse\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12*\n" +
+	"\x11previous_image_id\x18\x02 \x01(\tR\x0fpreviousImageId\x12(\n" +
+	"\x10current_image_id\x18\x03 \x01(\tR\x0ecurrentImageId2\xaa\x06\n" +
 	"\x10ContainerService\x12Y\n" +
 	"\x0eListContainers\x12\".dmanager.v1.ListContainersRequest\x1a#.dmanager.v1.ListContainersResponse\x12Y\n" +
 	"\x0eStartContainer\x12\".dmanager.v1.StartContainerRequest\x1a#.dmanager.v1.StartContainerResponse\x12V\n" +
@@ -920,7 +1030,8 @@ const file_proto_dmanager_v1_container_proto_rawDesc = "" +
 	"\x16SetContainerAutoUpdate\x12*.dmanager.v1.SetContainerAutoUpdateRequest\x1a+.dmanager.v1.SetContainerAutoUpdateResponse\x12n\n" +
 	"\x15CheckContainerUpdates\x12).dmanager.v1.CheckContainerUpdatesRequest\x1a*.dmanager.v1.CheckContainerUpdatesResponse\x12a\n" +
 	"\x10GetContainerLogs\x12$.dmanager.v1.GetContainerLogsRequest\x1a%.dmanager.v1.GetContainerLogsResponse0\x01\x12a\n" +
-	"\x10StreamContainers\x12$.dmanager.v1.StreamContainersRequest\x1a%.dmanager.v1.StreamContainersResponse0\x01B4Z2dmanager/internal/gen/proto/dmanager/v1;dmanagerv1b\x06proto3"
+	"\x10StreamContainers\x12$.dmanager.v1.StreamContainersRequest\x1a%.dmanager.v1.StreamContainersResponse0\x01\x12_\n" +
+	"\x10UpgradeContainer\x12$.dmanager.v1.UpgradeContainerRequest\x1a%.dmanager.v1.UpgradeContainerResponseB4Z2dmanager/internal/gen/proto/dmanager/v1;dmanagerv1b\x06proto3"
 
 var (
 	file_proto_dmanager_v1_container_proto_rawDescOnce sync.Once
@@ -934,7 +1045,7 @@ func file_proto_dmanager_v1_container_proto_rawDescGZIP() []byte {
 	return file_proto_dmanager_v1_container_proto_rawDescData
 }
 
-var file_proto_dmanager_v1_container_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_proto_dmanager_v1_container_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_proto_dmanager_v1_container_proto_goTypes = []any{
 	(*Container)(nil),                      // 0: dmanager.v1.Container
 	(*ListContainersRequest)(nil),          // 1: dmanager.v1.ListContainersRequest
@@ -951,6 +1062,8 @@ var file_proto_dmanager_v1_container_proto_goTypes = []any{
 	(*GetContainerLogsResponse)(nil),       // 12: dmanager.v1.GetContainerLogsResponse
 	(*StreamContainersRequest)(nil),        // 13: dmanager.v1.StreamContainersRequest
 	(*StreamContainersResponse)(nil),       // 14: dmanager.v1.StreamContainersResponse
+	(*UpgradeContainerRequest)(nil),        // 15: dmanager.v1.UpgradeContainerRequest
+	(*UpgradeContainerResponse)(nil),       // 16: dmanager.v1.UpgradeContainerResponse
 }
 var file_proto_dmanager_v1_container_proto_depIdxs = []int32{
 	0,  // 0: dmanager.v1.ListContainersResponse.containers:type_name -> dmanager.v1.Container
@@ -962,15 +1075,17 @@ var file_proto_dmanager_v1_container_proto_depIdxs = []int32{
 	9,  // 6: dmanager.v1.ContainerService.CheckContainerUpdates:input_type -> dmanager.v1.CheckContainerUpdatesRequest
 	11, // 7: dmanager.v1.ContainerService.GetContainerLogs:input_type -> dmanager.v1.GetContainerLogsRequest
 	13, // 8: dmanager.v1.ContainerService.StreamContainers:input_type -> dmanager.v1.StreamContainersRequest
-	2,  // 9: dmanager.v1.ContainerService.ListContainers:output_type -> dmanager.v1.ListContainersResponse
-	4,  // 10: dmanager.v1.ContainerService.StartContainer:output_type -> dmanager.v1.StartContainerResponse
-	6,  // 11: dmanager.v1.ContainerService.StopContainer:output_type -> dmanager.v1.StopContainerResponse
-	8,  // 12: dmanager.v1.ContainerService.SetContainerAutoUpdate:output_type -> dmanager.v1.SetContainerAutoUpdateResponse
-	10, // 13: dmanager.v1.ContainerService.CheckContainerUpdates:output_type -> dmanager.v1.CheckContainerUpdatesResponse
-	12, // 14: dmanager.v1.ContainerService.GetContainerLogs:output_type -> dmanager.v1.GetContainerLogsResponse
-	14, // 15: dmanager.v1.ContainerService.StreamContainers:output_type -> dmanager.v1.StreamContainersResponse
-	9,  // [9:16] is the sub-list for method output_type
-	2,  // [2:9] is the sub-list for method input_type
+	15, // 9: dmanager.v1.ContainerService.UpgradeContainer:input_type -> dmanager.v1.UpgradeContainerRequest
+	2,  // 10: dmanager.v1.ContainerService.ListContainers:output_type -> dmanager.v1.ListContainersResponse
+	4,  // 11: dmanager.v1.ContainerService.StartContainer:output_type -> dmanager.v1.StartContainerResponse
+	6,  // 12: dmanager.v1.ContainerService.StopContainer:output_type -> dmanager.v1.StopContainerResponse
+	8,  // 13: dmanager.v1.ContainerService.SetContainerAutoUpdate:output_type -> dmanager.v1.SetContainerAutoUpdateResponse
+	10, // 14: dmanager.v1.ContainerService.CheckContainerUpdates:output_type -> dmanager.v1.CheckContainerUpdatesResponse
+	12, // 15: dmanager.v1.ContainerService.GetContainerLogs:output_type -> dmanager.v1.GetContainerLogsResponse
+	14, // 16: dmanager.v1.ContainerService.StreamContainers:output_type -> dmanager.v1.StreamContainersResponse
+	16, // 17: dmanager.v1.ContainerService.UpgradeContainer:output_type -> dmanager.v1.UpgradeContainerResponse
+	10, // [10:18] is the sub-list for method output_type
+	2,  // [2:10] is the sub-list for method input_type
 	2,  // [2:2] is the sub-list for extension type_name
 	2,  // [2:2] is the sub-list for extension extendee
 	0,  // [0:2] is the sub-list for field type_name
@@ -987,7 +1102,7 @@ func file_proto_dmanager_v1_container_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_dmanager_v1_container_proto_rawDesc), len(file_proto_dmanager_v1_container_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -2,7 +2,13 @@
   "$schema": "https://biomejs.dev/schemas/2.5.2/schema.json",
   "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "files": {
-    "includes": ["**", "!**/*.svg"]
+    "includes": [
+      "src/components/**/*",
+      "src/routes/**/*",
+      "src/App.tsx",
+      "src/main.tsx",
+      "vite.config.ts"
+    ]
   },
   "linter": {
     "enabled": true,

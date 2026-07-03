@@ -3,19 +3,8 @@
 /* eslint-disable */
 // @ts-nocheck
 
+import { GetMeRequest, GetMeResponse, GetServerStatusRequest, GetServerStatusResponse, LoginRequest, LoginResponse, LogoutRequest, LogoutResponse, SetupAdminRequest, SetupAdminResponse } from "./auth_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
-import {
-  GetMeRequest,
-  GetMeResponse,
-  GetServerStatusRequest,
-  GetServerStatusResponse,
-  LoginRequest,
-  LoginResponse,
-  LogoutRequest,
-  LogoutResponse,
-  SetupAdminRequest,
-  SetupAdminResponse,
-} from "./auth_pb.js";
 
 /**
  * @generated from service dmanager.v1.AuthService
@@ -78,5 +67,6 @@ export const AuthService = {
       O: GetMeResponse,
       kind: MethodKind.Unary,
     },
-  },
+  }
 } as const;
+

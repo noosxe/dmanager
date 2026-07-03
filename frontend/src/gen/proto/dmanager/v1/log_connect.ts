@@ -3,8 +3,8 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { MethodKind } from "@bufbuild/protobuf";
 import { SyncLogsRequest, SyncLogsResponse } from "./log_pb.js";
+import { MethodKind } from "@bufbuild/protobuf";
 
 /**
  * @generated from service dmanager.v1.LogService
@@ -23,5 +23,6 @@ export const LogService = {
       O: SyncLogsResponse,
       kind: MethodKind.Unary,
     },
-  },
+  }
 } as const;
+

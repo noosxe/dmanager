@@ -92,7 +92,7 @@ func (s *Service) StartContainer(ctx context.Context, req *connect.Request[v1.St
 	updatedRecord, err := queries.GetContainer(ctx, containerID)
 	if err == nil {
 		s.broker.Publish(&v1.StreamContainersResponse{
-			Action:      "save",
+			Action:      actionSave,
 			ContainerId: containerID,
 			Container:   MapContainerRecord(updatedRecord),
 		})
@@ -183,7 +183,7 @@ func (s *Service) StopContainer(ctx context.Context, req *connect.Request[v1.Sto
 	updatedRecord, err := queries.GetContainer(ctx, containerID)
 	if err == nil {
 		s.broker.Publish(&v1.StreamContainersResponse{
-			Action:      "save",
+			Action:      actionSave,
 			ContainerId: containerID,
 			Container:   MapContainerRecord(updatedRecord),
 		})

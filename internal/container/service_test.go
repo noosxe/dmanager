@@ -354,19 +354,19 @@ func TestContainerActions(t *testing.T) {
 			_, _ = w.Write([]byte("OK"))
 			return
 		}
-		if r.Method == "GET" && strings.HasSuffix(r.URL.Path, "/containers/"+testActionID+"/json") {
+		if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/containers/"+testActionID+"/json") {
 			inspectCalled++
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = fmt.Fprintf(w, `{"Id": "%s", "State": {"Status": "%s"}}`, testActionID, inspectState)
 			return
 		}
-		if r.Method == "POST" && strings.HasSuffix(r.URL.Path, "/containers/"+testActionID+"/start") {
+		if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/containers/"+testActionID+"/start") {
 			startCalled++
 			inspectState = stateRunning // update state for next inspect
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
-		if r.Method == "POST" && strings.HasSuffix(r.URL.Path, "/containers/"+testActionID+"/stop") {
+		if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/containers/"+testActionID+"/stop") {
 			stopCalled++
 			// Check if query param t=15 is passed
 			q := r.URL.Query()
@@ -470,5 +470,210 @@ func TestContainerActions(t *testing.T) {
 	}
 	if dbC.State != stateExited {
 		t.Errorf("expected DB state to be updated to exited, got: %s", dbC.State)
+	}
+}
+
+func TestUpgradeContainer(t *testing.T) {
+	dbConn, queries := newTestDB(t)
+	broker := NewBroker()
+
+	oldID := "old-container-123"
+	newID := "new-container-999"
+	imageName := testImageNginx
+	oldImageID := "sha256:oldimage111"
+	newImageID := "sha256:newimage222"
+
+	// 1. Seed database with old container record
+	err := queries.SaveContainer(context.Background(), db.SaveContainerParams{
+		ID:              oldID,
+		Name:            "upgrade-container-test",
+		Image:           imageName,
+		ImageID:         oldImageID,
+		State:           stateRunning,
+		AutoUpdate:      1, // Seed with auto-update enabled to verify it is preserved
+		UpdateAvailable: 1,
+		UpdatedAt:       time.Now(),
+	})
+	if err != nil {
+		t.Fatalf("failed to seed test container: %v", err)
+	}
+
+	var inspectOldCalled, pullCalled, inspectImageCalled, stopCalled, removeCalled, createCalled, connectNetworkCalled, startCalled, inspectNewCalled int
+
+	// 2. Setup mock Docker server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		if strings.HasSuffix(r.URL.Path, "/_ping") {
+			w.Header().Set("API-Version", "1.45")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("OK"))
+			return
+		}
+
+		// Inspect old container
+		if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/containers/"+oldID+"/json") {
+			inspectOldCalled++
+			_, _ = fmt.Fprintf(w, `{
+				"Id": "%s",
+				"Name": "/upgrade-container-test",
+				"Image": "%s",
+				"Config": {"Image": "%s"},
+				"State": {"Status": "running", "Running": true},
+				"HostConfig": {},
+				"NetworkSettings": {
+					"Networks": {
+						"net1": {},
+						"net2": {}
+					}
+				}
+			}`, oldID, oldImageID, imageName)
+			return
+		}
+
+		// Pull image
+		if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/images/create") {
+			pullCalled++
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"status":"pulling..."}`))
+			return
+		}
+
+		// Inspect pulled image
+		if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/images/"+imageName+"/json") {
+			inspectImageCalled++
+			_, _ = fmt.Fprintf(w, `{"Id": "%s"}`, newImageID)
+			return
+		}
+
+		// Stop container
+		if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/containers/"+oldID+"/stop") {
+			stopCalled++
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		// Remove container
+		if r.Method == http.MethodDelete && strings.HasSuffix(r.URL.Path, "/containers/"+oldID) {
+			removeCalled++
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		// Create container
+		if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/containers/create") {
+			createCalled++
+			w.WriteHeader(http.StatusCreated)
+			_, _ = fmt.Fprintf(w, `{"Id": "%s"}`, newID)
+			return
+		}
+
+		// Connect network net1 or net2 via NetworkConnect (map iteration is randomized)
+		if r.Method == http.MethodPost && (strings.HasSuffix(r.URL.Path, "/networks/net1/connect") || strings.HasSuffix(r.URL.Path, "/networks/net2/connect")) {
+			connectNetworkCalled++
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		// Start new container
+		if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/containers/"+newID+"/start") {
+			startCalled++
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		// Inspect new container
+		if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/containers/"+newID+"/json") {
+			inspectNewCalled++
+			_, _ = fmt.Fprintf(w, `{
+				"Id": "%s",
+				"Name": "/upgrade-container-test",
+				"Config": {"Image": "%s"},
+				"State": {"Status": "running", "Running": true}
+			}`, newID, imageName)
+			return
+		}
+
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	dockerClient, err := client.New(
+		client.WithHost(server.URL),
+		client.WithHTTPClient(server.Client()),
+	)
+	if err != nil {
+		t.Fatalf("failed to create docker client: %v", err)
+	}
+
+	svc := NewService(dbConn, broker, dockerClient)
+
+	adminCtx := auth.WithUser(context.Background(), db.User{Role: roleAdmin})
+	viewerCtx := auth.WithUser(context.Background(), db.User{Role: "viewer"})
+
+	// 3. Verify permissions (Viewer must fail)
+	_, err = svc.UpgradeContainer(viewerCtx, connect.NewRequest(&v1.UpgradeContainerRequest{Id: oldID}))
+	if err == nil || connect.CodeOf(err) != connect.CodePermissionDenied {
+		t.Errorf("expected PermissionDenied for viewer, got: %v", err)
+	}
+
+	// 4. Verify UpgradeContainer (Admin must succeed)
+	resp, err := svc.UpgradeContainer(adminCtx, connect.NewRequest(&v1.UpgradeContainerRequest{Id: oldID}))
+	if err != nil {
+		t.Fatalf("UpgradeContainer failed: %v", err)
+	}
+
+	if resp.Msg.Id != newID || resp.Msg.PreviousImageId != oldImageID || resp.Msg.CurrentImageId != newImageID {
+		t.Errorf("unexpected UpgradeContainer response: %+v", resp.Msg)
+	}
+
+	// Verify all mocked docker daemon calls were executed
+	if inspectOldCalled != 1 {
+		t.Errorf("expected inspectOldCalled=1, got %d", inspectOldCalled)
+	}
+	if pullCalled != 1 {
+		t.Errorf("expected pullCalled=1, got %d", pullCalled)
+	}
+	if inspectImageCalled != 1 {
+		t.Errorf("expected inspectImageCalled=1, got %d", inspectImageCalled)
+	}
+	if stopCalled != 1 {
+		t.Errorf("expected stopCalled=1, got %d", stopCalled)
+	}
+	if removeCalled != 1 {
+		t.Errorf("expected removeCalled=1, got %d", removeCalled)
+	}
+	if createCalled != 1 {
+		t.Errorf("expected createCalled=1, got %d", createCalled)
+	}
+	if connectNetworkCalled != 1 {
+		t.Errorf("expected connectNetworkCalled=1 (for net2), got %d", connectNetworkCalled)
+	}
+	if startCalled != 1 {
+		t.Errorf("expected startCalled=1, got %d", startCalled)
+	}
+	if inspectNewCalled != 1 {
+		t.Errorf("expected inspectNewCalled=1, got %d", inspectNewCalled)
+	}
+
+	// 5. Verify database records
+	// Old container record must be deleted
+	_, err = queries.GetContainer(context.Background(), oldID)
+	if !errors.Is(err, sql.ErrNoRows) {
+		t.Errorf("expected old container record to be deleted, got: %v", err)
+	}
+
+	// New container record must be created, and auto_update must be preserved
+	newRecord, err := queries.GetContainer(context.Background(), newID)
+	if err != nil {
+		t.Fatalf("failed to query new container record: %v", err)
+	}
+
+	if newRecord.Name != "upgrade-container-test" || newRecord.ImageID != newImageID || newRecord.State != "running" {
+		t.Errorf("unexpected fields in new container record: %+v", newRecord)
+	}
+	if newRecord.AutoUpdate != 1 || newRecord.UpdateAvailable != 0 {
+		t.Errorf("expected auto_update=1 and update_available=0, got auto_update=%d, update_available=%d",
+			newRecord.AutoUpdate, newRecord.UpdateAvailable)
 	}
 }
