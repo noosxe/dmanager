@@ -12,6 +12,7 @@
 ## Git Workflow & Code Quality Guidelines
 
 ### 1. Branching Strategy
+- **Pull Before Branching**: Before creating a new branch, agents must always switch to the `main` branch, pull the latest changes from the remote origin (`git checkout main && git pull`), and create the new branch off the up-to-date local `main` branch to prevent divergence and conflicts.
 - **Protected Main Branch**: Direct commits to the `main` branch are strictly prohibited.
 - **Branch Naming**: All new changes must be pushed on separate branches prefixed according to the change theme:
   * `feat/...` for new features
