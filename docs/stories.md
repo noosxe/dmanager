@@ -6,7 +6,7 @@ This document outlines the development plan for the `dmanager` application. The 
 graph TD
     S1["STORY-001: DB Schema & Migrations (DONE)"] --> S2["STORY-002: Backend Authentication (DONE)"]
     S2 --> S3["STORY-003: CLI Serve Command (DONE)"]
-    S3 --> S4[STORY-004: Docker Client & Container Discovery]
+    S3 --> S4["STORY-004: Docker Client & Container Discovery (DONE)"]
     S4 --> S5[STORY-005: Event Monitor & DB Sync Daemon]
     S5 --> S6[STORY-006: Container ConnectRPC Sync Stream]
     S6 --> S7[STORY-007: Container Start/Stop API]
@@ -88,7 +88,7 @@ graph TD
 
 ---
 
-### STORY-004: Docker Client Setup & Basic Container Listing
+### STORY-004: Docker Client Setup & Basic Container Listing [DONE]
 - **Scope:** Docker Integration
 - **Estimated Size:** Small (~150 LOC)
 - **Dependencies:** `STORY-003`

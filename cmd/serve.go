@@ -16,7 +16,9 @@ import (
 
 	"dmanager/internal/auth"
 	"dmanager/internal/config"
+	"dmanager/internal/container"
 	"dmanager/internal/db"
+	"dmanager/internal/docker"
 	"dmanager/internal/gen/proto/dmanager/v1/dmanagerv1connect"
 )
 
@@ -56,8 +58,19 @@ var serveCmd = &cobra.Command{
 		defer func() { _ = dbConn.Close() }()
 
 		// 2. Run migrations
-		if err := db.RunMigrations(dbConn); err != nil {
-			return fmt.Errorf("failed to run migrations: %w", err)
+		if migrationErr := db.RunMigrations(dbConn); migrationErr != nil {
+			return fmt.Errorf("failed to run migrations: %w", migrationErr)
+		}
+
+		// Initialize Docker client
+		dockerClient, dErr := docker.NewClient(cfg.Docker.Host)
+		if dErr != nil {
+			return fmt.Errorf("failed to initialize Docker client: %w", dErr)
+		}
+
+		// Sync containers immediately after migration at startup
+		if syncErr := container.SyncContainers(cmd.Context(), dbConn, dockerClient); syncErr != nil {
+			return fmt.Errorf("failed to sync containers at startup: %w", syncErr)
 		}
 
 		// 3. Initialize queries and services
@@ -74,6 +87,14 @@ var serveCmd = &cobra.Command{
 			connect.WithInterceptors(authInterceptor),
 		)
 		mux.Handle(authPath, authHandler)
+
+		// Register ContainerService
+		containerSvc := container.NewService(dbConn)
+		containerPath, containerHandler := dmanagerv1connect.NewContainerServiceHandler(
+			containerSvc,
+			connect.WithInterceptors(authInterceptor),
+		)
+		mux.Handle(containerPath, containerHandler)
 
 		// Apply CORS middleware
 		handler := withCORS(cfg.Server.AllowedOrigins, mux)
