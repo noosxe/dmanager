@@ -22,6 +22,7 @@ func newTestDB(t *testing.T) (*sql.DB, *db.Queries) {
 	if err != nil {
 		t.Fatalf("failed to open in-memory db: %v", err)
 	}
+	dbConn.SetMaxOpenConns(1)
 	t.Cleanup(func() { _ = dbConn.Close() })
 
 	if err := db.RunMigrations(dbConn); err != nil {
