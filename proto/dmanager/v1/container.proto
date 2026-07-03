@@ -1,0 +1,96 @@
+syntax = "proto3";
+
+package dmanager.v1;
+
+option go_package = "dmanager/internal/gen/proto/dmanager/v1;dmanagerv1";
+
+service ContainerService {
+  // Retrieve all discovered containers on the host system (Authenticated).
+  rpc ListContainers(ListContainersRequest) returns (ListContainersResponse);
+
+  // Command to transition a container to a started execution state (Authenticated, Admin-only).
+  rpc StartContainer(StartContainerRequest) returns (StartContainerResponse);
+
+  // Command to gracefully stop a running container (Authenticated, Admin-only).
+  rpc StopContainer(StopContainerRequest) returns (StopContainerResponse);
+
+  // Toggle the automatic image checks/pulls loop for a container (Authenticated, Admin-only).
+  rpc SetContainerAutoUpdate(SetContainerAutoUpdateRequest) returns (SetContainerAutoUpdateResponse);
+
+  // Trigger an immediate, out-of-band registry digest check for a container (Authenticated, Admin-only).
+  rpc CheckContainerUpdates(CheckContainerUpdatesRequest) returns (CheckContainerUpdatesResponse);
+
+  // Stream live console outputs (stdout/stderr) from a container (Authenticated).
+  rpc GetContainerLogs(GetContainerLogsRequest) returns (stream GetContainerLogsResponse);
+}
+
+message Container {
+  string id = 1;
+  string name = 2;
+  string image = 3;
+  string image_id = 4;
+  string state = 5;
+  bool auto_update = 6;
+  bool update_available = 7;
+  string latest_image_digest = 8;
+  string last_checked_at = 9;  // RFC3339 formatted datetime string
+  string last_updated_at = 10; // RFC3339 formatted datetime string
+}
+
+message ListContainersRequest {}
+
+message ListContainersResponse {
+  repeated Container containers = 1;
+}
+
+message StartContainerRequest {
+  string id = 1;
+}
+
+message StartContainerResponse {
+  string id = 1;
+  string previous_state = 2;
+  string current_state = 3;
+}
+
+message StopContainerRequest {
+  string id = 1;
+}
+
+message StopContainerResponse {
+  string id = 1;
+  string previous_state = 2;
+  string current_state = 3;
+}
+
+message SetContainerAutoUpdateRequest {
+  string id = 1;
+  bool auto_update = 2;
+}
+
+message SetContainerAutoUpdateResponse {
+  string id = 1;
+  bool auto_update = 2;
+}
+
+message CheckContainerUpdatesRequest {
+  string id = 1;
+}
+
+message CheckContainerUpdatesResponse {
+  string id = 1;
+  bool update_available = 2;
+  string latest_image_digest = 3;
+}
+
+message GetContainerLogsRequest {
+  string id = 1;
+  int32 tail_lines = 2; // Number of historic log lines to return first. Defaults to 100.
+  bool follow = 3;      // Keep the stream open to watch logs in real-time.
+}
+
+message GetContainerLogsResponse {
+  string log_line = 1;
+  string timestamp = 2; // Log line timestamp if metadata is available
+  string stream_type = 3; // "stdout" or "stderr"
+}
