@@ -31,6 +31,8 @@
             pkgs.golangci-lint
             pkgs.direnv
             pkgs.nix-direnv
+            pkgs.sqlc
+            pkgs.goose
           ];
 
           shellHook = ''
