@@ -145,7 +145,7 @@ The backend is built in Go, prioritizing performance, strict type-safety, and mi
   * Excluded route: The `AuthService/Login` endpoint is explicitly bypassed by the interceptor.
 
 ### 2.11. Docker Engine SDK Communication
-* **SDK Library:** The backend communicates with the local host container engine using the official Docker Go SDK (`github.com/docker/docker/client`).
+* **SDK Library:** The backend communicates with the local host container engine using the official Moby Go SDK (`github.com/moby/moby/client`).
 * **Connection Channel:** Communication is executed over the standard Unix Socket located at `/var/run/docker.sock`.
 * **Context Lifecycles:** All Docker SDK operations are bound to Go's standard `context.Context` (with timeouts) to avoid hanging threads.
 
