@@ -2,18 +2,15 @@
 // @generated from file proto/dmanager/v1/container.proto (package dmanager.v1, syntax proto3)
 /* eslint-disable */
 
-import type { Message } from "@bufbuild/protobuf";
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file proto/dmanager/v1/container.proto.
  */
-export const file_proto_dmanager_v1_container: GenFile =
-  /*@__PURE__*/
-  fileDesc(
-    "CiFwcm90by9kbWFuYWdlci92MS9jb250YWluZXIucHJvdG8SC2RtYW5hZ2VyLnYxItMBCglDb250YWluZXISCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRINCgVpbWFnZRgDIAEoCRIQCghpbWFnZV9pZBgEIAEoCRINCgVzdGF0ZRgFIAEoCRITCgthdXRvX3VwZGF0ZRgGIAEoCBIYChB1cGRhdGVfYXZhaWxhYmxlGAcgASgIEhsKE2xhdGVzdF9pbWFnZV9kaWdlc3QYCCABKAkSFwoPbGFzdF9jaGVja2VkX2F0GAkgASgJEhcKD2xhc3RfdXBkYXRlZF9hdBgKIAEoCSIXChVMaXN0Q29udGFpbmVyc1JlcXVlc3QiRAoWTGlzdENvbnRhaW5lcnNSZXNwb25zZRIqCgpjb250YWluZXJzGAEgAygLMhYuZG1hbmFnZXIudjEuQ29udGFpbmVyIiMKFVN0YXJ0Q29udGFpbmVyUmVxdWVzdBIKCgJpZBgBIAEoCSJTChZTdGFydENvbnRhaW5lclJlc3BvbnNlEgoKAmlkGAEgASgJEhYKDnByZXZpb3VzX3N0YXRlGAIgASgJEhUKDWN1cnJlbnRfc3RhdGUYAyABKAkiIgoUU3RvcENvbnRhaW5lclJlcXVlc3QSCgoCaWQYASABKAkiUgoVU3RvcENvbnRhaW5lclJlc3BvbnNlEgoKAmlkGAEgASgJEhYKDnByZXZpb3VzX3N0YXRlGAIgASgJEhUKDWN1cnJlbnRfc3RhdGUYAyABKAkiQAodU2V0Q29udGFpbmVyQXV0b1VwZGF0ZVJlcXVlc3QSCgoCaWQYASABKAkSEwoLYXV0b191cGRhdGUYAiABKAgiQQoeU2V0Q29udGFpbmVyQXV0b1VwZGF0ZVJlc3BvbnNlEgoKAmlkGAEgASgJEhMKC2F1dG9fdXBkYXRlGAIgASgIIioKHENoZWNrQ29udGFpbmVyVXBkYXRlc1JlcXVlc3QSCgoCaWQYASABKAkiYgodQ2hlY2tDb250YWluZXJVcGRhdGVzUmVzcG9uc2USCgoCaWQYASABKAkSGAoQdXBkYXRlX2F2YWlsYWJsZRgCIAEoCBIbChNsYXRlc3RfaW1hZ2VfZGlnZXN0GAMgASgJIkkKF0dldENvbnRhaW5lckxvZ3NSZXF1ZXN0EgoKAmlkGAEgASgJEhIKCnRhaWxfbGluZXMYAiABKAUSDgoGZm9sbG93GAMgASgIIlQKGEdldENvbnRhaW5lckxvZ3NSZXNwb25zZRIQCghsb2dfbGluZRgBIAEoCRIRCgl0aW1lc3RhbXAYAiABKAkSEwoLc3RyZWFtX3R5cGUYAyABKAkiGQoXU3RyZWFtQ29udGFpbmVyc1JlcXVlc3QiawoYU3RyZWFtQ29udGFpbmVyc1Jlc3BvbnNlEg4KBmFjdGlvbhgBIAEoCRIpCgljb250YWluZXIYAiABKAsyFi5kbWFuYWdlci52MS5Db250YWluZXISFAoMY29udGFpbmVyX2lkGAMgASgJMskFChBDb250YWluZXJTZXJ2aWNlElkKDkxpc3RDb250YWluZXJzEiIuZG1hbmFnZXIudjEuTGlzdENvbnRhaW5lcnNSZXF1ZXN0GiMuZG1hbmFnZXIudjEuTGlzdENvbnRhaW5lcnNSZXNwb25zZRJZCg5TdGFydENvbnRhaW5lchIiLmRtYW5hZ2VyLnYxLlN0YXJ0Q29udGFpbmVyUmVxdWVzdBojLmRtYW5hZ2VyLnYxLlN0YXJ0Q29udGFpbmVyUmVzcG9uc2USVgoNU3RvcENvbnRhaW5lchIhLmRtYW5hZ2VyLnYxLlN0b3BDb250YWluZXJSZXF1ZXN0GiIuZG1hbmFnZXIudjEuU3RvcENvbnRhaW5lclJlc3BvbnNlEnEKFlNldENvbnRhaW5lckF1dG9VcGRhdGUSKi5kbWFuYWdlci52MS5TZXRDb250YWluZXJBdXRvVXBkYXRlUmVxdWVzdBorLmRtYW5hZ2VyLnYxLlNldENvbnRhaW5lckF1dG9VcGRhdGVSZXNwb25zZRJuChVDaGVja0NvbnRhaW5lclVwZGF0ZXMSKS5kbWFuYWdlci52MS5DaGVja0NvbnRhaW5lclVwZGF0ZXNSZXF1ZXN0GiouZG1hbmFnZXIudjEuQ2hlY2tDb250YWluZXJVcGRhdGVzUmVzcG9uc2USYQoQR2V0Q29udGFpbmVyTG9ncxIkLmRtYW5hZ2VyLnYxLkdldENvbnRhaW5lckxvZ3NSZXF1ZXN0GiUuZG1hbmFnZXIudjEuR2V0Q29udGFpbmVyTG9nc1Jlc3BvbnNlMAESYQoQU3RyZWFtQ29udGFpbmVycxIkLmRtYW5hZ2VyLnYxLlN0cmVhbUNvbnRhaW5lcnNSZXF1ZXN0GiUuZG1hbmFnZXIudjEuU3RyZWFtQ29udGFpbmVyc1Jlc3BvbnNlMAFCNFoyZG1hbmFnZXIvaW50ZXJuYWwvZ2VuL3Byb3RvL2RtYW5hZ2VyL3YxO2RtYW5hZ2VydjFiBnByb3RvMw",
-  );
+export const file_proto_dmanager_v1_container: GenFile = /*@__PURE__*/
+  fileDesc("CiFwcm90by9kbWFuYWdlci92MS9jb250YWluZXIucHJvdG8SC2RtYW5hZ2VyLnYxItMBCglDb250YWluZXISCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRINCgVpbWFnZRgDIAEoCRIQCghpbWFnZV9pZBgEIAEoCRINCgVzdGF0ZRgFIAEoCRITCgthdXRvX3VwZGF0ZRgGIAEoCBIYChB1cGRhdGVfYXZhaWxhYmxlGAcgASgIEhsKE2xhdGVzdF9pbWFnZV9kaWdlc3QYCCABKAkSFwoPbGFzdF9jaGVja2VkX2F0GAkgASgJEhcKD2xhc3RfdXBkYXRlZF9hdBgKIAEoCSIXChVMaXN0Q29udGFpbmVyc1JlcXVlc3QiRAoWTGlzdENvbnRhaW5lcnNSZXNwb25zZRIqCgpjb250YWluZXJzGAEgAygLMhYuZG1hbmFnZXIudjEuQ29udGFpbmVyIiMKFVN0YXJ0Q29udGFpbmVyUmVxdWVzdBIKCgJpZBgBIAEoCSJTChZTdGFydENvbnRhaW5lclJlc3BvbnNlEgoKAmlkGAEgASgJEhYKDnByZXZpb3VzX3N0YXRlGAIgASgJEhUKDWN1cnJlbnRfc3RhdGUYAyABKAkiIgoUU3RvcENvbnRhaW5lclJlcXVlc3QSCgoCaWQYASABKAkiUgoVU3RvcENvbnRhaW5lclJlc3BvbnNlEgoKAmlkGAEgASgJEhYKDnByZXZpb3VzX3N0YXRlGAIgASgJEhUKDWN1cnJlbnRfc3RhdGUYAyABKAkiQAodU2V0Q29udGFpbmVyQXV0b1VwZGF0ZVJlcXVlc3QSCgoCaWQYASABKAkSEwoLYXV0b191cGRhdGUYAiABKAgiQQoeU2V0Q29udGFpbmVyQXV0b1VwZGF0ZVJlc3BvbnNlEgoKAmlkGAEgASgJEhMKC2F1dG9fdXBkYXRlGAIgASgIIioKHENoZWNrQ29udGFpbmVyVXBkYXRlc1JlcXVlc3QSCgoCaWQYASABKAkiYgodQ2hlY2tDb250YWluZXJVcGRhdGVzUmVzcG9uc2USCgoCaWQYASABKAkSGAoQdXBkYXRlX2F2YWlsYWJsZRgCIAEoCBIbChNsYXRlc3RfaW1hZ2VfZGlnZXN0GAMgASgJIkkKF0dldENvbnRhaW5lckxvZ3NSZXF1ZXN0EgoKAmlkGAEgASgJEhIKCnRhaWxfbGluZXMYAiABKAUSDgoGZm9sbG93GAMgASgIIlQKGEdldENvbnRhaW5lckxvZ3NSZXNwb25zZRIQCghsb2dfbGluZRgBIAEoCRIRCgl0aW1lc3RhbXAYAiABKAkSEwoLc3RyZWFtX3R5cGUYAyABKAkiGQoXU3RyZWFtQ29udGFpbmVyc1JlcXVlc3QiawoYU3RyZWFtQ29udGFpbmVyc1Jlc3BvbnNlEg4KBmFjdGlvbhgBIAEoCRIpCgljb250YWluZXIYAiABKAsyFi5kbWFuYWdlci52MS5Db250YWluZXISFAoMY29udGFpbmVyX2lkGAMgASgJIiUKF1VwZ3JhZGVDb250YWluZXJSZXF1ZXN0EgoKAmlkGAEgASgJIlsKGFVwZ3JhZGVDb250YWluZXJSZXNwb25zZRIKCgJpZBgBIAEoCRIZChFwcmV2aW91c19pbWFnZV9pZBgCIAEoCRIYChBjdXJyZW50X2ltYWdlX2lkGAMgASgJMqoGChBDb250YWluZXJTZXJ2aWNlElkKDkxpc3RDb250YWluZXJzEiIuZG1hbmFnZXIudjEuTGlzdENvbnRhaW5lcnNSZXF1ZXN0GiMuZG1hbmFnZXIudjEuTGlzdENvbnRhaW5lcnNSZXNwb25zZRJZCg5TdGFydENvbnRhaW5lchIiLmRtYW5hZ2VyLnYxLlN0YXJ0Q29udGFpbmVyUmVxdWVzdBojLmRtYW5hZ2VyLnYxLlN0YXJ0Q29udGFpbmVyUmVzcG9uc2USVgoNU3RvcENvbnRhaW5lchIhLmRtYW5hZ2VyLnYxLlN0b3BDb250YWluZXJSZXF1ZXN0GiIuZG1hbmFnZXIudjEuU3RvcENvbnRhaW5lclJlc3BvbnNlEnEKFlNldENvbnRhaW5lckF1dG9VcGRhdGUSKi5kbWFuYWdlci52MS5TZXRDb250YWluZXJBdXRvVXBkYXRlUmVxdWVzdBorLmRtYW5hZ2VyLnYxLlNldENvbnRhaW5lckF1dG9VcGRhdGVSZXNwb25zZRJuChVDaGVja0NvbnRhaW5lclVwZGF0ZXMSKS5kbWFuYWdlci52MS5DaGVja0NvbnRhaW5lclVwZGF0ZXNSZXF1ZXN0GiouZG1hbmFnZXIudjEuQ2hlY2tDb250YWluZXJVcGRhdGVzUmVzcG9uc2USYQoQR2V0Q29udGFpbmVyTG9ncxIkLmRtYW5hZ2VyLnYxLkdldENvbnRhaW5lckxvZ3NSZXF1ZXN0GiUuZG1hbmFnZXIudjEuR2V0Q29udGFpbmVyTG9nc1Jlc3BvbnNlMAESYQoQU3RyZWFtQ29udGFpbmVycxIkLmRtYW5hZ2VyLnYxLlN0cmVhbUNvbnRhaW5lcnNSZXF1ZXN0GiUuZG1hbmFnZXIudjEuU3RyZWFtQ29udGFpbmVyc1Jlc3BvbnNlMAESXwoQVXBncmFkZUNvbnRhaW5lchIkLmRtYW5hZ2VyLnYxLlVwZ3JhZGVDb250YWluZXJSZXF1ZXN0GiUuZG1hbmFnZXIudjEuVXBncmFkZUNvbnRhaW5lclJlc3BvbnNlQjRaMmRtYW5hZ2VyL2ludGVybmFsL2dlbi9wcm90by9kbWFuYWdlci92MTtkbWFuYWdlcnYxYgZwcm90bzM");
 
 /**
  * @generated from message dmanager.v1.Container
@@ -78,21 +75,20 @@ export type Container = Message<"dmanager.v1.Container"> & {
  * Describes the message dmanager.v1.Container.
  * Use `create(ContainerSchema)` to create a new message.
  */
-export const ContainerSchema: GenMessage<Container> =
-  /*@__PURE__*/
+export const ContainerSchema: GenMessage<Container> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_container, 0);
 
 /**
  * @generated from message dmanager.v1.ListContainersRequest
  */
-export type ListContainersRequest = Message<"dmanager.v1.ListContainersRequest"> & {};
+export type ListContainersRequest = Message<"dmanager.v1.ListContainersRequest"> & {
+};
 
 /**
  * Describes the message dmanager.v1.ListContainersRequest.
  * Use `create(ListContainersRequestSchema)` to create a new message.
  */
-export const ListContainersRequestSchema: GenMessage<ListContainersRequest> =
-  /*@__PURE__*/
+export const ListContainersRequestSchema: GenMessage<ListContainersRequest> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_container, 1);
 
 /**
@@ -109,8 +105,7 @@ export type ListContainersResponse = Message<"dmanager.v1.ListContainersResponse
  * Describes the message dmanager.v1.ListContainersResponse.
  * Use `create(ListContainersResponseSchema)` to create a new message.
  */
-export const ListContainersResponseSchema: GenMessage<ListContainersResponse> =
-  /*@__PURE__*/
+export const ListContainersResponseSchema: GenMessage<ListContainersResponse> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_container, 2);
 
 /**
@@ -127,8 +122,7 @@ export type StartContainerRequest = Message<"dmanager.v1.StartContainerRequest">
  * Describes the message dmanager.v1.StartContainerRequest.
  * Use `create(StartContainerRequestSchema)` to create a new message.
  */
-export const StartContainerRequestSchema: GenMessage<StartContainerRequest> =
-  /*@__PURE__*/
+export const StartContainerRequestSchema: GenMessage<StartContainerRequest> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_container, 3);
 
 /**
@@ -155,8 +149,7 @@ export type StartContainerResponse = Message<"dmanager.v1.StartContainerResponse
  * Describes the message dmanager.v1.StartContainerResponse.
  * Use `create(StartContainerResponseSchema)` to create a new message.
  */
-export const StartContainerResponseSchema: GenMessage<StartContainerResponse> =
-  /*@__PURE__*/
+export const StartContainerResponseSchema: GenMessage<StartContainerResponse> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_container, 4);
 
 /**
@@ -173,8 +166,7 @@ export type StopContainerRequest = Message<"dmanager.v1.StopContainerRequest"> &
  * Describes the message dmanager.v1.StopContainerRequest.
  * Use `create(StopContainerRequestSchema)` to create a new message.
  */
-export const StopContainerRequestSchema: GenMessage<StopContainerRequest> =
-  /*@__PURE__*/
+export const StopContainerRequestSchema: GenMessage<StopContainerRequest> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_container, 5);
 
 /**
@@ -201,8 +193,7 @@ export type StopContainerResponse = Message<"dmanager.v1.StopContainerResponse">
  * Describes the message dmanager.v1.StopContainerResponse.
  * Use `create(StopContainerResponseSchema)` to create a new message.
  */
-export const StopContainerResponseSchema: GenMessage<StopContainerResponse> =
-  /*@__PURE__*/
+export const StopContainerResponseSchema: GenMessage<StopContainerResponse> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_container, 6);
 
 /**
@@ -224,32 +215,29 @@ export type SetContainerAutoUpdateRequest = Message<"dmanager.v1.SetContainerAut
  * Describes the message dmanager.v1.SetContainerAutoUpdateRequest.
  * Use `create(SetContainerAutoUpdateRequestSchema)` to create a new message.
  */
-export const SetContainerAutoUpdateRequestSchema: GenMessage<SetContainerAutoUpdateRequest> =
-  /*@__PURE__*/
+export const SetContainerAutoUpdateRequestSchema: GenMessage<SetContainerAutoUpdateRequest> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_container, 7);
 
 /**
  * @generated from message dmanager.v1.SetContainerAutoUpdateResponse
  */
-export type SetContainerAutoUpdateResponse =
-  Message<"dmanager.v1.SetContainerAutoUpdateResponse"> & {
-    /**
-     * @generated from field: string id = 1;
-     */
-    id: string;
+export type SetContainerAutoUpdateResponse = Message<"dmanager.v1.SetContainerAutoUpdateResponse"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
 
-    /**
-     * @generated from field: bool auto_update = 2;
-     */
-    autoUpdate: boolean;
-  };
+  /**
+   * @generated from field: bool auto_update = 2;
+   */
+  autoUpdate: boolean;
+};
 
 /**
  * Describes the message dmanager.v1.SetContainerAutoUpdateResponse.
  * Use `create(SetContainerAutoUpdateResponseSchema)` to create a new message.
  */
-export const SetContainerAutoUpdateResponseSchema: GenMessage<SetContainerAutoUpdateResponse> =
-  /*@__PURE__*/
+export const SetContainerAutoUpdateResponseSchema: GenMessage<SetContainerAutoUpdateResponse> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_container, 8);
 
 /**
@@ -266,8 +254,7 @@ export type CheckContainerUpdatesRequest = Message<"dmanager.v1.CheckContainerUp
  * Describes the message dmanager.v1.CheckContainerUpdatesRequest.
  * Use `create(CheckContainerUpdatesRequestSchema)` to create a new message.
  */
-export const CheckContainerUpdatesRequestSchema: GenMessage<CheckContainerUpdatesRequest> =
-  /*@__PURE__*/
+export const CheckContainerUpdatesRequestSchema: GenMessage<CheckContainerUpdatesRequest> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_container, 9);
 
 /**
@@ -294,8 +281,7 @@ export type CheckContainerUpdatesResponse = Message<"dmanager.v1.CheckContainerU
  * Describes the message dmanager.v1.CheckContainerUpdatesResponse.
  * Use `create(CheckContainerUpdatesResponseSchema)` to create a new message.
  */
-export const CheckContainerUpdatesResponseSchema: GenMessage<CheckContainerUpdatesResponse> =
-  /*@__PURE__*/
+export const CheckContainerUpdatesResponseSchema: GenMessage<CheckContainerUpdatesResponse> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_container, 10);
 
 /**
@@ -326,8 +312,7 @@ export type GetContainerLogsRequest = Message<"dmanager.v1.GetContainerLogsReque
  * Describes the message dmanager.v1.GetContainerLogsRequest.
  * Use `create(GetContainerLogsRequestSchema)` to create a new message.
  */
-export const GetContainerLogsRequestSchema: GenMessage<GetContainerLogsRequest> =
-  /*@__PURE__*/
+export const GetContainerLogsRequestSchema: GenMessage<GetContainerLogsRequest> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_container, 11);
 
 /**
@@ -358,21 +343,20 @@ export type GetContainerLogsResponse = Message<"dmanager.v1.GetContainerLogsResp
  * Describes the message dmanager.v1.GetContainerLogsResponse.
  * Use `create(GetContainerLogsResponseSchema)` to create a new message.
  */
-export const GetContainerLogsResponseSchema: GenMessage<GetContainerLogsResponse> =
-  /*@__PURE__*/
+export const GetContainerLogsResponseSchema: GenMessage<GetContainerLogsResponse> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_container, 12);
 
 /**
  * @generated from message dmanager.v1.StreamContainersRequest
  */
-export type StreamContainersRequest = Message<"dmanager.v1.StreamContainersRequest"> & {};
+export type StreamContainersRequest = Message<"dmanager.v1.StreamContainersRequest"> & {
+};
 
 /**
  * Describes the message dmanager.v1.StreamContainersRequest.
  * Use `create(StreamContainersRequestSchema)` to create a new message.
  */
-export const StreamContainersRequestSchema: GenMessage<StreamContainersRequest> =
-  /*@__PURE__*/
+export const StreamContainersRequestSchema: GenMessage<StreamContainersRequest> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_container, 13);
 
 /**
@@ -405,9 +389,52 @@ export type StreamContainersResponse = Message<"dmanager.v1.StreamContainersResp
  * Describes the message dmanager.v1.StreamContainersResponse.
  * Use `create(StreamContainersResponseSchema)` to create a new message.
  */
-export const StreamContainersResponseSchema: GenMessage<StreamContainersResponse> =
-  /*@__PURE__*/
+export const StreamContainersResponseSchema: GenMessage<StreamContainersResponse> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_container, 14);
+
+/**
+ * @generated from message dmanager.v1.UpgradeContainerRequest
+ */
+export type UpgradeContainerRequest = Message<"dmanager.v1.UpgradeContainerRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+};
+
+/**
+ * Describes the message dmanager.v1.UpgradeContainerRequest.
+ * Use `create(UpgradeContainerRequestSchema)` to create a new message.
+ */
+export const UpgradeContainerRequestSchema: GenMessage<UpgradeContainerRequest> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_container, 15);
+
+/**
+ * @generated from message dmanager.v1.UpgradeContainerResponse
+ */
+export type UpgradeContainerResponse = Message<"dmanager.v1.UpgradeContainerResponse"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string previous_image_id = 2;
+   */
+  previousImageId: string;
+
+  /**
+   * @generated from field: string current_image_id = 3;
+   */
+  currentImageId: string;
+};
+
+/**
+ * Describes the message dmanager.v1.UpgradeContainerResponse.
+ * Use `create(UpgradeContainerResponseSchema)` to create a new message.
+ */
+export const UpgradeContainerResponseSchema: GenMessage<UpgradeContainerResponse> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_container, 16);
 
 /**
  * @generated from service dmanager.v1.ContainerService
@@ -422,7 +449,7 @@ export const ContainerService: GenService<{
     methodKind: "unary";
     input: typeof ListContainersRequestSchema;
     output: typeof ListContainersResponseSchema;
-  };
+  },
   /**
    * Command to transition a container to a started execution state (Authenticated, Admin-only).
    *
@@ -432,7 +459,7 @@ export const ContainerService: GenService<{
     methodKind: "unary";
     input: typeof StartContainerRequestSchema;
     output: typeof StartContainerResponseSchema;
-  };
+  },
   /**
    * Command to gracefully stop a running container (Authenticated, Admin-only).
    *
@@ -442,7 +469,7 @@ export const ContainerService: GenService<{
     methodKind: "unary";
     input: typeof StopContainerRequestSchema;
     output: typeof StopContainerResponseSchema;
-  };
+  },
   /**
    * Toggle the automatic image checks/pulls loop for a container (Authenticated, Admin-only).
    *
@@ -452,7 +479,7 @@ export const ContainerService: GenService<{
     methodKind: "unary";
     input: typeof SetContainerAutoUpdateRequestSchema;
     output: typeof SetContainerAutoUpdateResponseSchema;
-  };
+  },
   /**
    * Trigger an immediate, out-of-band registry digest check for a container (Authenticated, Admin-only).
    *
@@ -462,7 +489,7 @@ export const ContainerService: GenService<{
     methodKind: "unary";
     input: typeof CheckContainerUpdatesRequestSchema;
     output: typeof CheckContainerUpdatesResponseSchema;
-  };
+  },
   /**
    * Stream live console outputs (stdout/stderr) from a container (Authenticated).
    *
@@ -472,7 +499,7 @@ export const ContainerService: GenService<{
     methodKind: "server_streaming";
     input: typeof GetContainerLogsRequestSchema;
     output: typeof GetContainerLogsResponseSchema;
-  };
+  },
   /**
    * Stream real-time container states/events (Authenticated).
    *
@@ -482,5 +509,17 @@ export const ContainerService: GenService<{
     methodKind: "server_streaming";
     input: typeof StreamContainersRequestSchema;
     output: typeof StreamContainersResponseSchema;
-  };
-}> = /*@__PURE__*/ serviceDesc(file_proto_dmanager_v1_container, 0);
+  },
+  /**
+   * Command to pull the latest image tag digest and recreate the container (Authenticated, Admin-only).
+   *
+   * @generated from rpc dmanager.v1.ContainerService.UpgradeContainer
+   */
+  upgradeContainer: {
+    methodKind: "unary";
+    input: typeof UpgradeContainerRequestSchema;
+    output: typeof UpgradeContainerResponseSchema;
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_proto_dmanager_v1_container, 0);
+

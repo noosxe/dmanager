@@ -10,7 +10,7 @@ graph TD
     S4 --> S5["STORY-005: Event Monitor & DB Sync Daemon (DONE)"]
     S5 --> S6["STORY-006: Container ConnectRPC Sync Stream (DONE)"]
     S6 --> S7["STORY-007: Container Start/Stop API (DONE)"]
-    S7 --> S8[STORY-008: Container Re-Creation Upgrade API]
+    S7 --> S8["STORY-008: Container Re-Creation Upgrade API (DONE)"]
     S8 --> S9[STORY-009: Log Streaming API]
     S2 --> F1[STORY-010: Frontend Routing & Auth Page]
     F1 --> F2[STORY-011: Frontend Dashboard & Grid]
@@ -159,7 +159,7 @@ graph TD
 
 ---
 
-### STORY-008: Container Re-Creation Upgrade API
+### STORY-008: Container Re-Creation Upgrade API [DONE]
 - **Scope:** Docker Integration
 - **Estimated Size:** Large (~300 LOC)
 - **Dependencies:** `STORY-007`

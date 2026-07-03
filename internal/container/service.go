@@ -12,6 +12,11 @@ import (
 	"dmanager/internal/gen/proto/dmanager/v1/dmanagerv1connect"
 )
 
+const (
+	actionSave   = "save"
+	actionDelete = "delete"
+)
+
 // Service implements the dmanagerv1connect.ContainerServiceHandler interface.
 type Service struct {
 	dmanagerv1connect.UnimplementedContainerServiceHandler

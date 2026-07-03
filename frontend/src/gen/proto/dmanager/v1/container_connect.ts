@@ -3,23 +3,8 @@
 /* eslint-disable */
 // @ts-nocheck
 
+import { CheckContainerUpdatesRequest, CheckContainerUpdatesResponse, GetContainerLogsRequest, GetContainerLogsResponse, ListContainersRequest, ListContainersResponse, SetContainerAutoUpdateRequest, SetContainerAutoUpdateResponse, StartContainerRequest, StartContainerResponse, StopContainerRequest, StopContainerResponse, StreamContainersRequest, StreamContainersResponse, UpgradeContainerRequest, UpgradeContainerResponse } from "./container_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
-import {
-  CheckContainerUpdatesRequest,
-  CheckContainerUpdatesResponse,
-  GetContainerLogsRequest,
-  GetContainerLogsResponse,
-  ListContainersRequest,
-  ListContainersResponse,
-  SetContainerAutoUpdateRequest,
-  SetContainerAutoUpdateResponse,
-  StartContainerRequest,
-  StartContainerResponse,
-  StopContainerRequest,
-  StopContainerResponse,
-  StreamContainersRequest,
-  StreamContainersResponse,
-} from "./container_pb.js";
 
 /**
  * @generated from service dmanager.v1.ContainerService
@@ -104,5 +89,17 @@ export const ContainerService = {
       O: StreamContainersResponse,
       kind: MethodKind.ServerStreaming,
     },
-  },
+    /**
+     * Command to pull the latest image tag digest and recreate the container (Authenticated, Admin-only).
+     *
+     * @generated from rpc dmanager.v1.ContainerService.UpgradeContainer
+     */
+    upgradeContainer: {
+      name: "UpgradeContainer",
+      I: UpgradeContainerRequest,
+      O: UpgradeContainerResponse,
+      kind: MethodKind.Unary,
+    },
+  }
 } as const;
+

@@ -120,6 +120,19 @@ service ContainerService {
 
   // Stream real-time container states/events (Authenticated).
   rpc StreamContainers(StreamContainersRequest) returns (stream StreamContainersResponse);
+
+  // Command to pull the latest image tag digest and recreate the container (Authenticated, Admin-only).
+  rpc UpgradeContainer(UpgradeContainerRequest) returns (UpgradeContainerResponse);
+}
+
+message UpgradeContainerRequest {
+  string id = 1;
+}
+
+message UpgradeContainerResponse {
+  string id = 1;
+  string previous_image_id = 2;
+  string current_image_id = 3;
 }
 
 message Container {

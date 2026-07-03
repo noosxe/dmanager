@@ -2,30 +2,27 @@
 // @generated from file proto/dmanager/v1/auth.proto (package dmanager.v1, syntax proto3)
 /* eslint-disable */
 
-import type { Message } from "@bufbuild/protobuf";
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file proto/dmanager/v1/auth.proto.
  */
-export const file_proto_dmanager_v1_auth: GenFile =
-  /*@__PURE__*/
-  fileDesc(
-    "Chxwcm90by9kbWFuYWdlci92MS9hdXRoLnByb3RvEgtkbWFuYWdlci52MSIYChZHZXRTZXJ2ZXJTdGF0dXNSZXF1ZXN0Ii4KF0dldFNlcnZlclN0YXR1c1Jlc3BvbnNlEhMKC25lZWRzX3NldHVwGAEgASgIIjcKEVNldHVwQWRtaW5SZXF1ZXN0EhAKCHVzZXJuYW1lGAEgASgJEhAKCHBhc3N3b3JkGAIgASgJIjQKElNldHVwQWRtaW5SZXNwb25zZRIQCgh1c2VybmFtZRgBIAEoCRIMCgRyb2xlGAIgASgJIjIKDExvZ2luUmVxdWVzdBIQCgh1c2VybmFtZRgBIAEoCRIQCghwYXNzd29yZBgCIAEoCSIvCg1Mb2dpblJlc3BvbnNlEhAKCHVzZXJuYW1lGAEgASgJEgwKBHJvbGUYAiABKAkiDwoNTG9nb3V0UmVxdWVzdCIQCg5Mb2dvdXRSZXNwb25zZSIOCgxHZXRNZVJlcXVlc3QiQAoNR2V0TWVSZXNwb25zZRIPCgd1c2VyX2lkGAEgASgDEhAKCHVzZXJuYW1lGAIgASgJEgwKBHJvbGUYAyABKAky/QIKC0F1dGhTZXJ2aWNlElwKD0dldFNlcnZlclN0YXR1cxIjLmRtYW5hZ2VyLnYxLkdldFNlcnZlclN0YXR1c1JlcXVlc3QaJC5kbWFuYWdlci52MS5HZXRTZXJ2ZXJTdGF0dXNSZXNwb25zZRJNCgpTZXR1cEFkbWluEh4uZG1hbmFnZXIudjEuU2V0dXBBZG1pblJlcXVlc3QaHy5kbWFuYWdlci52MS5TZXR1cEFkbWluUmVzcG9uc2USPgoFTG9naW4SGS5kbWFuYWdlci52MS5Mb2dpblJlcXVlc3QaGi5kbWFuYWdlci52MS5Mb2dpblJlc3BvbnNlEkEKBkxvZ291dBIaLmRtYW5hZ2VyLnYxLkxvZ291dFJlcXVlc3QaGy5kbWFuYWdlci52MS5Mb2dvdXRSZXNwb25zZRI+CgVHZXRNZRIZLmRtYW5hZ2VyLnYxLkdldE1lUmVxdWVzdBoaLmRtYW5hZ2VyLnYxLkdldE1lUmVzcG9uc2VCNFoyZG1hbmFnZXIvaW50ZXJuYWwvZ2VuL3Byb3RvL2RtYW5hZ2VyL3YxO2RtYW5hZ2VydjFiBnByb3RvMw",
-  );
+export const file_proto_dmanager_v1_auth: GenFile = /*@__PURE__*/
+  fileDesc("Chxwcm90by9kbWFuYWdlci92MS9hdXRoLnByb3RvEgtkbWFuYWdlci52MSIYChZHZXRTZXJ2ZXJTdGF0dXNSZXF1ZXN0Ii4KF0dldFNlcnZlclN0YXR1c1Jlc3BvbnNlEhMKC25lZWRzX3NldHVwGAEgASgIIjcKEVNldHVwQWRtaW5SZXF1ZXN0EhAKCHVzZXJuYW1lGAEgASgJEhAKCHBhc3N3b3JkGAIgASgJIjQKElNldHVwQWRtaW5SZXNwb25zZRIQCgh1c2VybmFtZRgBIAEoCRIMCgRyb2xlGAIgASgJIjIKDExvZ2luUmVxdWVzdBIQCgh1c2VybmFtZRgBIAEoCRIQCghwYXNzd29yZBgCIAEoCSIvCg1Mb2dpblJlc3BvbnNlEhAKCHVzZXJuYW1lGAEgASgJEgwKBHJvbGUYAiABKAkiDwoNTG9nb3V0UmVxdWVzdCIQCg5Mb2dvdXRSZXNwb25zZSIOCgxHZXRNZVJlcXVlc3QiQAoNR2V0TWVSZXNwb25zZRIPCgd1c2VyX2lkGAEgASgDEhAKCHVzZXJuYW1lGAIgASgJEgwKBHJvbGUYAyABKAky/QIKC0F1dGhTZXJ2aWNlElwKD0dldFNlcnZlclN0YXR1cxIjLmRtYW5hZ2VyLnYxLkdldFNlcnZlclN0YXR1c1JlcXVlc3QaJC5kbWFuYWdlci52MS5HZXRTZXJ2ZXJTdGF0dXNSZXNwb25zZRJNCgpTZXR1cEFkbWluEh4uZG1hbmFnZXIudjEuU2V0dXBBZG1pblJlcXVlc3QaHy5kbWFuYWdlci52MS5TZXR1cEFkbWluUmVzcG9uc2USPgoFTG9naW4SGS5kbWFuYWdlci52MS5Mb2dpblJlcXVlc3QaGi5kbWFuYWdlci52MS5Mb2dpblJlc3BvbnNlEkEKBkxvZ291dBIaLmRtYW5hZ2VyLnYxLkxvZ291dFJlcXVlc3QaGy5kbWFuYWdlci52MS5Mb2dvdXRSZXNwb25zZRI+CgVHZXRNZRIZLmRtYW5hZ2VyLnYxLkdldE1lUmVxdWVzdBoaLmRtYW5hZ2VyLnYxLkdldE1lUmVzcG9uc2VCNFoyZG1hbmFnZXIvaW50ZXJuYWwvZ2VuL3Byb3RvL2RtYW5hZ2VyL3YxO2RtYW5hZ2VydjFiBnByb3RvMw");
 
 /**
  * @generated from message dmanager.v1.GetServerStatusRequest
  */
-export type GetServerStatusRequest = Message<"dmanager.v1.GetServerStatusRequest"> & {};
+export type GetServerStatusRequest = Message<"dmanager.v1.GetServerStatusRequest"> & {
+};
 
 /**
  * Describes the message dmanager.v1.GetServerStatusRequest.
  * Use `create(GetServerStatusRequestSchema)` to create a new message.
  */
-export const GetServerStatusRequestSchema: GenMessage<GetServerStatusRequest> =
-  /*@__PURE__*/
+export const GetServerStatusRequestSchema: GenMessage<GetServerStatusRequest> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_auth, 0);
 
 /**
@@ -44,8 +41,7 @@ export type GetServerStatusResponse = Message<"dmanager.v1.GetServerStatusRespon
  * Describes the message dmanager.v1.GetServerStatusResponse.
  * Use `create(GetServerStatusResponseSchema)` to create a new message.
  */
-export const GetServerStatusResponseSchema: GenMessage<GetServerStatusResponse> =
-  /*@__PURE__*/
+export const GetServerStatusResponseSchema: GenMessage<GetServerStatusResponse> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_auth, 1);
 
 /**
@@ -67,8 +63,7 @@ export type SetupAdminRequest = Message<"dmanager.v1.SetupAdminRequest"> & {
  * Describes the message dmanager.v1.SetupAdminRequest.
  * Use `create(SetupAdminRequestSchema)` to create a new message.
  */
-export const SetupAdminRequestSchema: GenMessage<SetupAdminRequest> =
-  /*@__PURE__*/
+export const SetupAdminRequestSchema: GenMessage<SetupAdminRequest> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_auth, 2);
 
 /**
@@ -90,8 +85,7 @@ export type SetupAdminResponse = Message<"dmanager.v1.SetupAdminResponse"> & {
  * Describes the message dmanager.v1.SetupAdminResponse.
  * Use `create(SetupAdminResponseSchema)` to create a new message.
  */
-export const SetupAdminResponseSchema: GenMessage<SetupAdminResponse> =
-  /*@__PURE__*/
+export const SetupAdminResponseSchema: GenMessage<SetupAdminResponse> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_auth, 3);
 
 /**
@@ -113,8 +107,7 @@ export type LoginRequest = Message<"dmanager.v1.LoginRequest"> & {
  * Describes the message dmanager.v1.LoginRequest.
  * Use `create(LoginRequestSchema)` to create a new message.
  */
-export const LoginRequestSchema: GenMessage<LoginRequest> =
-  /*@__PURE__*/
+export const LoginRequestSchema: GenMessage<LoginRequest> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_auth, 4);
 
 /**
@@ -136,47 +129,46 @@ export type LoginResponse = Message<"dmanager.v1.LoginResponse"> & {
  * Describes the message dmanager.v1.LoginResponse.
  * Use `create(LoginResponseSchema)` to create a new message.
  */
-export const LoginResponseSchema: GenMessage<LoginResponse> =
-  /*@__PURE__*/
+export const LoginResponseSchema: GenMessage<LoginResponse> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_auth, 5);
 
 /**
  * @generated from message dmanager.v1.LogoutRequest
  */
-export type LogoutRequest = Message<"dmanager.v1.LogoutRequest"> & {};
+export type LogoutRequest = Message<"dmanager.v1.LogoutRequest"> & {
+};
 
 /**
  * Describes the message dmanager.v1.LogoutRequest.
  * Use `create(LogoutRequestSchema)` to create a new message.
  */
-export const LogoutRequestSchema: GenMessage<LogoutRequest> =
-  /*@__PURE__*/
+export const LogoutRequestSchema: GenMessage<LogoutRequest> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_auth, 6);
 
 /**
  * @generated from message dmanager.v1.LogoutResponse
  */
-export type LogoutResponse = Message<"dmanager.v1.LogoutResponse"> & {};
+export type LogoutResponse = Message<"dmanager.v1.LogoutResponse"> & {
+};
 
 /**
  * Describes the message dmanager.v1.LogoutResponse.
  * Use `create(LogoutResponseSchema)` to create a new message.
  */
-export const LogoutResponseSchema: GenMessage<LogoutResponse> =
-  /*@__PURE__*/
+export const LogoutResponseSchema: GenMessage<LogoutResponse> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_auth, 7);
 
 /**
  * @generated from message dmanager.v1.GetMeRequest
  */
-export type GetMeRequest = Message<"dmanager.v1.GetMeRequest"> & {};
+export type GetMeRequest = Message<"dmanager.v1.GetMeRequest"> & {
+};
 
 /**
  * Describes the message dmanager.v1.GetMeRequest.
  * Use `create(GetMeRequestSchema)` to create a new message.
  */
-export const GetMeRequestSchema: GenMessage<GetMeRequest> =
-  /*@__PURE__*/
+export const GetMeRequestSchema: GenMessage<GetMeRequest> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_auth, 8);
 
 /**
@@ -203,8 +195,7 @@ export type GetMeResponse = Message<"dmanager.v1.GetMeResponse"> & {
  * Describes the message dmanager.v1.GetMeResponse.
  * Use `create(GetMeResponseSchema)` to create a new message.
  */
-export const GetMeResponseSchema: GenMessage<GetMeResponse> =
-  /*@__PURE__*/
+export const GetMeResponseSchema: GenMessage<GetMeResponse> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_auth, 9);
 
 /**
@@ -220,7 +211,7 @@ export const AuthService: GenService<{
     methodKind: "unary";
     input: typeof GetServerStatusRequestSchema;
     output: typeof GetServerStatusResponseSchema;
-  };
+  },
   /**
    * Setup the primary administrator account (Unauthenticated, only if user count is 0).
    *
@@ -230,7 +221,7 @@ export const AuthService: GenService<{
     methodKind: "unary";
     input: typeof SetupAdminRequestSchema;
     output: typeof SetupAdminResponseSchema;
-  };
+  },
   /**
    * Authenticate user credentials and establish a session cookie (Unauthenticated).
    *
@@ -240,7 +231,7 @@ export const AuthService: GenService<{
     methodKind: "unary";
     input: typeof LoginRequestSchema;
     output: typeof LoginResponseSchema;
-  };
+  },
   /**
    * Expire the session token and clear the browser cookie (Authenticated).
    *
@@ -250,7 +241,7 @@ export const AuthService: GenService<{
     methodKind: "unary";
     input: typeof LogoutRequestSchema;
     output: typeof LogoutResponseSchema;
-  };
+  },
   /**
    * Retrieve current active user profile details (Authenticated).
    *
@@ -260,5 +251,7 @@ export const AuthService: GenService<{
     methodKind: "unary";
     input: typeof GetMeRequestSchema;
     output: typeof GetMeResponseSchema;
-  };
-}> = /*@__PURE__*/ serviceDesc(file_proto_dmanager_v1_auth, 0);
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_proto_dmanager_v1_auth, 0);
+

@@ -2,18 +2,15 @@
 // @generated from file proto/dmanager/v1/log.proto (package dmanager.v1, syntax proto3)
 /* eslint-disable */
 
-import type { Message } from "@bufbuild/protobuf";
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file proto/dmanager/v1/log.proto.
  */
-export const file_proto_dmanager_v1_log: GenFile =
-  /*@__PURE__*/
-  fileDesc(
-    "Chtwcm90by9kbWFuYWdlci92MS9sb2cucHJvdG8SC2RtYW5hZ2VyLnYxImgKDkNsaWVudExvZ0VudHJ5Eg0KBWxldmVsGAEgASgJEg8KB21lc3NhZ2UYAiABKAkSEQoJdGltZXN0YW1wGAMgASgJEhEKCWNvbXBvbmVudBgEIAEoCRIQCghtZXRhZGF0YRgFIAEoCSI/Cg9TeW5jTG9nc1JlcXVlc3QSLAoHZW50cmllcxgBIAMoCzIbLmRtYW5hZ2VyLnYxLkNsaWVudExvZ0VudHJ5IisKEFN5bmNMb2dzUmVzcG9uc2USFwoPcHJvY2Vzc2VkX2NvdW50GAEgASgFMlUKCkxvZ1NlcnZpY2USRwoIU3luY0xvZ3MSHC5kbWFuYWdlci52MS5TeW5jTG9nc1JlcXVlc3QaHS5kbWFuYWdlci52MS5TeW5jTG9nc1Jlc3BvbnNlQjRaMmRtYW5hZ2VyL2ludGVybmFsL2dlbi9wcm90by9kbWFuYWdlci92MTtkbWFuYWdlcnYxYgZwcm90bzM",
-  );
+export const file_proto_dmanager_v1_log: GenFile = /*@__PURE__*/
+  fileDesc("Chtwcm90by9kbWFuYWdlci92MS9sb2cucHJvdG8SC2RtYW5hZ2VyLnYxImgKDkNsaWVudExvZ0VudHJ5Eg0KBWxldmVsGAEgASgJEg8KB21lc3NhZ2UYAiABKAkSEQoJdGltZXN0YW1wGAMgASgJEhEKCWNvbXBvbmVudBgEIAEoCRIQCghtZXRhZGF0YRgFIAEoCSI/Cg9TeW5jTG9nc1JlcXVlc3QSLAoHZW50cmllcxgBIAMoCzIbLmRtYW5hZ2VyLnYxLkNsaWVudExvZ0VudHJ5IisKEFN5bmNMb2dzUmVzcG9uc2USFwoPcHJvY2Vzc2VkX2NvdW50GAEgASgFMlUKCkxvZ1NlcnZpY2USRwoIU3luY0xvZ3MSHC5kbWFuYWdlci52MS5TeW5jTG9nc1JlcXVlc3QaHS5kbWFuYWdlci52MS5TeW5jTG9nc1Jlc3BvbnNlQjRaMmRtYW5hZ2VyL2ludGVybmFsL2dlbi9wcm90by9kbWFuYWdlci92MTtkbWFuYWdlcnYxYgZwcm90bzM");
 
 /**
  * @generated from message dmanager.v1.ClientLogEntry
@@ -59,8 +56,7 @@ export type ClientLogEntry = Message<"dmanager.v1.ClientLogEntry"> & {
  * Describes the message dmanager.v1.ClientLogEntry.
  * Use `create(ClientLogEntrySchema)` to create a new message.
  */
-export const ClientLogEntrySchema: GenMessage<ClientLogEntry> =
-  /*@__PURE__*/
+export const ClientLogEntrySchema: GenMessage<ClientLogEntry> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_log, 0);
 
 /**
@@ -77,8 +73,7 @@ export type SyncLogsRequest = Message<"dmanager.v1.SyncLogsRequest"> & {
  * Describes the message dmanager.v1.SyncLogsRequest.
  * Use `create(SyncLogsRequestSchema)` to create a new message.
  */
-export const SyncLogsRequestSchema: GenMessage<SyncLogsRequest> =
-  /*@__PURE__*/
+export const SyncLogsRequestSchema: GenMessage<SyncLogsRequest> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_log, 1);
 
 /**
@@ -95,8 +90,7 @@ export type SyncLogsResponse = Message<"dmanager.v1.SyncLogsResponse"> & {
  * Describes the message dmanager.v1.SyncLogsResponse.
  * Use `create(SyncLogsResponseSchema)` to create a new message.
  */
-export const SyncLogsResponseSchema: GenMessage<SyncLogsResponse> =
-  /*@__PURE__*/
+export const SyncLogsResponseSchema: GenMessage<SyncLogsResponse> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_log, 2);
 
 /**
@@ -112,5 +106,7 @@ export const LogService: GenService<{
     methodKind: "unary";
     input: typeof SyncLogsRequestSchema;
     output: typeof SyncLogsResponseSchema;
-  };
-}> = /*@__PURE__*/ serviceDesc(file_proto_dmanager_v1_log, 0);
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_proto_dmanager_v1_log, 0);
+
