@@ -1,6 +1,7 @@
 import { createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 import { AuthService } from "./gen/proto/dmanager/v1/auth_pb";
+import { ContainerService } from "./gen/proto/dmanager/v1/container_pb";
 
 const getBaseUrl = () => {
   if (typeof window !== "undefined") {
@@ -23,4 +24,6 @@ export const transport = createConnectTransport({
 });
 
 export const authClient = createClient(AuthService, transport);
+export const containerClient = createClient(ContainerService, transport);
+
 

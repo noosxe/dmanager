@@ -194,6 +194,20 @@ The frontend is a modern React SPA optimized for speed, developer efficiency, an
   * When the main thread is idle, the task pulls the backlog of unsynced logs from IndexedDB, batches them, and transmits them to the backend using the ConnectRPC logging service client.
   * Upon successful backend ingestion acknowledgement, the logs are flagged as synced or pruned from IndexedDB.
 
+### 3.6. Dashboard Layout & Container Grid Components
+* **Dashboard Layout (`DashboardLayout.tsx`):**
+  * Provides a consistent, responsive layout shell for all authenticated views.
+  * Features a modern, glassmorphic navigation sidebar containing navigation links, application logo, active status badge, user identity card (username, role), and sign-out controls.
+  * Adjusts smoothly to mobile viewports with toggleable sidebar navigation drawer.
+* **Container Grid (`ContainerGrid.tsx`):**
+  * Renders a responsive grid displaying discovered Docker containers.
+  * Features a search input to instantly filter containers by name or image/tag.
+  * Supports status filtering buttons (All, Running, Stopped) to narrow down active workloads.
+  * Displays visual metrics (e.g. Total, Running, Stopped, and Updates Available container counts).
+  * Outlines each container card with premium design cards:
+    * Displays name, image repository/tag, current status badge (e.g. running, stopped, updating).
+    * Provides intuitive controls to start and stop containers (mapped to the backend service endpoints via ConnectRPC clients in subsequent updates).
+
 ---
 
 ## 4. Lifecycle Workflows
