@@ -21,6 +21,7 @@ graph TD
     F4 --> F5["STORY-015: Frontend Test Suite Setup (DONE)"]
     S14 --> S16["STORY-016: Production Compose & Deployment (DONE)"]
     F5 --> S16
+    S16 --> F17["STORY-017: Remove Google Fonts Dependency (DONE)"]
 ```
 
 ---
@@ -328,6 +329,26 @@ graph TD
   - `docs/deployment.md` (new)
 - **Validation Check:**
   - Verify that `docker compose config` passes successfully.
+
+---
+
+### STORY-017: Remove Google Fonts Dependency [DONE]
+- **Scope:** Frontend Assets & Styling
+- **Estimated Size:** Small (~50 LOC)
+- **Dependencies:** `STORY-015`
+- **Token Estimate:** Input: ~30k | Output: ~2k | Total: ~32k
+- **Goal:** Remove Google Fonts external runtime dependency by packaging and self-hosting Plus Jakarta Sans and JetBrains Mono fonts locally.
+- **Tasks:**
+  1. Install Fontsource npm packages for Plus Jakarta Sans and JetBrains Mono in the frontend directory.
+  2. Update `frontend/src/index.css` to import local stylesheets instead of fetching fonts from `fonts.googleapis.com`.
+  3. Validate frontend builds and test execution.
+- **Files Affected:**
+  - `frontend/package.json` (modified)
+  - `frontend/src/index.css` (modified)
+- **Validation Check:**
+  - Run Biome linters: `pnpm biome check .`
+  - Compile frontend build: `pnpm build`
+  - Run frontend test suite: `pnpm test`
 
 
 
