@@ -13,8 +13,8 @@ func TestLoadDefaults(t *testing.T) {
 		t.Fatalf("unexpected error loading config: %v", err)
 	}
 
-	if cfg.Server.Port != "8080" {
-		t.Errorf("expected Server.Port to be 8080, got %q", cfg.Server.Port)
+	if cfg.Server.Port != "9283" {
+		t.Errorf("expected Server.Port to be 9283, got %q", cfg.Server.Port)
 	}
 	if cfg.Server.DBPath != "dmanager.db" {
 		t.Errorf("expected Server.DBPath to be dmanager.db, got %q", cfg.Server.DBPath)

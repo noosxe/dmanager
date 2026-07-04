@@ -86,7 +86,7 @@ COPY rootfs/ /
 RUN chmod +x /etc/s6-overlay/s6-rc.d/dmanager/run
 
 # Expose HTTP port
-EXPOSE 8080
+EXPOSE 9283
 
 # Run s6 init supervisor
 ENTRYPOINT ["/init"]

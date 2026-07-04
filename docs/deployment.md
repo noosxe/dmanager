@@ -20,7 +20,7 @@ This document details the procedure and requirements to deploy the `dmanager` ap
 
 | YAML Key | Environment Override | Default Value | Description |
 | :--- | :--- | :--- | :--- |
-| `server.port` | `DMANAGER_SERVER_PORT` | `8080` | Port for the HTTP/ConnectRPC server. |
+| `server.port` | `DMANAGER_SERVER_PORT` | `9283` | Port for the HTTP/ConnectRPC server. |
 | `server.db_path` | `DMANAGER_SERVER_DB_PATH` | `/var/lib/dmanager/dmanager.db` | Persistent SQLite path. |
 | `server.allowed_origins` | `DMANAGER_SERVER_ALLOWED_ORIGINS` | `[]` | CORS comma-separated allowed origins list. |
 | `docker.host` | `DMANAGER_DOCKER_HOST` | `unix:///var/run/docker.sock` | Path to Docker unix socket. |
@@ -62,12 +62,12 @@ DMANAGER_REGISTRIES_0_PASSWORD=ghp_securepersonaltoken
        container_name: dmanager
        restart: unless-stopped
        ports:
-         - "8080:8080"
+         - "9283:9283"
        volumes:
          - /var/run/docker.sock:/var/run/docker.sock
          - dmanager-data:/var/lib/dmanager
        environment:
-         - DMANAGER_SERVER_PORT=8080
+         - DMANAGER_SERVER_PORT=9283
          - DMANAGER_SCHEDULER_INTERVAL_MINUTES=60
 
    volumes:
@@ -88,7 +88,7 @@ docker run -d \
   --restart unless-stopped \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v dmanager-data:/var/lib/dmanager \
-  -p 8080:8080 \
+  -p 9283:9283 \
   dmanager:latest
 ```
 
@@ -112,7 +112,7 @@ Following container startup, execute these diagnostics steps to verify correct a
   ```
   s6-rc: info: service dmanager successfully started
   2026/07/04 12:35:12 goose: successfully migrated database to version: 1
-  2026/07/04 12:35:12 Starting dmanager server on port 8080...
+  2026/07/04 12:35:12 Starting dmanager server on port 9283...
   ```
 - [ ] **Verify SQLite DB Creation:**
   Confirm that the database file is generated in the volume mount path:
@@ -120,4 +120,4 @@ Following container startup, execute these diagnostics steps to verify correct a
   docker exec dmanager ls -lh /var/lib/dmanager/dmanager.db
   ```
 - [ ] **Onboard On Browser:**
-  Open a browser tab to `http://localhost:8080` (or host IP if remote). Verify you are redirected to `/setup` to configure the primary administrator account (representing correct empty database verification).
+  Open a browser tab to `http://localhost:9283` (or host IP if remote). Verify you are redirected to `/setup` to configure the primary administrator account (representing correct empty database verification).

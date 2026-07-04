@@ -45,7 +45,7 @@ func Load(configPath string) (*Config, error) {
 
 	// 1. Load default fallback values
 	defaults := map[string]interface{}{
-		"server.port":                "8080",
+		"server.port":                "9283",
 		"server.db_path":             "dmanager.db",
 		"docker.host":                "unix:///var/run/docker.sock",
 		"scheduler.interval_minutes": 60,
