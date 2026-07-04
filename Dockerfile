@@ -8,7 +8,7 @@ WORKDIR /app
 RUN npm install -g pnpm@11.9.0
 
 # Copy workspace package definitions
-COPY frontend/package.json frontend/pnpm-lock.yaml ./frontend/
+COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./frontend/
 
 # Install frontend dependencies using build cache for pnpm store
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm --dir frontend install --frozen-lockfile
@@ -86,7 +86,7 @@ COPY rootfs/ /
 RUN chmod +x /etc/s6-overlay/s6-rc.d/dmanager/run
 
 # Expose HTTP port
-EXPOSE 8080
+EXPOSE 9283
 
 # Run s6 init supervisor
 ENTRYPOINT ["/init"]

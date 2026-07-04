@@ -1,5 +1,5 @@
 server:
-  port: "8080"
+  port: "9283"
   db_path: "/var/lib/dmanager/dmanager.db"
   allowed_origins: []
 docker:

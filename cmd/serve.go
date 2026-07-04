@@ -225,7 +225,7 @@ func withCORS(allowedOrigins []string, next http.Handler) http.Handler {
 
 func init() {
 	serveCmd.Flags().StringVarP(&configPath, "config", "c", "", "path to yaml configuration file")
-	serveCmd.Flags().StringVarP(&port, "port", "p", "8080", "port to listen on")
+	serveCmd.Flags().StringVarP(&port, "port", "p", "9283", "port to listen on")
 	serveCmd.Flags().StringVarP(&dbPath, "db", "d", "dmanager.db", "path to sqlite database file")
 	rootCmd.AddCommand(serveCmd)
 }

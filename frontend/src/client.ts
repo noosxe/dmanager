@@ -10,7 +10,7 @@ const getBaseUrl = () => {
       return "";
     }
   }
-  return "http://localhost:8080";
+  return "http://localhost:9283";
 };
 
 export const transport = createConnectTransport({

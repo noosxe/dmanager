@@ -308,6 +308,6 @@ The build is optimized using a three-stage Dockerfile that separates dependencie
   docker run -d \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v /path/to/data:/var/lib/dmanager \
-    -p 8080:8080 \
+    -p 9283:9283 \
     dmanager:latest
   ```
