@@ -9,6 +9,4 @@ plugins:
   - name: es
     out: frontend/src/gen
     opt: target=ts
-  - name: connect-es
-    out: frontend/src/gen
-    opt: target=ts
+

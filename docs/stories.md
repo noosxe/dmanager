@@ -12,7 +12,7 @@ graph TD
     S6 --> S7["STORY-007: Container Start/Stop API (DONE)"]
     S7 --> S8["STORY-008: Container Re-Creation Upgrade API (DONE)"]
     S8 --> S9["STORY-009: Log Streaming API (DONE)"]
-    S2 --> F1[STORY-010: Frontend Routing & Auth Page]
+    S2 --> F1["STORY-010: Frontend Routing & Auth Page (DONE)"]
     F1 --> F2[STORY-011: Frontend Dashboard & Grid]
     F2 --> F3[STORY-012: Frontend Actions & Status Stream]
     F3 --> F4[STORY-013: Frontend Logs Console xterm.js]
@@ -197,7 +197,7 @@ graph TD
 
 ## Frontend Stories
 
-### STORY-010: Frontend Routing & Login Page
+### STORY-010: Frontend Routing & Login Page [DONE]
 - **Scope:** Frontend Auth
 - **Estimated Size:** Medium (~250 LOC)
 - **Dependencies:** `STORY-002`
@@ -208,12 +208,14 @@ graph TD
   2. Implement premium, clean Login component with fields validation.
   3. Add auth hooks to manage API credentials and store token in localStorage.
 - **Files Affected:**
-  - `frontend/src/routes/` (navigation routes configuration)
+  - `frontend/src/routes/router.tsx` (navigation routes configuration)
   - `frontend/src/components/Login.tsx` (new premium login view)
-  - `frontend/src/hooks/useAuth.ts` (state management)
+  - `frontend/src/components/Setup.tsx` (new premium onboarding setup view)
+  - `frontend/src/hooks/useAuth.tsx` (state management)
 - **Validation Check:**
   - Run Biome linters and formatting checks: `pnpm biome check .`
   - Compile React build: `pnpm build`
+
 
 ---
 
