@@ -11,7 +11,7 @@ graph TD
     S5 --> S6["STORY-006: Container ConnectRPC Sync Stream (DONE)"]
     S6 --> S7["STORY-007: Container Start/Stop API (DONE)"]
     S7 --> S8["STORY-008: Container Re-Creation Upgrade API (DONE)"]
-    S8 --> S9[STORY-009: Log Streaming API]
+    S8 --> S9["STORY-009: Log Streaming API (DONE)"]
     S2 --> F1[STORY-010: Frontend Routing & Auth Page]
     F1 --> F2[STORY-011: Frontend Dashboard & Grid]
     F2 --> F3[STORY-012: Frontend Actions & Status Stream]
@@ -178,7 +178,7 @@ graph TD
 
 ---
 
-### STORY-009: Log Streaming & Tailing API
+### STORY-009: Log Streaming & Tailing API [DONE]
 - **Scope:** Real-Time Streams
 - **Estimated Size:** Medium (~200 LOC)
 - **Dependencies:** `STORY-004`

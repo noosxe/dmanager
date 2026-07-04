@@ -149,7 +149,18 @@ The backend is built in Go, prioritizing performance, strict type-safety, and mi
 * **Connection Channel:** Communication is executed over the standard Unix Socket located at `/var/run/docker.sock`.
 * **Context Lifecycles:** All Docker SDK operations are bound to Go's standard `context.Context` (with timeouts) to avoid hanging threads.
 
+### 2.12. Container Log Streaming
+* **Real-time Log Channel (`GetContainerLogs`):**
+  * The backend provides log streaming via a ConnectRPC server streaming endpoint: `ContainerService/GetContainerLogs`.
+  * Minimum privilege role is `viewer`. The `auth.Interceptor` handles authentication, while the handler checks that the authenticated user possesses either `admin` or `viewer` role privileges.
+  * The handler queries the Docker SDK `ContainerLogs` API.
+  * Since Docker logs are multiplexed with a standard 8-byte header when the container TTY is disabled, or as raw text when TTY is enabled, the handler checks the container configuration (`Config.Tty`) via `ContainerInspect` before streaming.
+  * If TTY is enabled, the handler reads lines from the raw stream directly.
+  * If TTY is disabled, the handler parses the 8-byte header frame-by-frame to demultiplex the stream into `stdout`/`stderr` payloads.
+  * In both cases, the parsed logs are packaged as `GetContainerLogsResponse` protobuf stream payloads and transmitted back to the client.
+
 ---
+
 
 ## 3. Frontend Design
 
