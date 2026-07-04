@@ -2,6 +2,7 @@ package container
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	connect "connectrpc.com/connect"
@@ -23,14 +24,16 @@ type Service struct {
 	db           db.DBTX
 	broker       *Broker
 	dockerClient *client.Client
+	logger       *slog.Logger
 }
 
 // NewService creates a new Container service.
-func NewService(dbConn db.DBTX, broker *Broker, dockerClient *client.Client) *Service {
+func NewService(dbConn db.DBTX, broker *Broker, dockerClient *client.Client, logger *slog.Logger) *Service {
 	return &Service{
 		db:           dbConn,
 		broker:       broker,
 		dockerClient: dockerClient,
+		logger:       logger,
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -101,7 +102,7 @@ func TestStartEventMonitor(t *testing.T) {
 	defer cancel()
 
 	eventsChan := make(chan string, 10)
-	StartEventMonitor(ctx, queries, dockerClient, func(action string, containerID string) {
+	StartEventMonitor(ctx, slog.Default(), queries, dockerClient, func(action string, containerID string) {
 		eventsChan <- fmt.Sprintf("%s:%s", action, containerID)
 	})
 

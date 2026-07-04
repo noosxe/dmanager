@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -237,7 +238,7 @@ func TestListContainers(t *testing.T) {
 	}
 
 	// Create service
-	svc := NewService(dbConn, NewBroker(), nil)
+	svc := NewService(dbConn, NewBroker(), nil, slog.Default())
 
 	// Call ListContainers
 	resp, err := svc.ListContainers(ctx, connect.NewRequest(&v1.ListContainersRequest{}))
@@ -279,7 +280,7 @@ func TestListContainers(t *testing.T) {
 func TestStreamContainers(t *testing.T) {
 	dbConn, _ := newTestDB(t)
 	broker := NewBroker()
-	svc := NewService(dbConn, broker, nil)
+	svc := NewService(dbConn, broker, nil, slog.Default())
 
 	mux := http.NewServeMux()
 	path, handler := dmanagerv1connect.NewContainerServiceHandler(svc)
@@ -390,7 +391,7 @@ func TestContainerActions(t *testing.T) {
 		t.Fatalf("failed to create docker client: %v", err)
 	}
 
-	svc := NewService(dbConn, broker, dockerClient)
+	svc := NewService(dbConn, broker, dockerClient, slog.Default())
 
 	// Contexts
 	adminCtx := auth.WithUser(context.Background(), db.User{
@@ -607,7 +608,7 @@ func TestUpgradeContainer(t *testing.T) {
 		t.Fatalf("failed to create docker client: %v", err)
 	}
 
-	svc := NewService(dbConn, broker, dockerClient)
+	svc := NewService(dbConn, broker, dockerClient, slog.Default())
 
 	adminCtx := auth.WithUser(context.Background(), db.User{Role: roleAdmin})
 	viewerCtx := auth.WithUser(context.Background(), db.User{Role: "viewer"})
@@ -795,10 +796,10 @@ func TestGetContainerLogs(t *testing.T) {
 		t.Fatalf("failed to create docker client: %v", err)
 	}
 
-	svc := NewService(dbConn, broker, dockerClient)
+	svc := NewService(dbConn, broker, dockerClient, slog.Default())
 
 	// Setup Connect handler / server with the Authentication Interceptor
-	interceptor := auth.NewInterceptor(queries)
+	interceptor := auth.NewInterceptor(queries, slog.Default())
 	mux := http.NewServeMux()
 	path, handler := dmanagerv1connect.NewContainerServiceHandler(svc, connect.WithInterceptors(interceptor))
 	mux.Handle(path, handler)

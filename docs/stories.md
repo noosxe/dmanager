@@ -24,7 +24,9 @@ graph TD
     S16 --> F17["STORY-017: Remove Google Fonts Dependency (DONE)"]
     F17 --> S18["STORY-018: Docker Build CI Workflow (DONE)"]
     S18 --> S19["STORY-019: Upgrade GitHub Actions to Latest Versions (DONE)"]
+    S19 --> S20["STORY-020: Structured Logging Migration (DONE)"]
 ```
+
 
 ---
 
@@ -388,6 +390,27 @@ graph TD
   - `.github/workflows/frontend.yml` (modified)
 - **Validation Check:**
   - Verify all GitHub workflows pass parsing/validation check.
+
+---
+
+### STORY-020: Structured Logging Migration [DONE]
+- **Scope:** Backend Infrastructure
+- **Estimated Size:** Medium (~150 LOC)
+- **Dependencies:** `STORY-003`, `STORY-005`
+- **Token Estimate:** Input: ~35k | Output: ~2k | Total: ~37k
+- **Goal:** Migrate the backend from standard `log` library to structured logging using `log/slog` with module-scoped attributes.
+- **Tasks:**
+  1. Initialize the global `slog` handler in `cmd/serve.go`.
+  2. Replace standard `log` library print usages in `cmd/serve.go` and `internal/docker/monitor.go` with contextual `slog` methods (e.g. `slog.Info`, `slog.Error`).
+  3. Ensure module-scoped loggers (e.g., using `logger.With("module", "module_name")`) are instantiated and passed to backend components.
+- **Files Affected:**
+  - `cmd/serve.go` (modified)
+  - `internal/docker/monitor.go` (modified)
+- **Validation Check:**
+  - Run compiler checking: `go build` / `go vet ./...`
+  - Verify formatting and linting: `golangci-lint run`
+  - Run all Go tests to verify everything compiles and runs successfully.
+
 
 
 

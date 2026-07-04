@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -21,11 +22,13 @@ const adminRole = "admin"
 
 type Service struct {
 	Queries *db.Queries
+	logger  *slog.Logger
 }
 
-func NewService(queries *db.Queries) *Service {
+func NewService(queries *db.Queries, logger *slog.Logger) *Service {
 	return &Service{
 		Queries: queries,
+		logger:  logger,
 	}
 }
 
