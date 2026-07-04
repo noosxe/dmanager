@@ -8,10 +8,12 @@ import {
   Server,
   Sparkles,
   Square,
+  Terminal,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useContainers } from "../hooks/useContainers";
+import { LogsDrawer } from "./LogsDrawer";
 
 export function ContainerGrid() {
   const { user } = useAuth();
@@ -32,6 +34,8 @@ export function ContainerGrid() {
 
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "running" | "stopped">("all");
+  const [selectedContainerId, setSelectedContainerId] = useState<string | null>(null);
+  const [selectedContainerName, setSelectedContainerName] = useState<string | null>(null);
 
   // Helper formatting dates
   const formatDate = (isoStr: string) => {
@@ -360,6 +364,25 @@ export function ContainerGrid() {
                     </button>
                   )}
 
+                  {/* View logs button */}
+                  <button
+                    type="button"
+                    className="card-action-btn"
+                    style={{
+                      background: "rgba(170, 59, 255, 0.08)",
+                      color: "var(--accent)",
+                      border: "1px solid rgba(170, 59, 255, 0.15)",
+                    }}
+                    onClick={() => {
+                      setSelectedContainerId(container.id);
+                      setSelectedContainerName(container.name);
+                    }}
+                    title="View console logs"
+                  >
+                    <Terminal size={12} />
+                    <span>Logs</span>
+                  </button>
+
                   {/* Manual checking button */}
                   <button
                     type="button"
@@ -398,6 +421,15 @@ export function ContainerGrid() {
           )}
         </div>
       )}
+
+      <LogsDrawer
+        containerId={selectedContainerId}
+        containerName={selectedContainerName}
+        onClose={() => {
+          setSelectedContainerId(null);
+          setSelectedContainerName(null);
+        }}
+      />
     </div>
   );
 }

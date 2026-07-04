@@ -15,7 +15,7 @@ graph TD
     S2 --> F1["STORY-010: Frontend Routing & Auth Page (DONE)"]
     F1 --> F2["STORY-011: Frontend Dashboard & Grid (DONE)"]
     F2 --> F3["STORY-012: Frontend Actions & Status Stream (DONE)"]
-    F3 --> F4[STORY-013: Frontend Logs Console xterm.js]
+    F3 --> F4["STORY-013: Frontend Logs Console xterm.js (DONE)"]
 ```
 
 ---
@@ -254,7 +254,7 @@ graph TD
 
 ---
 
-### STORY-013: Frontend Logs Terminal Console
+### STORY-013: Frontend Logs Terminal Console [DONE]
 - **Scope:** Frontend UI
 - **Estimated Size:** Medium (~200 LOC)
 - **Dependencies:** `STORY-009`
