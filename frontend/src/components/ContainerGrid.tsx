@@ -9,171 +9,29 @@ import {
   Sparkles,
   Square,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import { containerClient } from "../client";
+import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
-
-// Shape matching GenService type definitions
-interface Container {
-  id: string;
-  name: string;
-  image: string;
-  imageId: string;
-  state: string;
-  autoUpdate: boolean;
-  updateAvailable: boolean;
-  latestImageDigest: string;
-  lastCheckedAt: string;
-  lastUpdatedAt: string;
-}
-
-interface ProtoContainer {
-  id?: string;
-  name?: string;
-  image?: string;
-  imageId?: string;
-  state?: string;
-  autoUpdate?: boolean;
-  updateAvailable?: boolean;
-  latestImageDigest?: string;
-  lastCheckedAt?: string;
-  lastUpdatedAt?: string;
-}
+import { useContainers } from "../hooks/useContainers";
 
 export function ContainerGrid() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
 
-  const [containers, setContainers] = useState<Container[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    containers,
+    isLoading: loading,
+    error,
+    actionLoading,
+    refetch,
+    startContainer,
+    stopContainer,
+    upgradeContainer,
+    setContainerAutoUpdate,
+    checkContainerUpdates,
+  } = useContainers();
+
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "running" | "stopped">("all");
-  const [actionLoading, setActionLoading] = useState<Record<string, string>>({}); // { containerId: actionType }
-
-  const fetchContainers = useCallback(async () => {
-    try {
-      const response = await containerClient.listContainers({});
-      // Map Protobuf message fields safely
-      const items = (response.containers || []).map((c: ProtoContainer) => ({
-        id: c.id || "",
-        name: c.name || "",
-        image: c.image || "",
-        imageId: c.imageId || "",
-        state: c.state || "",
-        autoUpdate: !!c.autoUpdate,
-        updateAvailable: !!c.updateAvailable,
-        latestImageDigest: c.latestImageDigest || "",
-        lastCheckedAt: c.lastCheckedAt || "",
-        lastUpdatedAt: c.lastUpdatedAt || "",
-      }));
-      setContainers(items);
-      setError(null);
-    } catch (err: unknown) {
-      console.error("Failed to load containers:", err);
-      setError("Unable to connect to the Docker monitor backend.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Poll for container list periodically
-  useEffect(() => {
-    fetchContainers();
-    const interval = setInterval(fetchContainers, 5000);
-    return () => clearInterval(interval);
-  }, [fetchContainers]);
-
-  const handleStart = async (id: string) => {
-    if (!isAdmin) return;
-    setActionLoading((prev) => ({ ...prev, [id]: "starting" }));
-    try {
-      await containerClient.startContainer({ id });
-      await fetchContainers();
-    } catch (err: unknown) {
-      console.error("Start failed:", err);
-      const msg = err instanceof Error ? err.message : "Failed to start container";
-      alert(msg);
-    } finally {
-      setActionLoading((prev) => {
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
-    }
-  };
-
-  const handleStop = async (id: string) => {
-    if (!isAdmin) return;
-    setActionLoading((prev) => ({ ...prev, [id]: "stopping" }));
-    try {
-      await containerClient.stopContainer({ id });
-      await fetchContainers();
-    } catch (err: unknown) {
-      console.error("Stop failed:", err);
-      const msg = err instanceof Error ? err.message : "Failed to stop container";
-      alert(msg);
-    } finally {
-      setActionLoading((prev) => {
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
-    }
-  };
-
-  const handleUpgrade = async (id: string) => {
-    if (!isAdmin) return;
-    setActionLoading((prev) => ({ ...prev, [id]: "upgrading" }));
-    try {
-      await containerClient.upgradeContainer({ id });
-      await fetchContainers();
-    } catch (err: unknown) {
-      console.error("Upgrade failed:", err);
-      const msg = err instanceof Error ? err.message : "Failed to upgrade container";
-      alert(msg);
-    } finally {
-      setActionLoading((prev) => {
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
-    }
-  };
-
-  const handleToggleAutoUpdate = async (id: string, currentVal: boolean) => {
-    if (!isAdmin) return;
-    setActionLoading((prev) => ({ ...prev, [id]: "toggling" }));
-    try {
-      await containerClient.setContainerAutoUpdate({ id, autoUpdate: !currentVal });
-      await fetchContainers();
-    } catch (err: unknown) {
-      console.error("Failed to set auto-update:", err);
-    } finally {
-      setActionLoading((prev) => {
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
-    }
-  };
-
-  const handleCheckUpdates = async (id: string) => {
-    if (!isAdmin) return;
-    setActionLoading((prev) => ({ ...prev, [id]: "checking" }));
-    try {
-      await containerClient.checkContainerUpdates({ id });
-      await fetchContainers();
-    } catch (err: unknown) {
-      console.error("Updates check failed:", err);
-    } finally {
-      setActionLoading((prev) => {
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
-    }
-  };
 
   // Helper formatting dates
   const formatDate = (isoStr: string) => {
@@ -219,7 +77,7 @@ export function ContainerGrid() {
           type="button"
           className="auth-submit-btn"
           style={{ padding: "10px 16px", fontSize: "13px" }}
-          onClick={fetchContainers}
+          onClick={refetch}
           disabled={loading}
         >
           <RefreshCw size={14} className={loading ? "spinner" : ""} />
@@ -234,7 +92,9 @@ export function ContainerGrid() {
             <Server size={20} />
           </div>
           <div className="stat-info">
-            <span className="stat-value">{loading ? "--" : totalCount}</span>
+            <span className="stat-value">
+              {loading && containers.length === 0 ? "--" : totalCount}
+            </span>
             <span className="stat-label">Total Discovered</span>
           </div>
         </div>
@@ -244,7 +104,9 @@ export function ContainerGrid() {
             <Activity size={20} />
           </div>
           <div className="stat-info">
-            <span className="stat-value">{loading ? "--" : runningCount}</span>
+            <span className="stat-value">
+              {loading && containers.length === 0 ? "--" : runningCount}
+            </span>
             <span className="stat-label">Running</span>
           </div>
         </div>
@@ -254,7 +116,9 @@ export function ContainerGrid() {
             <Square size={16} />
           </div>
           <div className="stat-info">
-            <span className="stat-value">{loading ? "--" : stoppedCount}</span>
+            <span className="stat-value">
+              {loading && containers.length === 0 ? "--" : stoppedCount}
+            </span>
             <span className="stat-label">Stopped</span>
           </div>
         </div>
@@ -264,7 +128,9 @@ export function ContainerGrid() {
             <ArrowUpCircle size={20} />
           </div>
           <div className="stat-info">
-            <span className="stat-value">{loading ? "--" : updateCount}</span>
+            <span className="stat-value">
+              {loading && containers.length === 0 ? "--" : updateCount}
+            </span>
             <span className="stat-label">Updates Ready</span>
           </div>
         </div>
@@ -383,7 +249,7 @@ export function ContainerGrid() {
                       </span>
                       <button
                         type="button"
-                        onClick={() => handleToggleAutoUpdate(container.id, container.autoUpdate)}
+                        onClick={() => setContainerAutoUpdate(container.id, !container.autoUpdate)}
                         disabled={!isAdmin || !!loadingType}
                         style={{
                           background: container.autoUpdate
@@ -451,7 +317,7 @@ export function ContainerGrid() {
                     <button
                       type="button"
                       className="card-action-btn stop"
-                      onClick={() => handleStop(container.id)}
+                      onClick={() => stopContainer(container.id)}
                       disabled={!isAdmin || !!loadingType}
                     >
                       {loadingType === "stopping" ? (
@@ -465,7 +331,7 @@ export function ContainerGrid() {
                     <button
                       type="button"
                       className="card-action-btn start"
-                      onClick={() => handleStart(container.id)}
+                      onClick={() => startContainer(container.id)}
                       disabled={!isAdmin || !!loadingType}
                     >
                       {loadingType === "starting" ? (
@@ -482,7 +348,7 @@ export function ContainerGrid() {
                     <button
                       type="button"
                       className="card-action-btn upgrade"
-                      onClick={() => handleUpgrade(container.id)}
+                      onClick={() => upgradeContainer(container.id)}
                       disabled={!isAdmin || !!loadingType}
                     >
                       {loadingType === "upgrading" ? (
@@ -504,7 +370,7 @@ export function ContainerGrid() {
                       border: "1px solid var(--border)",
                       color: "var(--text)",
                     }}
-                    onClick={() => handleCheckUpdates(container.id)}
+                    onClick={() => checkContainerUpdates(container.id)}
                     disabled={!isAdmin || !!loadingType}
                     title="Check updates immediately"
                   >

@@ -205,8 +205,18 @@ The frontend is a modern React SPA optimized for speed, developer efficiency, an
   * Supports status filtering buttons (All, Running, Stopped) to narrow down active workloads.
   * Displays visual metrics (e.g. Total, Running, Stopped, and Updates Available container counts).
   * Outlines each container card with premium design cards:
-    * Displays name, image repository/tag, current status badge (e.g. running, stopped, updating).
     * Provides intuitive controls to start and stop containers (mapped to the backend service endpoints via ConnectRPC clients in subsequent updates).
+
+### 3.7. Container State Synchronizer Hook (`useContainers.ts`)
+* **State Management & Subscription:**
+  - Encapsulates the container fetching and state synchronization logic in a single, reusable custom Hook.
+  - Queries all discovered containers initially using the `listContainers` method.
+  - Initiates an asynchronous background subscription to the `StreamContainers` server streaming endpoint.
+  - Processes streaming events concurrently:
+    - **`save` event:** Inserts new containers or patches existing ones in the local state.
+    - **`delete` event:** Filters out and removes the specified container from the local state.
+  - Automatically handles connection aborts and cleanup by utilizing an `AbortController` passed to the RPC client, preventing memory leaks when components unmount.
+  - Exposes loading flags, error payloads, and unified action executors (`start`, `stop`, `upgrade`, `toggleAutoUpdate`, `checkUpdates`) directly to consumer components.
 
 ---
 
