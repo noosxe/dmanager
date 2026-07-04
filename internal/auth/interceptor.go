@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"time"
 
+	"log/slog"
+
 	connect "connectrpc.com/connect"
 
 	"dmanager/internal/db"
@@ -14,10 +16,14 @@ import (
 
 type Interceptor struct {
 	queries *db.Queries
+	logger  *slog.Logger
 }
 
-func NewInterceptor(queries *db.Queries) *Interceptor {
-	return &Interceptor{queries: queries}
+func NewInterceptor(queries *db.Queries, logger *slog.Logger) *Interceptor {
+	return &Interceptor{
+		queries: queries,
+		logger:  logger,
+	}
 }
 
 func (i *Interceptor) authenticate(ctx context.Context, cookieHeader string) (context.Context, error) {

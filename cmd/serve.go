@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -37,6 +37,18 @@ var serveCmd = &cobra.Command{
 	Short: "Start the dmanager backend daemon",
 	Long:  "Starts the ConnectRPC server hosting the dmanager services.",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Initialize structured logging
+		var logHandler slog.Handler
+		if os.Getenv("APP_ENV") == "production" || os.Getenv("DMANAGER_ENV") == "production" {
+			logHandler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})
+		} else {
+			logHandler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})
+		}
+		logger := slog.New(logHandler)
+		slog.SetDefault(logger)
+
+		cmdLogger := logger.With("module", "cmd")
+
 		// Load configuration
 		cfg, err := config.Load(configPath)
 		if err != nil {
@@ -81,13 +93,13 @@ var serveCmd = &cobra.Command{
 		queries := db.New(dbConn)
 		containerBroker := container.NewBroker()
 
-		go docker.StartEventMonitor(cmd.Context(), queries, dockerClient, func(action string, containerID string) {
+		go docker.StartEventMonitor(cmd.Context(), logger.With("module", "docker"), queries, dockerClient, func(action string, containerID string) {
 			switch action {
 			case "save":
 				dbQueries := db.New(dbConn)
 				c, dbErr := dbQueries.GetContainer(context.Background(), containerID)
 				if dbErr != nil {
-					log.Printf("Failed to fetch container %s for stream event broadcast: %v", containerID, dbErr)
+					cmdLogger.Error("Failed to fetch container for stream event broadcast", "container_id", containerID, "error", dbErr)
 					return
 				}
 				containerBroker.Publish(&dmanagerv1.StreamContainersResponse{
@@ -103,8 +115,8 @@ var serveCmd = &cobra.Command{
 			}
 		})
 
-		authSvc := auth.NewService(queries)
-		authInterceptor := auth.NewInterceptor(queries)
+		authSvc := auth.NewService(queries, logger.With("module", "auth"))
+		authInterceptor := auth.NewInterceptor(queries, logger.With("module", "auth"))
 
 		// 4. Set up HTTP handler/mux
 		mux := http.NewServeMux()
@@ -117,7 +129,7 @@ var serveCmd = &cobra.Command{
 		mux.Handle(authPath, authHandler)
 
 		// Register ContainerService
-		containerSvc := container.NewService(dbConn, containerBroker, dockerClient)
+		containerSvc := container.NewService(dbConn, containerBroker, dockerClient, logger.With("module", "container"))
 		containerPath, containerHandler := dmanagerv1connect.NewContainerServiceHandler(
 			containerSvc,
 			connect.WithInterceptors(authInterceptor),
@@ -174,22 +186,22 @@ var serveCmd = &cobra.Command{
 			signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 			<-sigChan
 
-			log.Println("Shutting down backend server...")
+			cmdLogger.Info("Shutting down backend server...")
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 
 			shutdownErr <- server.Shutdown(ctx)
 		}()
 
-		log.Printf("Starting dmanager server on port %s...", listenPort)
+		cmdLogger.Info("Starting dmanager server", "port", listenPort)
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return fmt.Errorf("server listen and serve failed: %w", err)
 		}
 
 		if err := <-shutdownErr; err != nil {
-			log.Printf("Graceful shutdown failed: %v", err)
+			cmdLogger.Error("Graceful shutdown failed", "error", err)
 		} else {
-			log.Println("Server stopped gracefully")
+			cmdLogger.Info("Server stopped gracefully")
 		}
 
 		return nil

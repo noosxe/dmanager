@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log/slog"
 	"strings"
 	"testing"
 
@@ -36,7 +37,7 @@ func newTestDB(t *testing.T) *db.Queries {
 
 func TestGetServerStatus(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries)
+	svc := NewService(queries, slog.Default())
 	ctx := context.Background()
 
 	resp, err := svc.GetServerStatus(ctx, connect.NewRequest(&v1.GetServerStatusRequest{}))
@@ -67,7 +68,7 @@ func TestGetServerStatus(t *testing.T) {
 
 func TestSetupAdmin(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries)
+	svc := NewService(queries, slog.Default())
 	ctx := context.Background()
 
 	resp, err := svc.SetupAdmin(ctx, connect.NewRequest(&v1.SetupAdminRequest{
@@ -96,7 +97,7 @@ func TestSetupAdmin(t *testing.T) {
 
 func TestLogin(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries)
+	svc := NewService(queries, slog.Default())
 	ctx := context.Background()
 
 	_, err := svc.SetupAdmin(ctx, connect.NewRequest(&v1.SetupAdminRequest{
@@ -138,7 +139,7 @@ func TestLogin(t *testing.T) {
 
 func TestGetMe(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries)
+	svc := NewService(queries, slog.Default())
 
 	user := db.User{
 		ID:       42,
@@ -167,7 +168,7 @@ func TestGetMe(t *testing.T) {
 
 func TestLogout(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries)
+	svc := NewService(queries, slog.Default())
 	ctx := context.Background()
 
 	_, err := svc.SetupAdmin(ctx, connect.NewRequest(&v1.SetupAdminRequest{

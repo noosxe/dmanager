@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"log"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -15,7 +15,7 @@ import (
 )
 
 // StartEventMonitor starts a background goroutine to monitor Docker events.
-func StartEventMonitor(ctx context.Context, queries *db.Queries, dockerClient *client.Client, onEvent func(action string, containerID string)) {
+func StartEventMonitor(ctx context.Context, logger *slog.Logger, queries *db.Queries, dockerClient *client.Client, onEvent func(action string, containerID string)) {
 	go func() {
 		filter := make(client.Filters).Add("type", "container")
 
@@ -27,14 +27,14 @@ func StartEventMonitor(ctx context.Context, queries *db.Queries, dockerClient *c
 		for {
 			select {
 			case <-ctx.Done():
-				log.Println("Docker event monitor shutting down: context cancelled")
+				logger.Info("Docker event monitor shutting down", "reason", "context cancelled")
 				return
 			case err := <-errChan:
 				if err != nil {
 					if ctx.Err() != nil {
 						return
 					}
-					log.Printf("Docker event monitor error: %v", err)
+					logger.Error("Docker event monitor error", "error", err)
 					select {
 					case <-ctx.Done():
 						return
@@ -46,13 +46,13 @@ func StartEventMonitor(ctx context.Context, queries *db.Queries, dockerClient *c
 					}
 				}
 			case event := <-eventChan:
-				handleEvent(ctx, queries, dockerClient, event, onEvent)
+				handleEvent(ctx, logger, queries, dockerClient, event, onEvent)
 			}
 		}
 	}()
 }
 
-func handleEvent(ctx context.Context, queries *db.Queries, dockerClient *client.Client, event events.Message, onEvent func(action string, containerID string)) {
+func handleEvent(ctx context.Context, logger *slog.Logger, queries *db.Queries, dockerClient *client.Client, event events.Message, onEvent func(action string, containerID string)) {
 	action := event.Action
 	containerID := event.Actor.ID
 	if containerID == "" {
@@ -60,9 +60,9 @@ func handleEvent(ctx context.Context, queries *db.Queries, dockerClient *client.
 	}
 
 	if action == "destroy" || action == "delete" {
-		log.Printf("Docker event: container %s deleted. Removing from DB", containerID)
+		logger.Info("Docker event: container deleted. Removing from DB", "container_id", containerID)
 		if err := queries.DeleteContainer(ctx, containerID); err != nil {
-			log.Printf("Failed to delete container %s from DB: %v", containerID, err)
+			logger.Error("Failed to delete container from DB", "container_id", containerID, "error", err)
 		} else if onEvent != nil {
 			onEvent("delete", containerID)
 		}
@@ -70,10 +70,10 @@ func handleEvent(ctx context.Context, queries *db.Queries, dockerClient *client.
 	}
 
 	if action == "create" || action == "start" || action == "stop" || action == "die" || action == "update" {
-		log.Printf("Docker event: container %s state changed (%s). Inspecting...", containerID, action)
+		logger.Info("Docker event: container state changed. Inspecting...", "container_id", containerID, "action", action)
 		inspect, err := dockerClient.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
 		if err != nil {
-			log.Printf("Failed to inspect container %s: %v", containerID, err)
+			logger.Error("Failed to inspect container", "container_id", containerID, "error", err)
 			return
 		}
 
@@ -102,7 +102,7 @@ func handleEvent(ctx context.Context, queries *db.Queries, dockerClient *client.
 			lastCheckedAt = existing.LastCheckedAt
 			lastUpdatedAt = existing.LastUpdatedAt
 		} else if !errors.Is(err, sql.ErrNoRows) {
-			log.Printf("Failed to check existing container %s in DB: %v", containerID, err)
+			logger.Error("Failed to check existing container in DB", "container_id", containerID, "error", err)
 			return
 		}
 
@@ -121,7 +121,7 @@ func handleEvent(ctx context.Context, queries *db.Queries, dockerClient *client.
 		}
 
 		if err := queries.SaveContainer(ctx, params); err != nil {
-			log.Printf("Failed to save container %s to DB: %v", containerID, err)
+			logger.Error("Failed to save container to DB", "container_id", containerID, "error", err)
 		} else if onEvent != nil {
 			onEvent("save", containerID)
 		}

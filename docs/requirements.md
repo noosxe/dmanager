@@ -47,3 +47,8 @@ The system is intended for administrators and developers who need to manage Dock
 ### 4.2. Reliability
 * **Configuration Preservation:** The automated update process must not result in data loss or configuration loss. Container parameters must be meticulously mapped from the old instance to the new one.
 * **Host Stability:** The management application must not interfere with host-level services or the normal operations of unrelated container workloads.
+
+### 4.3. Observability & Logging
+* **Structured Logging:** The backend must use structured logging (`log/slog`) for all application components rather than unstructured text logs.
+* **Module-Scoped Logging:** Log messages must automatically include context regarding the originating module or component, using a specific `"module"` attribute (e.g. `module=docker`, `module=auth`) to facilitate log aggregation and searching.
+
