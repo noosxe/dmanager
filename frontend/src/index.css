@@ -1056,3 +1056,250 @@ body {
   }
 }
 
+/* Logs Drawer / Terminal Styles */
+.logs-drawer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 100;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--transition-normal), visibility var(--transition-normal);
+  border: none;
+  outline: none;
+  padding: 0;
+}
+
+.logs-drawer-overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.logs-drawer-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 101;
+  width: 60%;
+  min-width: 450px;
+  max-width: 850px;
+  height: 100%;
+  background: rgba(15, 15, 22, 0.95);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform var(--transition-normal);
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .logs-drawer-panel {
+    width: 100%;
+    min-width: 100%;
+  }
+}
+
+.logs-drawer-panel.open {
+  transform: translateX(0);
+}
+
+.logs-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.logs-drawer-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logs-drawer-icon {
+  color: var(--accent);
+}
+
+.logs-drawer-title-group h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.logs-drawer-subtitle {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  font-family: var(--font-mono);
+}
+
+.logs-drawer-close-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.logs-drawer-close-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.logs-drawer-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 12px 24px;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.logs-drawer-filters {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.logs-control-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+}
+
+.logs-select {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+
+.logs-select:focus {
+  border-color: var(--accent);
+}
+
+.logs-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.logs-checkbox {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.logs-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.logs-status-badge.connecting {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+}
+
+.logs-status-badge.streaming {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.logs-status-badge.disconnected {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.logs-status-badge.error {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.logs-action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logs-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all var(--transition-fast);
+}
+
+.logs-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.logs-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.terminal-container {
+  flex: 1;
+  padding: 16px;
+  background: #0d0e12;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.xterm-viewport-wrapper {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.xterm-viewport-wrapper .xterm {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 4px;
+}
+
+
