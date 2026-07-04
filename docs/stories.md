@@ -19,6 +19,8 @@ graph TD
     S9 --> S14["STORY-014: Dockerfile & Containerization (DONE)"]
     F4 --> S14
     F4 --> F5["STORY-015: Frontend Test Suite Setup (DONE)"]
+    S14 --> S16["STORY-016: Production Compose & Deployment (IN PROGRESS)"]
+    F5 --> S16
 ```
 
 ---
@@ -309,5 +311,23 @@ graph TD
   - `frontend/src/components/Login.test.tsx` (new test)
 - **Validation Check:**
   - Run `pnpm test` (or `vitest run`) inside the frontend directory, ensuring all tests pass successfully.
+
+---
+
+### STORY-016: Production Compose & Deployment [IN PROGRESS]
+- **Scope:** Deployment & Operations
+- **Estimated Size:** Small (~100 LOC)
+- **Dependencies:** `STORY-014`, `STORY-015`
+- **Token Estimate:** Input: ~40k | Output: ~2k | Total: ~42k
+- **Goal:** Set up a production Docker Compose configuration file and draft a clear deployment verification checklist document.
+- **Tasks:**
+  1. Create a root-level `docker-compose.yml` supporting restart policies, persistent volumes, environment overrides, and the unix socket bridge.
+  2. Create a `docs/deployment.md` document outlining requirements, configurations, and docker run commands.
+- **Files Affected:**
+  - `docker-compose.yml` (new)
+  - `docs/deployment.md` (new)
+- **Validation Check:**
+  - Verify that `docker compose config` passes successfully.
+
 
 
