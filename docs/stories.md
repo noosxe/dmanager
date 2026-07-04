@@ -16,6 +16,8 @@ graph TD
     F1 --> F2["STORY-011: Frontend Dashboard & Grid (DONE)"]
     F2 --> F3["STORY-012: Frontend Actions & Status Stream (DONE)"]
     F3 --> F4["STORY-013: Frontend Logs Console xterm.js (DONE)"]
+    S9 --> S14["STORY-014: Dockerfile & Containerization (DONE)"]
+    F4 --> S14
 ```
 
 ---
@@ -268,3 +270,22 @@ graph TD
   - `frontend/src/components/LogsDrawer.tsx` (terminal UI wrapper)
 - **Validation Check:**
   - Compile frontend cleanly, verify Biome check passes.
+
+---
+
+### STORY-014: Dockerfile & Containerization [DONE]
+- **Scope:** Deployment & Process Control
+- **Estimated Size:** Small (~100 LOC)
+- **Dependencies:** `STORY-009`, `STORY-013`
+- **Token Estimate:** Input: ~50k | Output: ~3k | Total: ~53k
+- **Goal:** Set up a multi-stage Dockerfile to build the frontend and backend, package them into a lightweight Alpine image with s6-overlay, and verify execution.
+- **Tasks:**
+  1. Create a root `Dockerfile` using multi-stage builds (`node:24-alpine`, `golang:alpine`, and `alpine:latest`).
+  2. Configure `s6-overlay` in the runtime image to supervise the `dmanager` process using the embedded configuration in `rootfs/`.
+  3. Verify local build works by compiling and starting the container with the docker socket mounted.
+- **Files Affected:**
+  - `Dockerfile` (new)
+- **Validation Check:**
+  - Build the docker image locally.
+  - Run the built image checking s6-overlay starts up `dmanager` successfully.
+

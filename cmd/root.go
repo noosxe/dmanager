@@ -2,11 +2,15 @@
 package cmd
 
 import (
+	"embed"
 	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
 )
+
+// FrontendDist holds the embedded frontend static assets.
+var FrontendDist embed.FS
 
 var rootCmd = &cobra.Command{
 	Use:   "dmanager",

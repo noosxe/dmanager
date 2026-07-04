@@ -1,2 +1,3 @@
-#!/usr/bin/execlineb -P
-/usr/local/bin/dmanager serve --config /etc/dmanager/config.toml
+#!/bin/sh
+exec /usr/local/bin/dmanager serve --config /etc/dmanager/config.yaml
+
