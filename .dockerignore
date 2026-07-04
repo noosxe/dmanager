@@ -1,0 +1,11 @@
+.git
+.direnv
+.envrc
+**/node_modules
+**/dist
+/dmanager
+*.test
+*.db
+*.db-journal
+*.db-wal
+*.db-shm

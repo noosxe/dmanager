@@ -19,7 +19,7 @@ graph TD
     S9 --> S14["STORY-014: Dockerfile & Containerization (DONE)"]
     F4 --> S14
     F4 --> F5["STORY-015: Frontend Test Suite Setup (DONE)"]
-    S14 --> S16["STORY-016: Production Compose & Deployment (IN PROGRESS)"]
+    S14 --> S16["STORY-016: Production Compose & Deployment (DONE)"]
     F5 --> S16
 ```
 
@@ -314,7 +314,7 @@ graph TD
 
 ---
 
-### STORY-016: Production Compose & Deployment [IN PROGRESS]
+### STORY-016: Production Compose & Deployment [DONE]
 - **Scope:** Deployment & Operations
 - **Estimated Size:** Small (~100 LOC)
 - **Dependencies:** `STORY-014`, `STORY-015`
