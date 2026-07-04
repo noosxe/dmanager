@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -82,9 +85,9 @@ var serveCmd = &cobra.Command{
 			switch action {
 			case "save":
 				dbQueries := db.New(dbConn)
-				c, err := dbQueries.GetContainer(context.Background(), containerID)
-				if err != nil {
-					log.Printf("Failed to fetch container %s for stream event broadcast: %v", containerID, err)
+				c, dbErr := dbQueries.GetContainer(context.Background(), containerID)
+				if dbErr != nil {
+					log.Printf("Failed to fetch container %s for stream event broadcast: %v", containerID, dbErr)
 					return
 				}
 				containerBroker.Publish(&dmanagerv1.StreamContainersResponse{
@@ -120,6 +123,37 @@ var serveCmd = &cobra.Command{
 			connect.WithInterceptors(authInterceptor),
 		)
 		mux.Handle(containerPath, containerHandler)
+
+		// Register Frontend SPA static files handler
+		subFS, err := fs.Sub(FrontendDist, "frontend/dist")
+		if err != nil {
+			return fmt.Errorf("failed to get frontend build subdirectory: %w", err)
+		}
+
+		indexBytes, err := fs.ReadFile(subFS, "index.html")
+		if err != nil {
+			return fmt.Errorf("failed to read frontend index.html: %w", err)
+		}
+
+		fileServer := http.FileServer(http.FS(subFS))
+		spaHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			path := filepath.Clean(r.URL.Path)
+
+			// If file exists, serve it
+			f, err := subFS.Open(strings.TrimPrefix(path, "/"))
+			if err == nil {
+				_ = f.Close()
+				fileServer.ServeHTTP(w, r)
+				return
+			}
+
+			// Otherwise serve index.html (SPA routing fallback)
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(indexBytes)
+		})
+
+		mux.Handle("/", spaHandler)
 
 		// Apply CORS middleware
 		handler := withCORS(cfg.Server.AllowedOrigins, mux)
