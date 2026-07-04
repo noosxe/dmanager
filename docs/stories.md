@@ -23,6 +23,7 @@ graph TD
     F5 --> S16
     S16 --> F17["STORY-017: Remove Google Fonts Dependency (DONE)"]
     F17 --> S18["STORY-018: Docker Build CI Workflow (DONE)"]
+    S18 --> S19["STORY-019: Upgrade GitHub Actions to Latest Versions (DONE)"]
 ```
 
 ---
@@ -368,6 +369,26 @@ graph TD
   - `.github/workflows/docker.yml` (new)
 - **Validation Check:**
   - Verify workflow YAML structure is correct.
+
+---
+
+### STORY-019: Upgrade GitHub Actions to Latest Versions [DONE]
+- **Scope:** CI/CD & Infrastructure
+- **Estimated Size:** Small (~50 LOC)
+- **Dependencies:** `STORY-018`
+- **Token Estimate:** Input: ~30k | Output: ~2k | Total: ~32k
+- **Goal:** Upgrade all GitHub Actions used in workflows to their latest stable major versions (checkout to v7, setup-qemu-action to v4, setup-buildx-action to v4, build-push-action to v7, action-setup to v6) and search web to verify compatibility.
+- **Tasks:**
+  1. Update `.github/workflows/backend.yml` (upgrade actions/checkout to v7).
+  2. Update `.github/workflows/docker.yml` (upgrade actions/checkout to v7, setup-qemu-action to v4, setup-buildx-action to v4, build-push-action to v7).
+  3. Update `.github/workflows/frontend.yml` (upgrade actions/checkout to v7, action-setup to v6).
+- **Files Affected:**
+  - `.github/workflows/backend.yml` (modified)
+  - `.github/workflows/docker.yml` (modified)
+  - `.github/workflows/frontend.yml` (modified)
+- **Validation Check:**
+  - Verify all GitHub workflows pass parsing/validation check.
+
 
 
 
