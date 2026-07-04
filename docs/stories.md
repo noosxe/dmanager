@@ -14,7 +14,7 @@ graph TD
     S8 --> S9["STORY-009: Log Streaming API (DONE)"]
     S2 --> F1["STORY-010: Frontend Routing & Auth Page (DONE)"]
     F1 --> F2["STORY-011: Frontend Dashboard & Grid (DONE)"]
-    F2 --> F3[STORY-012: Frontend Actions & Status Stream]
+    F2 --> F3["STORY-012: Frontend Actions & Status Stream (DONE)"]
     F3 --> F4[STORY-013: Frontend Logs Console xterm.js]
 ```
 
@@ -237,7 +237,7 @@ graph TD
 
 ---
 
-### STORY-012: Frontend Actions & Real-time Status Stream Integration
+### STORY-012: Frontend Actions & Real-time Status Stream Integration [DONE]
 - **Scope:** Frontend State
 - **Estimated Size:** Medium (~250 LOC)
 - **Dependencies:** `STORY-006`, `STORY-007`
