@@ -3,6 +3,7 @@ package container
 import (
 	"context"
 	"database/sql"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"net/http"
@@ -396,7 +397,7 @@ func TestContainerActions(t *testing.T) {
 		Role: roleAdmin,
 	})
 	viewerCtx := auth.WithUser(context.Background(), db.User{
-		Role: "viewer",
+		Role: roleViewer,
 	})
 	unauthCtx := context.Background()
 
@@ -676,4 +677,222 @@ func TestUpgradeContainer(t *testing.T) {
 		t.Errorf("expected auto_update=1 and update_available=0, got auto_update=%d, update_available=%d",
 			newRecord.AutoUpdate, newRecord.UpdateAvailable)
 	}
+}
+
+func TestGetContainerLogs(t *testing.T) {
+	dbConn, queries := newTestDB(t)
+	broker := NewBroker()
+
+	containerID := "test-log-container"
+
+	// 1. Seed database with container record
+	err := queries.SaveContainer(context.Background(), db.SaveContainerParams{
+		ID:              containerID,
+		Name:            "log-container",
+		Image:           testImageNginx,
+		ImageID:         testImageID123,
+		State:           stateRunning,
+		AutoUpdate:      0,
+		UpdateAvailable: 0,
+		UpdatedAt:       time.Now(),
+	})
+	if err != nil {
+		t.Fatalf("failed to seed test container: %v", err)
+	}
+
+	// Seed viewer and admin users
+	viewerUser, err := queries.CreateUser(context.Background(), db.CreateUserParams{
+		Username:     "viewer-user",
+		PasswordHash: "hash",
+		Role:         "viewer",
+	})
+	if err != nil {
+		t.Fatalf("failed to create viewer user: %v", err)
+	}
+
+	adminUser, err := queries.CreateUser(context.Background(), db.CreateUserParams{
+		Username:     "admin-user",
+		PasswordHash: "hash",
+		Role:         roleAdmin,
+	})
+	if err != nil {
+		t.Fatalf("failed to create admin user: %v", err)
+	}
+
+	// Seed sessions
+	viewerSessionID := "viewer-session-token-12345"
+	_, err = queries.CreateSession(context.Background(), db.CreateSessionParams{
+		SessionID: viewerSessionID,
+		UserID:    viewerUser.ID,
+		ExpiresAt: time.Now().Add(24 * time.Hour),
+	})
+	if err != nil {
+		t.Fatalf("failed to create viewer session: %v", err)
+	}
+
+	adminSessionID := "admin-session-token-12345"
+	_, err = queries.CreateSession(context.Background(), db.CreateSessionParams{
+		SessionID: adminSessionID,
+		UserID:    adminUser.ID,
+		ExpiresAt: time.Now().Add(24 * time.Hour),
+	})
+	if err != nil {
+		t.Fatalf("failed to create admin session: %v", err)
+	}
+
+	var inspectTty bool
+	var logPayload []byte
+
+	// 2. Setup mock Docker server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		if strings.HasSuffix(r.URL.Path, "/_ping") {
+			w.Header().Set("API-Version", "1.45")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("OK"))
+			return
+		}
+
+		// Inspect container
+		if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/containers/"+containerID+"/json") {
+			_, _ = fmt.Fprintf(w, `{
+				"Id": "%s",
+				"Name": "/log-container",
+				"Config": {"Tty": %t},
+				"State": {"Status": "running"}
+			}`, containerID, inspectTty)
+			return
+		}
+
+		// Logs
+		if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/containers/"+containerID+"/logs") {
+			// Check query parameters
+			q := r.URL.Query()
+			if q.Get("stdout") != "1" || q.Get("stderr") != "1" || q.Get("timestamps") != "1" {
+				t.Errorf("expected stdout=1, stderr=1, timestamps=1, got stdout=%s, stderr=%s, timestamps=%s",
+					q.Get("stdout"), q.Get("stderr"), q.Get("timestamps"))
+			}
+			if q.Get("tail") != "100" {
+				t.Errorf("expected tail=100, got %s", q.Get("tail"))
+			}
+
+			w.Header().Set("Content-Type", "application/octet-stream")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(logPayload)
+			return
+		}
+
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	dockerClient, err := client.New(
+		client.WithHost(server.URL),
+		client.WithHTTPClient(server.Client()),
+	)
+	if err != nil {
+		t.Fatalf("failed to create docker client: %v", err)
+	}
+
+	svc := NewService(dbConn, broker, dockerClient)
+
+	// Setup Connect handler / server with the Authentication Interceptor
+	interceptor := auth.NewInterceptor(queries)
+	mux := http.NewServeMux()
+	path, handler := dmanagerv1connect.NewContainerServiceHandler(svc, connect.WithInterceptors(interceptor))
+	mux.Handle(path, handler)
+
+	testServer := httptest.NewServer(mux)
+	defer testServer.Close()
+
+	connClient := dmanagerv1connect.NewContainerServiceClient(testServer.Client(), testServer.URL)
+
+	// A. Check auth permissions
+	// Unauthenticated
+	reqUnauth := connect.NewRequest(&v1.GetContainerLogsRequest{Id: containerID})
+	streamUnauth, errUnauth := connClient.GetContainerLogs(context.Background(), reqUnauth)
+	if errUnauth == nil {
+		if streamUnauth.Receive() {
+			t.Errorf("expected stream to fail, but got message")
+		}
+		errUnauth = streamUnauth.Err()
+	}
+	if errUnauth == nil || connect.CodeOf(errUnauth) != connect.CodeUnauthenticated {
+		t.Errorf("expected Unauthenticated error, got: %v", errUnauth)
+	}
+
+	// Viewer role should succeed to initiate stream
+	// Note: We need a stream that does not block indefinitely, so follow=false.
+	inspectTty = true
+	logPayload = []byte("2026-07-04T12:00:00.000000000Z Line 1 of log\n2026-07-04T12:00:01.000000000Z Line 2 of log\n")
+
+	reqViewer := connect.NewRequest(&v1.GetContainerLogsRequest{Id: containerID, Follow: false})
+	reqViewer.Header().Set("Cookie", "session_id="+viewerSessionID)
+	stream, err := connClient.GetContainerLogs(context.Background(), reqViewer)
+	if err != nil {
+		t.Fatalf("GetContainerLogs failed for viewer: %v", err)
+	}
+
+	// Read raw logs (Tty = true)
+	var logs []*v1.GetContainerLogsResponse
+	for stream.Receive() {
+		logs = append(logs, stream.Msg())
+	}
+	if sErr := stream.Err(); sErr != nil {
+		t.Fatalf("stream encountered error: %v", sErr)
+	}
+	if len(logs) != 2 {
+		t.Errorf("expected 2 log lines, got %d", len(logs))
+	} else {
+		if logs[0].LogLine != "Line 1 of log" || logs[0].Timestamp != "2026-07-04T12:00:00.000000000Z" || logs[0].StreamType != streamTypeStdout {
+			t.Errorf("unexpected log 0: %+v", logs[0])
+		}
+		if logs[1].LogLine != "Line 2 of log" || logs[1].Timestamp != "2026-07-04T12:00:01.000000000Z" || logs[1].StreamType != streamTypeStdout {
+			t.Errorf("unexpected log 1: %+v", logs[1])
+		}
+	}
+
+	// B. Multiplexed stream (Tty = false)
+	inspectTty = false
+	frame1 := makeLogFrame(1, "2026-07-04T12:00:00.100Z Out 1\n")
+	frame2 := makeLogFrame(2, "2026-07-04T12:00:00.200Z Err 1\n")
+	logPayload = append(frame1, frame2...)
+
+	reqAdmin := connect.NewRequest(&v1.GetContainerLogsRequest{Id: containerID, Follow: false})
+	reqAdmin.Header().Set("Cookie", "session_id="+adminSessionID)
+	stream2, err := connClient.GetContainerLogs(context.Background(), reqAdmin)
+	if err != nil {
+		t.Fatalf("GetContainerLogs failed for admin: %v", err)
+	}
+
+	var multiplexedLogs []*v1.GetContainerLogsResponse
+	for stream2.Receive() {
+		multiplexedLogs = append(multiplexedLogs, stream2.Msg())
+	}
+	if sErr2 := stream2.Err(); sErr2 != nil {
+		t.Fatalf("stream2 encountered error: %v", sErr2)
+	}
+	if len(multiplexedLogs) != 2 {
+		t.Errorf("expected 2 multiplexed log lines, got %d", len(multiplexedLogs))
+	} else {
+		if multiplexedLogs[0].LogLine != "Out 1" || multiplexedLogs[0].Timestamp != "2026-07-04T12:00:00.100Z" || multiplexedLogs[0].StreamType != streamTypeStdout {
+			t.Errorf("unexpected multiplexed log 0: %+v", multiplexedLogs[0])
+		}
+		if multiplexedLogs[1].LogLine != "Err 1" || multiplexedLogs[1].Timestamp != "2026-07-04T12:00:00.200Z" || multiplexedLogs[1].StreamType != streamTypeStderr {
+			t.Errorf("unexpected multiplexed log 1: %+v", multiplexedLogs[1])
+		}
+	}
+}
+
+func makeLogFrame(streamType byte, payload string) []byte {
+	payloadLen := len(payload)
+	if payloadLen < 0 || payloadLen > 0xffffffff {
+		panic("invalid payload length")
+	}
+	buf := make([]byte, 8+payloadLen)
+	buf[0] = streamType
+	binary.BigEndian.PutUint32(buf[4:8], uint32(payloadLen))
+	copy(buf[8:], payload)
+	return buf
 }
