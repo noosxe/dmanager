@@ -22,6 +22,7 @@ graph TD
     S14 --> S16["STORY-016: Production Compose & Deployment (DONE)"]
     F5 --> S16
     S16 --> F17["STORY-017: Remove Google Fonts Dependency (DONE)"]
+    F17 --> S18["STORY-018: Docker Build CI Workflow (DONE)"]
 ```
 
 ---
@@ -349,6 +350,25 @@ graph TD
   - Run Biome linters: `pnpm biome check .`
   - Compile frontend build: `pnpm build`
   - Run frontend test suite: `pnpm test`
+
+---
+
+### STORY-018: Docker Build CI Workflow [DONE]
+- **Scope:** CI/CD & Infrastructure
+- **Estimated Size:** Small (~50 LOC)
+- **Dependencies:** `STORY-016`, `STORY-017`
+- **Token Estimate:** Input: ~30k | Output: ~2k | Total: ~32k
+- **Goal:** Add a new CI workflow "docker" triggered on pushes/pull requests to main to build the Docker image for both amd64 and arm64 platforms.
+- **Tasks:**
+  1. Add `.github/workflows/docker.yml` workflow triggered on push/PR to `main` branch.
+  2. Implement build strategy using a platform matrix for `linux/amd64` and `linux/arm64`.
+  3. Configure QEMU support for the `linux/arm64` platform matrix run.
+  4. Use Docker build-push action to build the image (without pushing).
+- **Files Affected:**
+  - `.github/workflows/docker.yml` (new)
+- **Validation Check:**
+  - Verify workflow YAML structure is correct.
+
 
 
 
