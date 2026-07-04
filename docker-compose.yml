@@ -1,0 +1,25 @@
+services:
+  dmanager:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dmanager
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - dmanager-data:/var/lib/dmanager
+      # Optional: Uncomment to override the default configuration with a host file
+      # - ./config.yaml:/etc/dmanager/config.yaml:ro
+    environment:
+      # Optional environment variable overrides (prefixed with DMANAGER_)
+      - DMANAGER_SERVER_PORT=8080
+      - DMANAGER_SCHEDULER_INTERVAL_MINUTES=60
+      # Registry Credentials Example:
+      # - DMANAGER_REGISTRIES_0_HOST=ghcr.io
+      # - DMANAGER_REGISTRIES_0_USERNAME=myuser
+      # - DMANAGER_REGISTRIES_0_PASSWORD=mypassword
+
+volumes:
+  dmanager-data:
