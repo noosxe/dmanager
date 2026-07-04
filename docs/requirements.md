@@ -35,8 +35,14 @@ The system is intended for administrators and developers who need to manage Dock
   1. **Image Retrieval:** Pull the updated container image from the registry.
   2. **Graceful Stop:** Stop the currently running container.
   3. **Container Re-creation:** Start a new container instance using the updated image while preserving the original container configuration (e.g., environment variables, network settings, port mappings, and volume mounts).
+### 3.5. Release Workflow & Distribution
+* **Tag-based Release Trigger:** The release workflow must run when a version tag matching `vX.Y.Z` (or similar semantic version formats) is pushed.
+* **Multi-Platform Container Builds:** The release workflow must build Docker images for both `linux/amd64` and `linux/arm64` platforms.
+* **Registry Distribution:** Built Docker images must be pushed to the GitHub Container Registry (GHCR).
+* **Official GitHub Release:** The workflow must create an official GitHub Release referencing the container images and including a list of changes made in the release.
 
 ---
+
 
 ## 4. Non-Functional Requirements
 

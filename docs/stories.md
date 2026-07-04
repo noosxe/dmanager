@@ -25,6 +25,7 @@ graph TD
     F17 --> S18["STORY-018: Docker Build CI Workflow (DONE)"]
     S18 --> S19["STORY-019: Upgrade GitHub Actions to Latest Versions (DONE)"]
     S19 --> S20["STORY-020: Structured Logging Migration (DONE)"]
+    S20 --> S21["STORY-021: Version Tag Release Workflow (DONE)"]
 ```
 
 
@@ -410,6 +411,26 @@ graph TD
   - Run compiler checking: `go build` / `go vet ./...`
   - Verify formatting and linting: `golangci-lint run`
   - Run all Go tests to verify everything compiles and runs successfully.
+
+---
+
+### STORY-021: Version Tag Release Workflow [DONE]
+- **Scope:** CI/CD & Release Infrastructure
+- **Estimated Size:** Small (~100 LOC)
+- **Dependencies:** `STORY-020`
+- **Token Estimate:** Input: ~30k | Output: ~2k | Total: ~32k
+- **Goal:** Add a release workflow that builds Docker images for both `amd64` and `arm64`, pushes them to GHCR, and creates a GitHub Release referencing those images with auto-generated release notes.
+- **Tasks:**
+  1. Create `.github/workflows/release.yml` triggered on push of tags matching `v*`.
+  2. Implement registry login step using `GITHUB_TOKEN` to GHCR.
+  3. Configure Docker build-push-action to build multi-platform (`linux/amd64`, `linux/arm64`) images and push them to GHCR.
+  4. Tag images as both `latest` and with the exact tag format (e.g. `vX.Y.Z`).
+  5. Add steps to generate automatic release notes and create an official GitHub release with those notes.
+- **Files Affected:**
+  - `.github/workflows/release.yml` (new)
+- **Validation Check:**
+  - Verify syntax and schema correctness of `.github/workflows/release.yml`.
+
 
 
 

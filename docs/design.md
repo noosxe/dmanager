@@ -311,3 +311,10 @@ The build is optimized using a three-stage Dockerfile that separates dependencie
     -p 9283:9283 \
     dmanager:latest
   ```
+
+### 5.4. Release Distribution Pipeline
+* **Trigger Event:** The workflow is triggered automatically on pushes of version tags matching `v*` (specifically semantic versions like `vX.Y.Z`).
+* **Docker Buildx & Multi-Arch:** Leverages GitHub Actions with QEMU virtualization to build cross-platform Docker images for `linux/amd64` and `linux/arm64`.
+* **GitHub Container Registry (GHCR):** Authenticates automatically using `GITHUB_TOKEN` and publishes the tagged images to `ghcr.io/${{ github.repository }}` under both the exact version tag and `latest`.
+* **Automated GitHub Release:** Employs official release utilities (e.g., `softprops/action-gh-release` or similar) to create a GitHub Release. It generates release notes automatically to list changes made since the prior release.
+
