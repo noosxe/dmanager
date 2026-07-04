@@ -18,6 +18,7 @@ graph TD
     F3 --> F4["STORY-013: Frontend Logs Console xterm.js (DONE)"]
     S9 --> S14["STORY-014: Dockerfile & Containerization (DONE)"]
     F4 --> S14
+    F4 --> F5["STORY-015: Frontend Test Suite Setup (DONE)"]
 ```
 
 ---
@@ -288,4 +289,25 @@ graph TD
 - **Validation Check:**
   - Build the docker image locally.
   - Run the built image checking s6-overlay starts up `dmanager` successfully.
+
+---
+
+### STORY-015: Frontend Test Suite Setup & Component Testing [DONE]
+- **Scope:** Frontend Testing
+- **Estimated Size:** Medium (~250 LOC)
+- **Dependencies:** `STORY-011`, `STORY-013`
+- **Token Estimate:** Input: ~60k | Output: ~4k | Total: ~64k
+- **Goal:** Set up Vitest, React Testing Library, and MSW for the React frontend, and write component/integration tests for critical views.
+- **Tasks:**
+  1. Add devDependencies for `vitest`, `@testing-library/react`, `@testing-library/jest-dom`, `@testing-library/user-event`, `jsdom`, and `msw` in `frontend/package.json`.
+  2. Configure Vitest in `frontend/vite.config.ts` (using `jsdom` environment and global test setups).
+  3. Create test files for critical components (e.g. `Login.test.tsx` and custom hook tests or a setup file) asserting basic UI functionality, interactions, and mocked responses.
+- **Files Affected:**
+  - `frontend/package.json` (modified)
+  - `frontend/vite.config.ts` (modified)
+  - `frontend/src/setupTests.ts` (new setup file)
+  - `frontend/src/components/Login.test.tsx` (new test)
+- **Validation Check:**
+  - Run `pnpm test` (or `vitest run`) inside the frontend directory, ensuring all tests pass successfully.
+
 
