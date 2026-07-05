@@ -27,6 +27,8 @@ graph TD
     S19 --> S20["STORY-020: Structured Logging Migration (DONE)"]
     S20 --> S21["STORY-021: Version Tag Release Workflow (DONE)"]
     S21 --> S22["STORY-022: Implement Container Auto-Update and Check Updates RPCs (DONE)"]
+    S22 --> S23["STORY-023: Periodic Registry Update Checker (DONE)"]
+    S23 --> S24["STORY-024: Automated Container Re-Deployment Workflow (DONE)"]
 ```
 
 
@@ -451,6 +453,46 @@ graph TD
 - **Validation Check:**
   - Run all unit and integration tests inside container service: `go test -v ./internal/container/...`
   - Verify zero linter warnings: `golangci-lint run`
+
+---
+
+### STORY-023: Periodic Registry Update Checker [DONE]
+- **Scope:** Backend Background Daemon
+- **Estimated Size:** Medium (~150 LOC)
+- **Dependencies:** `STORY-022`
+- **Goal:** Implement a background loop utilizing `time.Ticker` configured by `scheduler.interval_minutes` to check container images for registry digest changes, save status, and broadcast to clients.
+- **Tasks:**
+  1. Create a new scheduler/daemon service in `internal/container/scheduler.go` that loops with a ticker.
+  2. Retrieve container details, query registry tag digests with credential resolution.
+  3. Compare registry digests with local images.
+  4. Write status update to SQLite database and publish to the events broker.
+- **Files Affected:**
+  - `internal/container/scheduler.go` (new)
+  - `cmd/serve.go` (modified to initialize background worker)
+- **Validation Check:**
+  - Build checks and linter validation.
+  - Verification tests for periodic checks logic.
+
+---
+
+### STORY-024: Automated Container Re-Deployment Workflow [DONE]
+- **Scope:** Backend Background Daemon / Docker Re-deployment
+- **Estimated Size:** Medium (~150 LOC)
+- **Dependencies:** `STORY-023`
+- **Goal:** Implement the automated pull-stop-remove-recreate-start workflow for containers with auto-update enabled when a newer registry digest is confirmed.
+- **Tasks:**
+  1. Refactor container recreation/upgrade logic in `internal/container/upgrade.go` to expose an internal/unauthenticated method.
+  2. When the periodic scheduler detects a newer digest for a container with `auto_update` enabled, call the internal upgrade workflow.
+  3. Verify parameters preservation (environment, networking, ports, volumes).
+  4. Implement tests ensuring auto-update flow triggers container recreation successfully.
+- **Files Affected:**
+  - `internal/container/upgrade.go` (modified)
+  - `internal/container/scheduler.go` (modified)
+  - `internal/container/service_test.go` (modified/extended)
+- **Validation Check:**
+  - Run `go test -v ./internal/container/...`
+  - Compile the server successfully and check linter rules.
+
 
 
 

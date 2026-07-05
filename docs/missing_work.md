@@ -13,17 +13,17 @@ This document tracks frontend, backend, and background-related features and inte
   - [x] Implement the `CheckContainerUpdates` method to trigger an immediate, out-of-band registry check for a specific container image and update its database state.
 
 ### 1.2. Background Schedulers & Daemons
-- [ ] **Periodic Registry Update Checker** (in a new file under [internal/container/](file:///home/mechsoull/Projects/dmanager/internal/container))
-  - [ ] Implement a long-running background supervisor/loop utilizing a `time.Ticker` initialized at startup.
-  - [ ] Check registry tag digests for all containers according to the configured `scheduler.interval_minutes`.
-  - [ ] Utilize optional credentials stored in the `registries` block configuration for private repository authentication.
-  - [ ] Compare digests and set `update_available = 1` in the database when a newer tag is found.
-- [ ] **Automated Container Re-Deployment Workflow** (in [upgrade.go](file:///home/mechsoull/Projects/dmanager/internal/container/upgrade.go) or a new file)
-  - [ ] Implement the automated check-and-deploy path for containers with auto-update enabled.
-  - [ ] When a newer image is detected, pull the updated image from the registry.
-  - [ ] Retrieve exact execution parameters of the target container (environment variables, mounts, networks, labels, ports, configs).
-  - [ ] Stop and remove the old container resource.
-  - [ ] Recreate the container with the original parameters and the new image version, and start it.
+- [x] **Periodic Registry Update Checker** (in a new file under [internal/container/](file:///home/mechsoull/Projects/dmanager/internal/container))
+  - [x] Implement a long-running background supervisor/loop utilizing a `time.Ticker` initialized at startup.
+  - [x] Check registry tag digests for all containers according to the configured `scheduler.interval_minutes`.
+  - [x] Utilize optional credentials stored in the `registries` block configuration for private repository authentication.
+  - [x] Compare digests and set `update_available = 1` in the database when a newer tag is found.
+- [x] **Automated Container Re-Deployment Workflow** (in [upgrade.go](file:///home/mechsoull/Projects/dmanager/internal/container/upgrade.go) or a new file)
+  - [x] Implement the automated check-and-deploy path for containers with auto-update enabled.
+  - [x] When a newer image is detected, pull the updated image from the registry.
+  - [x] Retrieve exact execution parameters of the target container (environment variables, mounts, networks, labels, ports, configs).
+  - [x] Stop and remove the old container resource.
+  - [x] Recreate the container with the original parameters and the new image version, and start it.
 
 ## 2. Frontend Missing Work Checklist (React / TypeScript)
 

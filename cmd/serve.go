@@ -136,6 +136,9 @@ var serveCmd = &cobra.Command{
 		)
 		mux.Handle(containerPath, containerHandler)
 
+		// Start background registry update checker scheduler
+		container.StartScheduler(cmd.Context(), containerSvc, cfg.Scheduler.IntervalMinutes)
+
 		// Register Frontend SPA static files handler
 		subFS, err := fs.Sub(FrontendDist, "frontend/dist")
 		if err != nil {

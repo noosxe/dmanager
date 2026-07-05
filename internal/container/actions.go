@@ -275,13 +275,26 @@ func (s *Service) CheckContainerUpdates(ctx context.Context, req *connect.Reques
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("container ID is required"))
 	}
 
-	queries := db.New(s.db)
-	existing, err := queries.GetContainer(ctx, containerID)
+	updateAvailable, remoteDigest, err := s.checkContainerUpdatesInternal(ctx, containerID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, errors.New("container not found"))
 		}
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to query container from DB: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	return connect.NewResponse(&v1.CheckContainerUpdatesResponse{
+		Id:                containerID,
+		UpdateAvailable:   updateAvailable,
+		LatestImageDigest: remoteDigest,
+	}), nil
+}
+
+func (s *Service) checkContainerUpdatesInternal(ctx context.Context, containerID string) (bool, string, error) {
+	queries := db.New(s.db)
+	existing, err := queries.GetContainer(ctx, containerID)
+	if err != nil {
+		return false, "", err
 	}
 
 	// Get image reference. Try to inspect container on host first.
@@ -306,7 +319,7 @@ func (s *Service) CheckContainerUpdates(ctx context.Context, req *connect.Reques
 	}
 
 	if s.dockerClient == nil {
-		return nil, connect.NewError(connect.CodeInternal, errors.New("docker client not initialized"))
+		return false, "", errors.New("docker client not initialized")
 	}
 
 	// Contact registry for digest
@@ -314,12 +327,12 @@ func (s *Service) CheckContainerUpdates(ctx context.Context, req *connect.Reques
 		EncodedRegistryAuth: authHeader,
 	})
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to query registry for image %s: %w", imageRef, err))
+		return false, "", fmt.Errorf("failed to query registry for image %s: %w", imageRef, err)
 	}
 
 	remoteDigest := string(distInspect.Descriptor.Digest)
 	if remoteDigest == "" {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("registry returned empty digest for image %s", imageRef))
+		return false, "", fmt.Errorf("registry returned empty digest for image %s", imageRef)
 	}
 
 	// Inspect local image to get its RepoDigests for comparison
@@ -345,7 +358,7 @@ func (s *Service) CheckContainerUpdates(ctx context.Context, req *connect.Reques
 		LastCheckedAt:     now,
 	})
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update container state in DB: %w", err))
+		return false, "", fmt.Errorf("failed to update container state in DB: %w", err)
 	}
 
 	// Publish sync event to streams
@@ -358,11 +371,7 @@ func (s *Service) CheckContainerUpdates(ctx context.Context, req *connect.Reques
 		})
 	}
 
-	return connect.NewResponse(&v1.CheckContainerUpdatesResponse{
-		Id:                containerID,
-		UpdateAvailable:   updateAvailable,
-		LatestImageDigest: remoteDigest,
-	}), nil
+	return updateAvailable, remoteDigest, nil
 }
 
 // getRegistryAuth resolves base64-encoded registry credentials based on the image reference.

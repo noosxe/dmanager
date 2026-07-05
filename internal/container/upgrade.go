@@ -35,6 +35,15 @@ func (s *Service) UpgradeContainer(ctx context.Context, req *connect.Request[v1.
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("container ID is required"))
 	}
 
+	resp, err := s.upgradeContainerInternal(ctx, containerID)
+	if err != nil {
+		return nil, err
+	}
+
+	return connect.NewResponse(resp), nil
+}
+
+func (s *Service) upgradeContainerInternal(ctx context.Context, containerID string) (*v1.UpgradeContainerResponse, error) {
 	// 2. Retrieve existing container details from database
 	queries := db.New(s.db)
 	existing, err := queries.GetContainer(ctx, containerID)
@@ -213,9 +222,9 @@ func (s *Service) UpgradeContainer(ctx context.Context, req *connect.Request[v1.
 		})
 	}
 
-	return connect.NewResponse(&v1.UpgradeContainerResponse{
+	return &v1.UpgradeContainerResponse{
 		Id:              created.ID,
 		PreviousImageId: inspect.Container.Image,
 		CurrentImageId:  newImageID,
-	}), nil
+	}, nil
 }
