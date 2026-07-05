@@ -189,11 +189,10 @@ var serveCmd = &cobra.Command{
 
 		// 5. Create HTTP Server
 		server := &http.Server{
-			Addr:         ":" + listenPort,
-			Handler:      handler,
-			ReadTimeout:  15 * time.Second,
-			WriteTimeout: 15 * time.Second,
-			IdleTimeout:  30 * time.Second,
+			Addr:              ":" + listenPort,
+			Handler:           handler,
+			ReadHeaderTimeout: 10 * time.Second,
+			IdleTimeout:       30 * time.Second,
 		}
 
 		// 6. Graceful shutdown handler

@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/moby/moby/client"
 	"dmanager/internal/db"
+	"github.com/moby/moby/client"
 )
 
 func TestSchedulerCheckAllContainers(t *testing.T) {
