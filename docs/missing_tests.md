@@ -70,8 +70,8 @@ This document tracks unit and integration tests that are missing and need to be 
 
 ## 3. Unimplemented Service (Log Centralized Ingestion)
 
-- [ ] **[LogService](file:///home/mechsoull/Projects/dmanager/proto/dmanager/v1/log.proto#L7)**
-  - [ ] Create Go backend implementation of the ConnectRPC [LogServiceHandler](file:///home/mechsoull/Projects/dmanager/internal/gen/proto/dmanager/v1/dmanagerv1connect/log.connect.go#L76).
-  - [ ] Implement the [SyncLogs](file:///home/mechsoull/Projects/dmanager/proto/dmanager/v1/log.proto#L9) RPC to ingest frontend client logs, format them, and write them into the Go backend structured logger `log/slog` containing the attributes `source: frontend`, `client_level`, and `client_timestamp`.
-  - [ ] Write backend unit tests for `SyncLogs` ensuring payloads are processed, logged, and return counts.
-  - [ ] Register `LogService` in [serve.go](file:///home/mechsoull/Projects/dmanager/cmd/serve.go).
+- [x] **[LogService](file:///home/mechsoull/Projects/dmanager/proto/dmanager/v1/log.proto#L7)**
+  - [x] Create Go backend implementation of the ConnectRPC [LogServiceHandler](file:///home/mechsoull/Projects/dmanager/internal/gen/proto/dmanager/v1/dmanagerv1connect/log.connect.go#L76).
+  - [x] Implement the [SyncLogs](file:///home/mechsoull/Projects/dmanager/proto/dmanager/v1/log.proto#L9) RPC to ingest frontend client logs, format them, and write them into the Go backend structured logger `log/slog` containing the attributes `source: frontend`, `client_level`, and `client_timestamp`.
+  - [x] Write backend unit tests for `SyncLogs` ensuring payloads are processed, logged, and return counts.
+  - [x] Register `LogService` in [serve.go](file:///home/mechsoull/Projects/dmanager/cmd/serve.go).
