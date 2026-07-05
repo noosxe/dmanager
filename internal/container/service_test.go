@@ -31,6 +31,7 @@ const (
 	stateExited      = "exited"
 	testActionID     = "c-action-1"
 	testImageNginx   = "nginx:latest"
+	testImageNginxAlpine = "nginx:alpine"
 	testImageID123   = "sha256:123"
 )
 
@@ -907,7 +908,7 @@ func TestSetContainerAutoUpdate(t *testing.T) {
 	if err := queries.SaveContainer(context.Background(), db.SaveContainerParams{
 		ID:         containerID,
 		Name:       "test-autoupdate",
-		Image:      "nginx:alpine",
+		Image:      testImageNginxAlpine,
 		ImageID:    testImageID123,
 		State:      stateRunning,
 		AutoUpdate: 0,
@@ -975,7 +976,7 @@ func TestCheckContainerUpdates(t *testing.T) {
 	broker := NewBroker()
 
 	containerID := "test-checkupdates-id"
-	imageName := "nginx:alpine"
+	imageName := testImageNginxAlpine
 	localImageID := "sha256:local-image-123"
 
 	// Stub remote registry digest
