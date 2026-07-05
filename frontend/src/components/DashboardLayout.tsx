@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { Activity, LayoutDashboard, LogOut, Menu, Settings, Terminal } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
@@ -63,32 +64,25 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
 
           <nav className="sidebar-menu">
-            <button type="button" className="menu-item active" onClick={closeSidebar}>
+            <Link
+              to="/"
+              className="menu-item"
+              activeProps={{ className: "menu-item active" }}
+              onClick={closeSidebar}
+            >
               <LayoutDashboard size={18} />
               <span>Containers</span>
-            </button>
+            </Link>
 
-            <button
-              type="button"
+            <Link
+              to="/logs"
               className="menu-item"
-              disabled
-              style={{ opacity: 0.6, cursor: "not-allowed" }}
-              title="System Logs (Coming Soon)"
+              activeProps={{ className: "menu-item active" }}
+              onClick={closeSidebar}
             >
               <Activity size={18} />
               <span>System Logs</span>
-              <span
-                style={{
-                  fontSize: "9px",
-                  marginLeft: "auto",
-                  background: "rgba(255, 255, 255, 0.08)",
-                  padding: "2px 6px",
-                  borderRadius: "100px",
-                }}
-              >
-                Soon
-              </span>
-            </button>
+            </Link>
 
             <button
               type="button"

@@ -20,14 +20,31 @@ const (
 // Service implements dmanagerv1connect.LogServiceHandler.
 type Service struct {
 	logger *slog.Logger
+	buffer *RingBuffer
 }
 
 // NewService creates a new logging Service.
-func NewService(logger *slog.Logger) *Service {
+func NewService(logger *slog.Logger, buffer *RingBuffer) *Service {
 	return &Service{
 		logger: logger,
+		buffer: buffer,
 	}
 }
+
+// GetSystemLogs retrieves general logs from the backend's structured log ring buffer.
+func (s *Service) GetSystemLogs(ctx context.Context, req *connect.Request[v1.GetSystemLogsRequest]) (*connect.Response[v1.GetSystemLogsResponse], error) {
+	limit := int(req.Msg.Limit)
+	if limit <= 0 || limit > 500 {
+		limit = 100
+	}
+
+	entries := s.buffer.Get(limit, req.Msg.LevelFilter, req.Msg.SearchQuery)
+
+	return connect.NewResponse(&v1.GetSystemLogsResponse{
+		Entries: entries,
+	}), nil
+}
+
 
 // SyncLogs ingests a batch of client-side logs and logs them via the structured backend logger.
 func (s *Service) SyncLogs(ctx context.Context, req *connect.Request[v1.SyncLogsRequest]) (*connect.Response[v1.SyncLogsResponse], error) {

@@ -33,6 +33,7 @@ graph TD
     S25 --> S26["STORY-026: Enable Client-Server Binary Communication (DONE)"]
     S26 --> S27["STORY-027: Implement LogServiceHandler (DONE)"]
     S27 --> F28["STORY-028: Frontend Client-Side Logging Framework (DONE)"]
+    F28 --> F29["STORY-029: System Logs Page Design and Implementation (DONE)"]
 ```
 
 
@@ -571,6 +572,35 @@ graph TD
   - `frontend/src/main.tsx` (modified to initialize logging and syncing)
 - **Validation Check:**
   - Run frontend test suite: `pnpm test`
+  - Run Biome check: `pnpm biome check .`
+  - Compile frontend: `pnpm build`
+
+---
+
+### STORY-029: System Logs Page Design and Implementation [DONE]
+- **Scope:** Central Logging & Frontend Interface
+- **Estimated Size:** Medium (~350 LOC)
+- **Dependencies:** `STORY-028`
+- **Goal:** Design and implement an in-memory structured log ring-buffer on the backend, expose a `GetSystemLogs` RPC endpoint, and implement a responsive logs dashboard on the frontend with severity filters and text searching.
+- **Tasks:**
+  1. Add `GetSystemLogs` RPC definition to `proto/dmanager/v1/log.proto` and regenerate protobuf files.
+  2. Implement `RingBuffer` and `InterceptHandler` in the backend to capture all slog structured log events.
+  3. Register the new intercept handler wrapper on the main slog logger in `cmd/serve.go`.
+  4. Implement `GetSystemLogs` in `internal/logging/service.go` and add unit tests to `internal/logging/service_test.go`.
+  5. Enable the "System Logs" sidebar navigation button in `DashboardLayout.tsx` and register a `/logs` route in `frontend/src/routes/router.tsx`.
+  6. Create the `SystemLogs.tsx` frontend page displaying the log stream with level filtering, query filtering, and auto-refresh.
+- **Files Affected:**
+  - `proto/dmanager/v1/log.proto` (modified)
+  - `internal/logging/buffer.go` (new)
+  - `internal/logging/service.go` (modified)
+  - `internal/logging/service_test.go` (modified)
+  - `cmd/serve.go` (modified)
+  - `frontend/src/routes/router.tsx` (modified)
+  - `frontend/src/components/DashboardLayout.tsx` (modified)
+  - `frontend/src/components/SystemLogs.tsx` (new)
+- **Validation Check:**
+  - Compile the server successfully: `go build -o /dev/null ./...`
+  - Run all Go tests: `go test -v ./internal/logging/...`
   - Run Biome check: `pnpm biome check .`
   - Compile frontend: `pnpm build`
 

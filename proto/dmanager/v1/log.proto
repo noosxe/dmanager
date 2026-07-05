@@ -7,6 +7,9 @@ option go_package = "dmanager/internal/gen/proto/dmanager/v1;dmanagerv1";
 service LogService {
   // Transmit local browser log queues for centralized ingestion (Unauthenticated/Authenticated).
   rpc SyncLogs(SyncLogsRequest) returns (SyncLogsResponse);
+
+  // Retrieve central ingested logs and daemon structured logs (Authenticated).
+  rpc GetSystemLogs(GetSystemLogsRequest) returns (GetSystemLogsResponse);
 }
 
 message ClientLogEntry {
@@ -24,3 +27,22 @@ message SyncLogsRequest {
 message SyncLogsResponse {
   int32 processed_count = 1;
 }
+
+message LogEntry {
+  string level = 1;      // "DEBUG", "INFO", "WARN", "ERROR"
+  string message = 2;    // Log statement
+  string timestamp = 3;  // RFC3339 formatted log timestamp
+  string component = 4;  // Log source component
+  string metadata = 5;   // Serialized JSON log metadata
+}
+
+message GetSystemLogsRequest {
+  int32 limit = 1;
+  string level_filter = 2;
+  string search_query = 3;
+}
+
+message GetSystemLogsResponse {
+  repeated LogEntry entries = 1;
+}
+

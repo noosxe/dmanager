@@ -320,3 +320,20 @@ The build is optimized using a three-stage Dockerfile that separates dependencie
 * **GitHub Container Registry (GHCR):** Authenticates automatically using `GITHUB_TOKEN` and publishes the tagged images to `ghcr.io/${{ github.repository }}` under both the exact version tag and `latest`.
 * **Automated GitHub Release:** Employs official release utilities (e.g., `softprops/action-gh-release` or similar) to create a GitHub Release. It generates release notes automatically to list changes made since the prior release.
 
+
+### 6. System Logs Feature Design
+
+#### 6.1. Backend System Log Buffering
+* **In-Memory Ring Buffer:** Rather than utilizing slow, high-overhead disk or database writes, the backend records logs in a thread-safe circular in-memory buffer with a capacity of 1000 items.
+* **Wrapping Slog Handler (`InterceptHandler`):** A custom logger handler wraps Go's structured `slog.Handler` to intercept every log event dynamically, capture its level, message, timestamp, and optional contextual metadata attributes, mapping them into standard protobuf schemas (`v1.LogEntry`) and adding them to the ring buffer.
+* **Service RPC (`GetSystemLogs`):**
+  * Implemented inside `LogService` on `/dmanager.v1.LogService/GetSystemLogs`.
+  * Accepts `limit`, `level_filter`, and `search_query` parameters.
+  * Responds with a chronologically sorted list of matches (newest first).
+
+#### 6.2. Frontend System Logs Interface
+* **TanStack Route (`/logs`):** A dedicated protected route rendered inside `DashboardLayout`.
+* **Log Level Filtering & Text Search:** Allows filtering logs by severity (DEBUG, INFO, WARN, ERROR) and filtering messages using a text search input field.
+* **Auto-refresh and Paging Controls:** Features manual triggers to reload list state and control display density.
+* **Structured Context Viewer:** Supports viewing nested serialized metadata parameters (JSON) for complex log events (e.g., CLI operations, container upgrades, and request errors).
+
