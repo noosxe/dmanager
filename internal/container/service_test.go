@@ -24,15 +24,15 @@ import (
 )
 
 const (
-	stateRunning     = "running"
-	stateStopped     = "stopped"
-	testContainer1ID = "test-container-1"
-	testContainer2ID = "test-container-2"
-	stateExited      = "exited"
-	testActionID     = "c-action-1"
-	testImageNginx   = "nginx:latest"
+	stateRunning         = "running"
+	stateStopped         = "stopped"
+	testContainer1ID     = "test-container-1"
+	testContainer2ID     = "test-container-2"
+	stateExited          = "exited"
+	testActionID         = "c-action-1"
+	testImageNginx       = "nginx:latest"
 	testImageNginxAlpine = "nginx:alpine"
-	testImageID123   = "sha256:123"
+	testImageID123       = "sha256:123"
 )
 
 func newTestDB(t *testing.T) (*sql.DB, *db.Queries) {

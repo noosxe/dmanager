@@ -45,7 +45,6 @@ func (s *Service) GetSystemLogs(ctx context.Context, req *connect.Request[v1.Get
 	}), nil
 }
 
-
 // SyncLogs ingests a batch of client-side logs and logs them via the structured backend logger.
 func (s *Service) SyncLogs(ctx context.Context, req *connect.Request[v1.SyncLogsRequest]) (*connect.Response[v1.SyncLogsResponse], error) {
 	var processedCount int32

@@ -239,4 +239,3 @@ func TestInterceptHandler(t *testing.T) {
 		t.Errorf("expected metadata to contain meta_key, got %q", entry.Metadata)
 	}
 }
-
