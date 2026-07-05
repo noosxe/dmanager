@@ -125,6 +125,8 @@ The backend is built in Go, prioritizing performance, strict type-safety, and mi
   * Utilizes Go's official `log/slog` library for performance-oriented structured logging.
   * The root logger is configured at startup (defining output format as JSON in production, and standard log levels).
   * **Module-Scoped Logging:** When instantiating a module, the bootstrap process passes a scoped logger created using `logger.With("module", "module_name")`. All log events triggered within that module will implicitly include the `"module"` attribute, streamlining log aggregation, searchability, and system analysis.
+  * **Client Request Logging:** The ConnectRPC auth interceptor logs every incoming unary and streaming client request at `Info` level. The logged fields include the procedure name, the authenticated user (if any), the execution duration, and the resulting error if the request failed.
+  * **Daemon Action Logging:** Key application actions and operations (such as container start, container stop, auto-update state modifications, manual and scheduled update checks, and container image upgrades) are logged at `Info` level to track daemon activity clearly without requiring verbose debug logs.
 * **Frontend Log Ingestion Endpoint:**
   * The backend exposes a specific ConnectRPC endpoint (e.g., `dmanager.v1.LogService/SyncLogs`) to accept batches of frontend logs.
   * When client logs are received via this RPC, the backend parses each entry and passes it into the standard `slog` stream.

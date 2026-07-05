@@ -54,23 +54,31 @@ func (s *Service) upgradeContainerInternal(ctx context.Context, containerID stri
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to query container from DB: %w", err))
 	}
 
+	s.logger.Info("Upgrading container", "container_id", containerID, "container_name", existing.Name, "image", existing.Image)
+
 	// 3. Inspect container settings on Docker host
 	if s.dockerClient == nil {
-		return nil, connect.NewError(connect.CodeInternal, errors.New("docker client not initialized"))
+		err = errors.New("docker client not initialized")
+		s.logger.Error("Container upgrade failed", "container_id", containerID, "container_name", existing.Name, "error", err)
+		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
 	inspect, err := s.dockerClient.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
 	if err != nil {
 		if cerrdefs.IsNotFound(err) {
+			s.logger.Error("Container upgrade failed: container not found on Docker host", "container_id", containerID, "container_name", existing.Name)
 			return nil, connect.NewError(connect.CodeNotFound, errors.New("container not found on Docker host"))
 		}
+		s.logger.Error("Container upgrade failed: inspect container failed", "container_id", containerID, "container_name", existing.Name, "error", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to inspect container: %w", err))
 	}
 
 	// 4. Pull the latest image tag digest
 	imageRef := inspect.Container.Config.Image
 	if imageRef == "" {
-		return nil, connect.NewError(connect.CodeInternal, errors.New("container does not have an associated image"))
+		err = errors.New("container does not have an associated image")
+		s.logger.Error("Container upgrade failed", "container_id", containerID, "container_name", existing.Name, "error", err)
+		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
 	authHeader, err := s.getRegistryAuth(imageRef)
@@ -78,10 +86,12 @@ func (s *Service) upgradeContainerInternal(ctx context.Context, containerID stri
 		s.logger.Warn("Failed to resolve registry auth for pull, attempting unauthenticated pull", "image", imageRef, "error", err)
 	}
 
+	s.logger.Info("Pulling latest image for container upgrade", "container_name", existing.Name, "image", imageRef)
 	reader, err := s.dockerClient.ImagePull(ctx, imageRef, client.ImagePullOptions{
 		RegistryAuth: authHeader,
 	})
 	if err != nil {
+		s.logger.Error("Container upgrade failed: pull image failed", "container_id", containerID, "container_name", existing.Name, "image", imageRef, "error", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to pull image %s: %w", imageRef, err))
 	}
 	defer func() { _ = reader.Close() }()
@@ -91,26 +101,32 @@ func (s *Service) upgradeContainerInternal(ctx context.Context, containerID stri
 	// Fetch the new image ID/digest after pull
 	inspectNewImage, err := s.dockerClient.ImageInspect(ctx, imageRef)
 	if err != nil {
+		s.logger.Error("Container upgrade failed: inspect pulled image failed", "container_id", containerID, "container_name", existing.Name, "image", imageRef, "error", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to inspect pulled image: %w", err))
 	}
 	newImageID := inspectNewImage.ID
+	s.logger.Info("Latest image pulled successfully", "container_name", existing.Name, "image", imageRef, "new_image_id", newImageID)
 
 	// 5. Stop the container if it's currently running
 	if inspect.Container.State != nil && inspect.Container.State.Running {
+		s.logger.Info("Stopping running container for upgrade", "container_id", containerID, "container_name", existing.Name)
 		timeoutSeconds := 15
 		stopOpts := client.ContainerStopOptions{
 			Timeout: &timeoutSeconds,
 		}
 		if _, stopErr := s.dockerClient.ContainerStop(ctx, containerID, stopOpts); stopErr != nil {
+			s.logger.Error("Container upgrade failed: stop running container failed", "container_id", containerID, "container_name", existing.Name, "error", stopErr)
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to stop container before upgrade: %w", stopErr))
 		}
 	}
 
 	// 6. Delete the old container
+	s.logger.Info("Removing old container for upgrade", "container_id", containerID, "container_name", existing.Name)
 	removeOpts := client.ContainerRemoveOptions{
 		Force: true,
 	}
 	if _, removeErr := s.dockerClient.ContainerRemove(ctx, containerID, removeOpts); removeErr != nil {
+		s.logger.Error("Container upgrade failed: remove container failed", "container_id", containerID, "container_name", existing.Name, "error", removeErr)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to remove old container: %w", removeErr))
 	}
 
@@ -151,8 +167,10 @@ func (s *Service) upgradeContainerInternal(ctx context.Context, containerID stri
 	}
 
 	// 8. Re-create the container
+	s.logger.Info("Re-creating upgraded container", "container_name", containerName, "image", imageRef)
 	created, createErr := s.dockerClient.ContainerCreate(ctx, createOpts)
 	if createErr != nil {
+		s.logger.Error("Container upgrade failed: re-create container failed", "container_name", containerName, "error", createErr)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to re-create container: %w", createErr))
 	}
 
@@ -164,6 +182,7 @@ func (s *Service) upgradeContainerInternal(ctx context.Context, containerID stri
 		}
 		if _, netConnectErr := s.dockerClient.NetworkConnect(ctx, netName, connectOpts); netConnectErr != nil {
 			// Clean up the created container if networking setup fails to prevent zombie containers
+			s.logger.Error("Container upgrade failed: connect additional network failed, rolling back container creation", "container_name", containerName, "network", netName, "error", netConnectErr)
 			_, _ = s.dockerClient.ContainerRemove(ctx, created.ID, client.ContainerRemoveOptions{Force: true})
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to connect container to network %s: %w", netName, netConnectErr))
 		}
@@ -171,11 +190,14 @@ func (s *Service) upgradeContainerInternal(ctx context.Context, containerID stri
 
 	// 9. Start the new instance
 	if _, startErr := s.dockerClient.ContainerStart(ctx, created.ID, client.ContainerStartOptions{}); startErr != nil {
+		s.logger.Error("Container upgrade failed: start upgraded container failed", "container_name", containerName, "error", startErr)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start upgraded container: %w", startErr))
 	}
+	s.logger.Info("Upgraded container started successfully", "container_id", created.ID, "container_name", containerName, "image", imageRef)
 
 	// 10. Update the database: delete old container record and insert new container record
 	if deleteErr := queries.DeleteContainer(ctx, containerID); deleteErr != nil {
+		s.logger.Error("Container upgrade failed: delete old container record from DB failed", "container_id", containerID, "error", deleteErr)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete old container record from DB: %w", deleteErr))
 	}
 
@@ -202,6 +224,7 @@ func (s *Service) upgradeContainerInternal(ctx context.Context, containerID stri
 	}
 
 	if saveErr := queries.SaveContainer(ctx, saveParams); saveErr != nil {
+		s.logger.Error("Container upgrade failed: save upgraded container to DB failed", "container_id", created.ID, "container_name", containerName, "error", saveErr)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to save upgraded container to DB: %w", saveErr))
 	}
 
@@ -221,6 +244,8 @@ func (s *Service) upgradeContainerInternal(ctx context.Context, containerID stri
 			Container:   MapContainerRecord(updatedRecord),
 		})
 	}
+
+	s.logger.Info("Container upgrade completed successfully", "old_container_id", containerID, "new_container_id", created.ID, "container_name", containerName)
 
 	return &v1.UpgradeContainerResponse{
 		Id:              created.ID,
