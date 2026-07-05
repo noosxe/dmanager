@@ -530,6 +530,27 @@ graph TD
   - Compile frontend build: `pnpm build`
   - Run frontend test suite: `pnpm test`
 
+---
+
+### STORY-027: Implement LogServiceHandler [DONE]
+- **Scope:** Backend Logging / ConnectRPC
+- **Estimated Size:** Small (~100 LOC)
+- **Dependencies:** `STORY-026`
+- **Goal:** Implement the backend LogServiceHandler to process and format frontend logs.
+- **Tasks:**
+  1. Create package `internal/logging` and implement `LogServiceHandler` service handler with `SyncLogs` in `internal/logging/service.go`.
+  2. Implement backend unit tests for `SyncLogs` in `internal/logging/service_test.go`.
+  3. Register `LogService` via `NewLogServiceHandler` in `cmd/serve.go`.
+- **Files Affected:**
+  - `internal/logging/service.go` (new)
+  - `internal/logging/service_test.go` (new)
+  - `cmd/serve.go` (modified)
+- **Validation Check:**
+  - Compile the server successfully: `go build -o /dev/null ./...`
+  - Run all Go tests: `go test -v ./internal/logging/...`
+  - Ensure zero linter warnings: `golangci-lint run`
+
+
 
 
 

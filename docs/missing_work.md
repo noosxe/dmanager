@@ -5,9 +5,9 @@ This document tracks frontend, backend, and background-related features and inte
 ## 1. Backend Missing Work Checklist (Go / ConnectRPC)
 
 ### 1.1. Service Implementations
-- [ ] **[LogServiceHandler](file:///home/mechsoull/Projects/dmanager/internal/gen/proto/dmanager/v1/dmanagerv1connect/log.connect.go#L76)** (or [log.proto](file:///home/mechsoull/Projects/dmanager/proto/dmanager/v1/log.proto))
-  - [ ] Implement the `SyncLogs` method to ingest frontend client logs, parse/format them, and log them into the structured `log/slog` output with attributes `source: frontend`, `client_level`, and `client_timestamp`.
-  - [ ] Register `LogService` via `NewLogServiceHandler` in the server bootstrapper [serve.go](file:///home/mechsoull/Projects/dmanager/cmd/serve.go).
+- [x] **[LogServiceHandler](file:///home/mechsoull/Projects/dmanager/internal/gen/proto/dmanager/v1/dmanagerv1connect/log.connect.go#L76)** (or [log.proto](file:///home/mechsoull/Projects/dmanager/proto/dmanager/v1/log.proto))
+  - [x] Implement the `SyncLogs` method to ingest frontend client logs, parse/format them, and log them into the structured `log/slog` output with attributes `source: frontend`, `client_level`, and `client_timestamp`.
+  - [x] Register `LogService` via `NewLogServiceHandler` in the server bootstrapper [serve.go](file:///home/mechsoull/Projects/dmanager/cmd/serve.go).
 - [x] **[ContainerServiceHandler](file:///home/mechsoull/Projects/dmanager/internal/gen/proto/dmanager/v1/dmanagerv1connect/container.connect.go#L64)** (in [service.go](file:///home/mechsoull/Projects/dmanager/internal/container/service.go))
   - [x] Implement the `SetContainerAutoUpdate` method to persist a container's auto-update settings in the SQLite database and publish the sync event to container streams.
   - [x] Implement the `CheckContainerUpdates` method to trigger an immediate, out-of-band registry check for a specific container image and update its database state.

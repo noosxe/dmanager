@@ -24,6 +24,7 @@ import (
 	"dmanager/internal/docker"
 	dmanagerv1 "dmanager/internal/gen/proto/dmanager/v1"
 	"dmanager/internal/gen/proto/dmanager/v1/dmanagerv1connect"
+	"dmanager/internal/logging"
 )
 
 var (
@@ -135,6 +136,14 @@ var serveCmd = &cobra.Command{
 			connect.WithInterceptors(authInterceptor),
 		)
 		mux.Handle(containerPath, containerHandler)
+
+		// Register LogService
+		loggingSvc := logging.NewService(logger.With("module", "logging"))
+		loggingPath, loggingHandler := dmanagerv1connect.NewLogServiceHandler(
+			loggingSvc,
+			connect.WithInterceptors(authInterceptor),
+		)
+		mux.Handle(loggingPath, loggingHandler)
 
 		// Start background registry update checker scheduler
 		container.StartScheduler(cmd.Context(), containerSvc, cfg.Scheduler.IntervalMinutes)
