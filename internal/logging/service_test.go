@@ -10,6 +10,11 @@ import (
 	v1 "dmanager/internal/gen/proto/dmanager/v1"
 )
 
+const (
+	testTimeStr = "2026-07-05T17:00:00Z"
+	testWarnMsg = "Another Warning"
+)
+
 type logRecord struct {
 	Level   slog.Level
 	Message string
@@ -74,7 +79,7 @@ func TestSyncLogs(t *testing.T) {
 			{
 				Level:     levelInfo,
 				Message:   "User clicked login button",
-				Timestamp: "2026-07-05T17:00:00Z",
+				Timestamp: testTimeStr,
 				Component: "LoginButton",
 				Metadata:  `{"userID": "123"}`,
 			},
@@ -127,8 +132,8 @@ func TestSyncLogs(t *testing.T) {
 	if rec0.Attrs["client_level"] != levelInfo {
 		t.Errorf("expected client_level to be %s, got %v", levelInfo, rec0.Attrs["client_level"])
 	}
-	if rec0.Attrs["client_timestamp"] != "2026-07-05T17:00:00Z" {
-		t.Errorf("expected client_timestamp to be 2026-07-05T17:00:00Z, got %v", rec0.Attrs["client_timestamp"])
+	if rec0.Attrs["client_timestamp"] != testTimeStr {
+		t.Errorf("expected client_timestamp to be %s, got %v", testTimeStr, rec0.Attrs["client_timestamp"])
 	}
 	if rec0.Attrs["component"] != "LoginButton" {
 		t.Errorf("expected component to be LoginButton, got %v", rec0.Attrs["component"])
@@ -166,9 +171,9 @@ func TestGetSystemLogs(t *testing.T) {
 	buf := NewRingBuffer(5)
 	svc := NewService(slog.Default(), buf)
 
-	buf.Add(&v1.LogEntry{Level: "INFO", Message: "Message 1", Timestamp: "2026-07-05T17:00:00Z", Component: "CompA"})
-	buf.Add(&v1.LogEntry{Level: "ERROR", Message: "Message 2", Timestamp: "2026-07-05T17:01:00Z", Component: "CompB"})
-	buf.Add(&v1.LogEntry{Level: "WARN", Message: "Another Warning", Timestamp: "2026-07-05T17:02:00Z", Component: "CompA"})
+	buf.Add(&v1.LogEntry{Level: "INFO", Message: "Message 1", Timestamp: testTimeStr, Component: "CompA"})
+	buf.Add(&v1.LogEntry{Level: levelError, Message: "Message 2", Timestamp: "2026-07-05T17:01:00Z", Component: "CompB"})
+	buf.Add(&v1.LogEntry{Level: "WARN", Message: testWarnMsg, Timestamp: "2026-07-05T17:02:00Z", Component: "CompA"})
 
 	// Test 1: Get all (should return newest first)
 	req := connect.NewRequest(&v1.GetSystemLogsRequest{Limit: 10})
@@ -179,12 +184,12 @@ func TestGetSystemLogs(t *testing.T) {
 	if len(resp.Msg.Entries) != 3 {
 		t.Fatalf("expected 3 entries, got %d", len(resp.Msg.Entries))
 	}
-	if resp.Msg.Entries[0].Message != "Another Warning" {
-		t.Errorf("expected newest first ('Another Warning'), got %q", resp.Msg.Entries[0].Message)
+	if resp.Msg.Entries[0].Message != testWarnMsg {
+		t.Errorf("expected newest first ('%s'), got %q", testWarnMsg, resp.Msg.Entries[0].Message)
 	}
 
 	// Test 2: Filter by level
-	reqFilter := connect.NewRequest(&v1.GetSystemLogsRequest{Limit: 10, LevelFilter: "ERROR"})
+	reqFilter := connect.NewRequest(&v1.GetSystemLogsRequest{Limit: 10, LevelFilter: levelError})
 	respFilter, err := svc.GetSystemLogs(context.Background(), reqFilter)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -192,8 +197,8 @@ func TestGetSystemLogs(t *testing.T) {
 	if len(respFilter.Msg.Entries) != 1 {
 		t.Fatalf("expected 1 entry, got %d", len(respFilter.Msg.Entries))
 	}
-	if respFilter.Msg.Entries[0].Level != "ERROR" {
-		t.Errorf("expected ERROR level, got %s", respFilter.Msg.Entries[0].Level)
+	if respFilter.Msg.Entries[0].Level != levelError {
+		t.Errorf("expected %s level, got %s", levelError, respFilter.Msg.Entries[0].Level)
 	}
 
 	// Test 3: Filter by query
@@ -205,8 +210,8 @@ func TestGetSystemLogs(t *testing.T) {
 	if len(respQuery.Msg.Entries) != 1 {
 		t.Fatalf("expected 1 entry, got %d", len(respQuery.Msg.Entries))
 	}
-	if respQuery.Msg.Entries[0].Message != "Another Warning" {
-		t.Errorf("expected 'Another Warning', got %q", respQuery.Msg.Entries[0].Message)
+	if respQuery.Msg.Entries[0].Message != testWarnMsg {
+		t.Errorf("expected '%s', got %q", testWarnMsg, respQuery.Msg.Entries[0].Message)
 	}
 }
 
