@@ -35,12 +35,17 @@ const (
 const (
 	// LogServiceSyncLogsProcedure is the fully-qualified name of the LogService's SyncLogs RPC.
 	LogServiceSyncLogsProcedure = "/dmanager.v1.LogService/SyncLogs"
+	// LogServiceGetSystemLogsProcedure is the fully-qualified name of the LogService's GetSystemLogs
+	// RPC.
+	LogServiceGetSystemLogsProcedure = "/dmanager.v1.LogService/GetSystemLogs"
 )
 
 // LogServiceClient is a client for the dmanager.v1.LogService service.
 type LogServiceClient interface {
 	// Transmit local browser log queues for centralized ingestion (Unauthenticated/Authenticated).
 	SyncLogs(context.Context, *connect.Request[v1.SyncLogsRequest]) (*connect.Response[v1.SyncLogsResponse], error)
+	// Retrieve central ingested logs and daemon structured logs (Authenticated).
+	GetSystemLogs(context.Context, *connect.Request[v1.GetSystemLogsRequest]) (*connect.Response[v1.GetSystemLogsResponse], error)
 }
 
 // NewLogServiceClient constructs a client for the dmanager.v1.LogService service. By default, it
@@ -60,12 +65,19 @@ func NewLogServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...
 			connect.WithSchema(logServiceMethods.ByName("SyncLogs")),
 			connect.WithClientOptions(opts...),
 		),
+		getSystemLogs: connect.NewClient[v1.GetSystemLogsRequest, v1.GetSystemLogsResponse](
+			httpClient,
+			baseURL+LogServiceGetSystemLogsProcedure,
+			connect.WithSchema(logServiceMethods.ByName("GetSystemLogs")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // logServiceClient implements LogServiceClient.
 type logServiceClient struct {
-	syncLogs *connect.Client[v1.SyncLogsRequest, v1.SyncLogsResponse]
+	syncLogs      *connect.Client[v1.SyncLogsRequest, v1.SyncLogsResponse]
+	getSystemLogs *connect.Client[v1.GetSystemLogsRequest, v1.GetSystemLogsResponse]
 }
 
 // SyncLogs calls dmanager.v1.LogService.SyncLogs.
@@ -73,10 +85,17 @@ func (c *logServiceClient) SyncLogs(ctx context.Context, req *connect.Request[v1
 	return c.syncLogs.CallUnary(ctx, req)
 }
 
+// GetSystemLogs calls dmanager.v1.LogService.GetSystemLogs.
+func (c *logServiceClient) GetSystemLogs(ctx context.Context, req *connect.Request[v1.GetSystemLogsRequest]) (*connect.Response[v1.GetSystemLogsResponse], error) {
+	return c.getSystemLogs.CallUnary(ctx, req)
+}
+
 // LogServiceHandler is an implementation of the dmanager.v1.LogService service.
 type LogServiceHandler interface {
 	// Transmit local browser log queues for centralized ingestion (Unauthenticated/Authenticated).
 	SyncLogs(context.Context, *connect.Request[v1.SyncLogsRequest]) (*connect.Response[v1.SyncLogsResponse], error)
+	// Retrieve central ingested logs and daemon structured logs (Authenticated).
+	GetSystemLogs(context.Context, *connect.Request[v1.GetSystemLogsRequest]) (*connect.Response[v1.GetSystemLogsResponse], error)
 }
 
 // NewLogServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -92,10 +111,18 @@ func NewLogServiceHandler(svc LogServiceHandler, opts ...connect.HandlerOption) 
 		connect.WithSchema(logServiceMethods.ByName("SyncLogs")),
 		connect.WithHandlerOptions(opts...),
 	)
+	logServiceGetSystemLogsHandler := connect.NewUnaryHandler(
+		LogServiceGetSystemLogsProcedure,
+		svc.GetSystemLogs,
+		connect.WithSchema(logServiceMethods.ByName("GetSystemLogs")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/dmanager.v1.LogService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case LogServiceSyncLogsProcedure:
 			logServiceSyncLogsHandler.ServeHTTP(w, r)
+		case LogServiceGetSystemLogsProcedure:
+			logServiceGetSystemLogsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -107,4 +134,8 @@ type UnimplementedLogServiceHandler struct{}
 
 func (UnimplementedLogServiceHandler) SyncLogs(context.Context, *connect.Request[v1.SyncLogsRequest]) (*connect.Response[v1.SyncLogsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.LogService.SyncLogs is not implemented"))
+}
+
+func (UnimplementedLogServiceHandler) GetSystemLogs(context.Context, *connect.Request[v1.GetSystemLogsRequest]) (*connect.Response[v1.GetSystemLogsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.LogService.GetSystemLogs is not implemented"))
 }

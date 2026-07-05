@@ -185,6 +185,186 @@ func (x *SyncLogsResponse) GetProcessedCount() int32 {
 	return 0
 }
 
+type LogEntry struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Level         string                 `protobuf:"bytes,1,opt,name=level,proto3" json:"level,omitempty"`         // "DEBUG", "INFO", "WARN", "ERROR"
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`     // Log statement
+	Timestamp     string                 `protobuf:"bytes,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"` // RFC3339 formatted log timestamp
+	Component     string                 `protobuf:"bytes,4,opt,name=component,proto3" json:"component,omitempty"` // Log source component
+	Metadata      string                 `protobuf:"bytes,5,opt,name=metadata,proto3" json:"metadata,omitempty"`   // Serialized JSON log metadata
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LogEntry) Reset() {
+	*x = LogEntry{}
+	mi := &file_proto_dmanager_v1_log_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LogEntry) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LogEntry) ProtoMessage() {}
+
+func (x *LogEntry) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_log_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LogEntry.ProtoReflect.Descriptor instead.
+func (*LogEntry) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_log_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *LogEntry) GetLevel() string {
+	if x != nil {
+		return x.Level
+	}
+	return ""
+}
+
+func (x *LogEntry) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *LogEntry) GetTimestamp() string {
+	if x != nil {
+		return x.Timestamp
+	}
+	return ""
+}
+
+func (x *LogEntry) GetComponent() string {
+	if x != nil {
+		return x.Component
+	}
+	return ""
+}
+
+func (x *LogEntry) GetMetadata() string {
+	if x != nil {
+		return x.Metadata
+	}
+	return ""
+}
+
+type GetSystemLogsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Limit         int32                  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	LevelFilter   string                 `protobuf:"bytes,2,opt,name=level_filter,json=levelFilter,proto3" json:"level_filter,omitempty"`
+	SearchQuery   string                 `protobuf:"bytes,3,opt,name=search_query,json=searchQuery,proto3" json:"search_query,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetSystemLogsRequest) Reset() {
+	*x = GetSystemLogsRequest{}
+	mi := &file_proto_dmanager_v1_log_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetSystemLogsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetSystemLogsRequest) ProtoMessage() {}
+
+func (x *GetSystemLogsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_log_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetSystemLogsRequest.ProtoReflect.Descriptor instead.
+func (*GetSystemLogsRequest) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_log_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *GetSystemLogsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *GetSystemLogsRequest) GetLevelFilter() string {
+	if x != nil {
+		return x.LevelFilter
+	}
+	return ""
+}
+
+func (x *GetSystemLogsRequest) GetSearchQuery() string {
+	if x != nil {
+		return x.SearchQuery
+	}
+	return ""
+}
+
+type GetSystemLogsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Entries       []*LogEntry            `protobuf:"bytes,1,rep,name=entries,proto3" json:"entries,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetSystemLogsResponse) Reset() {
+	*x = GetSystemLogsResponse{}
+	mi := &file_proto_dmanager_v1_log_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetSystemLogsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetSystemLogsResponse) ProtoMessage() {}
+
+func (x *GetSystemLogsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_log_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetSystemLogsResponse.ProtoReflect.Descriptor instead.
+func (*GetSystemLogsResponse) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_log_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *GetSystemLogsResponse) GetEntries() []*LogEntry {
+	if x != nil {
+		return x.Entries
+	}
+	return nil
+}
+
 var File_proto_dmanager_v1_log_proto protoreflect.FileDescriptor
 
 const file_proto_dmanager_v1_log_proto_rawDesc = "" +
@@ -199,10 +379,23 @@ const file_proto_dmanager_v1_log_proto_rawDesc = "" +
 	"\x0fSyncLogsRequest\x125\n" +
 	"\aentries\x18\x01 \x03(\v2\x1b.dmanager.v1.ClientLogEntryR\aentries\";\n" +
 	"\x10SyncLogsResponse\x12'\n" +
-	"\x0fprocessed_count\x18\x01 \x01(\x05R\x0eprocessedCount2U\n" +
+	"\x0fprocessed_count\x18\x01 \x01(\x05R\x0eprocessedCount\"\x92\x01\n" +
+	"\bLogEntry\x12\x14\n" +
+	"\x05level\x18\x01 \x01(\tR\x05level\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x12\x1c\n" +
+	"\ttimestamp\x18\x03 \x01(\tR\ttimestamp\x12\x1c\n" +
+	"\tcomponent\x18\x04 \x01(\tR\tcomponent\x12\x1a\n" +
+	"\bmetadata\x18\x05 \x01(\tR\bmetadata\"r\n" +
+	"\x14GetSystemLogsRequest\x12\x14\n" +
+	"\x05limit\x18\x01 \x01(\x05R\x05limit\x12!\n" +
+	"\flevel_filter\x18\x02 \x01(\tR\vlevelFilter\x12!\n" +
+	"\fsearch_query\x18\x03 \x01(\tR\vsearchQuery\"H\n" +
+	"\x15GetSystemLogsResponse\x12/\n" +
+	"\aentries\x18\x01 \x03(\v2\x15.dmanager.v1.LogEntryR\aentries2\xad\x01\n" +
 	"\n" +
 	"LogService\x12G\n" +
-	"\bSyncLogs\x12\x1c.dmanager.v1.SyncLogsRequest\x1a\x1d.dmanager.v1.SyncLogsResponseB4Z2dmanager/internal/gen/proto/dmanager/v1;dmanagerv1b\x06proto3"
+	"\bSyncLogs\x12\x1c.dmanager.v1.SyncLogsRequest\x1a\x1d.dmanager.v1.SyncLogsResponse\x12V\n" +
+	"\rGetSystemLogs\x12!.dmanager.v1.GetSystemLogsRequest\x1a\".dmanager.v1.GetSystemLogsResponseB4Z2dmanager/internal/gen/proto/dmanager/v1;dmanagerv1b\x06proto3"
 
 var (
 	file_proto_dmanager_v1_log_proto_rawDescOnce sync.Once
@@ -216,21 +409,27 @@ func file_proto_dmanager_v1_log_proto_rawDescGZIP() []byte {
 	return file_proto_dmanager_v1_log_proto_rawDescData
 }
 
-var file_proto_dmanager_v1_log_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_proto_dmanager_v1_log_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_proto_dmanager_v1_log_proto_goTypes = []any{
-	(*ClientLogEntry)(nil),   // 0: dmanager.v1.ClientLogEntry
-	(*SyncLogsRequest)(nil),  // 1: dmanager.v1.SyncLogsRequest
-	(*SyncLogsResponse)(nil), // 2: dmanager.v1.SyncLogsResponse
+	(*ClientLogEntry)(nil),        // 0: dmanager.v1.ClientLogEntry
+	(*SyncLogsRequest)(nil),       // 1: dmanager.v1.SyncLogsRequest
+	(*SyncLogsResponse)(nil),      // 2: dmanager.v1.SyncLogsResponse
+	(*LogEntry)(nil),              // 3: dmanager.v1.LogEntry
+	(*GetSystemLogsRequest)(nil),  // 4: dmanager.v1.GetSystemLogsRequest
+	(*GetSystemLogsResponse)(nil), // 5: dmanager.v1.GetSystemLogsResponse
 }
 var file_proto_dmanager_v1_log_proto_depIdxs = []int32{
 	0, // 0: dmanager.v1.SyncLogsRequest.entries:type_name -> dmanager.v1.ClientLogEntry
-	1, // 1: dmanager.v1.LogService.SyncLogs:input_type -> dmanager.v1.SyncLogsRequest
-	2, // 2: dmanager.v1.LogService.SyncLogs:output_type -> dmanager.v1.SyncLogsResponse
-	2, // [2:3] is the sub-list for method output_type
-	1, // [1:2] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	3, // 1: dmanager.v1.GetSystemLogsResponse.entries:type_name -> dmanager.v1.LogEntry
+	1, // 2: dmanager.v1.LogService.SyncLogs:input_type -> dmanager.v1.SyncLogsRequest
+	4, // 3: dmanager.v1.LogService.GetSystemLogs:input_type -> dmanager.v1.GetSystemLogsRequest
+	2, // 4: dmanager.v1.LogService.SyncLogs:output_type -> dmanager.v1.SyncLogsResponse
+	5, // 5: dmanager.v1.LogService.GetSystemLogs:output_type -> dmanager.v1.GetSystemLogsResponse
+	4, // [4:6] is the sub-list for method output_type
+	2, // [2:4] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_proto_dmanager_v1_log_proto_init() }
@@ -244,7 +443,7 @@ func file_proto_dmanager_v1_log_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_dmanager_v1_log_proto_rawDesc), len(file_proto_dmanager_v1_log_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

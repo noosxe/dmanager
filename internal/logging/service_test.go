@@ -3,6 +3,7 @@ package logging
 import (
 	"context"
 	"log/slog"
+	"strings"
 	"testing"
 
 	connect "connectrpc.com/connect"
@@ -66,7 +67,7 @@ func TestSyncLogs(t *testing.T) {
 		records: records,
 	}
 	logger := slog.New(handler).With("module", "logging")
-	svc := NewService(logger)
+	svc := NewService(logger, NewRingBuffer(10))
 
 	req := connect.NewRequest(&v1.SyncLogsRequest{
 		Entries: []*v1.ClientLogEntry{
@@ -160,3 +161,77 @@ func TestSyncLogs(t *testing.T) {
 		t.Errorf("expected LevelInfo for unknown level 'UNKNOWN', got %v", rec3.Level)
 	}
 }
+
+func TestGetSystemLogs(t *testing.T) {
+	buf := NewRingBuffer(5)
+	svc := NewService(slog.Default(), buf)
+
+	buf.Add(&v1.LogEntry{Level: "INFO", Message: "Message 1", Timestamp: "2026-07-05T17:00:00Z", Component: "CompA"})
+	buf.Add(&v1.LogEntry{Level: "ERROR", Message: "Message 2", Timestamp: "2026-07-05T17:01:00Z", Component: "CompB"})
+	buf.Add(&v1.LogEntry{Level: "WARN", Message: "Another Warning", Timestamp: "2026-07-05T17:02:00Z", Component: "CompA"})
+
+	// Test 1: Get all (should return newest first)
+	req := connect.NewRequest(&v1.GetSystemLogsRequest{Limit: 10})
+	resp, err := svc.GetSystemLogs(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(resp.Msg.Entries) != 3 {
+		t.Fatalf("expected 3 entries, got %d", len(resp.Msg.Entries))
+	}
+	if resp.Msg.Entries[0].Message != "Another Warning" {
+		t.Errorf("expected newest first ('Another Warning'), got %q", resp.Msg.Entries[0].Message)
+	}
+
+	// Test 2: Filter by level
+	reqFilter := connect.NewRequest(&v1.GetSystemLogsRequest{Limit: 10, LevelFilter: "ERROR"})
+	respFilter, err := svc.GetSystemLogs(context.Background(), reqFilter)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(respFilter.Msg.Entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(respFilter.Msg.Entries))
+	}
+	if respFilter.Msg.Entries[0].Level != "ERROR" {
+		t.Errorf("expected ERROR level, got %s", respFilter.Msg.Entries[0].Level)
+	}
+
+	// Test 3: Filter by query
+	reqQuery := connect.NewRequest(&v1.GetSystemLogsRequest{Limit: 10, SearchQuery: "Warning"})
+	respQuery, err := svc.GetSystemLogs(context.Background(), reqQuery)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(respQuery.Msg.Entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(respQuery.Msg.Entries))
+	}
+	if respQuery.Msg.Entries[0].Message != "Another Warning" {
+		t.Errorf("expected 'Another Warning', got %q", respQuery.Msg.Entries[0].Message)
+	}
+}
+
+func TestInterceptHandler(t *testing.T) {
+	buf := NewRingBuffer(10)
+	baseLogger := slog.New(slog.NewTextHandler(&strings.Builder{}, nil)) // discard output
+	handler := NewInterceptHandler(baseLogger.Handler(), buf)
+	logger := slog.New(handler)
+
+	logger.Info("Hello System", slog.String("component", "TestComponent"), slog.String("meta_key", "meta_val"))
+
+	entries := buf.Get(10, "", "")
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+
+	entry := entries[0]
+	if entry.Message != "Hello System" {
+		t.Errorf("expected message 'Hello System', got %q", entry.Message)
+	}
+	if entry.Component != "TestComponent" {
+		t.Errorf("expected component 'TestComponent', got %q", entry.Component)
+	}
+	if !strings.Contains(entry.Metadata, `"meta_key":"meta_val"`) {
+		t.Errorf("expected metadata to contain meta_key, got %q", entry.Metadata)
+	}
+}
+

@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file proto/dmanager/v1/log.proto.
  */
 export const file_proto_dmanager_v1_log: GenFile = /*@__PURE__*/
-  fileDesc("Chtwcm90by9kbWFuYWdlci92MS9sb2cucHJvdG8SC2RtYW5hZ2VyLnYxImgKDkNsaWVudExvZ0VudHJ5Eg0KBWxldmVsGAEgASgJEg8KB21lc3NhZ2UYAiABKAkSEQoJdGltZXN0YW1wGAMgASgJEhEKCWNvbXBvbmVudBgEIAEoCRIQCghtZXRhZGF0YRgFIAEoCSI/Cg9TeW5jTG9nc1JlcXVlc3QSLAoHZW50cmllcxgBIAMoCzIbLmRtYW5hZ2VyLnYxLkNsaWVudExvZ0VudHJ5IisKEFN5bmNMb2dzUmVzcG9uc2USFwoPcHJvY2Vzc2VkX2NvdW50GAEgASgFMlUKCkxvZ1NlcnZpY2USRwoIU3luY0xvZ3MSHC5kbWFuYWdlci52MS5TeW5jTG9nc1JlcXVlc3QaHS5kbWFuYWdlci52MS5TeW5jTG9nc1Jlc3BvbnNlQjRaMmRtYW5hZ2VyL2ludGVybmFsL2dlbi9wcm90by9kbWFuYWdlci92MTtkbWFuYWdlcnYxYgZwcm90bzM");
+  fileDesc("Chtwcm90by9kbWFuYWdlci92MS9sb2cucHJvdG8SC2RtYW5hZ2VyLnYxImgKDkNsaWVudExvZ0VudHJ5Eg0KBWxldmVsGAEgASgJEg8KB21lc3NhZ2UYAiABKAkSEQoJdGltZXN0YW1wGAMgASgJEhEKCWNvbXBvbmVudBgEIAEoCRIQCghtZXRhZGF0YRgFIAEoCSI/Cg9TeW5jTG9nc1JlcXVlc3QSLAoHZW50cmllcxgBIAMoCzIbLmRtYW5hZ2VyLnYxLkNsaWVudExvZ0VudHJ5IisKEFN5bmNMb2dzUmVzcG9uc2USFwoPcHJvY2Vzc2VkX2NvdW50GAEgASgFImIKCExvZ0VudHJ5Eg0KBWxldmVsGAEgASgJEg8KB21lc3NhZ2UYAiABKAkSEQoJdGltZXN0YW1wGAMgASgJEhEKCWNvbXBvbmVudBgEIAEoCRIQCghtZXRhZGF0YRgFIAEoCSJRChRHZXRTeXN0ZW1Mb2dzUmVxdWVzdBINCgVsaW1pdBgBIAEoBRIUCgxsZXZlbF9maWx0ZXIYAiABKAkSFAoMc2VhcmNoX3F1ZXJ5GAMgASgJIj8KFUdldFN5c3RlbUxvZ3NSZXNwb25zZRImCgdlbnRyaWVzGAEgAygLMhUuZG1hbmFnZXIudjEuTG9nRW50cnkyrQEKCkxvZ1NlcnZpY2USRwoIU3luY0xvZ3MSHC5kbWFuYWdlci52MS5TeW5jTG9nc1JlcXVlc3QaHS5kbWFuYWdlci52MS5TeW5jTG9nc1Jlc3BvbnNlElYKDUdldFN5c3RlbUxvZ3MSIS5kbWFuYWdlci52MS5HZXRTeXN0ZW1Mb2dzUmVxdWVzdBoiLmRtYW5hZ2VyLnYxLkdldFN5c3RlbUxvZ3NSZXNwb25zZUI0WjJkbWFuYWdlci9pbnRlcm5hbC9nZW4vcHJvdG8vZG1hbmFnZXIvdjE7ZG1hbmFnZXJ2MWIGcHJvdG8z");
 
 /**
  * @generated from message dmanager.v1.ClientLogEntry
@@ -94,6 +94,97 @@ export const SyncLogsResponseSchema: GenMessage<SyncLogsResponse> = /*@__PURE__*
   messageDesc(file_proto_dmanager_v1_log, 2);
 
 /**
+ * @generated from message dmanager.v1.LogEntry
+ */
+export type LogEntry = Message<"dmanager.v1.LogEntry"> & {
+  /**
+   * "DEBUG", "INFO", "WARN", "ERROR"
+   *
+   * @generated from field: string level = 1;
+   */
+  level: string;
+
+  /**
+   * Log statement
+   *
+   * @generated from field: string message = 2;
+   */
+  message: string;
+
+  /**
+   * RFC3339 formatted log timestamp
+   *
+   * @generated from field: string timestamp = 3;
+   */
+  timestamp: string;
+
+  /**
+   * Log source component
+   *
+   * @generated from field: string component = 4;
+   */
+  component: string;
+
+  /**
+   * Serialized JSON log metadata
+   *
+   * @generated from field: string metadata = 5;
+   */
+  metadata: string;
+};
+
+/**
+ * Describes the message dmanager.v1.LogEntry.
+ * Use `create(LogEntrySchema)` to create a new message.
+ */
+export const LogEntrySchema: GenMessage<LogEntry> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_log, 3);
+
+/**
+ * @generated from message dmanager.v1.GetSystemLogsRequest
+ */
+export type GetSystemLogsRequest = Message<"dmanager.v1.GetSystemLogsRequest"> & {
+  /**
+   * @generated from field: int32 limit = 1;
+   */
+  limit: number;
+
+  /**
+   * @generated from field: string level_filter = 2;
+   */
+  levelFilter: string;
+
+  /**
+   * @generated from field: string search_query = 3;
+   */
+  searchQuery: string;
+};
+
+/**
+ * Describes the message dmanager.v1.GetSystemLogsRequest.
+ * Use `create(GetSystemLogsRequestSchema)` to create a new message.
+ */
+export const GetSystemLogsRequestSchema: GenMessage<GetSystemLogsRequest> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_log, 4);
+
+/**
+ * @generated from message dmanager.v1.GetSystemLogsResponse
+ */
+export type GetSystemLogsResponse = Message<"dmanager.v1.GetSystemLogsResponse"> & {
+  /**
+   * @generated from field: repeated dmanager.v1.LogEntry entries = 1;
+   */
+  entries: LogEntry[];
+};
+
+/**
+ * Describes the message dmanager.v1.GetSystemLogsResponse.
+ * Use `create(GetSystemLogsResponseSchema)` to create a new message.
+ */
+export const GetSystemLogsResponseSchema: GenMessage<GetSystemLogsResponse> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_log, 5);
+
+/**
  * @generated from service dmanager.v1.LogService
  */
 export const LogService: GenService<{
@@ -106,6 +197,16 @@ export const LogService: GenService<{
     methodKind: "unary";
     input: typeof SyncLogsRequestSchema;
     output: typeof SyncLogsResponseSchema;
+  },
+  /**
+   * Retrieve central ingested logs and daemon structured logs (Authenticated).
+   *
+   * @generated from rpc dmanager.v1.LogService.GetSystemLogs
+   */
+  getSystemLogs: {
+    methodKind: "unary";
+    input: typeof GetSystemLogsRequestSchema;
+    output: typeof GetSystemLogsResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_proto_dmanager_v1_log, 0);

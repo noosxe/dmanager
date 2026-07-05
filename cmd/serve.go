@@ -45,6 +45,11 @@ var serveCmd = &cobra.Command{
 		} else {
 			logHandler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})
 		}
+
+		// Initialize ring buffer for system logs page
+		logBuffer := logging.NewRingBuffer(1000)
+		logHandler = logging.NewInterceptHandler(logHandler, logBuffer)
+
 		logger := slog.New(logHandler)
 		slog.SetDefault(logger)
 
@@ -138,7 +143,7 @@ var serveCmd = &cobra.Command{
 		mux.Handle(containerPath, containerHandler)
 
 		// Register LogService
-		loggingSvc := logging.NewService(logger.With("module", "logging"))
+		loggingSvc := logging.NewService(logger.With("module", "logging"), logBuffer)
 		loggingPath, loggingHandler := dmanagerv1connect.NewLogServiceHandler(
 			loggingSvc,
 			connect.WithInterceptors(authInterceptor),
