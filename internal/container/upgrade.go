@@ -64,7 +64,14 @@ func (s *Service) UpgradeContainer(ctx context.Context, req *connect.Request[v1.
 		return nil, connect.NewError(connect.CodeInternal, errors.New("container does not have an associated image"))
 	}
 
-	reader, err := s.dockerClient.ImagePull(ctx, imageRef, client.ImagePullOptions{})
+	authHeader, err := s.getRegistryAuth(imageRef)
+	if err != nil {
+		s.logger.Warn("Failed to resolve registry auth for pull, attempting unauthenticated pull", "image", imageRef, "error", err)
+	}
+
+	reader, err := s.dockerClient.ImagePull(ctx, imageRef, client.ImagePullOptions{
+		RegistryAuth: authHeader,
+	})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to pull image %s: %w", imageRef, err))
 	}

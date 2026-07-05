@@ -8,6 +8,7 @@ import (
 	connect "connectrpc.com/connect"
 	"github.com/moby/moby/client"
 
+	"dmanager/internal/config"
 	"dmanager/internal/db"
 	dmanagerv1 "dmanager/internal/gen/proto/dmanager/v1"
 	"dmanager/internal/gen/proto/dmanager/v1/dmanagerv1connect"
@@ -25,15 +26,17 @@ type Service struct {
 	broker       *Broker
 	dockerClient *client.Client
 	logger       *slog.Logger
+	registries   []config.Registry
 }
 
 // NewService creates a new Container service.
-func NewService(dbConn db.DBTX, broker *Broker, dockerClient *client.Client, logger *slog.Logger) *Service {
+func NewService(dbConn db.DBTX, broker *Broker, dockerClient *client.Client, logger *slog.Logger, registries []config.Registry) *Service {
 	return &Service{
 		db:           dbConn,
 		broker:       broker,
 		dockerClient: dockerClient,
 		logger:       logger,
+		registries:   registries,
 	}
 }
 

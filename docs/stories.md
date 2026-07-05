@@ -26,6 +26,7 @@ graph TD
     S18 --> S19["STORY-019: Upgrade GitHub Actions to Latest Versions (DONE)"]
     S19 --> S20["STORY-020: Structured Logging Migration (DONE)"]
     S20 --> S21["STORY-021: Version Tag Release Workflow (DONE)"]
+    S21 --> S22["STORY-022: Implement Container Auto-Update and Check Updates RPCs (DONE)"]
 ```
 
 
@@ -430,6 +431,27 @@ graph TD
   - `.github/workflows/release.yml` (new)
 - **Validation Check:**
   - Verify syntax and schema correctness of `.github/workflows/release.yml`.
+
+---
+
+### STORY-022: Implement Container Auto-Update and Check Updates RPCs [DONE]
+- **Scope:** Backend Container Service & Registry Integration
+- **Estimated Size:** Medium (~200 LOC)
+- **Dependencies:** `STORY-021`
+- **Goal:** Implement `SetContainerAutoUpdate` and `CheckContainerUpdates` RPC handlers in `ContainerServiceHandler`.
+- **Tasks:**
+  1. Add registries slice configuration to `Service` struct to handle credentials matching.
+  2. Implement `SetContainerAutoUpdate` to persist setting in SQLite DB and publish event via broker.
+  3. Implement `CheckContainerUpdates` to perform remote Docker Registry check via `DistributionInspect` with appropriate credential matching, compare digests, update SQLite DB, and broadcast the change.
+- **Files Affected:**
+  - `internal/container/service.go` (modified)
+  - `internal/container/actions.go` (new RPC implementations or helper additions)
+  - `internal/container/service_test.go` (new unit tests)
+  - `cmd/serve.go` (modified constructor call)
+- **Validation Check:**
+  - Run all unit and integration tests inside container service: `go test -v ./internal/container/...`
+  - Verify zero linter warnings: `golangci-lint run`
+
 
 
 

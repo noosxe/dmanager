@@ -238,7 +238,7 @@ func TestListContainers(t *testing.T) {
 	}
 
 	// Create service
-	svc := NewService(dbConn, NewBroker(), nil, slog.Default())
+	svc := NewService(dbConn, NewBroker(), nil, slog.Default(), nil)
 
 	// Call ListContainers
 	resp, err := svc.ListContainers(ctx, connect.NewRequest(&v1.ListContainersRequest{}))
@@ -280,7 +280,7 @@ func TestListContainers(t *testing.T) {
 func TestStreamContainers(t *testing.T) {
 	dbConn, _ := newTestDB(t)
 	broker := NewBroker()
-	svc := NewService(dbConn, broker, nil, slog.Default())
+	svc := NewService(dbConn, broker, nil, slog.Default(), nil)
 
 	mux := http.NewServeMux()
 	path, handler := dmanagerv1connect.NewContainerServiceHandler(svc)
@@ -391,7 +391,7 @@ func TestContainerActions(t *testing.T) {
 		t.Fatalf("failed to create docker client: %v", err)
 	}
 
-	svc := NewService(dbConn, broker, dockerClient, slog.Default())
+	svc := NewService(dbConn, broker, dockerClient, slog.Default(), nil)
 
 	// Contexts
 	adminCtx := auth.WithUser(context.Background(), db.User{
@@ -608,7 +608,7 @@ func TestUpgradeContainer(t *testing.T) {
 		t.Fatalf("failed to create docker client: %v", err)
 	}
 
-	svc := NewService(dbConn, broker, dockerClient, slog.Default())
+	svc := NewService(dbConn, broker, dockerClient, slog.Default(), nil)
 
 	adminCtx := auth.WithUser(context.Background(), db.User{Role: roleAdmin})
 	viewerCtx := auth.WithUser(context.Background(), db.User{Role: "viewer"})
@@ -796,7 +796,7 @@ func TestGetContainerLogs(t *testing.T) {
 		t.Fatalf("failed to create docker client: %v", err)
 	}
 
-	svc := NewService(dbConn, broker, dockerClient, slog.Default())
+	svc := NewService(dbConn, broker, dockerClient, slog.Default(), nil)
 
 	// Setup Connect handler / server with the Authentication Interceptor
 	interceptor := auth.NewInterceptor(queries, slog.Default())
@@ -896,4 +896,208 @@ func makeLogFrame(streamType byte, payload string) []byte {
 	binary.BigEndian.PutUint32(buf[4:8], uint32(payloadLen))
 	copy(buf[8:], payload)
 	return buf
+}
+
+func TestSetContainerAutoUpdate(t *testing.T) {
+	dbConn, queries := newTestDB(t)
+	broker := NewBroker()
+	svc := NewService(dbConn, broker, nil, slog.Default(), nil)
+
+	containerID := "test-autoupdate-id"
+	if err := queries.SaveContainer(context.Background(), db.SaveContainerParams{
+		ID:         containerID,
+		Name:       "test-autoupdate",
+		Image:      "nginx:alpine",
+		ImageID:    testImageID123,
+		State:      stateRunning,
+		AutoUpdate: 0,
+	}); err != nil {
+		t.Fatalf("failed to save container: %v", err)
+	}
+
+	adminCtx := auth.WithUser(context.Background(), db.User{Role: roleAdmin})
+	viewerCtx := auth.WithUser(context.Background(), db.User{Role: roleViewer})
+
+	// 1. Viewer should be denied permission
+	_, err := svc.SetContainerAutoUpdate(viewerCtx, connect.NewRequest(&v1.SetContainerAutoUpdateRequest{
+		Id:         containerID,
+		AutoUpdate: true,
+	}))
+	if err == nil || connect.CodeOf(err) != connect.CodePermissionDenied {
+		t.Errorf("expected PermissionDenied for viewer, got: %v", err)
+	}
+
+	// 2. Admin should succeed to set auto-update to true
+	resp, err := svc.SetContainerAutoUpdate(adminCtx, connect.NewRequest(&v1.SetContainerAutoUpdateRequest{
+		Id:         containerID,
+		AutoUpdate: true,
+	}))
+	if err != nil {
+		t.Fatalf("SetContainerAutoUpdate failed: %v", err)
+	}
+	if resp.Msg.Id != containerID || !resp.Msg.AutoUpdate {
+		t.Errorf("unexpected response: %+v", resp.Msg)
+	}
+
+	// Verify in DB
+	c, err := queries.GetContainer(context.Background(), containerID)
+	if err != nil {
+		t.Fatalf("failed to query container: %v", err)
+	}
+	if c.AutoUpdate != 1 {
+		t.Errorf("expected AutoUpdate=1 in DB, got %d", c.AutoUpdate)
+	}
+
+	// 3. Admin sets to false
+	resp, err = svc.SetContainerAutoUpdate(adminCtx, connect.NewRequest(&v1.SetContainerAutoUpdateRequest{
+		Id:         containerID,
+		AutoUpdate: false,
+	}))
+	if err != nil {
+		t.Fatalf("SetContainerAutoUpdate failed: %v", err)
+	}
+	if resp.Msg.Id != containerID || resp.Msg.AutoUpdate {
+		t.Errorf("unexpected response: %+v", resp.Msg)
+	}
+
+	// Verify in DB
+	c, err = queries.GetContainer(context.Background(), containerID)
+	if err != nil {
+		t.Fatalf("failed to query container: %v", err)
+	}
+	if c.AutoUpdate != 0 {
+		t.Errorf("expected AutoUpdate=0 in DB, got %d", c.AutoUpdate)
+	}
+}
+
+func TestCheckContainerUpdates(t *testing.T) {
+	dbConn, queries := newTestDB(t)
+	broker := NewBroker()
+
+	containerID := "test-checkupdates-id"
+	imageName := "nginx:alpine"
+	localImageID := "sha256:local-image-123"
+
+	// Stub remote registry digest
+	remoteDigest := "sha256:remote-manifest-digest-xyz"
+	var currentRepoDigest string
+
+	// Setup mock docker daemon
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		// Ping
+		if r.Method == http.MethodGet && r.URL.Path == "/_ping" {
+			w.Header().Set("API-Version", "1.45")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("OK"))
+			return
+		}
+
+		// Inspect container
+		if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/containers/"+containerID+"/json") {
+			_, _ = fmt.Fprintf(w, `{
+				"Id": "%s",
+				"Name": "/test-checkupdates",
+				"Image": "%s",
+				"Config": {"Image": "%s"},
+				"State": {"Status": "running", "Running": true}
+			}`, containerID, localImageID, imageName)
+			return
+		}
+
+		// Distribution Inspect (remote registry check)
+		if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/distribution/"+imageName+"/json") {
+			_, _ = fmt.Fprintf(w, `{
+				"Descriptor": {
+					"digest": "%s"
+				}
+			}`, remoteDigest)
+			return
+		}
+
+		// Inspect local image
+		if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/images/"+localImageID+"/json") {
+			_, _ = fmt.Fprintf(w, `{
+				"Id": "%s",
+				"RepoDigests": ["nginx@%s"]
+			}`, localImageID, currentRepoDigest)
+			return
+		}
+
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	dockerClient, err := client.New(
+		client.WithHost(server.URL),
+		client.WithHTTPClient(server.Client()),
+	)
+	if err != nil {
+		t.Fatalf("failed to create docker client: %v", err)
+	}
+
+	svc := NewService(dbConn, broker, dockerClient, slog.Default(), nil)
+
+	adminCtx := auth.WithUser(context.Background(), db.User{Role: roleAdmin})
+	viewerCtx := auth.WithUser(context.Background(), db.User{Role: roleViewer})
+
+	// Initialize DB record
+	if saveErr := queries.SaveContainer(context.Background(), db.SaveContainerParams{
+		ID:              containerID,
+		Name:            "test-checkupdates",
+		Image:           imageName,
+		ImageID:         localImageID,
+		State:           stateRunning,
+		UpdateAvailable: 0,
+	}); saveErr != nil {
+		t.Fatalf("failed to save container: %v", saveErr)
+	}
+
+	// 1. Viewer should be denied
+	_, err = svc.CheckContainerUpdates(viewerCtx, connect.NewRequest(&v1.CheckContainerUpdatesRequest{Id: containerID}))
+	if err == nil || connect.CodeOf(err) != connect.CodePermissionDenied {
+		t.Errorf("expected PermissionDenied for viewer, got: %v", err)
+	}
+
+	// 2. Admin should check and find update IS available (local digest doesn't match remote digest)
+	currentRepoDigest = "sha256:different-local-digest-123"
+	resp, err := svc.CheckContainerUpdates(adminCtx, connect.NewRequest(&v1.CheckContainerUpdatesRequest{Id: containerID}))
+	if err != nil {
+		t.Fatalf("CheckContainerUpdates failed: %v", err)
+	}
+	if !resp.Msg.UpdateAvailable || resp.Msg.LatestImageDigest != remoteDigest {
+		t.Errorf("unexpected response when update available: %+v", resp.Msg)
+	}
+
+	// Verify in DB
+	c, err := queries.GetContainer(context.Background(), containerID)
+	if err != nil {
+		t.Fatalf("failed to query container: %v", err)
+	}
+	if c.UpdateAvailable != 1 {
+		t.Errorf("expected UpdateAvailable=1, got %d", c.UpdateAvailable)
+	}
+	if digestStr, ok := c.LatestImageDigest.(string); !ok || digestStr != remoteDigest {
+		t.Errorf("expected LatestImageDigest=%s, got %v", remoteDigest, c.LatestImageDigest)
+	}
+
+	// 3. Admin checks and finds update is NOT available (local digest matches remote digest)
+	currentRepoDigest = remoteDigest
+	resp, err = svc.CheckContainerUpdates(adminCtx, connect.NewRequest(&v1.CheckContainerUpdatesRequest{Id: containerID}))
+	if err != nil {
+		t.Fatalf("CheckContainerUpdates failed: %v", err)
+	}
+	if resp.Msg.UpdateAvailable || resp.Msg.LatestImageDigest != remoteDigest {
+		t.Errorf("unexpected response when update not available: %+v", resp.Msg)
+	}
+
+	// Verify in DB
+	c, err = queries.GetContainer(context.Background(), containerID)
+	if err != nil {
+		t.Fatalf("failed to query container: %v", err)
+	}
+	if c.UpdateAvailable != 0 {
+		t.Errorf("expected UpdateAvailable=0, got %d", c.UpdateAvailable)
+	}
 }
