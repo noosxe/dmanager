@@ -29,6 +29,7 @@ graph TD
     S21 --> S22["STORY-022: Implement Container Auto-Update and Check Updates RPCs (DONE)"]
     S22 --> S23["STORY-023: Periodic Registry Update Checker (DONE)"]
     S23 --> S24["STORY-024: Automated Container Re-Deployment Workflow (DONE)"]
+    S24 --> S25["STORY-025: Improve Request and Action Logging (DONE)"]
 ```
 
 
@@ -492,6 +493,26 @@ graph TD
 - **Validation Check:**
   - Run `go test -v ./internal/container/...`
   - Compile the server successfully and check linter rules.
+
+---
+
+### STORY-025: Improve Request and Action Logging [DONE]
+- **Scope:** Backend Logging & Operations
+- **Estimated Size:** Small (~100 LOC)
+- **Dependencies:** `STORY-024`
+- **Goal:** Improve logging at `Info` level for client requests and daemon actions (start, stop, upgrade, auto-update setting, update check) to clarify backend operations.
+- **Tasks:**
+  1. Add unary and streaming request logging to the auth interceptor (`internal/auth/interceptor.go`) to log request procedures, users, status, and duration at `Info` level.
+  2. Implement `Info` level logging inside `internal/container/actions.go` for container start, stop, auto-update modifications, and image update checks.
+  3. Implement `Info` level logging in `internal/container/upgrade.go` for container image upgrades.
+- **Files Affected:**
+  - `internal/auth/interceptor.go` (modified)
+  - `internal/container/actions.go` (modified)
+  - `internal/container/upgrade.go` (modified)
+- **Validation Check:**
+  - Verify that backend compile check and tests pass successfully: `go test -v ./...`
+  - Ensure zero linter warnings: `golangci-lint run`
+
 
 
 

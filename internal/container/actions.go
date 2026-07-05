@@ -52,28 +52,36 @@ func (s *Service) StartContainer(ctx context.Context, req *connect.Request[v1.St
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to query container from DB: %w", err))
 	}
 
+	s.logger.Info("Starting container", "container_id", containerID, "container_name", existing.Name)
+
 	// 3. Inspect container state on Docker host before starting
 	if s.dockerClient == nil {
-		return nil, connect.NewError(connect.CodeInternal, errors.New("docker client not initialized"))
+		err = errors.New("docker client not initialized")
+		s.logger.Error("Failed to start container", "container_id", containerID, "container_name", existing.Name, "error", err)
+		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
 	inspectBefore, err := s.dockerClient.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
 	if err != nil {
 		if cerrdefs.IsNotFound(err) {
+			s.logger.Error("Failed to start container: not found on Docker host", "container_id", containerID, "container_name", existing.Name)
 			return nil, connect.NewError(connect.CodeNotFound, errors.New("container not found on Docker host"))
 		}
+		s.logger.Error("Failed to inspect container before starting", "container_id", containerID, "container_name", existing.Name, "error", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to inspect container: %w", err))
 	}
 	previousState := inspectBefore.Container.State.Status
 
 	// 4. Start the container
 	if _, startErr := s.dockerClient.ContainerStart(ctx, containerID, client.ContainerStartOptions{}); startErr != nil {
+		s.logger.Error("Failed to start container on Docker host", "container_id", containerID, "container_name", existing.Name, "error", startErr)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start container: %w", startErr))
 	}
 
 	// 5. Inspect container state after starting
 	inspectAfter, err := s.dockerClient.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
 	if err != nil {
+		s.logger.Error("Failed to inspect container after start", "container_id", containerID, "container_name", existing.Name, "error", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to inspect container after start: %w", err))
 	}
 	currentState := inspectAfter.Container.State.Status
@@ -93,6 +101,7 @@ func (s *Service) StartContainer(ctx context.Context, req *connect.Request[v1.St
 		UpdatedAt:         time.Now(),
 	}
 	if saveErr := queries.SaveContainer(ctx, params); saveErr != nil {
+		s.logger.Error("Failed to update container state in DB", "container_id", containerID, "container_name", existing.Name, "error", saveErr)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update container state in DB: %w", saveErr))
 	}
 
@@ -105,6 +114,8 @@ func (s *Service) StartContainer(ctx context.Context, req *connect.Request[v1.St
 			Container:   MapContainerRecord(updatedRecord),
 		})
 	}
+
+	s.logger.Info("Container started successfully", "container_id", containerID, "container_name", existing.Name, "previous_state", string(previousState), "current_state", string(currentState))
 
 	return connect.NewResponse(&v1.StartContainerResponse{
 		Id:            containerID,
@@ -139,16 +150,22 @@ func (s *Service) StopContainer(ctx context.Context, req *connect.Request[v1.Sto
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to query container from DB: %w", err))
 	}
 
+	s.logger.Info("Stopping container", "container_id", containerID, "container_name", existing.Name)
+
 	// 3. Inspect container state on Docker host before stopping
 	if s.dockerClient == nil {
-		return nil, connect.NewError(connect.CodeInternal, errors.New("docker client not initialized"))
+		err = errors.New("docker client not initialized")
+		s.logger.Error("Failed to stop container", "container_id", containerID, "container_name", existing.Name, "error", err)
+		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
 	inspectBefore, err := s.dockerClient.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
 	if err != nil {
 		if cerrdefs.IsNotFound(err) {
+			s.logger.Error("Failed to stop container: not found on Docker host", "container_id", containerID, "container_name", existing.Name)
 			return nil, connect.NewError(connect.CodeNotFound, errors.New("container not found on Docker host"))
 		}
+		s.logger.Error("Failed to inspect container before stopping", "container_id", containerID, "container_name", existing.Name, "error", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to inspect container: %w", err))
 	}
 	previousState := inspectBefore.Container.State.Status
@@ -159,12 +176,14 @@ func (s *Service) StopContainer(ctx context.Context, req *connect.Request[v1.Sto
 		Timeout: &timeoutSeconds,
 	}
 	if _, stopErr := s.dockerClient.ContainerStop(ctx, containerID, stopOpts); stopErr != nil {
+		s.logger.Error("Failed to stop container on Docker host", "container_id", containerID, "container_name", existing.Name, "error", stopErr)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to stop container: %w", stopErr))
 	}
 
 	// 5. Inspect container state after stopping
 	inspectAfter, err := s.dockerClient.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
 	if err != nil {
+		s.logger.Error("Failed to inspect container after stop", "container_id", containerID, "container_name", existing.Name, "error", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to inspect container after stop: %w", err))
 	}
 	currentState := inspectAfter.Container.State.Status
@@ -184,6 +203,7 @@ func (s *Service) StopContainer(ctx context.Context, req *connect.Request[v1.Sto
 		UpdatedAt:         time.Now(),
 	}
 	if saveErr := queries.SaveContainer(ctx, params); saveErr != nil {
+		s.logger.Error("Failed to update container state in DB after stop", "container_id", containerID, "container_name", existing.Name, "error", saveErr)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update container state in DB: %w", saveErr))
 	}
 
@@ -196,6 +216,8 @@ func (s *Service) StopContainer(ctx context.Context, req *connect.Request[v1.Sto
 			Container:   MapContainerRecord(updatedRecord),
 		})
 	}
+
+	s.logger.Info("Container stopped successfully", "container_id", containerID, "container_name", existing.Name, "previous_state", string(previousState), "current_state", string(currentState))
 
 	return connect.NewResponse(&v1.StopContainerResponse{
 		Id:            containerID,
@@ -222,13 +244,15 @@ func (s *Service) SetContainerAutoUpdate(ctx context.Context, req *connect.Reque
 
 	queries := db.New(s.db)
 	// Check if container exists in database
-	_, err := queries.GetContainer(ctx, containerID)
+	existing, err := queries.GetContainer(ctx, containerID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, errors.New("container not found"))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to query container from DB: %w", err))
 	}
+
+	s.logger.Info("Setting container auto-update", "container_id", containerID, "container_name", existing.Name, "auto_update", req.Msg.AutoUpdate)
 
 	var autoUpdateVal int64
 	if req.Msg.AutoUpdate {
@@ -240,6 +264,7 @@ func (s *Service) SetContainerAutoUpdate(ctx context.Context, req *connect.Reque
 		AutoUpdate: autoUpdateVal,
 	})
 	if err != nil {
+		s.logger.Error("Failed to update container auto-update setting in DB", "container_id", containerID, "container_name", existing.Name, "error", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update auto-update setting: %w", err))
 	}
 
@@ -252,6 +277,8 @@ func (s *Service) SetContainerAutoUpdate(ctx context.Context, req *connect.Reque
 			Container:   MapContainerRecord(updatedRecord),
 		})
 	}
+
+	s.logger.Info("Container auto-update setting updated successfully", "container_id", containerID, "container_name", existing.Name, "auto_update", req.Msg.AutoUpdate)
 
 	return connect.NewResponse(&v1.SetContainerAutoUpdateResponse{
 		Id:         containerID,
@@ -312,6 +339,8 @@ func (s *Service) checkContainerUpdatesInternal(ctx context.Context, containerID
 		}
 	}
 
+	s.logger.Info("Checking container updates", "container_id", containerID, "container_name", existing.Name, "image", imageRef)
+
 	// Resolve registry authentication
 	authHeader, err := s.getRegistryAuth(imageRef)
 	if err != nil {
@@ -319,7 +348,9 @@ func (s *Service) checkContainerUpdatesInternal(ctx context.Context, containerID
 	}
 
 	if s.dockerClient == nil {
-		return false, "", errors.New("docker client not initialized")
+		err = errors.New("docker client not initialized")
+		s.logger.Error("Failed to check container updates", "container_id", containerID, "container_name", existing.Name, "error", err)
+		return false, "", err
 	}
 
 	// Contact registry for digest
@@ -327,12 +358,15 @@ func (s *Service) checkContainerUpdatesInternal(ctx context.Context, containerID
 		EncodedRegistryAuth: authHeader,
 	})
 	if err != nil {
+		s.logger.Error("Failed to check container updates: registry check failed", "container_id", containerID, "container_name", existing.Name, "error", err)
 		return false, "", fmt.Errorf("failed to query registry for image %s: %w", imageRef, err)
 	}
 
 	remoteDigest := string(distInspect.Descriptor.Digest)
 	if remoteDigest == "" {
-		return false, "", fmt.Errorf("registry returned empty digest for image %s", imageRef)
+		err = fmt.Errorf("registry returned empty digest for image %s", imageRef)
+		s.logger.Error("Failed to check container updates: empty remote digest", "container_id", containerID, "container_name", existing.Name, "error", err)
+		return false, "", err
 	}
 
 	// Inspect local image to get its RepoDigests for comparison
@@ -358,6 +392,7 @@ func (s *Service) checkContainerUpdatesInternal(ctx context.Context, containerID
 		LastCheckedAt:     now,
 	})
 	if err != nil {
+		s.logger.Error("Failed to update container state in DB after update check", "container_id", containerID, "container_name", existing.Name, "error", err)
 		return false, "", fmt.Errorf("failed to update container state in DB: %w", err)
 	}
 
@@ -370,6 +405,8 @@ func (s *Service) checkContainerUpdatesInternal(ctx context.Context, containerID
 			Container:   MapContainerRecord(updatedRecord),
 		})
 	}
+
+	s.logger.Info("Container update check finished", "container_id", containerID, "container_name", existing.Name, "update_available", updateAvailable, "remote_digest", remoteDigest)
 
 	return updateAvailable, remoteDigest, nil
 }
@@ -448,4 +485,3 @@ func isUpdateAvailable(localRepoDigests []string, remoteDigest string) bool {
 	}
 	return true // No matching digest found locally, update available
 }
-

@@ -63,20 +63,48 @@ func (i *Interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 		procedure := req.Spec().Procedure
 		cookieHeader := req.Header().Get("Cookie")
 
+		var authCtx context.Context
+		var err error
+
 		if isUnauthenticatedProcedure(procedure) {
+			authCtx = ctx
 			if sessionID := parseSessionCookie(cookieHeader); sessionID != "" {
-				if authCtx, err := i.authenticate(ctx, cookieHeader); err == nil {
-					ctx = authCtx
+				if actx, aerr := i.authenticate(ctx, cookieHeader); aerr == nil {
+					authCtx = actx
 				}
 			}
-			return next(ctx, req)
+		} else {
+			authCtx, err = i.authenticate(ctx, cookieHeader)
+			if err != nil {
+				i.logger.Info("Unauthorized request blocked", "procedure", procedure, "error", err)
+				return nil, err
+			}
 		}
 
-		authCtx, err := i.authenticate(ctx, cookieHeader)
-		if err != nil {
-			return nil, err
+		userStr := "unauthenticated"
+		if u, ok := UserFromContext(authCtx); ok {
+			userStr = u.Username
 		}
-		return next(authCtx, req)
+
+		startTime := time.Now()
+		resp, err := next(authCtx, req)
+		duration := time.Since(startTime)
+
+		if err != nil {
+			i.logger.Info("Request failed",
+				"procedure", procedure,
+				"user", userStr,
+				"duration", duration,
+				"error", err.Error(),
+			)
+		} else {
+			i.logger.Info("Request completed",
+				"procedure", procedure,
+				"user", userStr,
+				"duration", duration,
+			)
+		}
+		return resp, err
 	})
 }
 
@@ -89,20 +117,49 @@ func (i *Interceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) co
 		procedure := conn.Spec().Procedure
 		cookieHeader := conn.RequestHeader().Get("Cookie")
 
+		var authCtx context.Context
+		var err error
+
 		if isUnauthenticatedProcedure(procedure) {
+			authCtx = ctx
 			if sessionID := parseSessionCookie(cookieHeader); sessionID != "" {
-				if authCtx, err := i.authenticate(ctx, cookieHeader); err == nil {
-					ctx = authCtx
+				if actx, aerr := i.authenticate(ctx, cookieHeader); aerr == nil {
+					authCtx = actx
 				}
 			}
-			return next(ctx, conn)
+		} else {
+			authCtx, err = i.authenticate(ctx, cookieHeader)
+			if err != nil {
+				i.logger.Info("Unauthorized streaming request blocked", "procedure", procedure, "error", err)
+				return err
+			}
 		}
 
-		authCtx, err := i.authenticate(ctx, cookieHeader)
-		if err != nil {
-			return err
+		userStr := "unauthenticated"
+		if u, ok := UserFromContext(authCtx); ok {
+			userStr = u.Username
 		}
-		return next(authCtx, conn)
+
+		startTime := time.Now()
+		i.logger.Info("Streaming request started", "procedure", procedure, "user", userStr)
+		streamErr := next(authCtx, conn)
+		duration := time.Since(startTime)
+
+		if streamErr != nil {
+			i.logger.Info("Streaming request failed",
+				"procedure", procedure,
+				"user", userStr,
+				"duration", duration,
+				"error", streamErr.Error(),
+			)
+		} else {
+			i.logger.Info("Streaming request completed",
+				"procedure", procedure,
+				"user", userStr,
+				"duration", duration,
+			)
+		}
+		return streamErr
 	})
 }
 
