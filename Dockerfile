@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Stage 1: Frontend Builder
-FROM node:24-alpine AS frontend-builder
+FROM --platform=$BUILDPLATFORM node:24-alpine AS frontend-builder
 WORKDIR /app
 
 # Install pnpm matching the project environment
@@ -24,7 +24,7 @@ RUN pnpm --dir frontend run build
 
 
 # Stage 2: Backend Builder
-FROM golang:1.26-alpine AS backend-builder
+FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS backend-builder
 WORKDIR /app
 
 # Configure CGO-free build parameters
