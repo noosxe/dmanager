@@ -15,7 +15,8 @@
 
 # Node / Frontend Bundles
 node_modules/
-dist/
+dist/*
+!frontend/dist/.gitkeep
 .pnpm-debug.log*
 
 # Database
