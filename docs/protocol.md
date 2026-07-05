@@ -7,7 +7,7 @@ This document outlines the API design and communication protocol between the Vit
 ## 1. Protocol Architecture
 
 The application communicates exclusively via **ConnectRPC**, a lightweight, type-safe RPC framework.
-* **Format:** Pure Protocol Buffers (no JSON REST endpoints).
+* **Format:** Pure Protocol Buffers (using binary serialization format via `useBinaryFormat: true` on the client transport, with no JSON REST endpoints).
 * **Transport:** Connect protocol (compatible with gRPC-Web and gRPC) over HTTP/1.1 and HTTP/2.
 * **Authentication Mechanism:** Session cookie authentication. The Connect interceptor on the backend extracts and validates the session cookie before routing requests to handlers (except for designated unauthenticated login/setup methods).
 
