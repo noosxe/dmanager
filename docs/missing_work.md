@@ -28,9 +28,9 @@ This document tracks frontend, backend, and background-related features and inte
 ## 2. Frontend Missing Work Checklist (React / TypeScript)
 
 ### 2.1. Client-Side Logging Framework
-- [ ] **Dexie.js Buffer Setup** (in new logging service files under [frontend/src/](file:///home/mechsoull/Projects/dmanager/frontend/src))
-  - [ ] Install `dexie` and configure IndexedDB to store client-side warnings, errors, uncaught exceptions, and user action events locally.
-- [ ] **Browser Idle-Time Syncer** (in new sync files under [frontend/src/](file:///home/mechsoull/Projects/dmanager/frontend/src))
-  - [ ] Implement an idle syncer utilizing `requestIdleCallback` (with standard timer fallbacks) to process IndexedDB backlogs.
-  - [ ] Call `LogService.syncLogs` client method to upload logs to the backend.
-  - [ ] Mark logs as successfully synced or prune them from IndexedDB upon response.
+- [x] **Dexie.js Buffer Setup** (in new logging service files under [frontend/src/](file:///home/mechsoull/Projects/dmanager/frontend/src))
+  - [x] Install `dexie` and configure IndexedDB to store client-side warnings, errors, uncaught exceptions, and user action events locally.
+- [x] **Browser Idle-Time Syncer** (in new sync files under [frontend/src/](file:///home/mechsoull/Projects/dmanager/frontend/src))
+  - [x] Implement an idle syncer utilizing `requestIdleCallback` (with standard timer fallbacks) to process IndexedDB backlogs.
+  - [x] Call `LogService.syncLogs` client method to upload logs to the backend.
+  - [x] Mark logs as successfully synced or prune them from IndexedDB upon response.

@@ -31,6 +31,8 @@ graph TD
     S23 --> S24["STORY-024: Automated Container Re-Deployment Workflow (DONE)"]
     S24 --> S25["STORY-025: Improve Request and Action Logging (DONE)"]
     S25 --> S26["STORY-026: Enable Client-Server Binary Communication (DONE)"]
+    S26 --> S27["STORY-027: Implement LogServiceHandler (DONE)"]
+    S27 --> F28["STORY-028: Frontend Client-Side Logging Framework (DONE)"]
 ```
 
 
@@ -549,6 +551,29 @@ graph TD
   - Compile the server successfully: `go build -o /dev/null ./...`
   - Run all Go tests: `go test -v ./internal/logging/...`
   - Ensure zero linter warnings: `golangci-lint run`
+
+---
+
+### STORY-028: Frontend Client-Side Logging Framework [DONE]
+- **Scope:** Frontend Logging & Local Storage
+- **Estimated Size:** Medium (~250 LOC)
+- **Dependencies:** `STORY-027`
+- **Goal:** Set up Dexie.js in the frontend, buffering logs in IndexedDB, and synchronize them to the Go backend during browser idle periods.
+- **Tasks:**
+  1. Configure IndexedDB via Dexie.js to store client logs (level, message, timestamp, component, metadata).
+  2. Implement global interceptors or wraps to capture warnings, errors, uncaught exceptions, and user actions, storing them in IndexedDB.
+  3. Implement an idle-time sync mechanism utilizing `requestIdleCallback` (with custom timeout fallbacks) to send buffered logs in batches using the ConnectRPC LogService client.
+  4. Ensure synced logs are pruned or deleted from the IndexedDB buffer upon successful synchronization.
+- **Files Affected:**
+  - `frontend/src/client.ts` (modified to export log client)
+  - `frontend/src/services/logger.ts` (new)
+  - `frontend/src/services/syncer.ts` (new)
+  - `frontend/src/main.tsx` (modified to initialize logging and syncing)
+- **Validation Check:**
+  - Run frontend test suite: `pnpm test`
+  - Run Biome check: `pnpm biome check .`
+  - Compile frontend: `pnpm build`
+
 
 
 
