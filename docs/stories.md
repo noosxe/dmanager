@@ -30,6 +30,7 @@ graph TD
     S22 --> S23["STORY-023: Periodic Registry Update Checker (DONE)"]
     S23 --> S24["STORY-024: Automated Container Re-Deployment Workflow (DONE)"]
     S24 --> S25["STORY-025: Improve Request and Action Logging (DONE)"]
+    S25 --> S26["STORY-026: Enable Client-Server Binary Communication (DONE)"]
 ```
 
 
@@ -512,6 +513,23 @@ graph TD
 - **Validation Check:**
   - Verify that backend compile check and tests pass successfully: `go test -v ./...`
   - Ensure zero linter warnings: `golangci-lint run`
+
+---
+
+### STORY-026: Enable Client-Server Binary Communication [DONE]
+- **Scope:** Communication Protocol / ConnectRPC Transport
+- **Estimated Size:** Small (~10 LOC)
+- **Dependencies:** `STORY-025`
+- **Goal:** Enable binary wire format for ConnectRPC calls on the client transport.
+- **Tasks:**
+  1. Update `frontend/src/client.ts` to add `useBinaryFormat: true` to `createConnectTransport`.
+- **Files Affected:**
+  - `frontend/src/client.ts` (modified)
+- **Validation Check:**
+  - Run Biome linters: `pnpm biome check .`
+  - Compile frontend build: `pnpm build`
+  - Run frontend test suite: `pnpm test`
+
 
 
 

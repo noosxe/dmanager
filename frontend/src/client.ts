@@ -15,6 +15,7 @@ const getBaseUrl = () => {
 
 export const transport = createConnectTransport({
   baseUrl: getBaseUrl(),
+  useBinaryFormat: true,
   fetch: (url, options) => {
     return fetch(url, {
       ...options,
