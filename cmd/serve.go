@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
+	"path"
 	"strings"
 	"syscall"
 	"time"
@@ -72,6 +72,9 @@ var serveCmd = &cobra.Command{
 			listenPort = port
 		}
 
+		srvCtx, srvCancel := context.WithCancel(cmd.Context())
+		defer srvCancel()
+
 		// 1. Open SQLite database
 		dbConn, err := db.Open(dbFile)
 		if err != nil {
@@ -91,7 +94,7 @@ var serveCmd = &cobra.Command{
 		}
 
 		// Sync containers immediately after migration at startup
-		if syncErr := container.SyncContainers(cmd.Context(), dbConn, dockerClient); syncErr != nil {
+		if syncErr := container.SyncContainers(srvCtx, dbConn, dockerClient); syncErr != nil {
 			return fmt.Errorf("failed to sync containers at startup: %w", syncErr)
 		}
 
@@ -99,11 +102,11 @@ var serveCmd = &cobra.Command{
 		queries := db.New(dbConn)
 		containerBroker := container.NewBroker()
 
-		go docker.StartEventMonitor(cmd.Context(), logger.With("module", "docker"), queries, dockerClient, func(action string, containerID string) {
+		docker.StartEventMonitor(srvCtx, logger.With("module", "docker"), queries, dockerClient, func(action string, containerID string) {
 			switch action {
 			case "save":
 				dbQueries := db.New(dbConn)
-				c, dbErr := dbQueries.GetContainer(context.Background(), containerID)
+				c, dbErr := dbQueries.GetContainer(srvCtx, containerID)
 				if dbErr != nil {
 					cmdLogger.Error("Failed to fetch container for stream event broadcast", "container_id", containerID, "error", dbErr)
 					return
@@ -151,7 +154,7 @@ var serveCmd = &cobra.Command{
 		mux.Handle(loggingPath, loggingHandler)
 
 		// Start background registry update checker scheduler
-		container.StartScheduler(cmd.Context(), containerSvc, cfg.Scheduler.IntervalMinutes)
+		container.StartScheduler(srvCtx, containerSvc, cfg.Scheduler.IntervalMinutes)
 
 		// Register Frontend SPA static files handler
 		subFS, err := fs.Sub(FrontendDist, "frontend/dist")
@@ -166,10 +169,10 @@ var serveCmd = &cobra.Command{
 
 		fileServer := http.FileServer(http.FS(subFS))
 		spaHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			path := filepath.Clean(r.URL.Path)
+			fsPath := path.Clean(r.URL.Path)
 
 			// If file exists, serve it
-			f, err := subFS.Open(strings.TrimPrefix(path, "/"))
+			f, err := subFS.Open(strings.TrimPrefix(fsPath, "/"))
 			if err == nil {
 				_ = f.Close()
 				fileServer.ServeHTTP(w, r)
@@ -203,10 +206,12 @@ var serveCmd = &cobra.Command{
 			<-sigChan
 
 			cmdLogger.Info("Shutting down backend server...")
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
+			srvCancel() // Cancel background operations context
 
-			shutdownErr <- server.Shutdown(ctx)
+			shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer shutdownCancel()
+
+			shutdownErr <- server.Shutdown(shutdownCtx)
 		}()
 
 		cmdLogger.Info("Starting dmanager server", "port", listenPort)
