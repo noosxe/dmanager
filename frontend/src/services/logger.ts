@@ -26,6 +26,11 @@ const originalWarn = console.warn;
 const originalError = console.error;
 
 let isIntercepting = false;
+let isUnloading = false;
+
+export function setIsUnloading(value: boolean) {
+  isUnloading = value;
+}
 
 export async function addLogEntry(
   level: "DEBUG" | "INFO" | "WARN" | "ERROR",
@@ -33,6 +38,9 @@ export async function addLogEntry(
   component: string,
   metadataObj: Record<string, unknown> = {},
 ) {
+  if (isUnloading) {
+    return;
+  }
   try {
     const timestamp = new Date().toISOString();
     const metadata = JSON.stringify(metadataObj);
@@ -50,6 +58,14 @@ export async function addLogEntry(
 
 export function initLogger() {
   if (typeof window === "undefined") return;
+
+  window.addEventListener("beforeunload", () => {
+    isUnloading = true;
+  });
+
+  window.addEventListener("pagehide", () => {
+    isUnloading = true;
+  });
 
   // Capture unhandled javascript errors
   window.addEventListener("error", (event) => {
