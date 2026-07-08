@@ -22,7 +22,7 @@ vi.mock("dexie", () => {
   };
 });
 
-import { addLogEntry, initLogger, logDb, logUserAction } from "./logger";
+import { addLogEntry, initLogger, logDb, logUserAction, setIsUnloading } from "./logger";
 
 // Direct assignment to bypass any TypeScript class field initialization overrides
 logDb.logs = {
@@ -148,5 +148,33 @@ describe("Client-Side Logger", () => {
     );
 
     document.body.removeChild(btn);
+  });
+
+  it("should not log entries when isUnloading is set to true", async () => {
+    setIsUnloading(true);
+    try {
+      await addLogEntry("INFO", "This should be ignored", "TestComponent");
+      expect(mockAdd).not.toHaveBeenCalled();
+    } finally {
+      setIsUnloading(false);
+    }
+  });
+
+  it("should set isUnloading on window beforeunload and pagehide events", () => {
+    initLogger();
+
+    // Simulate beforeunload
+    window.dispatchEvent(new Event("beforeunload"));
+    console.error("error during beforeunload");
+    expect(mockAdd).not.toHaveBeenCalled();
+
+    setIsUnloading(false); // Reset
+
+    // Simulate pagehide
+    window.dispatchEvent(new Event("pagehide"));
+    console.error("error during pagehide");
+    expect(mockAdd).not.toHaveBeenCalled();
+
+    setIsUnloading(false); // Reset
   });
 });
