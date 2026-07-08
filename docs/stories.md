@@ -34,6 +34,7 @@ graph TD
     S26 --> S27["STORY-027: Implement LogServiceHandler (DONE)"]
     S27 --> F28["STORY-028: Frontend Client-Side Logging Framework (DONE)"]
     F28 --> F29["STORY-029: System Logs Page Design and Implementation (DONE)"]
+    F29 --> F30["STORY-030: Migrate Sidebar Logo to SVG Asset (DONE)"]
 ```
 
 
@@ -603,6 +604,26 @@ graph TD
   - Run all Go tests: `go test -v ./internal/logging/...`
   - Run Biome check: `pnpm biome check .`
   - Compile frontend: `pnpm build`
+
+---
+
+### STORY-030: Migrate Sidebar Logo to SVG Asset [DONE]
+- **Scope:** Frontend Assets & Clean Up
+- **Estimated Size:** Small (~50 LOC)
+- **Dependencies:** `STORY-029`
+- **Goal:** Extract `.sidebar-logo` with its gradient background and terminal icon into a standalone `logo.svg` asset, update the frontend components to reference this asset, and clean up the styling.
+- **Tasks:**
+  1. Create `frontend/public/logo.svg` containing the SVG definition of the sidebar logo (including gradient, shape, and terminal icon).
+  2. Modify `frontend/src/components/DashboardLayout.tsx` to use the new `logo.svg` for both mobile and desktop sidebar logos.
+  3. Clean up the unused css styles in `frontend/src/index.css`.
+- **Files Affected:**
+  - `frontend/public/logo.svg` (new)
+  - `frontend/src/components/DashboardLayout.tsx` (modified)
+  - `frontend/src/index.css` (modified)
+- **Validation Check:**
+  - Run Biome check: `pnpm biome check .`
+  - Compile frontend: `pnpm build`
+
 
 
 

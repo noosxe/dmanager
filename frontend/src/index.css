@@ -447,13 +447,8 @@ body {
 }
 
 .sidebar-logo {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, var(--accent) 0%, #3b82f6 100%);
-  color: #fff;
   border-radius: 10px;
   box-shadow: 0 4px 12px var(--accent-glow);
 }

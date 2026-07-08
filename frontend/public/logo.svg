@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <!-- Linear gradient from brand accent purple to blue -->
+    <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#aa3bff" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </linearGradient>
+  </defs>
+  <!-- Rounded rectangle matching 25% border-radius (rx="128" ry="128" for 512x512) -->
+  <rect width="512" height="512" rx="128" fill="url(#bg-gradient)" />
+  <!-- Centered white Terminal icon -->
+  <!-- Size of icon is 24 * 12 = 288. Positioned at translate(112, 112) -->
+  <g transform="translate(112, 112) scale(12)" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="4 17 10 11 4 5" />
+    <line x1="12" y1="19" x2="20" y2="19" />
+  </g>
+</svg>
