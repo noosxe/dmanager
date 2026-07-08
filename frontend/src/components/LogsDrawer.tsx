@@ -112,7 +112,7 @@ export function LogsDrawer({ containerId, containerName, onClose }: LogsDrawerPr
 
         for await (const chunk of stream) {
           if (!isSubscribed) break;
-          term.write(chunk.logLine);
+          term.write(`${chunk.logLine}\r\n`);
         }
 
         if (isSubscribed) {
