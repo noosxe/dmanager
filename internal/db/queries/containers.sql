@@ -18,6 +18,9 @@ ON CONFLICT(id) DO UPDATE SET
 -- name: GetContainer :one
 SELECT * FROM containers WHERE id = ? LIMIT 1;
 
+-- name: GetContainerByName :one
+SELECT * FROM containers WHERE name = ? LIMIT 1;
+
 -- name: ListContainers :many
 SELECT * FROM containers ORDER BY name ASC;
 
