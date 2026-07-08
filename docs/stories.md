@@ -41,7 +41,10 @@ graph TD
     S32 --> F34["STORY-034: Frontend Settings Web UI (DONE)"]
     F34 --> F35["STORY-035: Configure Frontend minimumReleaseAge (DONE)"]
     F35 --> F36["STORY-036: Configure Dependabot npm Cooldown (DONE)"]
+    F36 --> S37["STORY-037: Configure Dependabot for GitHub Actions (DONE)"]
 ```
+
+
 
 
 
@@ -752,4 +755,21 @@ graph TD
   - Run Biome check: `pnpm biome check .`
   - Compile frontend: `pnpm build`
   - Run frontend test suite: `pnpm test`
+
+---
+
+### STORY-037: Configure Dependabot for GitHub Actions [DONE]
+- **Scope:** CI Configuration
+- **Estimated Size:** Small (~5 LOC)
+- **Dependencies:** `STORY-036`
+- **Goal:** Configure Dependabot in `.github/dependabot.yml` to perform weekly checks for `github-actions` updates.
+- **Tasks:**
+  1. Add a new package-ecosystem block for `github-actions` in `.github/dependabot.yml`.
+- **Files Affected:**
+  - `.github/dependabot.yml` (modified)
+- **Validation Check:**
+  - Run Biome check: `pnpm biome check .`
+  - Compile frontend: `pnpm build`
+  - Run frontend test suite: `pnpm test`
+
 
