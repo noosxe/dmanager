@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Activity, LayoutDashboard, LogOut, Menu, Settings, Terminal } from "lucide-react";
+import { Activity, LayoutDashboard, LogOut, Menu, Settings } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
@@ -28,9 +28,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Mobile Top Header Bar */}
       <div className="mobile-header-bar">
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <div className="sidebar-logo" style={{ width: "32px", height: "32px" }}>
-            <Terminal size={18} />
-          </div>
+          <img
+            src="/logo.svg"
+            className="sidebar-logo"
+            alt="dmanager logo"
+            style={{ width: "32px", height: "32px" }}
+          />
           <span className="sidebar-brand-name" style={{ fontSize: "16px" }}>
             dmanager
           </span>
@@ -57,9 +60,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <aside className={`dashboard-sidebar ${isSidebarOpen ? "open" : ""}`}>
         <div className="sidebar-top">
           <div className="sidebar-brand">
-            <div className="sidebar-logo">
-              <Terminal size={22} />
-            </div>
+            <img src="/logo.svg" className="sidebar-logo" alt="dmanager logo" />
             <span className="sidebar-brand-name">dmanager</span>
           </div>
 
