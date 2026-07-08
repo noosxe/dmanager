@@ -36,6 +36,9 @@ graph TD
     F28 --> F29["STORY-029: System Logs Page Design and Implementation (DONE)"]
     F29 --> F30["STORY-030: Migrate Sidebar Logo to SVG Asset (DONE)"]
     F30 --> F31["STORY-031: Configure Build Pipeline Favicon Generation (DONE)"]
+    F31 --> S32["STORY-032: DB Settings Migration, Repo & RPCs (TODO)"]
+    S32 --> S33["STORY-033: Gotify Notification Dispatcher (TODO)"]
+    S32 --> F34["STORY-034: Frontend Settings Web UI (TODO)"]
 ```
 
 
@@ -646,6 +649,71 @@ graph TD
 - **Validation Check:**
   - Run Biome check: `pnpm biome check .`
   - Compile frontend: `pnpm build` (which generates the assets and runs vite build)
+
+---
+
+### STORY-032: Database Settings Migration, Repository & RPCs [TODO]
+- **Scope:** Backend Settings Infrastructure
+- **Estimated Size:** Medium (~200 LOC)
+- **Dependencies:** `STORY-031`
+- **Goal:** Set up database settings table migrations, SQLC query generation, settings service protobuf schema definitions, and RPC logic to get, update, and test settings.
+- **Tasks:**
+  1. Create database migration script `internal/db/migrations/00002_add_settings.sql` matching [docs/schema.md](file:///home/mechsoull/Projects/dmanager/docs/schema.md).
+  2. Create SQL query templates in `internal/db/queries/settings.sql` and run `sqlc generate`.
+  3. Define settings RPC protobuf endpoints in `proto/dmanager/v1/settings.proto` and run code generation scripts.
+  4. Implement `SettingsService` handler handling `GetSettings` and `UpdateSettings` in Go.
+  5. Implement `TestGotifyNotification` handler to dispatch a test payload to a target Gotify server.
+- **Files Affected:**
+  - `internal/db/migrations/00002_add_settings.sql` (new)
+  - `internal/db/queries/settings.sql` (new)
+  - `proto/dmanager/v1/settings.proto` (new)
+  - `internal/settings/service.go` (new)
+  - `internal/settings/service_test.go` (new)
+  - `cmd/serve.go` (modified)
+- **Validation Check:**
+  - Verify compiler checking and tests pass: `go test -v ./internal/settings/...`
+  - Ensure zero linter warnings: `golangci-lint run`.
+
+---
+
+### STORY-033: Gotify Notification Dispatcher [TODO]
+- **Scope:** Backend Background Notification Dispatch
+- **Estimated Size:** Medium (~150 LOC)
+- **Dependencies:** `STORY-032`
+- **Goal:** Implement a notification dispatcher that subscribes to container events/triggers and dispatches Gotify messages for image updates found, check failures, and auto-update outcomes.
+- **Tasks:**
+  1. Implement a notification package/service handling POST requests to Gotify server.
+  2. Hook the dispatcher to notify when newer container image updates are found.
+  3. Hook the dispatcher to notify on failures to check for container image updates.
+  4. Hook the dispatcher to notify on both success and failure cases of automatic container updates/re-deployments.
+- **Files Affected:**
+  - `internal/notification/gotify.go` (new)
+  - `internal/container/scheduler.go` (modified)
+  - `internal/notification/gotify_test.go` (new)
+- **Validation Check:**
+  - Verify dispatcher tests pass: `go test -v ./internal/notification/...`
+  - Verify overall Go build and lints pass.
+
+---
+
+### STORY-034: Frontend Settings View and Gotify Form [TODO]
+- **Scope:** Frontend Settings Panel
+- **Estimated Size:** Medium (~250 LOC)
+- **Dependencies:** `STORY-032`
+- **Goal:** Enable Settings sidebar item, implement the routing structure for `/settings`, and build the form to update and test Gotify notification configurations.
+- **Tasks:**
+  1. Add settings route in `frontend/src/routes/router.tsx`.
+  2. Update `DashboardLayout.tsx` to enable the Settings navigation link.
+  3. Build a beautiful glassmorphic `Settings.tsx` containing the form for Gotify URL and Application Token.
+  4. Connect saving actions to `UpdateSettings` and testing connections to `TestGotifyNotification`.
+- **Files Affected:**
+  - `frontend/src/routes/router.tsx` (modified)
+  - `frontend/src/components/DashboardLayout.tsx` (modified)
+  - `frontend/src/components/Settings.tsx` (new)
+- **Validation Check:**
+  - Run Biome checks: `pnpm biome check .`
+  - Compile React build: `pnpm build`
+  - Run frontend test suite.
 
 
 

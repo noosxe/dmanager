@@ -56,6 +56,15 @@ Caches discovered host container properties, scheduler inspection metrics, and u
 | `created_at` | DATETIME | NOT NULL DEFAULT CURRENT_TIMESTAMP | Timestamp when container record was first discovered. |
 | `updated_at` | DATETIME | NOT NULL DEFAULT CURRENT_TIMESTAMP | Timestamp of the last local state change. |
 
+### 2.4. `settings` Table
+Stores system-wide configuration keys and values (e.g. Gotify notification settings).
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `key` | TEXT | PRIMARY KEY | Unique configuration key name. |
+| `value` | TEXT | NOT NULL | Configured settings string value. |
+| `updated_at` | DATETIME | NOT NULL DEFAULT CURRENT_TIMESTAMP | Timestamp when the setting was last updated. |
+
 ---
 
 ## 3. Database Indexes & Constraints
@@ -120,6 +129,21 @@ DROP TABLE IF EXISTS sessions;
 DROP TABLE IF EXISTS users;
 ```
 
+### `00002_add_settings.sql`
+```sql
+-- +goose Up
+CREATE TABLE settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO settings (key, value) VALUES ('gotify_url', '');
+INSERT INTO settings (key, value) VALUES ('gotify_token', '');
+
+-- +goose Down
+DROP TABLE IF EXISTS settings;
+```
 ---
 
 ## 5. SQLC Query Definitions
@@ -206,4 +230,20 @@ WHERE id = ?;
 
 -- name: DeleteOrphanContainers :exec
 DELETE FROM containers WHERE id NOT IN (sqlc.slice('active_ids'));
+```
+
+### `settings.sql`
+```sql
+-- name: GetSetting :one
+SELECT * FROM settings WHERE key = ? LIMIT 1;
+
+-- name: UpdateSetting :exec
+INSERT INTO settings (key, value, updated_at)
+VALUES (?, ?, CURRENT_TIMESTAMP)
+ON CONFLICT(key) DO UPDATE SET
+    value = excluded.value,
+    updated_at = CURRENT_TIMESTAMP;
+
+-- name: ListSettings :many
+SELECT * FROM settings;
 ```

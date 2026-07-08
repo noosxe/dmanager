@@ -337,3 +337,40 @@ The build is optimized using a three-stage Dockerfile that separates dependencie
 * **Auto-refresh and Paging Controls:** Features manual triggers to reload list state and control display density.
 * **Structured Context Viewer:** Supports viewing nested serialized metadata parameters (JSON) for complex log events (e.g., CLI operations, container upgrades, and request errors).
 
+
+### 7. Settings & Gotify Notification Integration Design
+
+#### 7.1. Database Configuration Storage
+* **Settings Schema:** A new `settings` table is introduced to store global configuration options as key-value pairs to support flexible configurations.
+* **Migration `00002_add_settings.sql`:**
+  ```sql
+  CREATE TABLE settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+  ```
+  Default configuration entries (e.g. `gotify_url`, `gotify_token`) are initialized as empty values.
+
+#### 7.2. Settings & Notification Service (ConnectRPC)
+* **RPC Protocol Definitions (`SettingsService`):**
+  * `GetSettings(GetSettingsRequest) returns (GetSettingsResponse)`: Retrieves the currently configured settings.
+  * `UpdateSettings(UpdateSettingsRequest) returns (UpdateSettingsResponse)`: Saves/updates the settings values in the SQLite database.
+  * `TestGotifyNotification(TestGotifyNotificationRequest) returns (TestGotifyNotificationResponse)`: Dispatches a mock notification to the specified Gotify server to verify authentication and connection settings.
+* **Notification Agent:**
+  * A background dispatcher listening to container and scheduler event triggers.
+  * Dispatches standard Gotify POST request payloads (`title`, `message`, `priority`) to `<gotify_url>/message?token=<gotify_token>` for the following events:
+    * **Image Update Found:** Dispatched at `normal` priority when the checker detects a newer image version in the registry.
+    * **Update Check Failure:** Dispatched at `warning` or `high` priority if the scheduler fails to query the registry (e.g., registry down, network issues, or invalid credentials).
+    * **Auto-update Success:** Dispatched at `normal` priority when the automatic re-deployment workflow completes successfully.
+    * **Auto-update Failure:** Dispatched at `high` priority if the automated re-deployment workflow fails (e.g., container recreation fails, pull error).
+
+#### 7.3. Frontend Settings Dashboard
+* **TanStack Route (`/settings`):** Accessible via the sidebar "Settings" navigation button.
+* **Settings Panel Form:**
+  * Displays text fields for Gotify URL and Application Token.
+  * Includes standard URL validation rules.
+  * Includes a "Save Settings" button invoking `UpdateSettings` RPC.
+  * Includes a "Test Gotify Connection" button invoking `TestGotifyNotification` RPC, rendering status to the user.
+
+
