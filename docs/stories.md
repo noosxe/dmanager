@@ -40,7 +40,10 @@ graph TD
     S32 --> S33["STORY-033: Gotify Notification Dispatcher (DONE)"]
     S32 --> F34["STORY-034: Frontend Settings Web UI (DONE)"]
     F34 --> F35["STORY-035: Configure Frontend minimumReleaseAge (DONE)"]
+    F35 --> F36["STORY-036: Configure Dependabot npm Cooldown (DONE)"]
 ```
+
+
 
 
 
@@ -733,3 +736,20 @@ graph TD
   - Run Biome check: `pnpm biome check .`
   - Compile frontend: `pnpm build`
   - Run frontend test suite: `pnpm test`
+
+---
+
+### STORY-036: Configure Dependabot npm Cooldown [DONE]
+- **Scope:** CI Configuration
+- **Estimated Size:** Small (~5 LOC)
+- **Dependencies:** `STORY-035`
+- **Goal:** Configure a 1-day cooldown in `.github/dependabot.yml` for npm updates to match pnpm's `minimumReleaseAge` configuration.
+- **Tasks:**
+  1. Add `cooldown: default-days: 1` to `.github/dependabot.yml` in the `npm` ecosystem block.
+- **Files Affected:**
+  - `.github/dependabot.yml` (modified)
+- **Validation Check:**
+  - Run Biome check: `pnpm biome check .`
+  - Compile frontend: `pnpm build`
+  - Run frontend test suite: `pnpm test`
+
