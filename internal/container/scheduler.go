@@ -2,6 +2,7 @@ package container
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"dmanager/internal/db"
@@ -43,19 +44,24 @@ func (s *Service) checkAllContainers(ctx context.Context) {
 		updateAvailable, _, err := s.checkContainerUpdatesInternal(ctx, record.ID)
 		if err != nil {
 			s.logger.Error("Scheduler: failed to check update for container", "container_name", record.Name, "container_id", record.ID, "error", err)
+			s.notifier.SendGotify(ctx, "Registry Check Error", fmt.Sprintf("Failed to check for image updates for container %s: %v", record.Name, err), 3)
 			continue
 		}
 
 		if updateAvailable {
 			s.logger.Info("Scheduler: update is available for container", "container_name", record.Name, "container_id", record.ID)
+			s.notifier.SendGotify(ctx, "Image Update Available", fmt.Sprintf("A new image update has been detected in the registry for container %s.", record.Name), 5)
+
 			// Trigger automated re-deployment workflow if auto-update is enabled
 			if record.AutoUpdate != 0 {
 				s.logger.Info("Scheduler: auto-update is enabled. Triggering automated container re-deployment", "container_name", record.Name, "container_id", record.ID)
 				_, upgradeErr := s.upgradeContainerInternal(ctx, record.ID)
 				if upgradeErr != nil {
 					s.logger.Error("Scheduler: automated re-deployment failed", "container_name", record.Name, "container_id", record.ID, "error", upgradeErr)
+					s.notifier.SendGotify(ctx, "Auto-Update Failed", fmt.Sprintf("Automated container re-deployment for %s failed: %v", record.Name, upgradeErr), 8)
 				} else {
 					s.logger.Info("Scheduler: automated re-deployment succeeded", "container_name", record.Name, "container_id", record.ID)
+					s.notifier.SendGotify(ctx, "Auto-Update Succeeded", fmt.Sprintf("Automated container %s re-deployment succeeded. The container was successfully updated and restarted.", record.Name), 5)
 				}
 			}
 		} else {

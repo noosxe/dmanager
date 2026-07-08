@@ -12,6 +12,7 @@ import (
 	"dmanager/internal/db"
 	dmanagerv1 "dmanager/internal/gen/proto/dmanager/v1"
 	"dmanager/internal/gen/proto/dmanager/v1/dmanagerv1connect"
+	"dmanager/internal/notification"
 )
 
 const (
@@ -27,6 +28,7 @@ type Service struct {
 	dockerClient *client.Client
 	logger       *slog.Logger
 	registries   []config.Registry
+	notifier     *notification.Dispatcher
 }
 
 // NewService creates a new Container service.
@@ -37,6 +39,7 @@ func NewService(dbConn db.DBTX, broker *Broker, dockerClient *client.Client, log
 		dockerClient: dockerClient,
 		logger:       logger,
 		registries:   registries,
+		notifier:     notification.NewDispatcher(dbConn, logger.With("module", "notification")),
 	}
 }
 
