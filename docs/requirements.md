@@ -41,6 +41,11 @@ The system is intended for administrators and developers who need to manage Dock
 * **Registry Distribution:** Built Docker images must be pushed to the GitHub Container Registry (GHCR).
 * **Official GitHub Release:** The workflow must create an official GitHub Release referencing the container images and including a list of changes made in the release.
 
+### 3.6. Notifications & Gotify Integration
+* **Gotify Integration:** The system must support sending notifications to a Gotify server when newer container image updates are detected or when automatic container re-deployments are executed.
+* **Web UI Configuration:** The user must be able to configure the Gotify server parameters (server URL and application token) through a settings page in the Web UI.
+* **Test Notification:** The user must be able to send a test notification from the settings page to verify correct integration.
+
 ---
 
 
