@@ -63,6 +63,30 @@ func (q *Queries) GetContainer(ctx context.Context, id string) (Container, error
 	return i, err
 }
 
+const getContainerByName = `-- name: GetContainerByName :one
+SELECT id, name, image, image_id, state, auto_update, update_available, latest_image_digest, last_checked_at, last_updated_at, created_at, updated_at FROM containers WHERE name = ? LIMIT 1
+`
+
+func (q *Queries) GetContainerByName(ctx context.Context, name string) (Container, error) {
+	row := q.db.QueryRowContext(ctx, getContainerByName, name)
+	var i Container
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Image,
+		&i.ImageID,
+		&i.State,
+		&i.AutoUpdate,
+		&i.UpdateAvailable,
+		&i.LatestImageDigest,
+		&i.LastCheckedAt,
+		&i.LastUpdatedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getUpgradableContainers = `-- name: GetUpgradableContainers :many
 SELECT id, name, image, image_id, state, auto_update, update_available, latest_image_digest, last_checked_at, last_updated_at, created_at, updated_at FROM containers 
 WHERE auto_update = 1 AND update_available = 1

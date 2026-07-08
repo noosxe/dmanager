@@ -95,6 +95,9 @@ func handleEvent(ctx context.Context, logger *slog.Logger, queries *db.Queries, 
 		var lastUpdatedAt interface{} = nil
 
 		existing, err := queries.GetContainer(ctx, containerID)
+		if err != nil && errors.Is(err, sql.ErrNoRows) {
+			existing, err = queries.GetContainerByName(ctx, name)
+		}
 		if err == nil {
 			autoUpdate = existing.AutoUpdate
 			updateAvailable = existing.UpdateAvailable

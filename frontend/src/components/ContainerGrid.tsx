@@ -59,15 +59,17 @@ export function ContainerGrid() {
   const updateCount = containers.filter((c) => c.updateAvailable).length;
 
   // Search & filter filtering
-  const filteredContainers = containers.filter((c) => {
-    const matchesSearch =
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.image.toLowerCase().includes(search.toLowerCase());
+  const filteredContainers = containers
+    .filter((c) => {
+      const matchesSearch =
+        c.name.toLowerCase().includes(search.toLowerCase()) ||
+        c.image.toLowerCase().includes(search.toLowerCase());
 
-    if (filter === "running") return matchesSearch && c.state === "running";
-    if (filter === "stopped") return matchesSearch && c.state !== "running";
-    return matchesSearch;
-  });
+      if (filter === "running") return matchesSearch && c.state === "running";
+      if (filter === "stopped") return matchesSearch && c.state !== "running";
+      return matchesSearch;
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px", width: "100%" }}>
@@ -206,7 +208,7 @@ export function ContainerGrid() {
             const hasUpdate = container.updateAvailable;
 
             return (
-              <div key={container.id} className="container-card">
+              <div key={container.name} className="container-card">
                 {/* Header row */}
                 <div className="card-header-row">
                   <div className="card-title-section">

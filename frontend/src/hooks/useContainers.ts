@@ -34,6 +34,7 @@ export function useContainers() {
   const [actionLoading, setActionLoading] = useState<Record<string, string>>({}); // { containerId: actionType }
 
   const isMounted = useRef(true);
+  const pendingDeletes = useRef<Record<string, any>>({});
 
   // Map Protobuf message fields safely to camelCase local state format
   const mapProtoContainer = useCallback((c: ProtoContainer): Container => {
@@ -180,11 +181,32 @@ export function useContainers() {
 
             setContainers((prev) => {
               if (action === "delete") {
+                const containerToDelete = prev.find((c) => c.id === containerId);
+                if (containerToDelete) {
+                  const name = containerToDelete.name;
+                  if (pendingDeletes.current[name]) {
+                    window.clearTimeout(pendingDeletes.current[name]);
+                  }
+                  pendingDeletes.current[name] = window.setTimeout(() => {
+                    setContainers((p) => p.filter((c) => c.id !== containerId));
+                    delete pendingDeletes.current[name];
+                  }, 300);
+                  return prev;
+                }
                 return prev.filter((c) => c.id !== containerId);
               }
               if (action === "save" && protoContainer) {
                 const mapped = mapProtoContainer(protoContainer);
-                const idx = prev.findIndex((c) => c.id === mapped.id);
+                if (pendingDeletes.current[mapped.name]) {
+                  window.clearTimeout(pendingDeletes.current[mapped.name]);
+                  delete pendingDeletes.current[mapped.name];
+                }
+                // Try matching by ID first
+                let idx = prev.findIndex((c) => c.id === mapped.id);
+                // Fallback to matching by name to handle container ID changes on recreation
+                if (idx < 0) {
+                  idx = prev.findIndex((c) => c.name === mapped.name);
+                }
                 if (idx >= 0) {
                   const updated = [...prev];
                   updated[idx] = mapped;
@@ -216,6 +238,12 @@ export function useContainers() {
     return () => {
       isMounted.current = false;
       abortController.abort();
+      // Clear all pending delete timeouts on unmount
+      Object.values(pendingDeletes.current).forEach((timeoutId) => {
+        if (timeoutId) {
+          window.clearTimeout(timeoutId);
+        }
+      });
     };
   }, [fetchContainers, mapProtoContainer]);
 

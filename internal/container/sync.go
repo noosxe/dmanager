@@ -39,6 +39,9 @@ func SyncContainers(ctx context.Context, dbConn db.DBTX, dockerClient *client.Cl
 		var lastUpdatedAt interface{} = nil
 
 		existing, err := queries.GetContainer(ctx, c.ID)
+		if err != nil && errors.Is(err, sql.ErrNoRows) {
+			existing, err = queries.GetContainerByName(ctx, name)
+		}
 		if err == nil {
 			autoUpdate = existing.AutoUpdate
 			updateAvailable = existing.UpdateAvailable
