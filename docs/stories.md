@@ -680,11 +680,12 @@ graph TD
 - **Scope:** Backend Background Notification Dispatch
 - **Estimated Size:** Medium (~150 LOC)
 - **Dependencies:** `STORY-032`
-- **Goal:** Implement a notification dispatcher that subscribes to container updates/upgrade events and sends Gotify messages.
+- **Goal:** Implement a notification dispatcher that subscribes to container events/triggers and dispatches Gotify messages for image updates found, check failures, and auto-update outcomes.
 - **Tasks:**
-  1. Implement a notification package/service handling HTTP requests to Gotify server using the Go HTTP client or a custom handler.
-  2. Hook the notification service to auto-update/scheduler alerts.
-  3. When an update is detected, or when a container upgrade completes, trigger the dispatcher to send a status update message.
+  1. Implement a notification package/service handling POST requests to Gotify server.
+  2. Hook the dispatcher to notify when newer container image updates are found.
+  3. Hook the dispatcher to notify on failures to check for container image updates.
+  4. Hook the dispatcher to notify on both success and failure cases of automatic container updates/re-deployments.
 - **Files Affected:**
   - `internal/notification/gotify.go` (new)
   - `internal/container/scheduler.go` (modified)

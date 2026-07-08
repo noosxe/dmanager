@@ -358,8 +358,12 @@ The build is optimized using a three-stage Dockerfile that separates dependencie
   * `UpdateSettings(UpdateSettingsRequest) returns (UpdateSettingsResponse)`: Saves/updates the settings values in the SQLite database.
   * `TestGotifyNotification(TestGotifyNotificationRequest) returns (TestGotifyNotificationResponse)`: Dispatches a mock notification to the specified Gotify server to verify authentication and connection settings.
 * **Notification Agent:**
-  * A background dispatcher listening to container auto-update events and update-available checker triggers.
-  * Dispatches standard Gotify POST request payloads (`title`, `message`, `priority`) to `<gotify_url>/message?token=<gotify_token>` when updates are found or completed.
+  * A background dispatcher listening to container and scheduler event triggers.
+  * Dispatches standard Gotify POST request payloads (`title`, `message`, `priority`) to `<gotify_url>/message?token=<gotify_token>` for the following events:
+    * **Image Update Found:** Dispatched at `normal` priority when the checker detects a newer image version in the registry.
+    * **Update Check Failure:** Dispatched at `warning` or `high` priority if the scheduler fails to query the registry (e.g., registry down, network issues, or invalid credentials).
+    * **Auto-update Success:** Dispatched at `normal` priority when the automatic re-deployment workflow completes successfully.
+    * **Auto-update Failure:** Dispatched at `high` priority if the automated re-deployment workflow fails (e.g., container recreation fails, pull error).
 
 #### 7.3. Frontend Settings Dashboard
 * **TanStack Route (`/settings`):** Accessible via the sidebar "Settings" navigation button.
