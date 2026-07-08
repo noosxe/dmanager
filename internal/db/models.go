@@ -30,6 +30,12 @@ type Session struct {
 	CreatedAt time.Time
 }
 
+type Setting struct {
+	Key       string
+	Value     string
+	UpdatedAt time.Time
+}
+
 type User struct {
 	ID           int64
 	Username     string

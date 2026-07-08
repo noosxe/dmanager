@@ -25,6 +25,7 @@ import (
 	dmanagerv1 "dmanager/internal/gen/proto/dmanager/v1"
 	"dmanager/internal/gen/proto/dmanager/v1/dmanagerv1connect"
 	"dmanager/internal/logging"
+	"dmanager/internal/settings"
 )
 
 var (
@@ -152,6 +153,14 @@ var serveCmd = &cobra.Command{
 			connect.WithInterceptors(authInterceptor),
 		)
 		mux.Handle(loggingPath, loggingHandler)
+
+		// Register SettingsService
+		settingsSvc := settings.NewService(dbConn, logger.With("module", "settings"))
+		settingsPath, settingsHandler := dmanagerv1connect.NewSettingsServiceHandler(
+			settingsSvc,
+			connect.WithInterceptors(authInterceptor),
+		)
+		mux.Handle(settingsPath, settingsHandler)
 
 		// Start background registry update checker scheduler
 		container.StartScheduler(srvCtx, containerSvc, cfg.Scheduler.IntervalMinutes)
