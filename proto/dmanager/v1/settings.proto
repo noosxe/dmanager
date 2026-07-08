@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package dmanager.v1;
+
+option go_package = "dmanager/internal/gen/proto/dmanager/v1;dmanagerv1";
+
+service SettingsService {
+  // Retrieve current active configuration settings (Authenticated).
+  rpc GetSettings(GetSettingsRequest) returns (GetSettingsResponse);
+
+  // Update configuration settings (Authenticated).
+  rpc UpdateSettings(UpdateSettingsRequest) returns (UpdateSettingsResponse);
+
+  // Send a test notification to the Gotify server to verify configuration (Authenticated).
+  rpc TestGotifyNotification(TestGotifyNotificationRequest) returns (TestGotifyNotificationResponse);
+}
+
+message GetSettingsRequest {}
+
+message GetSettingsResponse {
+  string gotify_url = 1;
+  string gotify_token = 2;
+}
+
+message UpdateSettingsRequest {
+  string gotify_url = 1;
+  string gotify_token = 2;
+}
+
+message UpdateSettingsResponse {}
+
+message TestGotifyNotificationRequest {
+  // If provided, tests with these unsaved credentials.
+  // If empty, falls back to saved credentials in the database.
+  string gotify_url = 1;
+  string gotify_token = 2;
+}
+
+message TestGotifyNotificationResponse {
+  bool success = 1;
+  string error_message = 2;
+}
