@@ -8,6 +8,7 @@ import {
 import { ContainerGrid } from "../components/ContainerGrid";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { Login } from "../components/Login";
+import { Settings } from "../components/Settings";
 import { Setup } from "../components/Setup";
 import { SystemLogs } from "../components/SystemLogs";
 
@@ -94,8 +95,33 @@ const logsRoute = createRoute({
   ),
 });
 
-// 7. Assemble the route tree
-const routeTree = rootRoute.addChildren([dashboardRoute, loginRoute, setupRoute, logsRoute]);
+// 7. Settings route
+const settingsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/settings",
+  beforeLoad: ({ context }) => {
+    if (context.auth.needsSetup) {
+      throw redirect({ to: "/setup" });
+    }
+    if (!context.auth.isAuthenticated) {
+      throw redirect({ to: "/login" });
+    }
+  },
+  component: () => (
+    <DashboardLayout>
+      <Settings />
+    </DashboardLayout>
+  ),
+});
+
+// 8. Assemble the route tree
+const routeTree = rootRoute.addChildren([
+  dashboardRoute,
+  loginRoute,
+  setupRoute,
+  logsRoute,
+  settingsRoute,
+]);
 
 // 7. Define the router instance
 export const router = createRouter({

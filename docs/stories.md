@@ -36,9 +36,9 @@ graph TD
     F28 --> F29["STORY-029: System Logs Page Design and Implementation (DONE)"]
     F29 --> F30["STORY-030: Migrate Sidebar Logo to SVG Asset (DONE)"]
     F30 --> F31["STORY-031: Configure Build Pipeline Favicon Generation (DONE)"]
-    F31 --> S32["STORY-032: DB Settings Migration, Repo & RPCs (TODO)"]
-    S32 --> S33["STORY-033: Gotify Notification Dispatcher (TODO)"]
-    S32 --> F34["STORY-034: Frontend Settings Web UI (TODO)"]
+    F31 --> S32["STORY-032: DB Settings Migration, Repo & RPCs (DONE)"]
+    S32 --> S33["STORY-033: Gotify Notification Dispatcher (DONE)"]
+    S32 --> F34["STORY-034: Frontend Settings Web UI (DONE)"]
 ```
 
 
@@ -652,7 +652,7 @@ graph TD
 
 ---
 
-### STORY-032: Database Settings Migration, Repository & RPCs [TODO]
+### STORY-032: Database Settings Migration, Repository & RPCs [DONE]
 - **Scope:** Backend Settings Infrastructure
 - **Estimated Size:** Medium (~200 LOC)
 - **Dependencies:** `STORY-031`
@@ -676,7 +676,7 @@ graph TD
 
 ---
 
-### STORY-033: Gotify Notification Dispatcher [TODO]
+### STORY-033: Gotify Notification Dispatcher [DONE]
 - **Scope:** Backend Background Notification Dispatch
 - **Estimated Size:** Medium (~150 LOC)
 - **Dependencies:** `STORY-032`
@@ -696,7 +696,7 @@ graph TD
 
 ---
 
-### STORY-034: Frontend Settings View and Gotify Form [TODO]
+### STORY-034: Frontend Settings View and Gotify Form [DONE]
 - **Scope:** Frontend Settings Panel
 - **Estimated Size:** Medium (~250 LOC)
 - **Dependencies:** `STORY-032`
