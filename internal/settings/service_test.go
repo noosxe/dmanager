@@ -18,6 +18,8 @@ import (
 	v1 "dmanager/internal/gen/proto/dmanager/v1"
 )
 
+const adminVal = "admin"
+
 func newTestDBConn(t *testing.T) *sql.DB {
 	dbConn, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
@@ -56,8 +58,8 @@ func TestGetSettings(t *testing.T) {
 
 	// Test Admin
 	adminUser := db.User{
-		Username: "admin",
-		Role:     "admin",
+		Username: adminVal,
+		Role:     adminVal,
 	}
 	ctx = auth.WithUser(ctx, adminUser)
 	resp, err := svc.GetSettings(ctx, connect.NewRequest(&v1.GetSettingsRequest{}))
@@ -73,8 +75,8 @@ func TestUpdateSettings(t *testing.T) {
 	dbConn := newTestDBConn(t)
 	svc := NewService(dbConn, slog.Default())
 	adminUser := db.User{
-		Username: "admin",
-		Role:     "admin",
+		Username: adminVal,
+		Role:     adminVal,
 	}
 	ctx := auth.WithUser(context.Background(), adminUser)
 
@@ -101,8 +103,8 @@ func TestTestGotifyNotification(t *testing.T) {
 	dbConn := newTestDBConn(t)
 	svc := NewService(dbConn, slog.Default())
 	adminUser := db.User{
-		Username: "admin",
-		Role:     "admin",
+		Username: adminVal,
+		Role:     adminVal,
 	}
 	ctx := auth.WithUser(context.Background(), adminUser)
 

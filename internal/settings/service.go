@@ -21,6 +21,8 @@ import (
 	"dmanager/internal/gen/proto/dmanager/v1/dmanagerv1connect"
 )
 
+const roleAdmin = "admin"
+
 // Service implements the dmanagerv1connect.SettingsServiceHandler interface.
 type Service struct {
 	dmanagerv1connect.UnimplementedSettingsServiceHandler
@@ -41,7 +43,7 @@ func (s *Service) checkAdmin(ctx context.Context) error {
 	if !ok {
 		return connect.NewError(connect.CodeUnauthenticated, errors.New("unauthenticated"))
 	}
-	if user.Role != "admin" {
+	if user.Role != roleAdmin {
 		return connect.NewError(connect.CodePermissionDenied, errors.New("admin privilege required"))
 	}
 	return nil
@@ -181,7 +183,9 @@ func (s *Service) TestGotifyNotification(ctx context.Context, req *connect.Reque
 			ErrorMessage: fmt.Sprintf("Failed to connect to Gotify: %v", err),
 		}), nil
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
