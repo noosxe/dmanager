@@ -35,6 +35,7 @@ graph TD
     S27 --> F28["STORY-028: Frontend Client-Side Logging Framework (DONE)"]
     F28 --> F29["STORY-029: System Logs Page Design and Implementation (DONE)"]
     F29 --> F30["STORY-030: Migrate Sidebar Logo to SVG Asset (DONE)"]
+    F30 --> F31["STORY-031: Configure Build Pipeline Favicon Generation (DONE)"]
 ```
 
 
@@ -623,6 +624,29 @@ graph TD
 - **Validation Check:**
   - Run Biome check: `pnpm biome check .`
   - Compile frontend: `pnpm build`
+
+---
+
+### STORY-031: Configure Build Pipeline Favicon Generation [DONE]
+- **Scope:** Frontend Build Pipeline
+- **Estimated Size:** Small (~30 LOC)
+- **Dependencies:** `STORY-030`
+- **Goal:** Set up automated favicon asset generation in the Vite build pipeline using `@vite-pwa/assets-generator`.
+- **Tasks:**
+  1. Add `@vite-pwa/assets-generator` as a devDependency in the frontend package.
+  2. Configure `generate-assets` script in `frontend/package.json` to generate favicon assets from `logo.svg`.
+  3. Prepend `pnpm generate-assets` to the `build` script in `frontend/package.json`.
+  4. Delete the old `favicon.svg` file from the repository.
+  5. Update `frontend/index.html` to reference the generated favicon assets (`favicon.ico`, `logo.svg`, `apple-touch-icon-180x180.png`).
+- **Files Affected:**
+  - `frontend/package.json` (modified)
+  - `frontend/index.html` (modified)
+  - `frontend/public/favicon.svg` (deleted)
+  - `docs/stories.md` (modified)
+- **Validation Check:**
+  - Run Biome check: `pnpm biome check .`
+  - Compile frontend: `pnpm build` (which generates the assets and runs vite build)
+
 
 
 
