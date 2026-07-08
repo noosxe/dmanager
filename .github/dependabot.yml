@@ -12,6 +12,8 @@ updates:
     directory: "/frontend"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 1
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]

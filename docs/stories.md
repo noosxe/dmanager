@@ -39,7 +39,13 @@ graph TD
     F31 --> S32["STORY-032: DB Settings Migration, Repo & RPCs (DONE)"]
     S32 --> S33["STORY-033: Gotify Notification Dispatcher (DONE)"]
     S32 --> F34["STORY-034: Frontend Settings Web UI (DONE)"]
+    F34 --> F35["STORY-035: Configure Frontend minimumReleaseAge (DONE)"]
+    F35 --> F36["STORY-036: Configure Dependabot npm Cooldown (DONE)"]
 ```
+
+
+
+
 
 
 ---
@@ -715,17 +721,35 @@ graph TD
   - Compile React build: `pnpm build`
   - Run frontend test suite.
 
+---
 
+### STORY-035: Configure Frontend minimumReleaseAge [DONE]
+- **Scope:** Frontend Package Configuration
+- **Estimated Size:** Small (~5 LOC)
+- **Dependencies:** `STORY-034`
+- **Goal:** Configure `minimumReleaseAge: 1440` in `frontend/pnpm-workspace.yaml` to ensure package installation delay and security.
+- **Tasks:**
+  1. Add `minimumReleaseAge: 1440` configuration to `frontend/pnpm-workspace.yaml`.
+- **Files Affected:**
+  - `frontend/pnpm-workspace.yaml` (modified)
+- **Validation Check:**
+  - Run Biome check: `pnpm biome check .`
+  - Compile frontend: `pnpm build`
+  - Run frontend test suite: `pnpm test`
 
+---
 
-
-
-
-
-
-
-
-
-
-
+### STORY-036: Configure Dependabot npm Cooldown [DONE]
+- **Scope:** CI Configuration
+- **Estimated Size:** Small (~5 LOC)
+- **Dependencies:** `STORY-035`
+- **Goal:** Configure a 1-day cooldown in `.github/dependabot.yml` for npm updates to match pnpm's `minimumReleaseAge` configuration.
+- **Tasks:**
+  1. Add `cooldown: default-days: 1` to `.github/dependabot.yml` in the `npm` ecosystem block.
+- **Files Affected:**
+  - `.github/dependabot.yml` (modified)
+- **Validation Check:**
+  - Run Biome check: `pnpm biome check .`
+  - Compile frontend: `pnpm build`
+  - Run frontend test suite: `pnpm test`
 
