@@ -38,7 +38,7 @@
     "@vite-pwa/assets-generator": "^1.0.2",
     "@vitejs/plugin-react": "^6.0.3",
     "jsdom": "^29.1.1",
-    "msw": "^2.14.7",
+    "msw": "^2.15.0",
     "typescript": "~7.0.2",
     "vite": "^8.1.1",
     "vitest": "^4.1.10"
