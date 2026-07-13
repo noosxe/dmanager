@@ -1343,6 +1343,7 @@ body {
 }
 
 .logs-search-input {
+  box-sizing: border-box;
   width: 100%;
   padding: 10px 12px 10px 38px;
   background: rgba(0, 0, 0, 0.05);
@@ -1364,6 +1365,7 @@ body {
 }
 
 .logs-select-filter {
+  box-sizing: border-box;
   padding: 10px 32px 10px 12px;
   background: rgba(0, 0, 0, 0.05);
   border: 1px solid var(--border);
