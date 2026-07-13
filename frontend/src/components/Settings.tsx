@@ -9,6 +9,7 @@ import {
 import type React from "react";
 import { useEffect, useState } from "react";
 import { settingsClient } from "../client";
+import { useToast } from "../context/ToastContext";
 
 export function Settings() {
   const [gotifyUrl, setGotifyUrl] = useState("");
@@ -24,6 +25,8 @@ export function Settings() {
     success: boolean;
     message: string;
   } | null>(null);
+
+  const toast = useToast();
 
   // Load existing settings
   useEffect(() => {
@@ -55,9 +58,12 @@ export function Settings() {
         gotifyToken: gotifyToken.trim(),
       });
       setSuccess("Settings saved successfully.");
+      toast.success("Settings saved successfully.");
     } catch (err: unknown) {
       console.error("Failed to save settings:", err);
-      setError(err instanceof Error ? err.message : String(err));
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg);
+      toast.error(`Failed to save settings: ${msg}`);
     } finally {
       setIsSaving(false);
     }
@@ -68,6 +74,7 @@ export function Settings() {
     setSuccess(null);
     setTestResult(null);
     setIsTesting(true);
+    toast.info("Testing connection to Gotify server...");
 
     try {
       const resp = await settingsClient.testGotifyNotification({
@@ -76,22 +83,28 @@ export function Settings() {
       });
 
       if (resp.success) {
+        const msg = "Connection test succeeded! A test notification was sent.";
         setTestResult({
           success: true,
-          message: "Connection test succeeded! A test notification was sent.",
+          message: msg,
         });
+        toast.success(msg);
       } else {
+        const msg = resp.errorMessage || "Connection test failed.";
         setTestResult({
           success: false,
-          message: resp.errorMessage || "Connection test failed.",
+          message: msg,
         });
+        toast.error(msg);
       }
     } catch (err: unknown) {
       console.error("Test connection failed:", err);
+      const msg = err instanceof Error ? err.message : String(err);
       setTestResult({
         success: false,
-        message: err instanceof Error ? err.message : String(err),
+        message: msg,
       });
+      toast.error(`Connection test failed: ${msg}`);
     } finally {
       setIsTesting(false);
     }
