@@ -33,16 +33,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     (type: ToastType, message: string, duration = 5000): string => {
       const id = Math.random().toString(36).substring(2, 9);
       setToasts((prev) => [...prev, { id, type, message, duration }]);
-
-      if (duration > 0) {
-        setTimeout(() => {
-          removeToast(id);
-        }, duration);
-      }
-
       return id;
     },
-    [removeToast]
+    []
   );
 
   const success = useCallback(

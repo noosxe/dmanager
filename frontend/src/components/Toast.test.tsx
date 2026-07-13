@@ -99,4 +99,40 @@ describe("Toast Notification System", () => {
 
     vi.useRealTimers();
   });
+
+  it("pauses dismissal on hover and resumes on mouse leave", () => {
+    vi.useFakeTimers();
+
+    render(
+      <ToastProvider>
+        <TestComponent />
+        <ToastContainer />
+      </ToastProvider>,
+    );
+
+    // Trigger short toast (1000ms duration)
+    fireEvent.click(screen.getByTestId("short-btn"));
+    const toastItem = screen.getByText("Short message").closest(".toast-item")!;
+    expect(toastItem).toBeInTheDocument();
+
+    // Hover over the toast
+    fireEvent.mouseEnter(toastItem);
+
+    // Fast-forward time by 1000ms (should NOT dismiss)
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(screen.getByText("Short message")).toBeInTheDocument();
+
+    // Mouse leaves the toast
+    fireEvent.mouseLeave(toastItem);
+
+    // Fast-forward time by 1000ms (should dismiss now)
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(screen.queryByText("Short message")).not.toBeInTheDocument();
+
+    vi.useRealTimers();
+  });
 });
