@@ -1321,7 +1321,7 @@ body {
 .logs-control-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 16px;
   align-items: center;
   width: 100%;
 }
@@ -1329,7 +1329,7 @@ body {
 .logs-search-wrapper {
   position: relative;
   flex: 1;
-  min-width: 200px;
+  min-width: 280px;
 }
 
 .logs-search-icon {
@@ -1386,6 +1386,31 @@ body {
 .logs-select-filter:focus {
   outline: none;
   border-color: var(--accent);
+}
+
+.logs-filters-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .logs-control-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .logs-search-wrapper {
+    width: 100%;
+  }
+  .logs-filters-group {
+    width: 100%;
+  }
+  .logs-filters-group > .logs-select-filter {
+    flex: 1;
+    min-width: 120px;
+  }
 }
 
 .logs-table-container {
