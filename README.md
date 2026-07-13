@@ -1,0 +1,249 @@
+# dmanager
+
+A self-contained Docker Container Manager web application that discovers local containers, allows start/stop operations, and conducts scheduled image update checks.
+
+## Features
+
+- **Container Discovery** — automatically discovers and lists all Docker containers on the host
+- **Container Management** — start, stop, and upgrade containers from a modern web UI
+- **Image Update Checks** — scheduled background checks for newer image versions across registries
+- **Auto-Update** — optional per-container automatic re-deployment preserving all configuration
+- **Private Registry Support** — authenticate against private registries (GHCR, Docker Hub, etc.)
+- **Gotify Notifications** — receive push notifications for update events and failures
+- **System Logs** — browse structured backend logs directly in the UI
+- **Authentication** — session-based auth with role-based access control (admin / viewer)
+
+---
+
+## Quick Start with Docker Compose
+
+### Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) (v20.10+)
+- [Docker Compose](https://docs.docker.com/compose/install/) (v2+)
+
+### 1. Create a `docker-compose.yml`
+
+```yaml
+services:
+  dmanager:
+    image: ghcr.io/noosxe/dmanager:latest
+    container_name: dmanager
+    restart: unless-stopped
+    ports:
+      - "9283:9283"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - dmanager-data:/var/lib/dmanager
+      # Optional: mount a custom config file
+      # - ./config.yaml:/etc/dmanager/config.yaml:ro
+    environment:
+      - DMANAGER_SERVER_PORT=9283
+      - DMANAGER_SCHEDULER_INTERVAL_MINUTES=60
+
+volumes:
+  dmanager-data:
+```
+
+### 2. Start the application
+
+```bash
+docker compose up -d
+```
+
+### 3. Open the web UI
+
+Navigate to [http://localhost:9283](http://localhost:9283) in your browser.
+
+On first launch you will be prompted to create an administrator account.
+
+### Stopping the application
+
+```bash
+docker compose down
+```
+
+> [!IMPORTANT]
+> The Docker socket (`/var/run/docker.sock`) **must** be mounted into the container so dmanager can discover and manage containers on the host.
+
+---
+
+## Configuration
+
+dmanager loads configuration from multiple sources, merged in the following order of precedence (later overrides earlier):
+
+1. **Built-in defaults** (hardcoded)
+2. **YAML configuration file**
+3. **Environment variables** (prefixed with `DMANAGER_`)
+4. **CLI flags** (when running the binary directly)
+
+### Configuration file
+
+When running inside Docker the config file is read from `/etc/dmanager/config.yaml`. To customise it, create a `config.yaml` on the host and bind-mount it:
+
+```yaml
+# docker-compose.yml (excerpt)
+volumes:
+  - ./config.yaml:/etc/dmanager/config.yaml:ro
+```
+
+Without a custom mount the built-in defaults are used.
+
+When running the binary directly the following paths are searched in order:
+
+1. Path specified via `--config` / `-c` flag
+2. `/etc/dmanager/config.yaml`
+3. `./config.yaml` (current working directory)
+
+#### Example `config.yaml`
+
+```yaml
+server:
+  port: "9283"
+  db_path: "/var/lib/dmanager/dmanager.db"
+  allowed_origins: []
+
+docker:
+  host: "unix:///var/run/docker.sock"
+
+scheduler:
+  interval_minutes: 60
+
+registries: []
+```
+
+### Configuration file reference
+
+#### `server` — HTTP server settings
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `server.port` | `string` | `"9283"` | Port the HTTP server listens on. |
+| `server.db_path` | `string` | `"dmanager.db"` | Path to the SQLite database file. Inside Docker this should be on a persistent volume (e.g. `/var/lib/dmanager/dmanager.db`). |
+| `server.allowed_origins` | `string[]` | `[]` | List of allowed CORS origins. Leave empty to disallow cross-origin requests. Use `["*"]` to allow all origins. |
+
+#### `docker` — Docker daemon connection
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `docker.host` | `string` | `"unix:///var/run/docker.sock"` | Docker daemon endpoint. Typically the Unix socket path. |
+
+#### `scheduler` — Background update checker
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `scheduler.interval_minutes` | `int` | `60` | Interval in minutes between automatic image update checks. |
+
+#### `registries` — Private registry credentials
+
+A list of registry credential entries. Each entry supports the following fields:
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `registries[].host` | `string` | — | Registry hostname (e.g. `ghcr.io`, `registry.example.com`). |
+| `registries[].username` | `string` | — | Authentication username. |
+| `registries[].password` | `string` | — | Authentication password or access token. |
+
+**Example with private registries:**
+
+```yaml
+registries:
+  - host: ghcr.io
+    username: myuser
+    password: ghp_xxxxxxxxxxxxxxxxxxxx
+  - host: registry.example.com
+    username: deploy
+    password: s3cret
+```
+
+---
+
+## Environment variables
+
+All configuration values can be overridden via environment variables prefixed with `DMANAGER_`. Underscores map to the nested YAML structure (e.g. `server.port` → `DMANAGER_SERVER_PORT`).
+
+| Variable | Maps to | Default | Description |
+|----------|---------|---------|-------------|
+| `DMANAGER_SERVER_PORT` | `server.port` | `9283` | Port the HTTP server listens on. |
+| `DMANAGER_SERVER_DB_PATH` | `server.db_path` | `dmanager.db` | Path to the SQLite database file. |
+| `DMANAGER_SERVER_ALLOWED_ORIGINS` | `server.allowed_origins` | *(empty)* | Comma-separated list of allowed CORS origins. |
+| `DMANAGER_DOCKER_HOST` | `docker.host` | `unix:///var/run/docker.sock` | Docker daemon endpoint. |
+| `DMANAGER_SCHEDULER_INTERVAL_MINUTES` | `scheduler.interval_minutes` | `60` | Minutes between automatic image update checks. |
+| `DMANAGER_REGISTRIES_<N>_HOST` | `registries[N].host` | — | Hostname of the Nth registry (0-indexed). |
+| `DMANAGER_REGISTRIES_<N>_USERNAME` | `registries[N].username` | — | Username for the Nth registry. |
+| `DMANAGER_REGISTRIES_<N>_PASSWORD` | `registries[N].password` | — | Password / token for the Nth registry. |
+| `DMANAGER_ENV` | *(logging mode)* | *(not set)* | Set to `production` to switch log output to JSON format. |
+| `APP_ENV` | *(logging mode)* | *(not set)* | Alternative to `DMANAGER_ENV`. Set to `production` for JSON logs. |
+
+**Registry credentials example (Docker Compose):**
+
+```yaml
+environment:
+  - DMANAGER_REGISTRIES_0_HOST=ghcr.io
+  - DMANAGER_REGISTRIES_0_USERNAME=myuser
+  - DMANAGER_REGISTRIES_0_PASSWORD=ghp_xxxxxxxxxxxxxxxxxxxx
+  - DMANAGER_REGISTRIES_1_HOST=registry.example.com
+  - DMANAGER_REGISTRIES_1_USERNAME=deploy
+  - DMANAGER_REGISTRIES_1_PASSWORD=s3cret
+```
+
+---
+
+## Volumes
+
+| Container path | Purpose |
+|----------------|---------|
+| `/var/run/docker.sock` | **Required.** Host Docker socket for container management. |
+| `/var/lib/dmanager` | Persistent storage for the SQLite database. |
+| `/etc/dmanager/config.yaml` | Optional custom configuration file (mount read-only). |
+
+---
+
+## Ports
+
+| Container port | Protocol | Description |
+|----------------|----------|-------------|
+| `9283` | HTTP | Web UI and ConnectRPC API. |
+
+---
+
+## Building from source
+
+dmanager uses a multi-stage Dockerfile that compiles both the React frontend and Go backend into a single static binary:
+
+```bash
+# Build the image locally
+docker compose build
+
+# Or build directly
+docker build -t dmanager:local .
+```
+
+### Running the binary directly
+
+If you prefer to run outside Docker (requires Go 1.26+, Node.js 24+, and pnpm):
+
+```bash
+# Build frontend
+cd frontend && pnpm install && pnpm build && cd ..
+
+# Build backend (embeds frontend assets)
+go build -o dmanager .
+
+# Run
+./dmanager serve --config config.yaml
+```
+
+#### CLI flags
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--config` | `-c` | *(auto-detect)* | Path to the YAML configuration file. |
+| `--port` | `-p` | `9283` | Port to listen on (overrides config). |
+| `--db` | `-d` | `dmanager.db` | Path to SQLite database file (overrides config). |
+
+---
+
+## License
+
+See [LICENSE](LICENSE) for details.
