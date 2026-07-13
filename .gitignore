@@ -44,3 +44,7 @@ config.toml
 # Operating System Metadata
 .DS_Store
 Thumbs.db
+
+# Local package manager overrides
+/pnpm-workspace.yaml
+

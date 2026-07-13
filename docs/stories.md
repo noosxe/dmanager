@@ -821,6 +821,29 @@ graph TD
   - Run Biome check: `pnpm biome check .`
   - Compile frontend: `pnpm build`
 
+---
+
+### STORY-040: Frontend Table View and View Switcher [DONE]
+- **Scope:** Frontend Web UI
+- **Estimated Size:** Medium (~300 LOC)
+- **Dependencies:** `STORY-039`
+- **Goal:** Implement a view switcher and a premium TanStack-based table view for containers on the main page of the Web UI, persisting the user's view preference.
+- **Tasks:**
+  1. Install `@tanstack/react-table` package.
+  2. Implement `ContainerTable.tsx` using `@tanstack/react-table` for displaying containers list.
+  3. Implement view switcher in `ContainerGrid.tsx` with layout/list toggle buttons.
+  4. Save/load the selected view mode to/from `localStorage`.
+  5. Add styles for the table headers, rows, active updates, status colors, and buttons to `index.css`.
+- **Files Affected:**
+  - `frontend/package.json` (modified)
+  - `frontend/src/components/ContainerGrid.tsx` (modified)
+  - `frontend/src/components/ContainerTable.tsx` (new)
+  - `frontend/src/index.css` (modified)
+- **Validation Check:**
+  - Run Biome check: `pnpm biome check .`
+  - Compile frontend: `pnpm build`
+
+
 
 
 
