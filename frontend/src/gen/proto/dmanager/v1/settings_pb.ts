@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file proto/dmanager/v1/settings.proto.
  */
 export const file_proto_dmanager_v1_settings: GenFile = /*@__PURE__*/
-  fileDesc("CiBwcm90by9kbWFuYWdlci92MS9zZXR0aW5ncy5wcm90bxILZG1hbmFnZXIudjEiFAoSR2V0U2V0dGluZ3NSZXF1ZXN0Ij8KE0dldFNldHRpbmdzUmVzcG9uc2USEgoKZ290aWZ5X3VybBgBIAEoCRIUCgxnb3RpZnlfdG9rZW4YAiABKAkiQQoVVXBkYXRlU2V0dGluZ3NSZXF1ZXN0EhIKCmdvdGlmeV91cmwYASABKAkSFAoMZ290aWZ5X3Rva2VuGAIgASgJIhgKFlVwZGF0ZVNldHRpbmdzUmVzcG9uc2UiSQodVGVzdEdvdGlmeU5vdGlmaWNhdGlvblJlcXVlc3QSEgoKZ290aWZ5X3VybBgBIAEoCRIUCgxnb3RpZnlfdG9rZW4YAiABKAkiSAoeVGVzdEdvdGlmeU5vdGlmaWNhdGlvblJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSFQoNZXJyb3JfbWVzc2FnZRgCIAEoCTKxAgoPU2V0dGluZ3NTZXJ2aWNlElAKC0dldFNldHRpbmdzEh8uZG1hbmFnZXIudjEuR2V0U2V0dGluZ3NSZXF1ZXN0GiAuZG1hbmFnZXIudjEuR2V0U2V0dGluZ3NSZXNwb25zZRJZCg5VcGRhdGVTZXR0aW5ncxIiLmRtYW5hZ2VyLnYxLlVwZGF0ZVNldHRpbmdzUmVxdWVzdBojLmRtYW5hZ2VyLnYxLlVwZGF0ZVNldHRpbmdzUmVzcG9uc2UScQoWVGVzdEdvdGlmeU5vdGlmaWNhdGlvbhIqLmRtYW5hZ2VyLnYxLlRlc3RHb3RpZnlOb3RpZmljYXRpb25SZXF1ZXN0GisuZG1hbmFnZXIudjEuVGVzdEdvdGlmeU5vdGlmaWNhdGlvblJlc3BvbnNlQjRaMmRtYW5hZ2VyL2ludGVybmFsL2dlbi9wcm90by9kbWFuYWdlci92MTtkbWFuYWdlcnYxYgZwcm90bzM");
+  fileDesc("CiBwcm90by9kbWFuYWdlci92MS9zZXR0aW5ncy5wcm90bxILZG1hbmFnZXIudjEiFAoSR2V0U2V0dGluZ3NSZXF1ZXN0Ij8KE0dldFNldHRpbmdzUmVzcG9uc2USEgoKZ290aWZ5X3VybBgBIAEoCRIUCgxnb3RpZnlfdG9rZW4YAiABKAkiQQoVVXBkYXRlU2V0dGluZ3NSZXF1ZXN0EhIKCmdvdGlmeV91cmwYASABKAkSFAoMZ290aWZ5X3Rva2VuGAIgASgJIhgKFlVwZGF0ZVNldHRpbmdzUmVzcG9uc2UiSQodVGVzdEdvdGlmeU5vdGlmaWNhdGlvblJlcXVlc3QSEgoKZ290aWZ5X3VybBgBIAEoCRIUCgxnb3RpZnlfdG9rZW4YAiABKAkiSAoeVGVzdEdvdGlmeU5vdGlmaWNhdGlvblJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSFQoNZXJyb3JfbWVzc2FnZRgCIAEoCSIaChhHZXRSZWdpc3RyeVN0YXR1c1JlcXVlc3QicgoOUmVnaXN0cnlTdGF0dXMSDAoEaG9zdBgBIAEoCRIQCgh1c2VybmFtZRgCIAEoCRIVCg1pc19jb25maWd1cmVkGAMgASgIEhIKCmlzX2hlYWx0aHkYBCABKAgSFQoNZXJyb3JfbWVzc2FnZRgFIAEoCSJMChlHZXRSZWdpc3RyeVN0YXR1c1Jlc3BvbnNlEi8KCnJlZ2lzdHJpZXMYASADKAsyGy5kbWFuYWdlci52MS5SZWdpc3RyeVN0YXR1czKVAwoPU2V0dGluZ3NTZXJ2aWNlElAKC0dldFNldHRpbmdzEh8uZG1hbmFnZXIudjEuR2V0U2V0dGluZ3NSZXF1ZXN0GiAuZG1hbmFnZXIudjEuR2V0U2V0dGluZ3NSZXNwb25zZRJZCg5VcGRhdGVTZXR0aW5ncxIiLmRtYW5hZ2VyLnYxLlVwZGF0ZVNldHRpbmdzUmVxdWVzdBojLmRtYW5hZ2VyLnYxLlVwZGF0ZVNldHRpbmdzUmVzcG9uc2UScQoWVGVzdEdvdGlmeU5vdGlmaWNhdGlvbhIqLmRtYW5hZ2VyLnYxLlRlc3RHb3RpZnlOb3RpZmljYXRpb25SZXF1ZXN0GisuZG1hbmFnZXIudjEuVGVzdEdvdGlmeU5vdGlmaWNhdGlvblJlc3BvbnNlEmIKEUdldFJlZ2lzdHJ5U3RhdHVzEiUuZG1hbmFnZXIudjEuR2V0UmVnaXN0cnlTdGF0dXNSZXF1ZXN0GiYuZG1hbmFnZXIudjEuR2V0UmVnaXN0cnlTdGF0dXNSZXNwb25zZUI0WjJkbWFuYWdlci9pbnRlcm5hbC9nZW4vcHJvdG8vZG1hbmFnZXIvdjE7ZG1hbmFnZXJ2MWIGcHJvdG8z");
 
 /**
  * @generated from message dmanager.v1.GetSettingsRequest
@@ -130,6 +130,73 @@ export const TestGotifyNotificationResponseSchema: GenMessage<TestGotifyNotifica
   messageDesc(file_proto_dmanager_v1_settings, 5);
 
 /**
+ * @generated from message dmanager.v1.GetRegistryStatusRequest
+ */
+export type GetRegistryStatusRequest = Message<"dmanager.v1.GetRegistryStatusRequest"> & {
+};
+
+/**
+ * Describes the message dmanager.v1.GetRegistryStatusRequest.
+ * Use `create(GetRegistryStatusRequestSchema)` to create a new message.
+ */
+export const GetRegistryStatusRequestSchema: GenMessage<GetRegistryStatusRequest> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_settings, 6);
+
+/**
+ * @generated from message dmanager.v1.RegistryStatus
+ */
+export type RegistryStatus = Message<"dmanager.v1.RegistryStatus"> & {
+  /**
+   * @generated from field: string host = 1;
+   */
+  host: string;
+
+  /**
+   * @generated from field: string username = 2;
+   */
+  username: string;
+
+  /**
+   * @generated from field: bool is_configured = 3;
+   */
+  isConfigured: boolean;
+
+  /**
+   * @generated from field: bool is_healthy = 4;
+   */
+  isHealthy: boolean;
+
+  /**
+   * @generated from field: string error_message = 5;
+   */
+  errorMessage: string;
+};
+
+/**
+ * Describes the message dmanager.v1.RegistryStatus.
+ * Use `create(RegistryStatusSchema)` to create a new message.
+ */
+export const RegistryStatusSchema: GenMessage<RegistryStatus> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_settings, 7);
+
+/**
+ * @generated from message dmanager.v1.GetRegistryStatusResponse
+ */
+export type GetRegistryStatusResponse = Message<"dmanager.v1.GetRegistryStatusResponse"> & {
+  /**
+   * @generated from field: repeated dmanager.v1.RegistryStatus registries = 1;
+   */
+  registries: RegistryStatus[];
+};
+
+/**
+ * Describes the message dmanager.v1.GetRegistryStatusResponse.
+ * Use `create(GetRegistryStatusResponseSchema)` to create a new message.
+ */
+export const GetRegistryStatusResponseSchema: GenMessage<GetRegistryStatusResponse> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_settings, 8);
+
+/**
  * @generated from service dmanager.v1.SettingsService
  */
 export const SettingsService: GenService<{
@@ -162,6 +229,16 @@ export const SettingsService: GenService<{
     methodKind: "unary";
     input: typeof TestGotifyNotificationRequestSchema;
     output: typeof TestGotifyNotificationResponseSchema;
+  },
+  /**
+   * Get status of configured private registries (Authenticated).
+   *
+   * @generated from rpc dmanager.v1.SettingsService.GetRegistryStatus
+   */
+  getRegistryStatus: {
+    methodKind: "unary";
+    input: typeof GetRegistryStatusRequestSchema;
+    output: typeof GetRegistryStatusResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_proto_dmanager_v1_settings, 0);

@@ -303,6 +303,162 @@ func (x *TestGotifyNotificationResponse) GetErrorMessage() string {
 	return ""
 }
 
+type GetRegistryStatusRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetRegistryStatusRequest) Reset() {
+	*x = GetRegistryStatusRequest{}
+	mi := &file_proto_dmanager_v1_settings_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetRegistryStatusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetRegistryStatusRequest) ProtoMessage() {}
+
+func (x *GetRegistryStatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_settings_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetRegistryStatusRequest.ProtoReflect.Descriptor instead.
+func (*GetRegistryStatusRequest) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_settings_proto_rawDescGZIP(), []int{6}
+}
+
+type RegistryStatus struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Host          string                 `protobuf:"bytes,1,opt,name=host,proto3" json:"host,omitempty"`
+	Username      string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
+	IsConfigured  bool                   `protobuf:"varint,3,opt,name=is_configured,json=isConfigured,proto3" json:"is_configured,omitempty"`
+	IsHealthy     bool                   `protobuf:"varint,4,opt,name=is_healthy,json=isHealthy,proto3" json:"is_healthy,omitempty"`
+	ErrorMessage  string                 `protobuf:"bytes,5,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RegistryStatus) Reset() {
+	*x = RegistryStatus{}
+	mi := &file_proto_dmanager_v1_settings_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RegistryStatus) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RegistryStatus) ProtoMessage() {}
+
+func (x *RegistryStatus) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_settings_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RegistryStatus.ProtoReflect.Descriptor instead.
+func (*RegistryStatus) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_settings_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *RegistryStatus) GetHost() string {
+	if x != nil {
+		return x.Host
+	}
+	return ""
+}
+
+func (x *RegistryStatus) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *RegistryStatus) GetIsConfigured() bool {
+	if x != nil {
+		return x.IsConfigured
+	}
+	return false
+}
+
+func (x *RegistryStatus) GetIsHealthy() bool {
+	if x != nil {
+		return x.IsHealthy
+	}
+	return false
+}
+
+func (x *RegistryStatus) GetErrorMessage() string {
+	if x != nil {
+		return x.ErrorMessage
+	}
+	return ""
+}
+
+type GetRegistryStatusResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Registries    []*RegistryStatus      `protobuf:"bytes,1,rep,name=registries,proto3" json:"registries,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetRegistryStatusResponse) Reset() {
+	*x = GetRegistryStatusResponse{}
+	mi := &file_proto_dmanager_v1_settings_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetRegistryStatusResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetRegistryStatusResponse) ProtoMessage() {}
+
+func (x *GetRegistryStatusResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_settings_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetRegistryStatusResponse.ProtoReflect.Descriptor instead.
+func (*GetRegistryStatusResponse) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_settings_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *GetRegistryStatusResponse) GetRegistries() []*RegistryStatus {
+	if x != nil {
+		return x.Registries
+	}
+	return nil
+}
+
 var File_proto_dmanager_v1_settings_proto protoreflect.FileDescriptor
 
 const file_proto_dmanager_v1_settings_proto_rawDesc = "" +
@@ -324,11 +480,24 @@ const file_proto_dmanager_v1_settings_proto_rawDesc = "" +
 	"\fgotify_token\x18\x02 \x01(\tR\vgotifyToken\"_\n" +
 	"\x1eTestGotifyNotificationResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12#\n" +
-	"\rerror_message\x18\x02 \x01(\tR\ferrorMessage2\xb1\x02\n" +
+	"\rerror_message\x18\x02 \x01(\tR\ferrorMessage\"\x1a\n" +
+	"\x18GetRegistryStatusRequest\"\xa9\x01\n" +
+	"\x0eRegistryStatus\x12\x12\n" +
+	"\x04host\x18\x01 \x01(\tR\x04host\x12\x1a\n" +
+	"\busername\x18\x02 \x01(\tR\busername\x12#\n" +
+	"\ris_configured\x18\x03 \x01(\bR\fisConfigured\x12\x1d\n" +
+	"\n" +
+	"is_healthy\x18\x04 \x01(\bR\tisHealthy\x12#\n" +
+	"\rerror_message\x18\x05 \x01(\tR\ferrorMessage\"X\n" +
+	"\x19GetRegistryStatusResponse\x12;\n" +
+	"\n" +
+	"registries\x18\x01 \x03(\v2\x1b.dmanager.v1.RegistryStatusR\n" +
+	"registries2\x95\x03\n" +
 	"\x0fSettingsService\x12P\n" +
 	"\vGetSettings\x12\x1f.dmanager.v1.GetSettingsRequest\x1a .dmanager.v1.GetSettingsResponse\x12Y\n" +
 	"\x0eUpdateSettings\x12\".dmanager.v1.UpdateSettingsRequest\x1a#.dmanager.v1.UpdateSettingsResponse\x12q\n" +
-	"\x16TestGotifyNotification\x12*.dmanager.v1.TestGotifyNotificationRequest\x1a+.dmanager.v1.TestGotifyNotificationResponseB4Z2dmanager/internal/gen/proto/dmanager/v1;dmanagerv1b\x06proto3"
+	"\x16TestGotifyNotification\x12*.dmanager.v1.TestGotifyNotificationRequest\x1a+.dmanager.v1.TestGotifyNotificationResponse\x12b\n" +
+	"\x11GetRegistryStatus\x12%.dmanager.v1.GetRegistryStatusRequest\x1a&.dmanager.v1.GetRegistryStatusResponseB4Z2dmanager/internal/gen/proto/dmanager/v1;dmanagerv1b\x06proto3"
 
 var (
 	file_proto_dmanager_v1_settings_proto_rawDescOnce sync.Once
@@ -342,7 +511,7 @@ func file_proto_dmanager_v1_settings_proto_rawDescGZIP() []byte {
 	return file_proto_dmanager_v1_settings_proto_rawDescData
 }
 
-var file_proto_dmanager_v1_settings_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_proto_dmanager_v1_settings_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_proto_dmanager_v1_settings_proto_goTypes = []any{
 	(*GetSettingsRequest)(nil),             // 0: dmanager.v1.GetSettingsRequest
 	(*GetSettingsResponse)(nil),            // 1: dmanager.v1.GetSettingsResponse
@@ -350,19 +519,25 @@ var file_proto_dmanager_v1_settings_proto_goTypes = []any{
 	(*UpdateSettingsResponse)(nil),         // 3: dmanager.v1.UpdateSettingsResponse
 	(*TestGotifyNotificationRequest)(nil),  // 4: dmanager.v1.TestGotifyNotificationRequest
 	(*TestGotifyNotificationResponse)(nil), // 5: dmanager.v1.TestGotifyNotificationResponse
+	(*GetRegistryStatusRequest)(nil),       // 6: dmanager.v1.GetRegistryStatusRequest
+	(*RegistryStatus)(nil),                 // 7: dmanager.v1.RegistryStatus
+	(*GetRegistryStatusResponse)(nil),      // 8: dmanager.v1.GetRegistryStatusResponse
 }
 var file_proto_dmanager_v1_settings_proto_depIdxs = []int32{
-	0, // 0: dmanager.v1.SettingsService.GetSettings:input_type -> dmanager.v1.GetSettingsRequest
-	2, // 1: dmanager.v1.SettingsService.UpdateSettings:input_type -> dmanager.v1.UpdateSettingsRequest
-	4, // 2: dmanager.v1.SettingsService.TestGotifyNotification:input_type -> dmanager.v1.TestGotifyNotificationRequest
-	1, // 3: dmanager.v1.SettingsService.GetSettings:output_type -> dmanager.v1.GetSettingsResponse
-	3, // 4: dmanager.v1.SettingsService.UpdateSettings:output_type -> dmanager.v1.UpdateSettingsResponse
-	5, // 5: dmanager.v1.SettingsService.TestGotifyNotification:output_type -> dmanager.v1.TestGotifyNotificationResponse
-	3, // [3:6] is the sub-list for method output_type
-	0, // [0:3] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	7, // 0: dmanager.v1.GetRegistryStatusResponse.registries:type_name -> dmanager.v1.RegistryStatus
+	0, // 1: dmanager.v1.SettingsService.GetSettings:input_type -> dmanager.v1.GetSettingsRequest
+	2, // 2: dmanager.v1.SettingsService.UpdateSettings:input_type -> dmanager.v1.UpdateSettingsRequest
+	4, // 3: dmanager.v1.SettingsService.TestGotifyNotification:input_type -> dmanager.v1.TestGotifyNotificationRequest
+	6, // 4: dmanager.v1.SettingsService.GetRegistryStatus:input_type -> dmanager.v1.GetRegistryStatusRequest
+	1, // 5: dmanager.v1.SettingsService.GetSettings:output_type -> dmanager.v1.GetSettingsResponse
+	3, // 6: dmanager.v1.SettingsService.UpdateSettings:output_type -> dmanager.v1.UpdateSettingsResponse
+	5, // 7: dmanager.v1.SettingsService.TestGotifyNotification:output_type -> dmanager.v1.TestGotifyNotificationResponse
+	8, // 8: dmanager.v1.SettingsService.GetRegistryStatus:output_type -> dmanager.v1.GetRegistryStatusResponse
+	5, // [5:9] is the sub-list for method output_type
+	1, // [1:5] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_proto_dmanager_v1_settings_proto_init() }
@@ -376,7 +551,7 @@ func file_proto_dmanager_v1_settings_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_dmanager_v1_settings_proto_rawDesc), len(file_proto_dmanager_v1_settings_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

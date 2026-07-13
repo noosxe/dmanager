@@ -42,6 +42,9 @@ const (
 	// SettingsServiceTestGotifyNotificationProcedure is the fully-qualified name of the
 	// SettingsService's TestGotifyNotification RPC.
 	SettingsServiceTestGotifyNotificationProcedure = "/dmanager.v1.SettingsService/TestGotifyNotification"
+	// SettingsServiceGetRegistryStatusProcedure is the fully-qualified name of the SettingsService's
+	// GetRegistryStatus RPC.
+	SettingsServiceGetRegistryStatusProcedure = "/dmanager.v1.SettingsService/GetRegistryStatus"
 )
 
 // SettingsServiceClient is a client for the dmanager.v1.SettingsService service.
@@ -52,6 +55,8 @@ type SettingsServiceClient interface {
 	UpdateSettings(context.Context, *connect.Request[v1.UpdateSettingsRequest]) (*connect.Response[v1.UpdateSettingsResponse], error)
 	// Send a test notification to the Gotify server to verify configuration (Authenticated).
 	TestGotifyNotification(context.Context, *connect.Request[v1.TestGotifyNotificationRequest]) (*connect.Response[v1.TestGotifyNotificationResponse], error)
+	// Get status of configured private registries (Authenticated).
+	GetRegistryStatus(context.Context, *connect.Request[v1.GetRegistryStatusRequest]) (*connect.Response[v1.GetRegistryStatusResponse], error)
 }
 
 // NewSettingsServiceClient constructs a client for the dmanager.v1.SettingsService service. By
@@ -83,6 +88,12 @@ func NewSettingsServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(settingsServiceMethods.ByName("TestGotifyNotification")),
 			connect.WithClientOptions(opts...),
 		),
+		getRegistryStatus: connect.NewClient[v1.GetRegistryStatusRequest, v1.GetRegistryStatusResponse](
+			httpClient,
+			baseURL+SettingsServiceGetRegistryStatusProcedure,
+			connect.WithSchema(settingsServiceMethods.ByName("GetRegistryStatus")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -91,6 +102,7 @@ type settingsServiceClient struct {
 	getSettings            *connect.Client[v1.GetSettingsRequest, v1.GetSettingsResponse]
 	updateSettings         *connect.Client[v1.UpdateSettingsRequest, v1.UpdateSettingsResponse]
 	testGotifyNotification *connect.Client[v1.TestGotifyNotificationRequest, v1.TestGotifyNotificationResponse]
+	getRegistryStatus      *connect.Client[v1.GetRegistryStatusRequest, v1.GetRegistryStatusResponse]
 }
 
 // GetSettings calls dmanager.v1.SettingsService.GetSettings.
@@ -108,6 +120,11 @@ func (c *settingsServiceClient) TestGotifyNotification(ctx context.Context, req 
 	return c.testGotifyNotification.CallUnary(ctx, req)
 }
 
+// GetRegistryStatus calls dmanager.v1.SettingsService.GetRegistryStatus.
+func (c *settingsServiceClient) GetRegistryStatus(ctx context.Context, req *connect.Request[v1.GetRegistryStatusRequest]) (*connect.Response[v1.GetRegistryStatusResponse], error) {
+	return c.getRegistryStatus.CallUnary(ctx, req)
+}
+
 // SettingsServiceHandler is an implementation of the dmanager.v1.SettingsService service.
 type SettingsServiceHandler interface {
 	// Retrieve current active configuration settings (Authenticated).
@@ -116,6 +133,8 @@ type SettingsServiceHandler interface {
 	UpdateSettings(context.Context, *connect.Request[v1.UpdateSettingsRequest]) (*connect.Response[v1.UpdateSettingsResponse], error)
 	// Send a test notification to the Gotify server to verify configuration (Authenticated).
 	TestGotifyNotification(context.Context, *connect.Request[v1.TestGotifyNotificationRequest]) (*connect.Response[v1.TestGotifyNotificationResponse], error)
+	// Get status of configured private registries (Authenticated).
+	GetRegistryStatus(context.Context, *connect.Request[v1.GetRegistryStatusRequest]) (*connect.Response[v1.GetRegistryStatusResponse], error)
 }
 
 // NewSettingsServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -143,6 +162,12 @@ func NewSettingsServiceHandler(svc SettingsServiceHandler, opts ...connect.Handl
 		connect.WithSchema(settingsServiceMethods.ByName("TestGotifyNotification")),
 		connect.WithHandlerOptions(opts...),
 	)
+	settingsServiceGetRegistryStatusHandler := connect.NewUnaryHandler(
+		SettingsServiceGetRegistryStatusProcedure,
+		svc.GetRegistryStatus,
+		connect.WithSchema(settingsServiceMethods.ByName("GetRegistryStatus")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/dmanager.v1.SettingsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case SettingsServiceGetSettingsProcedure:
@@ -151,6 +176,8 @@ func NewSettingsServiceHandler(svc SettingsServiceHandler, opts ...connect.Handl
 			settingsServiceUpdateSettingsHandler.ServeHTTP(w, r)
 		case SettingsServiceTestGotifyNotificationProcedure:
 			settingsServiceTestGotifyNotificationHandler.ServeHTTP(w, r)
+		case SettingsServiceGetRegistryStatusProcedure:
+			settingsServiceGetRegistryStatusHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -170,4 +197,8 @@ func (UnimplementedSettingsServiceHandler) UpdateSettings(context.Context, *conn
 
 func (UnimplementedSettingsServiceHandler) TestGotifyNotification(context.Context, *connect.Request[v1.TestGotifyNotificationRequest]) (*connect.Response[v1.TestGotifyNotificationResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.SettingsService.TestGotifyNotification is not implemented"))
+}
+
+func (UnimplementedSettingsServiceHandler) GetRegistryStatus(context.Context, *connect.Request[v1.GetRegistryStatusRequest]) (*connect.Response[v1.GetRegistryStatusResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.SettingsService.GetRegistryStatus is not implemented"))
 }

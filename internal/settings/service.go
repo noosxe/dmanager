@@ -14,8 +14,10 @@ import (
 	"time"
 
 	connect "connectrpc.com/connect"
+	"github.com/moby/moby/client"
 
 	"dmanager/internal/auth"
+	"dmanager/internal/config"
 	"dmanager/internal/db"
 	v1 "dmanager/internal/gen/proto/dmanager/v1"
 	"dmanager/internal/gen/proto/dmanager/v1/dmanagerv1connect"
@@ -26,15 +28,19 @@ const roleAdmin = "admin"
 // Service implements the dmanagerv1connect.SettingsServiceHandler interface.
 type Service struct {
 	dmanagerv1connect.UnimplementedSettingsServiceHandler
-	db     db.DBTX
-	logger *slog.Logger
+	db           db.DBTX
+	logger       *slog.Logger
+	registries   []config.Registry
+	dockerClient *client.Client
 }
 
 // NewService creates a new settings service.
-func NewService(dbConn db.DBTX, logger *slog.Logger) *Service {
+func NewService(dbConn db.DBTX, logger *slog.Logger, registries []config.Registry, dockerClient *client.Client) *Service {
 	return &Service{
-		db:     dbConn,
-		logger: logger,
+		db:           dbConn,
+		logger:       logger,
+		registries:   registries,
+		dockerClient: dockerClient,
 	}
 }
 
@@ -197,5 +203,55 @@ func (s *Service) TestGotifyNotification(ctx context.Context, req *connect.Reque
 
 	return connect.NewResponse(&v1.TestGotifyNotificationResponse{
 		Success: true,
+	}), nil
+}
+
+// GetRegistryStatus performs dynamic connectivity and credentials checks against configured private registries.
+func (s *Service) GetRegistryStatus(ctx context.Context, req *connect.Request[v1.GetRegistryStatusRequest]) (*connect.Response[v1.GetRegistryStatusResponse], error) {
+	if err := s.checkAdmin(ctx); err != nil {
+		return nil, err
+	}
+
+	var results []*v1.RegistryStatus
+
+	for _, reg := range s.registries {
+		status := &v1.RegistryStatus{
+			Host:         reg.Host,
+			Username:     reg.Username,
+			IsConfigured: reg.Host != "" && reg.Username != "" && reg.Password != "",
+			IsHealthy:    false,
+		}
+
+		if !status.IsConfigured {
+			status.ErrorMessage = "Missing host, username, or password in configuration"
+			results = append(results, status)
+			continue
+		}
+
+		if s.dockerClient == nil {
+			status.ErrorMessage = "Docker client is not initialized on host"
+			results = append(results, status)
+			continue
+		}
+
+		// Execute RegistryLogin on docker daemon to verify registry connection/auth
+		_, err := s.dockerClient.RegistryLogin(ctx, client.RegistryLoginOptions{
+			Username:      reg.Username,
+			Password:      reg.Password,
+			ServerAddress: reg.Host,
+		})
+
+		if err != nil {
+			status.IsHealthy = false
+			status.ErrorMessage = err.Error()
+		} else {
+			status.IsHealthy = true
+		}
+
+		results = append(results, status)
+	}
+
+	return connect.NewResponse(&v1.GetRegistryStatusResponse{
+		Registries: results,
 	}), nil
 }
