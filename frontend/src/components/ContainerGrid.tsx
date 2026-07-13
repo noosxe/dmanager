@@ -88,7 +88,7 @@ export function ContainerGrid() {
       {/* Dashboard Top Header Title */}
       <div className="dashboard-header">
         <div className="header-title-section">
-          <h2>Container Grid</h2>
+          <h2>Container Dashboard</h2>
           <p>Monitor status, toggle auto-updates and redeploy host workloads.</p>
         </div>
         <button
