@@ -42,6 +42,7 @@ graph TD
     F34 --> F35["STORY-035: Configure Frontend minimumReleaseAge (DONE)"]
     F35 --> F36["STORY-036: Configure Dependabot npm Cooldown (DONE)"]
     F36 --> S37["STORY-037: Configure Dependabot for GitHub Actions (DONE)"]
+    S37 --> F38["STORY-038: Frontend Toast Notification System (DONE)"]
 ```
 
 
@@ -771,5 +772,29 @@ graph TD
   - Run Biome check: `pnpm biome check .`
   - Compile frontend: `pnpm build`
   - Run frontend test suite: `pnpm test`
+
+---
+
+### STORY-038: Frontend Toast Notification System [DONE]
+- **Scope:** Frontend UI & UX Feedback
+- **Estimated Size:** Medium (~250 LOC)
+- **Dependencies:** `STORY-037`
+- **Goal:** Implement a responsive, beautiful glassmorphic toast notification system in the frontend, providing clear success, error, warning, and info feedback to user actions.
+- **Tasks:**
+  1. Implement a global `ToastContext` and `ToastProvider` to manage toast items.
+  2. Implement a `ToastContainer` and animated `Toast` components with elegant visual styles.
+  3. Integrate the toast system into `useContainers` hook (start/stop actions, update check, auto-update, upgrade).
+  4. Integrate the toast system into `Settings.tsx` (saving settings, testing connection).
+- **Files Affected:**
+  - `frontend/src/context/ToastContext.tsx` (new)
+  - `frontend/src/components/ToastContainer.tsx` (new)
+  - `frontend/src/hooks/useContainers.ts` (modified)
+  - `frontend/src/components/Settings.tsx` (modified)
+  - `frontend/src/components/DashboardLayout.tsx` (modified)
+- **Validation Check:**
+  - Run Biome check: `pnpm biome check .`
+  - Compile frontend: `pnpm build`
+  - Run frontend test suite: `pnpm test`
+
 
 

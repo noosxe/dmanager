@@ -373,4 +373,27 @@ The build is optimized using a three-stage Dockerfile that separates dependencie
   * Includes a "Save Settings" button invoking `UpdateSettings` RPC.
   * Includes a "Test Gotify Connection" button invoking `TestGotifyNotification` RPC, rendering status to the user.
 
+### 8. Frontend Toast Notification System Design
 
+#### 8.1. Toast Core Architecture
+* **Toast Types:**
+  * `info`: General informational messages (e.g., "Checking for updates...").
+  * `success`: Successful action completions (e.g., "Container started successfully").
+  * `warning`: Warnings or non-blocking issues (e.g., "No updates found").
+  * `error`: Error messages from failed actions (e.g., "Failed to stop container").
+* **State Management (Toast Context):** A global React Context (`ToastContext`) and custom provider (`ToastProvider`) managed by a custom hook (`useToast`). This provider maintains a list of active toast items, providing `toast.info`, `toast.success`, `toast.warning`, and `toast.error` methods. Each toast is auto-dismissed after a configurable timeout (default 5000ms).
+* **Toast UI Component:**
+  * Displays a glassmorphic style with matching theme colors and relevant Lucide icons (`CheckCircle2`, `AlertTriangle`, `Info`, `XCircle`).
+  * Features a close button for immediate dismissal.
+  * Rendered inside a fixed-position container at the top or bottom right of the page with high z-index.
+
+#### 8.2. Integration & Interactions
+* **Container Dashboard actions (`useContainers`):**
+  * Start Container: Toasts info on request, success on start, and error on failure.
+  * Stop Container: Toasts info on request, success on stop, and error on failure.
+  * Upgrade Container: Toasts info/loading when upgrading starts, success on completion, and error on failure.
+  * Toggle Auto Update: Toasts success/error when toggling.
+  * Check Updates: Toasts info when starting checking, success when checking is complete (informing the user whether a new update was found or if the image is already up-to-date), and error on failure.
+* **Settings Panel actions (`Settings.tsx`):**
+  * Save Settings: Toasts success on save, error on failure.
+  * Test Gotify Connection: Toasts info when starting test, success if connection succeeds, and error if it fails.
