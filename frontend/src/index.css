@@ -1393,6 +1393,7 @@ body {
   gap: 10px;
   flex-wrap: wrap;
   align-items: center;
+  flex-shrink: 0;
 }
 
 @media (max-width: 768px) {
@@ -1406,6 +1407,7 @@ body {
   }
   .logs-filters-group {
     width: 100%;
+    flex-shrink: 1;
   }
   .logs-filters-group > .logs-select-filter {
     flex: 1;
