@@ -43,6 +43,7 @@ graph TD
     F35 --> F36["STORY-036: Configure Dependabot npm Cooldown (DONE)"]
     F36 --> S37["STORY-037: Configure Dependabot for GitHub Actions (DONE)"]
     S37 --> F38["STORY-038: Frontend Toast Notification System (DONE)"]
+    F38 --> F39["STORY-039: Private Registry Status Monitoring (DONE)"]
 ```
 
 
@@ -795,6 +796,31 @@ graph TD
   - Run Biome check: `pnpm biome check .`
   - Compile frontend: `pnpm build`
   - Run frontend test suite: `pnpm test`
+
+---
+
+### STORY-039: Private Registry Status Monitoring [DONE]
+- **Scope:** Settings Web UI & Private Registry Integration
+- **Estimated Size:** Medium (~250 LOC)
+- **Dependencies:** `STORY-038`
+- **Goal:** Implement the backend RPC `GetRegistryStatus` to verify registry credentials and connections, and display these statuses in a dedicated settings section in the Web UI.
+- **Tasks:**
+  1. Define the `GetRegistryStatus` RPC in `proto/dmanager/v1/settings.proto` and run code generation scripts.
+  2. Implement the `GetRegistryStatus` handler in the backend `settings.Service` by passing the config's `Registries` and the `dockerClient` to the service, and calling `RegistryLogin` to verify status.
+  3. Create the `RegistryStatus` UI card components and embed them in `Settings.tsx` settings view.
+  4. Connect the frontend card list to the `GetRegistryStatus` RPC and implement manual refresh and automatic loading state.
+- **Files Affected:**
+  - `proto/dmanager/v1/settings.proto` (modified)
+  - `internal/settings/service.go` (modified)
+  - `internal/settings/service_test.go` (modified)
+  - `cmd/serve.go` (modified)
+  - `frontend/src/components/Settings.tsx` (modified)
+- **Validation Check:**
+  - Compile the server successfully: `go build -o /dev/null ./...`
+  - Run all Go tests: `go test -v ./internal/settings/...`
+  - Run Biome check: `pnpm biome check .`
+  - Compile frontend: `pnpm build`
+
 
 
 

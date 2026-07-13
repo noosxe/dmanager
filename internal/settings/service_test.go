@@ -14,11 +14,15 @@ import (
 	_ "github.com/ncruces/go-sqlite3/driver"
 
 	"dmanager/internal/auth"
+	"dmanager/internal/config"
 	"dmanager/internal/db"
 	v1 "dmanager/internal/gen/proto/dmanager/v1"
 )
 
-const adminVal = "admin"
+const (
+	adminVal = "admin"
+	ghcrHost = "ghcr.io"
+)
 
 func newTestDBConn(t *testing.T) *sql.DB {
 	dbConn, err := sql.Open("sqlite3", ":memory:")
@@ -36,7 +40,7 @@ func newTestDBConn(t *testing.T) *sql.DB {
 
 func TestGetSettings(t *testing.T) {
 	dbConn := newTestDBConn(t)
-	svc := NewService(dbConn, slog.Default())
+	svc := NewService(dbConn, slog.Default(), nil, nil)
 
 	// Test Unauthenticated
 	ctx := context.Background()
@@ -73,7 +77,7 @@ func TestGetSettings(t *testing.T) {
 
 func TestUpdateSettings(t *testing.T) {
 	dbConn := newTestDBConn(t)
-	svc := NewService(dbConn, slog.Default())
+	svc := NewService(dbConn, slog.Default(), nil, nil)
 	adminUser := db.User{
 		Username: adminVal,
 		Role:     adminVal,
@@ -101,7 +105,7 @@ func TestUpdateSettings(t *testing.T) {
 
 func TestTestGotifyNotification(t *testing.T) {
 	dbConn := newTestDBConn(t)
-	svc := NewService(dbConn, slog.Default())
+	svc := NewService(dbConn, slog.Default(), nil, nil)
 	adminUser := db.User{
 		Username: adminVal,
 		Role:     adminVal,
@@ -166,5 +170,73 @@ func TestTestGotifyNotification(t *testing.T) {
 	}
 	if receivedToken != "saved-token" {
 		t.Errorf("expected received token 'saved-token', got '%s'", receivedToken)
+	}
+}
+
+func TestGetRegistryStatus(t *testing.T) {
+	dbConn := newTestDBConn(t)
+	adminUser := db.User{
+		Username: adminVal,
+		Role:     adminVal,
+	}
+	ctx := auth.WithUser(context.Background(), adminUser)
+
+	// Case 1: Empty registries
+	svc1 := NewService(dbConn, slog.Default(), nil, nil)
+	resp1, err := svc1.GetRegistryStatus(ctx, connect.NewRequest(&v1.GetRegistryStatusRequest{}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(resp1.Msg.Registries) != 0 {
+		t.Errorf("expected 0 registries, got %d", len(resp1.Msg.Registries))
+	}
+
+	// Case 2: Unconfigured registry (missing credentials)
+	regs2 := []config.Registry{
+		{Host: ghcrHost, Username: ""}, // missing password/username
+	}
+	svc2 := NewService(dbConn, slog.Default(), regs2, nil)
+	resp2, err := svc2.GetRegistryStatus(ctx, connect.NewRequest(&v1.GetRegistryStatusRequest{}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(resp2.Msg.Registries) != 1 {
+		t.Fatalf("expected 1 registry status, got %d", len(resp2.Msg.Registries))
+	}
+	r2 := resp2.Msg.Registries[0]
+	if r2.Host != ghcrHost {
+		t.Errorf("expected host ghcr.io, got %s", r2.Host)
+	}
+	if r2.IsConfigured {
+		t.Errorf("expected IsConfigured to be false")
+	}
+	if r2.IsHealthy {
+		t.Errorf("expected IsHealthy to be false")
+	}
+	if r2.ErrorMessage == "" {
+		t.Errorf("expected error message")
+	}
+
+	// Case 3: Configured registry but nil docker client
+	regs3 := []config.Registry{
+		{Host: ghcrHost, Username: "user", Password: "pwd"},
+	}
+	svc3 := NewService(dbConn, slog.Default(), regs3, nil)
+	resp3, err := svc3.GetRegistryStatus(ctx, connect.NewRequest(&v1.GetRegistryStatusRequest{}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(resp3.Msg.Registries) != 1 {
+		t.Fatalf("expected 1 registry status, got %d", len(resp3.Msg.Registries))
+	}
+	r3 := resp3.Msg.Registries[0]
+	if !r3.IsConfigured {
+		t.Errorf("expected IsConfigured to be true")
+	}
+	if r3.IsHealthy {
+		t.Errorf("expected IsHealthy to be false")
+	}
+	if r3.ErrorMessage != "Docker client is not initialized on host" {
+		t.Errorf("unexpected error message: %s", r3.ErrorMessage)
 	}
 }

@@ -155,7 +155,7 @@ var serveCmd = &cobra.Command{
 		mux.Handle(loggingPath, loggingHandler)
 
 		// Register SettingsService
-		settingsSvc := settings.NewService(dbConn, logger.With("module", "settings"))
+		settingsSvc := settings.NewService(dbConn, logger.With("module", "settings"), cfg.Registries, dockerClient)
 		settingsPath, settingsHandler := dmanagerv1connect.NewSettingsServiceHandler(
 			settingsSvc,
 			connect.WithInterceptors(authInterceptor),

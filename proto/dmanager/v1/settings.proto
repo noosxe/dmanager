@@ -13,6 +13,9 @@ service SettingsService {
 
   // Send a test notification to the Gotify server to verify configuration (Authenticated).
   rpc TestGotifyNotification(TestGotifyNotificationRequest) returns (TestGotifyNotificationResponse);
+
+  // Get status of configured private registries (Authenticated).
+  rpc GetRegistryStatus(GetRegistryStatusRequest) returns (GetRegistryStatusResponse);
 }
 
 message GetSettingsRequest {}
@@ -39,4 +42,18 @@ message TestGotifyNotificationRequest {
 message TestGotifyNotificationResponse {
   bool success = 1;
   string error_message = 2;
+}
+
+message GetRegistryStatusRequest {}
+
+message RegistryStatus {
+  string host = 1;
+  string username = 2;
+  bool is_configured = 3;
+  bool is_healthy = 4;
+  string error_message = 5;
+}
+
+message GetRegistryStatusResponse {
+  repeated RegistryStatus registries = 1;
 }

@@ -49,6 +49,11 @@ The system is intended for administrators and developers who need to manage Dock
 * **Web UI Configuration:** The user must be able to configure the Gotify server parameters (server URL and application token) through a settings page in the Web UI.
 * **Test Notification:** The user must be able to send a test notification from the settings page to verify correct integration.
 
+### 3.7. Private Registry Status Monitoring
+* **Private Registry Config Info:** The system must show all configured private registries (e.g. Host, Username) in the Web UI.
+* **Authentication and Connectivity Health Check:** The system must verify if credentials are configured correctly and perform active checks to ensure it is able to query updates from each private registry without errors.
+* **Registry Status Section:** The settings page must display a registry status section displaying the results of these verification checks, including error details if any registry check fails.
+
 ---
 
 

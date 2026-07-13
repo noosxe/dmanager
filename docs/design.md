@@ -357,6 +357,7 @@ The build is optimized using a three-stage Dockerfile that separates dependencie
   * `GetSettings(GetSettingsRequest) returns (GetSettingsResponse)`: Retrieves the currently configured settings.
   * `UpdateSettings(UpdateSettingsRequest) returns (UpdateSettingsResponse)`: Saves/updates the settings values in the SQLite database.
   * `TestGotifyNotification(TestGotifyNotificationRequest) returns (TestGotifyNotificationResponse)`: Dispatches a mock notification to the specified Gotify server to verify authentication and connection settings.
+  * `GetRegistryStatus(GetRegistryStatusRequest) returns (GetRegistryStatusResponse)`: Dynamic health check verifying connectivity and login credentials for all configured private registries.
 * **Notification Agent:**
   * A background dispatcher listening to container and scheduler event triggers.
   * Dispatches standard Gotify POST request payloads (`title`, `message`, `priority`) to `<gotify_url>/message?token=<gotify_token>` for the following events:
@@ -372,6 +373,15 @@ The build is optimized using a three-stage Dockerfile that separates dependencie
   * Includes standard URL validation rules.
   * Includes a "Save Settings" button invoking `UpdateSettings` RPC.
   * Includes a "Test Gotify Connection" button invoking `TestGotifyNotification` RPC, rendering status to the user.
+
+#### 7.4. Private Registry Status Panel
+* **Registry Status Section:** A section embedded within the `/settings` page.
+* **Metadata & Health Indicators:**
+  * Renders a card list of all private registries configured on the backend.
+  * Displays the host URL and username configuration details.
+  * Performs parallel connectivity and authentication checks using the server's Docker Engine API client `RegistryLogin`.
+  * Displays a colored visual badge for status (`Healthy` / `Configured / OK` in green, `Error / Unhealthy` in red with the descriptive connection error).
+  * Includes a "Refresh Status" button to force-reload status.
 
 ### 8. Frontend Toast Notification System Design
 

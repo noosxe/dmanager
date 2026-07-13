@@ -2,14 +2,16 @@ import {
   CheckCircle2,
   Loader2,
   Play,
+  RefreshCw,
   Save,
   Settings as SettingsIcon,
   ShieldAlert,
 } from "lucide-react";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { settingsClient } from "../client";
 import { useToast } from "../context/ToastContext";
+import type { RegistryStatus } from "../gen/proto/dmanager/v1/settings_pb";
 
 export function Settings() {
   const [gotifyUrl, setGotifyUrl] = useState("");
@@ -25,6 +27,11 @@ export function Settings() {
     success: boolean;
     message: string;
   } | null>(null);
+
+  // Registry status state
+  const [registryStatuses, setRegistryStatuses] = useState<RegistryStatus[]>([]);
+  const [registriesLoading, setRegistriesLoading] = useState(true);
+  const [registriesError, setRegistriesError] = useState<string | null>(null);
 
   const toast = useToast();
 
@@ -44,6 +51,25 @@ export function Settings() {
     }
     loadSettings();
   }, []);
+
+  const fetchRegistryStatus = useCallback(async () => {
+    setRegistriesLoading(true);
+    setRegistriesError(null);
+    try {
+      const resp = await settingsClient.getRegistryStatus({});
+      setRegistryStatuses(resp.registries);
+    } catch (err: unknown) {
+      console.error("Failed to load registry statuses:", err);
+      setRegistriesError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setRegistriesLoading(false);
+    }
+  }, []);
+
+  // Load registry status
+  useEffect(() => {
+    fetchRegistryStatus();
+  }, [fetchRegistryStatus]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -296,6 +322,202 @@ export function Settings() {
             </button>
           </div>
         </form>
+      </div>
+
+      <div className="logs-viewer-card" style={{ marginTop: "24px" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "8px",
+            flexWrap: "wrap",
+            gap: "12px",
+          }}
+        >
+          <div>
+            <h2
+              style={{
+                fontSize: "18px",
+                fontWeight: "600",
+                color: "var(--text-h)",
+                margin: 0,
+              }}
+            >
+              Private Registries Status
+            </h2>
+            <p style={{ fontSize: "14px", opacity: 0.8, margin: "4px 0 0 0" }}>
+              Status of configured private Docker registries from configuration.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={fetchRegistryStatus}
+            disabled={registriesLoading}
+            className="settings-btn-secondary"
+            style={{ padding: "8px 16px" }}
+          >
+            {registriesLoading ? (
+              <Loader2 className="animate-spin" size={16} />
+            ) : (
+              <RefreshCw size={16} />
+            )}
+            <span>Refresh Status</span>
+          </button>
+        </div>
+
+        {registriesError && (
+          <div className="auth-error-banner" style={{ marginBottom: "16px" }}>
+            <ShieldAlert size={18} className="auth-error-icon" />
+            <span>{registriesError}</span>
+          </div>
+        )}
+
+        {registriesLoading && registryStatuses.length === 0 ? (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "32px",
+            }}
+          >
+            <Loader2 className="animate-spin text-accent" size={24} />
+            <span style={{ marginLeft: "12px", fontSize: "14px" }}>
+              Checking registry status...
+            </span>
+          </div>
+        ) : registryStatuses.length === 0 ? (
+          <div
+            style={{
+              padding: "32px",
+              textAlign: "center",
+              opacity: 0.6,
+              fontSize: "14px",
+              border: "1px dashed var(--border)",
+              borderRadius: "10px",
+              backgroundColor: "rgba(255, 255, 255, 0.02)",
+            }}
+          >
+            No private registries configured. Define them in your server config.yaml.
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            {registryStatuses.map((reg) => (
+              <div
+                key={reg.host}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "16px",
+                  border: "1px solid var(--card-border)",
+                  borderRadius: "12px",
+                  background: "rgba(255, 255, 255, 0.03)",
+                  backdropFilter: "blur(10px)",
+                  flexWrap: "wrap",
+                  gap: "12px",
+                }}
+              >
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span style={{ fontWeight: "700", color: "var(--text-h)", fontSize: "15px" }}>
+                      {reg.host}
+                    </span>
+                    {reg.isHealthy ? (
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          fontWeight: "600",
+                          color: "#10b981",
+                          background: "rgba(16, 185, 129, 0.08)",
+                          border: "1px solid rgba(16, 185, 129, 0.2)",
+                          padding: "2px 8px",
+                          borderRadius: "9999px",
+                        }}
+                      >
+                        Healthy
+                      </span>
+                    ) : (
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          fontWeight: "600",
+                          color: "var(--error)",
+                          background: "var(--error-bg)",
+                          border: "1px solid var(--error-border)",
+                          padding: "2px 8px",
+                          borderRadius: "9999px",
+                        }}
+                      >
+                        Unhealthy
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: "13px", opacity: 0.8 }}>
+                    Username:{" "}
+                    <code
+                      style={{
+                        fontFamily: "var(--font-mono)",
+                        background: "rgba(255,255,255,0.05)",
+                        padding: "2px 6px",
+                        borderRadius: "4px",
+                      }}
+                    >
+                      {reg.username || "(anonymous)"}
+                    </code>
+                  </div>
+                </div>
+
+                {!reg.isConfigured ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      color: "var(--error)",
+                      fontSize: "13px",
+                    }}
+                  >
+                    <ShieldAlert size={16} />
+                    <span>Incomplete configuration credentials</span>
+                  </div>
+                ) : reg.isHealthy ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      color: "#10b981",
+                      fontSize: "13px",
+                    }}
+                  >
+                    <CheckCircle2 size={16} />
+                    <span>Connected & Authorized</span>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      maxWidth: "100%",
+                      width: "100%",
+                      marginTop: "4px",
+                      padding: "8px 12px",
+                      background: "var(--error-bg)",
+                      border: "1px solid var(--error-border)",
+                      color: "var(--error)",
+                      borderRadius: "8px",
+                      fontSize: "12px",
+                      fontFamily: "var(--font-mono)",
+                      wordBreak: "break-all",
+                    }}
+                  >
+                    Error: {reg.errorMessage}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
