@@ -202,12 +202,18 @@ The frontend is a modern React SPA optimized for speed, developer efficiency, an
   * Features a modern, glassmorphic navigation sidebar containing navigation links, application logo, active status badge, user identity card (username, role), and sign-out controls.
   * Adjusts smoothly to mobile viewports with toggleable sidebar navigation drawer.
 * **Container Grid (`ContainerGrid.tsx`):**
-  * Renders a responsive grid displaying discovered Docker containers.
+  * Renders the main dashboard container management area.
   * Features a search input to instantly filter containers by name or image/tag.
   * Supports status filtering buttons (All, Running, Stopped) to narrow down active workloads.
   * Displays visual metrics (e.g. Total, Running, Stopped, and Updates Available container counts).
-  * Outlines each container card with premium design cards:
-    * Provides intuitive controls to start and stop containers (mapped to the backend service endpoints via ConnectRPC clients in subsequent updates).
+  * Integrates the View Switcher component to toggle between Card Grid and Table views.
+* **Container Table (`ContainerTable.tsx`):**
+  * Renders a premium, responsive data table of discovered containers utilizing the TanStack Table (`@tanstack/react-table`) library.
+  * Displays container name, state/status badges, image repository and tags, container ID, auto-update toggle status, and actions.
+  * Integrates sorting and structured column layouts with sleek hover animations.
+* **View Switcher:**
+  * A toolbar toggle component (using layout/list icons) to switch views.
+  * Stores the user's active view preference (`grid` or `table`) in `localStorage` for cross-session persistence.
 
 ### 3.7. Container State Synchronizer Hook (`useContainers.ts`)
 * **State Management & Subscription:**

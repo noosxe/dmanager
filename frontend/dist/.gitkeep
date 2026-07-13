@@ -1,1 +1,0 @@
-# Keep frontend/dist directory tracked in git so that go:embed directives compile in CI.

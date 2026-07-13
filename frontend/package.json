@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "generate-assets": "pwa-assets-generator --preset minimal public/logo.svg",
-    "build": "pnpm generate-assets && tsc -b && vite build",
+    "build": "pnpm generate-assets && tsc -b && vite build && touch dist/.gitkeep",
     "lint": "biome check .",
     "preview": "vite preview",
     "test": "vitest run",
@@ -19,6 +19,7 @@
     "@fontsource/jetbrains-mono": "^5.2.8",
     "@fontsource/plus-jakarta-sans": "^5.2.8",
     "@tanstack/react-router": "^1.170.17",
+    "@tanstack/react-table": "^8.21.3",
     "@xterm/addon-fit": "^0.11.0",
     "dexie": "^4.4.4",
     "lucide-react": "^1.23.0",

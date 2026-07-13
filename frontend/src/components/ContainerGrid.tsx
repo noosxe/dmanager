@@ -2,6 +2,8 @@ import {
   Activity,
   AlertCircle,
   ArrowUpCircle,
+  LayoutGrid,
+  List,
   Play,
   RefreshCw,
   Search,
@@ -13,6 +15,7 @@ import {
 import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useContainers } from "../hooks/useContainers";
+import { ContainerTable } from "./ContainerTable";
 import { LogsDrawer } from "./LogsDrawer";
 
 export function ContainerGrid() {
@@ -36,6 +39,15 @@ export function ContainerGrid() {
   const [filter, setFilter] = useState<"all" | "running" | "stopped">("all");
   const [selectedContainerId, setSelectedContainerId] = useState<string | null>(null);
   const [selectedContainerName, setSelectedContainerName] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"grid" | "table">(() => {
+    const saved = localStorage.getItem("dmanager_view_mode");
+    return saved === "table" || saved === "grid" ? saved : "grid";
+  });
+
+  const handleViewModeChange = (mode: "grid" | "table") => {
+    setViewMode(mode);
+    localStorage.setItem("dmanager_view_mode", mode);
+  };
 
   // Helper formatting dates
   const formatDate = (isoStr: string) => {
@@ -76,7 +88,7 @@ export function ContainerGrid() {
       {/* Dashboard Top Header Title */}
       <div className="dashboard-header">
         <div className="header-title-section">
-          <h2>Container Grid</h2>
+          <h2>Container Dashboard</h2>
           <p>Monitor status, toggle auto-updates and redeploy host workloads.</p>
         </div>
         <button
@@ -163,28 +175,49 @@ export function ContainerGrid() {
           />
         </div>
 
-        <div className="filter-group">
-          <button
-            type="button"
-            className={`filter-btn ${filter === "all" ? "active" : ""}`}
-            onClick={() => setFilter("all")}
-          >
-            All
-          </button>
-          <button
-            type="button"
-            className={`filter-btn ${filter === "running" ? "active" : ""}`}
-            onClick={() => setFilter("running")}
-          >
-            Running
-          </button>
-          <button
-            type="button"
-            className={`filter-btn ${filter === "stopped" ? "active" : ""}`}
-            onClick={() => setFilter("stopped")}
-          >
-            Stopped
-          </button>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+          <div className="filter-group">
+            <button
+              type="button"
+              className={`filter-btn ${filter === "all" ? "active" : ""}`}
+              onClick={() => setFilter("all")}
+            >
+              All
+            </button>
+            <button
+              type="button"
+              className={`filter-btn ${filter === "running" ? "active" : ""}`}
+              onClick={() => setFilter("running")}
+            >
+              Running
+            </button>
+            <button
+              type="button"
+              className={`filter-btn ${filter === "stopped" ? "active" : ""}`}
+              onClick={() => setFilter("stopped")}
+            >
+              Stopped
+            </button>
+          </div>
+
+          <div className="view-switcher-container">
+            <button
+              type="button"
+              className={`view-switcher-btn ${viewMode === "grid" ? "active" : ""}`}
+              onClick={() => handleViewModeChange("grid")}
+              title="Grid View"
+            >
+              <LayoutGrid size={16} />
+            </button>
+            <button
+              type="button"
+              className={`view-switcher-btn ${viewMode === "table" ? "active" : ""}`}
+              onClick={() => handleViewModeChange("table")}
+              title="Table View"
+            >
+              <List size={16} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -200,6 +233,22 @@ export function ContainerGrid() {
         >
           <RefreshCw size={24} className="spinner" style={{ color: "var(--accent)" }} />
         </div>
+      ) : viewMode === "table" ? (
+        <ContainerTable
+          containers={filteredContainers}
+          isAdmin={isAdmin}
+          actionLoading={actionLoading}
+          startContainer={startContainer}
+          stopContainer={stopContainer}
+          upgradeContainer={upgradeContainer}
+          setContainerAutoUpdate={setContainerAutoUpdate}
+          checkContainerUpdates={checkContainerUpdates}
+          onViewLogs={(id, name) => {
+            setSelectedContainerId(id);
+            setSelectedContainerName(name);
+          }}
+          formatDate={formatDate}
+        />
       ) : (
         <div className="containers-grid-layout">
           {filteredContainers.map((container) => {
