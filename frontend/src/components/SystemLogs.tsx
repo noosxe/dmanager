@@ -216,7 +216,7 @@ export function SystemLogs() {
             />
           </div>
 
-          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <div className="logs-filters-group">
             {/* Level filter dropdown */}
             <select
               value={levelFilter}
