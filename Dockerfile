@@ -50,18 +50,19 @@ ARG TARGETARCH
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags="-s -w" -o dmanager .
 
 
-# Stage 3: Runtime Image
-FROM alpine:latest
+# Stage 3: Downloader (runs natively on build host, no QEMU)
+FROM --platform=$BUILDPLATFORM alpine:latest AS downloader
 
-# Install execution dependency tools
+# Install tools needed for downloading and extracting
 RUN apk add --no-cache ca-certificates xz curl
 
 # Accept target architecture from Buildx
 ARG TARGETARCH
-
-# Install s6-overlay process supervisor
 ARG S6_OVERLAY_VERSION=3.2.0.2
-RUN case "${TARGETARCH}" in \
+
+# Download and extract s6-overlay for the target arch into a temporary directory
+RUN mkdir -p /tmp/s6-root && \
+    case "${TARGETARCH}" in \
         amd64)   S6_ARCH="x86_64" ;; \
         arm64)   S6_ARCH="aarch64" ;; \
         arm)     S6_ARCH="arm" ;; \
@@ -69,21 +70,31 @@ RUN case "${TARGETARCH}" in \
     esac && \
     curl -sSfL -o /tmp/s6-overlay-noarch.tar.xz "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz" && \
     curl -sSfL -o /tmp/s6-overlay-${S6_ARCH}.tar.xz "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz" && \
-    tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz && \
-    tar -C / -Jxpf /tmp/s6-overlay-${S6_ARCH}.tar.xz && \
-    rm -rf /tmp/s6-overlay-*
+    tar -C /tmp/s6-root -Jxpf /tmp/s6-overlay-noarch.tar.xz && \
+    tar -C /tmp/s6-root -Jxpf /tmp/s6-overlay-${S6_ARCH}.tar.xz
 
-# Copy binary to standard path
+# Create empty data and configuration directories to copy into runtime image
+RUN mkdir -p /tmp/var-lib-dmanager /tmp/etc-dmanager
+
+
+# Stage 4: Runtime Image (no RUN instructions, zero QEMU overhead!)
+FROM alpine:latest
+
+# Copy certificates from downloader stage
+COPY --from=downloader /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
+# Copy empty data and configuration directories
+COPY --from=downloader /tmp/var-lib-dmanager /var/lib/dmanager
+COPY --from=downloader /tmp/etc-dmanager /etc/dmanager
+
+# Copy s6-overlay files
+COPY --from=downloader /tmp/s6-root/ /
+
+# Copy statically compiled binary
 COPY --from=backend-builder /app/dmanager /usr/local/bin/dmanager
 
-# Create configuration and storage directories
-RUN mkdir -p /var/lib/dmanager /etc/dmanager
-
-# Copy s6 process supervision structure
+# Copy s6 process supervision structure (permissions preserved from Git/host)
 COPY rootfs/ /
-
-# Ensure daemon service script is executable
-RUN chmod +x /etc/s6-overlay/s6-rc.d/dmanager/run
 
 # Expose HTTP port
 EXPOSE 9283

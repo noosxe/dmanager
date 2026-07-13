@@ -44,6 +44,8 @@ graph TD
     F36 --> S37["STORY-037: Configure Dependabot for GitHub Actions (DONE)"]
     S37 --> F38["STORY-038: Frontend Toast Notification System (DONE)"]
     F38 --> F39["STORY-039: Private Registry Status Monitoring (DONE)"]
+    F39 --> F40["STORY-040: Frontend Table View and View Switcher (DONE)"]
+    F40 --> S41["STORY-041: Eliminate QEMU from Multi-Architecture Docker Builds (DONE)"]
 ```
 
 
@@ -842,6 +844,25 @@ graph TD
 - **Validation Check:**
   - Run Biome check: `pnpm biome check .`
   - Compile frontend: `pnpm build`
+
+---
+
+### STORY-041: Eliminate QEMU from Multi-Architecture Docker Builds [DONE]
+- **Scope:** Container CI/CD & Build Infrastructure
+- **Estimated Size:** Small (~100 LOC)
+- **Dependencies:** `STORY-040`
+- **Goal:** Refactor the Docker build setup to eliminate the dependency on QEMU, enabling native-speed multi-architecture container image builds.
+- **Tasks:**
+  1. Refactor the root `Dockerfile` to download and extract `s6-overlay` in a native `$BUILDPLATFORM` stage and copy it to a no-RUN final runtime stage.
+  2. Remove the `Set up QEMU` action from `.github/workflows/release.yml`.
+  3. Remove the `Set up QEMU` action from `.github/workflows/docker.yml`.
+- **Files Affected:**
+  - `Dockerfile` (modified)
+  - `.github/workflows/release.yml` (modified)
+  - `.github/workflows/docker.yml` (modified)
+- **Validation Check:**
+  - Verify that the Dockerfile build compiles for both `linux/amd64` and `linux/arm64` locally.
+
 
 
 
