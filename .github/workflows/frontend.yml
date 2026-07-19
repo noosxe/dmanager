@@ -3,42 +3,28 @@ name: Frontend CI
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'frontend/**'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/frontend.yml'
   pull_request:
     branches: [ main ]
+    paths:
+      - 'frontend/**'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/frontend.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 defaults:
   run:
     working-directory: frontend
 
 jobs:
-  build:
-    name: Build React App
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-
-      - name: Setup PNPM
-        uses: pnpm/action-setup@v6
-        with:
-          version: 11.9.0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24.16.0
-          cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build Vite application
-        run: pnpm build
-
-  lint-format:
-    name: Biome Lint & Format Check
+  ci:
+    name: Lint, Format & Build
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -62,3 +48,6 @@ jobs:
 
       - name: Run Biome Checks (Lint, Format, Imports)
         run: pnpm biome ci
+
+      - name: Build Vite application
+        run: pnpm build
