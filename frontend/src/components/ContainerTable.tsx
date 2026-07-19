@@ -180,9 +180,6 @@ export function ContainerTable({
         const loadingType = actionLoading[container.id];
         return (
           <div className="table-cell-autoupdate">
-            <span style={{ fontSize: "11px", color: "var(--text)", fontWeight: 500 }}>
-              {container.autoUpdate ? "Active" : "Disabled"}
-            </span>
             <button
               type="button"
               onClick={() => setContainerAutoUpdate(container.id, !container.autoUpdate)}
