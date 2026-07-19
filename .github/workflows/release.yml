@@ -43,6 +43,8 @@ jobs:
           tags: |
             ghcr.io/${{ steps.string.outputs.repo_name }}:${{ github.ref_name }}
             ghcr.io/${{ steps.string.outputs.repo_name }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3

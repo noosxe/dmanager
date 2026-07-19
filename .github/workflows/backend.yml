@@ -3,8 +3,24 @@ name: Backend CI
 on:
   push:
     branches: [ main ]
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '.golangci.yml'
+      - '.github/workflows/backend.yml'
   pull_request:
     branches: [ main ]
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '.golangci.yml'
+      - '.github/workflows/backend.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lint:
@@ -26,8 +42,31 @@ jobs:
         with:
           version: v2.12.2
 
-  build-test:
-    name: Test & Build
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: 1.26.4
+          cache: true
+
+      - name: Run unit tests
+        run: go test -v -race -coverprofile=coverage.out ./...
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.out
+
+  build:
+    name: Cross-Compile (${{ matrix.arch }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -42,12 +81,6 @@ jobs:
         with:
           go-version: 1.26.4
           cache: true
-
-      - name: Install dependencies
-        run: go mod download
-
-      - name: Run unit tests
-        run: go test -v -race ./...
 
       - name: Compile dmanager binary
         run: CGO_ENABLED=0 GOOS=linux GOARCH=${{ matrix.arch }} go build -o dmanager .
