@@ -2,6 +2,10 @@
 
 A self-contained Docker Container Manager web application that discovers local containers, allows start/stop operations, and conducts scheduled image update checks.
 
+## Disclosure
+
+Written by AI, tested and used by humans.
+
 ## Features
 
 - **Container Discovery** — automatically discovers and lists all Docker containers on the host
