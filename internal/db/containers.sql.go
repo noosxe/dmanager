@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"strings"
 	"time"
 )
@@ -249,6 +250,35 @@ func (q *Queries) SetContainerAutoUpdate(ctx context.Context, arg SetContainerAu
 	return err
 }
 
+const updateContainerForUpgrade = `-- name: UpdateContainerForUpgrade :execresult
+UPDATE containers
+SET id = ?, name = ?, image = ?, image_id = ?, state = ?,
+    update_available = 0, last_updated_at = ?, updated_at = CURRENT_TIMESTAMP
+WHERE id = ?
+`
+
+type UpdateContainerForUpgradeParams struct {
+	ID            string
+	Name          string
+	Image         string
+	ImageID       string
+	State         string
+	LastUpdatedAt interface{}
+	ID_2          string
+}
+
+func (q *Queries) UpdateContainerForUpgrade(ctx context.Context, arg UpdateContainerForUpgradeParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, updateContainerForUpgrade,
+		arg.ID,
+		arg.Name,
+		arg.Image,
+		arg.ImageID,
+		arg.State,
+		arg.LastUpdatedAt,
+		arg.ID_2,
+	)
+}
+
 const updateContainerUpdateState = `-- name: UpdateContainerUpdateState :exec
 UPDATE containers
 SET update_available = ?, latest_image_digest = ?, last_checked_at = ?, updated_at = CURRENT_TIMESTAMP
@@ -268,6 +298,36 @@ func (q *Queries) UpdateContainerUpdateState(ctx context.Context, arg UpdateCont
 		arg.LatestImageDigest,
 		arg.LastCheckedAt,
 		arg.ID,
+	)
+	return err
+}
+
+const upsertContainerFromEvent = `-- name: UpsertContainerFromEvent :exec
+INSERT INTO containers (id, name, image, image_id, state)
+VALUES (?, ?, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET
+    name = excluded.name,
+    image = excluded.image,
+    image_id = excluded.image_id,
+    state = excluded.state,
+    updated_at = CURRENT_TIMESTAMP
+`
+
+type UpsertContainerFromEventParams struct {
+	ID      string
+	Name    string
+	Image   string
+	ImageID string
+	State   string
+}
+
+func (q *Queries) UpsertContainerFromEvent(ctx context.Context, arg UpsertContainerFromEventParams) error {
+	_, err := q.db.ExecContext(ctx, upsertContainerFromEvent,
+		arg.ID,
+		arg.Name,
+		arg.Image,
+		arg.ImageID,
+		arg.State,
 	)
 	return err
 }

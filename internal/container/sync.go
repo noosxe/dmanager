@@ -2,10 +2,7 @@ package container
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"strings"
-	"time"
 
 	"github.com/moby/moby/client"
 
@@ -31,42 +28,13 @@ func SyncContainers(ctx context.Context, dbConn db.DBTX, dockerClient *client.Cl
 			name = strings.TrimPrefix(c.Names[0], "/")
 		}
 
-		// Check if container already exists to preserve auto_update and update_available
-		var autoUpdate int64 = 0
-		var updateAvailable int64 = 0
-		var latestImageDigest interface{} = nil
-		var lastCheckedAt interface{} = nil
-		var lastUpdatedAt interface{} = nil
-
-		existing, err := queries.GetContainer(ctx, c.ID)
-		if err != nil && errors.Is(err, sql.ErrNoRows) {
-			existing, err = queries.GetContainerByName(ctx, name)
-		}
-		if err == nil {
-			autoUpdate = existing.AutoUpdate
-			updateAvailable = existing.UpdateAvailable
-			latestImageDigest = existing.LatestImageDigest
-			lastCheckedAt = existing.LastCheckedAt
-			lastUpdatedAt = existing.LastUpdatedAt
-		} else if !errors.Is(err, sql.ErrNoRows) {
-			return err
-		}
-
-		params := db.SaveContainerParams{
-			ID:                c.ID,
-			Name:              name,
-			Image:             c.Image,
-			ImageID:           c.ImageID,
-			State:             string(c.State),
-			AutoUpdate:        autoUpdate,
-			UpdateAvailable:   updateAvailable,
-			LatestImageDigest: latestImageDigest,
-			LastCheckedAt:     lastCheckedAt,
-			LastUpdatedAt:     lastUpdatedAt,
-			UpdatedAt:         time.Now(),
-		}
-
-		if err := queries.SaveContainer(ctx, params); err != nil {
+		if err := queries.UpsertContainerFromEvent(ctx, db.UpsertContainerFromEventParams{
+			ID:      c.ID,
+			Name:    name,
+			Image:   c.Image,
+			ImageID: c.ImageID,
+			State:   string(c.State),
+		}); err != nil {
 			return err
 		}
 	}

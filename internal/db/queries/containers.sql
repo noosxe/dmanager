@@ -43,6 +43,22 @@ UPDATE containers
 SET update_available = 0, last_updated_at = ?, updated_at = CURRENT_TIMESTAMP
 WHERE id = ?;
 
+-- name: UpsertContainerFromEvent :exec
+INSERT INTO containers (id, name, image, image_id, state)
+VALUES (?, ?, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET
+    name = excluded.name,
+    image = excluded.image,
+    image_id = excluded.image_id,
+    state = excluded.state,
+    updated_at = CURRENT_TIMESTAMP;
+
+-- name: UpdateContainerForUpgrade :execresult
+UPDATE containers
+SET id = ?, name = ?, image = ?, image_id = ?, state = ?,
+    update_available = 0, last_updated_at = ?, updated_at = CURRENT_TIMESTAMP
+WHERE id = ?;
+
 -- name: DeleteOrphanContainers :exec
 DELETE FROM containers WHERE id NOT IN (sqlc.slice('active_ids'));
 
