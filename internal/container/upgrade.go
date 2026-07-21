@@ -195,47 +195,64 @@ func (s *Service) upgradeContainerInternal(ctx context.Context, containerID stri
 	}
 	s.logger.Info("Upgraded container started successfully", "container_id", created.ID, "container_name", containerName, "image", imageRef)
 
-	// 10. Update the database: delete old container record and insert new container record
-	if deleteErr := queries.DeleteContainer(ctx, containerID); deleteErr != nil {
-		s.logger.Error("Container upgrade failed: delete old container record from DB failed", "container_id", containerID, "error", deleteErr)
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete old container record from DB: %w", deleteErr))
-	}
-
-	// Inspect the new container state to store accurate DB representation
+	// 10. Inspect new container to get its actual state
 	newInspect, err := s.dockerClient.ContainerInspect(ctx, created.ID, client.ContainerInspectOptions{})
 	newState := "running"
 	if err == nil && newInspect.Container.State != nil {
 		newState = string(newInspect.Container.State.Status)
 	}
 
-	// Save new container record
-	saveParams := db.SaveContainerParams{
-		ID:                created.ID,
-		Name:              containerName,
-		Image:             imageRef,
-		ImageID:           newImageID,
-		State:             newState,
-		AutoUpdate:        existing.AutoUpdate,
-		UpdateAvailable:   0, // Reset update flags
-		LatestImageDigest: existing.LatestImageDigest,
-		LastCheckedAt:     existing.LastCheckedAt,
-		LastUpdatedAt:     time.Now(),
-		UpdatedAt:         time.Now(),
+	// Update the database record in place (atomically swaps container ID and
+	// preserves auto_update, avoiding the race condition of delete-then-insert)
+	result, err := queries.UpdateContainerForUpgrade(ctx, db.UpdateContainerForUpgradeParams{
+		ID:            created.ID,
+		Name:          containerName,
+		Image:         imageRef,
+		ImageID:       newImageID,
+		State:         newState,
+		LastUpdatedAt: time.Now(),
+		ID_2:          containerID,
+	})
+	if err != nil {
+		s.logger.Error("Container upgrade failed: update container record in DB failed", "container_id", containerID, "new_container_id", created.ID, "error", err)
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update container record in DB: %w", err))
 	}
 
-	if saveErr := queries.SaveContainer(ctx, saveParams); saveErr != nil {
-		s.logger.Error("Container upgrade failed: save upgraded container to DB failed", "container_id", created.ID, "container_name", containerName, "error", saveErr)
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to save upgraded container to DB: %w", saveErr))
+	// If the in-place update found no rows (e.g., the event monitor processed a
+	// destroy event and already deleted the old record), fall back to an upsert
+	// that still writes the preserved auto_update value.
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		s.logger.Warn("Container upgrade: old record not found for in-place update, falling back to upsert", "old_container_id", containerID, "new_container_id", created.ID)
+		saveParams := db.SaveContainerParams{
+			ID:                created.ID,
+			Name:              containerName,
+			Image:             imageRef,
+			ImageID:           newImageID,
+			State:             newState,
+			AutoUpdate:        existing.AutoUpdate,
+			UpdateAvailable:   0,
+			LatestImageDigest: existing.LatestImageDigest,
+			LastCheckedAt:     existing.LastCheckedAt,
+			LastUpdatedAt:     time.Now(),
+			UpdatedAt:         time.Now(),
+		}
+		if saveErr := queries.SaveContainer(ctx, saveParams); saveErr != nil {
+			s.logger.Error("Container upgrade failed: fallback save to DB failed", "container_id", created.ID, "container_name", containerName, "error", saveErr)
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to save upgraded container to DB: %w", saveErr))
+		}
 	}
 
 	// 11. Broadcast database synchronization events to streaming clients
-	// Stream deletion of old container ID
-	s.broker.Publish(&v1.StreamContainersResponse{
-		Action:      actionDelete,
-		ContainerId: containerID,
-	})
+	// If the container ID changed, notify clients to remove the old entry
+	if created.ID != containerID {
+		s.broker.Publish(&v1.StreamContainersResponse{
+			Action:      actionDelete,
+			ContainerId: containerID,
+		})
+	}
 
-	// Stream save of new container
+	// Stream save of new/updated container
 	updatedRecord, err := queries.GetContainer(ctx, created.ID)
 	if err == nil {
 		s.broker.Publish(&v1.StreamContainersResponse{

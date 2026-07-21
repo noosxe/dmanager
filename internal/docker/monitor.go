@@ -2,8 +2,6 @@ package docker
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"log/slog"
 	"strings"
 	"time"
@@ -88,42 +86,13 @@ func handleEvent(ctx context.Context, logger *slog.Logger, queries *db.Queries, 
 			state = string(inspect.Container.State.Status)
 		}
 
-		var autoUpdate int64 = 0
-		var updateAvailable int64 = 0
-		var latestImageDigest interface{} = nil
-		var lastCheckedAt interface{} = nil
-		var lastUpdatedAt interface{} = nil
-
-		existing, err := queries.GetContainer(ctx, containerID)
-		if err != nil && errors.Is(err, sql.ErrNoRows) {
-			existing, err = queries.GetContainerByName(ctx, name)
-		}
-		if err == nil {
-			autoUpdate = existing.AutoUpdate
-			updateAvailable = existing.UpdateAvailable
-			latestImageDigest = existing.LatestImageDigest
-			lastCheckedAt = existing.LastCheckedAt
-			lastUpdatedAt = existing.LastUpdatedAt
-		} else if !errors.Is(err, sql.ErrNoRows) {
-			logger.Error("Failed to check existing container in DB", "container_id", containerID, "error", err)
-			return
-		}
-
-		params := db.SaveContainerParams{
-			ID:                containerID,
-			Name:              name,
-			Image:             image,
-			ImageID:           imageID,
-			State:             state,
-			AutoUpdate:        autoUpdate,
-			UpdateAvailable:   updateAvailable,
-			LatestImageDigest: latestImageDigest,
-			LastCheckedAt:     lastCheckedAt,
-			LastUpdatedAt:     lastUpdatedAt,
-			UpdatedAt:         time.Now(),
-		}
-
-		if err := queries.SaveContainer(ctx, params); err != nil {
+		if err := queries.UpsertContainerFromEvent(ctx, db.UpsertContainerFromEventParams{
+			ID:      containerID,
+			Name:    name,
+			Image:   image,
+			ImageID: imageID,
+			State:   state,
+		}); err != nil {
 			logger.Error("Failed to save container to DB", "container_id", containerID, "error", err)
 		} else if onEvent != nil {
 			onEvent("save", containerID)
