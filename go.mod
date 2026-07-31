@@ -11,7 +11,7 @@ require (
 	github.com/knadh/koanf/providers/file v1.2.1
 	github.com/knadh/koanf/v2 v2.3.5
 	github.com/moby/moby/api v1.55.0
-	github.com/moby/moby/client v0.5.0
+	github.com/moby/moby/client v0.5.1
 	github.com/ncruces/go-sqlite3 v0.35.2
 	github.com/pressly/goose/v3 v3.27.3
 	github.com/spf13/cobra v1.10.2
