@@ -5,7 +5,7 @@ go 1.25.7
 require (
 	connectrpc.com/connect v1.20.0
 	github.com/containerd/errdefs v1.0.0
-	github.com/knadh/koanf/parsers/yaml v1.1.0
+	github.com/knadh/koanf/parsers/yaml v1.1.1
 	github.com/knadh/koanf/providers/confmap v1.0.0
 	github.com/knadh/koanf/providers/env/v2 v2.0.1
 	github.com/knadh/koanf/providers/file v1.2.1
