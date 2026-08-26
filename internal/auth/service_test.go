@@ -3,7 +3,10 @@ package auth
 import (
 	"context"
 	"database/sql"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -20,10 +23,14 @@ import (
 )
 
 const (
-	testAdminUsername = "admin"
-	testPassword      = "password12345"
-	wrongPassword     = "wrongpassword"
-	eventLoginSuccess = "login_success"
+	testAdminUsername  = "admin"
+	testPassword       = "password12345"
+	wrongPassword      = "wrongpassword"
+	eventLoginSuccess  = "login_success"
+	testBobUsername    = "bob"
+	testViewerRole     = "viewer"
+	challengeRegTest   = "registration"
+	challengeLoginTest = "login"
 )
 
 func newTestDB(t *testing.T) *db.Queries {
@@ -52,9 +59,17 @@ func testAuthConfig() config.AuthConfig {
 	}
 }
 
+func testWebAuthnConfig() config.WebAuthnConfig {
+	return config.WebAuthnConfig{
+		RPID:                    "localhost",
+		Origins:                 []string{"http://localhost:9283", "https://localhost:9283"},
+		RequireUserVerification: "preferred",
+	}
+}
+
 func TestGetServerStatus(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
 	ctx := context.Background()
 
 	resp, err := svc.GetServerStatus(ctx, connect.NewRequest(&v1.GetServerStatusRequest{}))
@@ -85,7 +100,7 @@ func TestGetServerStatus(t *testing.T) {
 
 func TestSetupAdmin(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
 	ctx := context.Background()
 
 	resp, err := svc.SetupAdmin(ctx, connect.NewRequest(&v1.SetupAdminRequest{
@@ -127,7 +142,7 @@ func TestSetupAdmin(t *testing.T) {
 
 func TestLogin(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
 	ctx := context.Background()
 
 	_, err := svc.SetupAdmin(ctx, connect.NewRequest(&v1.SetupAdminRequest{
@@ -216,7 +231,7 @@ func TestLogin(t *testing.T) {
 
 func TestLoginLegacyBcryptCost10(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
 	ctx := context.Background()
 
 	// Seed user with legacy cost 10 hash
@@ -310,11 +325,11 @@ func TestCookieSecureMatrix(t *testing.T) {
 
 func TestGetMe(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
 
 	user := db.User{
 		ID:       42,
-		Username: "bob",
+		Username: testBobUsername,
 		Role:     "user",
 	}
 
@@ -323,7 +338,7 @@ func TestGetMe(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if resp.Msg.UserId != 42 || resp.Msg.Username != "bob" || resp.Msg.Role != "user" {
+	if resp.Msg.UserId != 42 || resp.Msg.Username != testBobUsername || resp.Msg.Role != "user" {
 		t.Errorf("unexpected response: %+v", resp.Msg)
 	}
 
@@ -339,7 +354,7 @@ func TestGetMe(t *testing.T) {
 
 func TestLogout(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
 	ctx := context.Background()
 
 	_, err := svc.SetupAdmin(ctx, connect.NewRequest(&v1.SetupAdminRequest{
@@ -383,7 +398,7 @@ func TestLogout(t *testing.T) {
 
 func TestSetupAdminPasswordPolicyRejection(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
 	ctx := context.Background()
 
 	// Less than 12 chars should be rejected
@@ -401,7 +416,7 @@ func TestSetupAdminPasswordPolicyRejection(t *testing.T) {
 
 func TestLoginRateLimitingThrottling(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
 	ctx := context.Background()
 
 	_, err := svc.SetupAdmin(ctx, connect.NewRequest(&v1.SetupAdminRequest{
@@ -441,7 +456,7 @@ func TestLoginRateLimitingThrottling(t *testing.T) {
 
 func TestLoginTimingEqualization(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
 	ctx := context.Background()
 
 	if len(svc.dummyHash) == 0 {
@@ -463,7 +478,7 @@ func TestLoginTimingEqualization(t *testing.T) {
 
 func TestAuthEventsLoggingOnDecisionPoints(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
 	ctx := context.Background()
 
 	// 1. Setup Admin writes setup_admin event
@@ -530,7 +545,7 @@ func TestAuthEventsLoggingOnDecisionPoints(t *testing.T) {
 
 func TestListAuthEventsScoping(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
 	ctx := context.Background()
 
 	// Create admin and viewer users
@@ -592,7 +607,7 @@ func TestListAuthEventsScoping(t *testing.T) {
 
 func TestSessionManagementAndRevocation(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
 	ctx := context.Background()
 
 	user, err := queries.CreateUser(ctx, db.CreateUserParams{
@@ -761,5 +776,276 @@ func TestFormatDeviceLabel(t *testing.T) {
 		if got != tc.want {
 			t.Errorf("formatDeviceLabel(%q) = %q, want %q", tc.ua, got, tc.want)
 		}
+	}
+}
+
+func TestPasskeyLoginEnabledStatus(t *testing.T) {
+	queries := newTestDB(t)
+	ctx := context.Background()
+
+	// 1. Configured WebAuthn
+	svc1 := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+	resp1, err := svc1.GetServerStatus(ctx, connect.NewRequest(&v1.GetServerStatusRequest{}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !resp1.Msg.PasskeyLoginEnabled {
+		t.Errorf("expected PasskeyLoginEnabled to be true when configured")
+	}
+	if resp1.Msg.RpId != "localhost" {
+		t.Errorf("expected RpId 'localhost', got %s", resp1.Msg.RpId)
+	}
+
+	// 2. Unconfigured WebAuthn
+	svc2 := NewService(queries, slog.Default(), testAuthConfig(), config.WebAuthnConfig{}, false)
+	resp2, err := svc2.GetServerStatus(ctx, connect.NewRequest(&v1.GetServerStatusRequest{}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp2.Msg.PasskeyLoginEnabled {
+		t.Errorf("expected PasskeyLoginEnabled to be false when unconfigured")
+	}
+}
+
+func TestBeginPasskeyRegistration(t *testing.T) {
+	queries := newTestDB(t)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+	ctx := context.Background()
+
+	user, err := queries.CreateUser(ctx, db.CreateUserParams{
+		Username:     "alice",
+		PasswordHash: testDummyHash,
+		Role:         testViewerRole,
+	})
+	if err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
+
+	authCtx := context.WithValue(ctx, userContextKey, user)
+
+	// Begin registration
+	resp, err := svc.BeginPasskeyRegistration(authCtx, connect.NewRequest(&v1.BeginPasskeyRegistrationRequest{
+		Name: "My YubiKey",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if resp.Msg.OptionsJson == "" {
+		t.Errorf("expected non-empty options_json")
+	}
+
+	// Verify challenge stored in DB
+	var optMap map[string]interface{}
+	unmarshalErr := json.Unmarshal([]byte(resp.Msg.OptionsJson), &optMap)
+	if unmarshalErr != nil {
+		t.Fatalf("failed to parse options_json: %v", unmarshalErr)
+	}
+	challengeStr, _ := optMap["challenge"].(string)
+	if challengeStr == "" {
+		t.Fatalf("expected challenge in options_json")
+	}
+
+	found, err := queries.GetUnconsumedWebAuthnChallenge(ctx, db.GetUnconsumedWebAuthnChallengeParams{
+		Challenge: []byte(challengeStr),
+		Kind:      challengeRegTest,
+		ExpiresAt: time.Now(),
+	})
+	if err != nil {
+		t.Fatalf("expected unconsumed registration challenge in DB: %v", err)
+	}
+	if !found.UserID.Valid || found.UserID.Int64 != user.ID {
+		t.Errorf("expected challenge user_id %d, got %v", user.ID, found.UserID)
+	}
+}
+
+func TestPasskeyCredentialManagementAndLockoutGuardrail(t *testing.T) {
+	queries := newTestDB(t)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+	ctx := context.Background()
+
+	// 1. User with password
+	userWithPass, err := queries.CreateUser(ctx, db.CreateUserParams{
+		Username:     "bob",
+		PasswordHash: testDummyHash,
+		Role:         "viewer",
+	})
+	if err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
+
+	// Insert passkey for bob (AAGUID matching YubiKey 5 NFC: cb69481e-8ff7-4039-93ec-0a2729a1d67b)
+	yubiAaguid, _ := hex.DecodeString("cb69481e8ff7403993ec0a2729a1d67b")
+	credID := []byte("cred-123456789012")
+	_, err = queries.CreateWebAuthnCredential(ctx, db.CreateWebAuthnCredentialParams{
+		CredentialID:    credID,
+		UserID:          userWithPass.ID,
+		PublicKey:       []byte("pubkey-bytes"),
+		AttestationType: "none",
+		Transport:       "usb,nfc",
+		Aaguid:          yubiAaguid,
+		SignCount:       5,
+		CloneWarning:    0,
+		BackupEligible:  0,
+		BackupState:     0,
+		Name:            "My Backup Key",
+		CreatedAt:       time.Now(),
+		LastUsedAt:      sql.NullTime{},
+	})
+	if err != nil {
+		t.Fatalf("failed to create credential: %v", err)
+	}
+
+	authCtx := context.WithValue(ctx, userContextKey, userWithPass)
+
+	// List passkeys
+	listResp, err := svc.ListPasskeys(authCtx, connect.NewRequest(&v1.ListPasskeysRequest{}))
+	if err != nil {
+		t.Fatalf("failed to list passkeys: %v", err)
+	}
+	if len(listResp.Msg.Passkeys) != 1 {
+		t.Fatalf("expected 1 passkey, got %d", len(listResp.Msg.Passkeys))
+	}
+	pk := listResp.Msg.Passkeys[0]
+	if pk.FriendlyDeviceName != "YubiKey 5 NFC" {
+		t.Errorf("expected friendly name 'YubiKey 5 NFC', got %s", pk.FriendlyDeviceName)
+	}
+	if pk.Name != "My Backup Key" {
+		t.Errorf("expected name 'My Backup Key', got %s", pk.Name)
+	}
+
+	// Rename passkey
+	renameResp, err := svc.RenamePasskey(authCtx, connect.NewRequest(&v1.RenamePasskeyRequest{
+		Id:   hex.EncodeToString(credID),
+		Name: "Primary YubiKey",
+	}))
+	if err != nil {
+		t.Fatalf("failed to rename passkey: %v", err)
+	}
+	if renameResp.Msg.Passkey.Name != "Primary YubiKey" {
+		t.Errorf("expected renamed name 'Primary YubiKey', got %s", renameResp.Msg.Passkey.Name)
+	}
+
+	// Delete passkey succeeds because user has password
+	_, err = svc.DeletePasskey(authCtx, connect.NewRequest(&v1.DeletePasskeyRequest{
+		Id: hex.EncodeToString(credID),
+	}))
+	if err != nil {
+		t.Fatalf("expected delete to succeed when user has password: %v", err)
+	}
+
+	// 2. Passwordless user lockout guardrail
+	userNoPass, err := queries.CreateUser(ctx, db.CreateUserParams{
+		Username:     "passwordless",
+		PasswordHash: "", // No password
+		Role:         "viewer",
+	})
+	if err != nil {
+		t.Fatalf("failed to create passwordless user: %v", err)
+	}
+
+	credID2 := []byte("cred-passwordless-1")
+	_, err = queries.CreateWebAuthnCredential(ctx, db.CreateWebAuthnCredentialParams{
+		CredentialID:    credID2,
+		UserID:          userNoPass.ID,
+		PublicKey:       []byte("pubkey-bytes"),
+		AttestationType: "none",
+		Transport:       "internal",
+		Aaguid:          yubiAaguid,
+		SignCount:       1,
+		CloneWarning:    0,
+		BackupEligible:  1,
+		BackupState:     1,
+		Name:            "Passkey 1",
+		CreatedAt:       time.Now(),
+		LastUsedAt:      sql.NullTime{},
+	})
+	if err != nil {
+		t.Fatalf("failed to create credential: %v", err)
+	}
+
+	noPassCtx := context.WithValue(ctx, userContextKey, userNoPass)
+
+	// Attempting to delete the ONLY passkey of a passwordless user MUST fail with FailedPrecondition
+	_, err = svc.DeletePasskey(noPassCtx, connect.NewRequest(&v1.DeletePasskeyRequest{
+		Id: hex.EncodeToString(credID2),
+	}))
+	if err == nil {
+		t.Fatalf("expected lockout guardrail error deleting last passkey of passwordless user")
+	}
+	var connectErr *connect.Error
+	if !errors.As(err, &connectErr) || connectErr.Code() != connect.CodeFailedPrecondition {
+		t.Errorf("expected CodeFailedPrecondition, got %v", err)
+	}
+}
+
+func TestBeginPasskeyLoginAndChallengeCreation(t *testing.T) {
+	queries := newTestDB(t)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+	ctx := context.Background()
+
+	resp, err := svc.BeginPasskeyLogin(ctx, connect.NewRequest(&v1.BeginPasskeyLoginRequest{}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if resp.Msg.OptionsJson == "" {
+		t.Errorf("expected non-empty options_json")
+	}
+
+	// Verify challenge stored in DB
+	var optMap map[string]interface{}
+	unmarshalErr := json.Unmarshal([]byte(resp.Msg.OptionsJson), &optMap)
+	if unmarshalErr != nil {
+		t.Fatalf("failed to parse options_json: %v", unmarshalErr)
+	}
+	challengeStr, _ := optMap["challenge"].(string)
+	if challengeStr == "" {
+		t.Fatalf("expected challenge in options_json")
+	}
+
+	found, err := queries.GetUnconsumedWebAuthnChallenge(ctx, db.GetUnconsumedWebAuthnChallengeParams{
+		Challenge: []byte(challengeStr),
+		Kind:      challengeLoginTest,
+		ExpiresAt: time.Now(),
+	})
+	if err != nil {
+		t.Fatalf("expected unconsumed login challenge in DB: %v", err)
+	}
+	if found.Consumed != 0 {
+		t.Errorf("expected consumed 0, got %d", found.Consumed)
+	}
+}
+
+func TestFinishPasskeyLoginInvalidPayloadAndMissingChallenge(t *testing.T) {
+	queries := newTestDB(t)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+	ctx := context.Background()
+
+	// 1. Malformed payload
+	_, err := svc.FinishPasskeyLogin(ctx, connect.NewRequest(&v1.FinishPasskeyLoginRequest{
+		ResponseJson: "invalid-json",
+	}))
+	if err == nil {
+		t.Fatalf("expected error on malformed payload")
+	}
+	var connectErr *connect.Error
+	if !errors.As(err, &connectErr) || connectErr.Code() != connect.CodeInvalidArgument {
+		t.Errorf("expected CodeInvalidArgument, got %v", err)
+	}
+
+	// 2. Valid WebAuthn structure but challenge not in DB
+	authDataB64 := "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEB" // valid base64
+	clientDataB64 := "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoibm9uZXhpc3RlbnQtY2hhbGxlbmdlLTEyMyIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6OTI4MyJ9"
+
+	missingChallengePayload := fmt.Sprintf(`{"id":"AQID","rawId":"AQID","type":"public-key","response":{"clientDataJSON":"%s","authenticatorData":"%s","signature":"AQID","userHandle":"AQID"}}`, clientDataB64, authDataB64)
+	_, err = svc.FinishPasskeyLogin(ctx, connect.NewRequest(&v1.FinishPasskeyLoginRequest{
+		ResponseJson: missingChallengePayload,
+	}))
+	if err == nil {
+		t.Fatalf("expected error on missing challenge")
+	}
+	if !errors.As(err, &connectErr) || (connectErr.Code() != connect.CodeUnauthenticated && connectErr.Code() != connect.CodeInvalidArgument) {
+		t.Errorf("expected CodeUnauthenticated or CodeInvalidArgument, got %v", err)
 	}
 }

@@ -1,17 +1,28 @@
 import { ConnectError } from "@connectrpc/connect";
-import { Eye, EyeOff, Loader2, Lock, ShieldAlert, Sparkles, Terminal, User } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Fingerprint,
+  Loader2,
+  Lock,
+  ShieldAlert,
+  Sparkles,
+  Terminal,
+  User,
+} from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 
 export function Login() {
-  const { login } = useAuth();
+  const { login, loginWithPasskey, passkeyLoginEnabled } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPasskeySubmitting, setIsPasskeySubmitting] = useState(false);
 
   // Validation errors
   const [validationErrors, setValidationErrors] = useState<{
@@ -35,6 +46,24 @@ export function Login() {
 
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
+  };
+
+  const handlePasskeyLogin = async () => {
+    setError(null);
+    setIsPasskeySubmitting(true);
+    try {
+      await loginWithPasskey(rememberMe);
+    } catch (err: unknown) {
+      console.error(err);
+      if (err instanceof ConnectError) {
+        setError(err.rawMessage || err.message);
+      } else {
+        const message = err instanceof Error ? err.message : String(err);
+        setError(message || "Passkey authentication failed");
+      }
+    } finally {
+      setIsPasskeySubmitting(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -79,6 +108,32 @@ export function Login() {
           <div className="auth-error-banner">
             <ShieldAlert size={18} className="auth-error-icon" />
             <span>{error}</span>
+          </div>
+        )}
+
+        {passkeyLoginEnabled && (
+          <div style={{ marginBottom: "16px" }}>
+            <button
+              type="button"
+              onClick={handlePasskeyLogin}
+              disabled={isSubmitting || isPasskeySubmitting}
+              className="auth-submit-btn auth-passkey-btn"
+            >
+              {isPasskeySubmitting ? (
+                <>
+                  <Loader2 size={18} className="spinner" />
+                  <span>Signing in with Passkey...</span>
+                </>
+              ) : (
+                <>
+                  <Fingerprint size={18} />
+                  <span>Sign in with Passkey</span>
+                </>
+              )}
+            </button>
+            <div className="auth-divider">
+              <span>or sign in with password</span>
+            </div>
           </div>
         )}
 

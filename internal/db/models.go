@@ -57,3 +57,28 @@ type User struct {
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }
+
+type WebauthnChallenge struct {
+	ID        int64
+	Challenge []byte
+	Kind      string
+	UserID    sql.NullInt64
+	ExpiresAt time.Time
+	Consumed  int64
+}
+
+type WebauthnCredential struct {
+	CredentialID    []byte
+	UserID          int64
+	PublicKey       []byte
+	AttestationType string
+	Transport       string
+	Aaguid          []byte
+	SignCount       int64
+	CloneWarning    int64
+	BackupEligible  int64
+	BackupState     int64
+	Name            string
+	CreatedAt       time.Time
+	LastUsedAt      sql.NullTime
+}

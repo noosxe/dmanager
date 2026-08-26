@@ -1,12 +1,18 @@
+import { create as webauthnCreate } from "@github/webauthn-json";
 import {
   Activity,
+  Check,
   CheckCircle2,
   Clock,
+  Edit2,
+  Fingerprint,
   Globe,
+  Key,
   Laptop,
   Loader2,
   LogOut,
   Play,
+  Plus,
   RefreshCw,
   Save,
   Settings as SettingsIcon,
@@ -15,12 +21,13 @@ import {
   Smartphone,
   Trash2,
   User,
+  X,
 } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import { authClient, settingsClient } from "../client";
 import { useToast } from "../context/ToastContext";
-import type { AuthEvent, Session } from "../gen/proto/dmanager/v1/auth_pb";
+import type { AuthEvent, Passkey, Session } from "../gen/proto/dmanager/v1/auth_pb";
 import type { RegistryStatus } from "../gen/proto/dmanager/v1/settings_pb";
 
 export function Settings() {
@@ -46,7 +53,22 @@ export function Settings() {
   const [registriesLoading, setRegistriesLoading] = useState(true);
   const [registriesError, setRegistriesError] = useState<string | null>(null);
 
-  // Security Tab State: Sessions & Audit Events
+  // Security Tab State: Passkeys, Sessions & Audit Events
+  const [passkeys, setPasskeys] = useState<Passkey[]>([]);
+  const [passkeysLoading, setPasskeysLoading] = useState(false);
+  const [passkeysError, setPasskeysError] = useState<string | null>(null);
+  const [isAddingPasskey, setIsAddingPasskey] = useState(false);
+  const [showAddPasskey, setShowAddPasskey] = useState(false);
+  const [newPasskeyName, setNewPasskeyName] = useState("");
+  const [editingPasskeyId, setEditingPasskeyId] = useState<string | null>(null);
+  const [editingPasskeyName, setEditingPasskeyName] = useState("");
+  const [deletingPasskeyId, setDeletingPasskeyId] = useState<string | null>(null);
+  const [serverInfo, setServerInfo] = useState<{
+    passkeyLoginEnabled: boolean;
+    rpId: string;
+    origins: string[];
+  } | null>(null);
+
   const [sessions, setSessions] = useState<Session[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [sessionsError, setSessionsError] = useState<string | null>(null);
@@ -95,6 +117,35 @@ export function Settings() {
     fetchRegistryStatus();
   }, [fetchRegistryStatus]);
 
+  // Load Passkeys
+  const fetchPasskeys = useCallback(async () => {
+    setPasskeysLoading(true);
+    setPasskeysError(null);
+    try {
+      const resp = await authClient.listPasskeys({});
+      setPasskeys(resp.passkeys);
+    } catch (err: unknown) {
+      console.error("Failed to load passkeys:", err);
+      setPasskeysError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPasskeysLoading(false);
+    }
+  }, []);
+
+  // Load Server Status (RP info)
+  const fetchServerStatus = useCallback(async () => {
+    try {
+      const resp = await authClient.getServerStatus({});
+      setServerInfo({
+        passkeyLoginEnabled: resp.passkeyLoginEnabled,
+        rpId: resp.rpId,
+        origins: resp.origins,
+      });
+    } catch (err: unknown) {
+      console.error("Failed to load server status:", err);
+    }
+  }, []);
+
   // Load Sessions
   const fetchSessions = useCallback(async () => {
     setSessionsLoading(true);
@@ -128,10 +179,12 @@ export function Settings() {
   // Load Security data when tab switches to security
   useEffect(() => {
     if (activeTab === "security") {
+      fetchPasskeys();
+      fetchServerStatus();
       fetchSessions();
       fetchAuthEvents();
     }
-  }, [activeTab, fetchSessions, fetchAuthEvents]);
+  }, [activeTab, fetchPasskeys, fetchServerStatus, fetchSessions, fetchAuthEvents]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -233,6 +286,80 @@ export function Settings() {
     } finally {
       setIsRevokingOther(false);
     }
+  };
+
+  const handleAddPasskey = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsAddingPasskey(true);
+    setPasskeysError(null);
+    try {
+      const name = newPasskeyName.trim();
+      const beginResp = await authClient.beginPasskeyRegistration({ name });
+      const options = JSON.parse(beginResp.optionsJson);
+      const credential = await webauthnCreate({ publicKey: options });
+      const finishResp = await authClient.finishPasskeyRegistration({
+        name,
+        responseJson: JSON.stringify(credential),
+      });
+      if (finishResp.passkey) {
+        setPasskeys((prev) => [finishResp.passkey as Passkey, ...prev]);
+      }
+      setShowAddPasskey(false);
+      setNewPasskeyName("");
+      toast.success("Passkey registered successfully.");
+      fetchAuthEvents();
+    } catch (err: unknown) {
+      console.error("Passkey registration failed:", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      setPasskeysError(msg);
+      toast.error(`Passkey registration failed: ${msg}`);
+    } finally {
+      setIsAddingPasskey(false);
+    }
+  };
+
+  const handleRenamePasskey = async (id: string) => {
+    if (!editingPasskeyName.trim()) return;
+    try {
+      const resp = await authClient.renamePasskey({
+        id,
+        name: editingPasskeyName.trim(),
+      });
+      if (resp.passkey) {
+        setPasskeys((prev) => prev.map((p) => (p.id === id ? (resp.passkey as Passkey) : p)));
+      }
+      setEditingPasskeyId(null);
+      setEditingPasskeyName("");
+      toast.success("Passkey renamed successfully.");
+    } catch (err: unknown) {
+      console.error("Failed to rename passkey:", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Failed to rename passkey: ${msg}`);
+    }
+  };
+
+  const handleDeletePasskey = async (id: string) => {
+    setDeletingPasskeyId(id);
+    try {
+      await authClient.deletePasskey({ id });
+      setPasskeys((prev) => prev.filter((p) => p.id !== id));
+      toast.success("Passkey removed successfully.");
+      fetchAuthEvents();
+    } catch (err: unknown) {
+      console.error("Failed to delete passkey:", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Failed to delete passkey: ${msg}`);
+    } finally {
+      setDeletingPasskeyId(null);
+    }
+  };
+
+  const renderPasskeyIcon = (friendlyName: string) => {
+    const f = friendlyName.toLowerCase();
+    if (f.includes("yubikey") || f.includes("security key")) {
+      return <Key size={18} style={{ color: "var(--accent)" }} />;
+    }
+    return <Fingerprint size={18} style={{ color: "var(--accent)" }} />;
   };
 
   const renderDeviceIcon = (label: string) => {
@@ -680,6 +807,346 @@ export function Settings() {
 
       {activeTab === "security" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          {/* Passkeys / WebAuthn Section */}
+          <div className="logs-viewer-card">
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "16px",
+                flexWrap: "wrap",
+                gap: "12px",
+              }}
+            >
+              <div>
+                <h2
+                  style={{
+                    fontSize: "18px",
+                    fontWeight: "600",
+                    color: "var(--text-h)",
+                    margin: 0,
+                  }}
+                >
+                  Passkeys & Security Keys
+                </h2>
+                <p style={{ fontSize: "14px", opacity: 0.8, margin: "4px 0 0 0" }}>
+                  Sign in without passwords using platform authenticators (Touch ID, Windows Hello,
+                  Face ID) or hardware security keys (YubiKey).
+                </p>
+                {serverInfo?.rpId && (
+                  <div
+                    style={{
+                      marginTop: "6px",
+                      fontSize: "12px",
+                      opacity: 0.7,
+                      fontFamily: "var(--font-mono, monospace)",
+                    }}
+                  >
+                    Relying Party: <strong>{serverInfo.rpId}</strong> · Origins:{" "}
+                    <strong>{serverInfo.origins.join(", ") || "none"}</strong>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button
+                  type="button"
+                  onClick={fetchPasskeys}
+                  disabled={passkeysLoading}
+                  className="settings-btn-secondary"
+                  style={{ padding: "8px 12px" }}
+                  aria-label="Refresh passkeys"
+                >
+                  {passkeysLoading ? (
+                    <Loader2 className="animate-spin" size={16} />
+                  ) : (
+                    <RefreshCw size={16} />
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowAddPasskey(true)}
+                  disabled={isAddingPasskey}
+                  className="settings-btn-primary"
+                  style={{ padding: "8px 14px" }}
+                >
+                  <Plus size={16} />
+                  <span>Add Passkey</span>
+                </button>
+              </div>
+            </div>
+
+            {passkeysError && (
+              <div className="auth-error-banner" style={{ marginBottom: "16px" }}>
+                <ShieldAlert size={18} className="auth-error-icon" />
+                <span>{passkeysError}</span>
+              </div>
+            )}
+
+            {showAddPasskey && (
+              <form
+                onSubmit={handleAddPasskey}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px",
+                  padding: "16px",
+                  border: "1px solid var(--accent)",
+                  borderRadius: "10px",
+                  background: "rgba(59, 130, 246, 0.05)",
+                  marginBottom: "16px",
+                }}
+              >
+                <div
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+                >
+                  <span style={{ fontWeight: "600", fontSize: "14px", color: "var(--text-h)" }}>
+                    Register a New Passkey
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddPasskey(false);
+                      setNewPasskeyName("");
+                    }}
+                    style={{ background: "none", border: "none", cursor: "pointer", opacity: 0.6 }}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label htmlFor="passkey-name" style={{ fontSize: "12px" }}>
+                    Passkey Name / Label (optional)
+                  </label>
+                  <input
+                    id="passkey-name"
+                    type="text"
+                    value={newPasskeyName}
+                    onChange={(e) => setNewPasskeyName(e.target.value)}
+                    placeholder="e.g. Work MacBook, YubiKey 5C, iPhone"
+                    maxLength={50}
+                    disabled={isAddingPasskey}
+                  />
+                </div>
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddPasskey(false)}
+                    disabled={isAddingPasskey}
+                    className="settings-btn-secondary"
+                    style={{ padding: "6px 12px", fontSize: "13px" }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isAddingPasskey}
+                    className="settings-btn-primary"
+                    style={{ padding: "6px 14px", fontSize: "13px" }}
+                  >
+                    {isAddingPasskey ? (
+                      <>
+                        <Loader2 className="animate-spin" size={14} />
+                        <span>Prompting Authenticator...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Fingerprint size={14} />
+                        <span>Prompt Device Authenticator</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {passkeysLoading && passkeys.length === 0 ? (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "32px",
+                }}
+              >
+                <Loader2 className="animate-spin text-accent" size={24} />
+                <span style={{ marginLeft: "12px", fontSize: "14px" }}>Loading passkeys...</span>
+              </div>
+            ) : passkeys.length === 0 ? (
+              <div
+                style={{
+                  padding: "32px",
+                  textAlign: "center",
+                  opacity: 0.7,
+                  fontSize: "14px",
+                  border: "1px dashed var(--border)",
+                  borderRadius: "10px",
+                  lineHeight: "1.6",
+                }}
+              >
+                <Fingerprint size={28} style={{ opacity: 0.5, margin: "0 auto 8px" }} />
+                <div>No passkeys registered yet.</div>
+                <div style={{ fontSize: "12px", opacity: 0.8, marginTop: "4px" }}>
+                  Add a passkey to sign in seamlessly without passwords using Touch ID, Face ID,
+                  Windows Hello, or a YubiKey.
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {passkeys.map((pk) => {
+                  const createdDate = pk.createdAt
+                    ? new Date(Number(pk.createdAt.seconds) * 1000).toLocaleDateString()
+                    : "Unknown";
+                  const lastUsedDate = pk.lastUsedAt
+                    ? new Date(Number(pk.lastUsedAt.seconds) * 1000).toLocaleString()
+                    : "Never";
+
+                  return (
+                    <div key={pk.id} className="passkey-row-card">
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "12px",
+                          flex: 1,
+                          minWidth: "220px",
+                        }}
+                      >
+                        {renderPasskeyIcon(pk.friendlyDeviceName)}
+                        <div style={{ flex: 1 }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            {editingPasskeyId === pk.id ? (
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                <input
+                                  type="text"
+                                  value={editingPasskeyName}
+                                  onChange={(e) => setEditingPasskeyName(e.target.value)}
+                                  maxLength={50}
+                                  style={{ padding: "4px 8px", fontSize: "13px" }}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleRenamePasskey(pk.id)}
+                                  className="settings-btn-primary"
+                                  style={{ padding: "4px 8px" }}
+                                  aria-label="Save name"
+                                >
+                                  <Check size={14} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingPasskeyId(null)}
+                                  className="settings-btn-secondary"
+                                  style={{ padding: "4px 8px" }}
+                                  aria-label="Cancel rename"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            ) : (
+                              <>
+                                <span
+                                  style={{
+                                    fontWeight: "600",
+                                    color: "var(--text-h)",
+                                    fontSize: "14px",
+                                  }}
+                                >
+                                  {pk.name}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingPasskeyId(pk.id);
+                                    setEditingPasskeyName(pk.name);
+                                  }}
+                                  style={{
+                                    background: "none",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    opacity: 0.6,
+                                    padding: "2px",
+                                  }}
+                                  aria-label="Rename passkey"
+                                >
+                                  <Edit2 size={13} />
+                                </button>
+                              </>
+                            )}
+
+                            {pk.backupEligible ? (
+                              <span className="passkey-synced-badge">
+                                <CheckCircle2 size={12} />
+                                <span>Synced Passkey</span>
+                              </span>
+                            ) : (
+                              <span className="auth-event-badge auth-event-badge-info">
+                                <span>Hardware Key</span>
+                              </span>
+                            )}
+
+                            {pk.cloneWarning && (
+                              <span className="auth-event-badge auth-event-badge-error">
+                                <span>Clone Warning</span>
+                              </span>
+                            )}
+                          </div>
+
+                          <div
+                            style={{
+                              fontSize: "12px",
+                              opacity: 0.7,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "12px",
+                              marginTop: "4px",
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            <span>Model: {pk.friendlyDeviceName}</span>
+                            <span>Added: {createdDate}</span>
+                            <span>Last used: {lastUsedDate}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePasskey(pk.id)}
+                          disabled={deletingPasskeyId === pk.id}
+                          className="settings-btn-secondary"
+                          style={{
+                            padding: "6px 12px",
+                            fontSize: "12px",
+                            color: "var(--error)",
+                            borderColor: "var(--error-border)",
+                          }}
+                        >
+                          {deletingPasskeyId === pk.id ? (
+                            <Loader2 className="animate-spin" size={14} />
+                          ) : (
+                            <Trash2 size={14} />
+                          )}
+                          <span>Delete</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           {/* Active Sessions Section */}
           <div className="logs-viewer-card">
             <div

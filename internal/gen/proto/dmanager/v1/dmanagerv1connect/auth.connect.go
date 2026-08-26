@@ -56,6 +56,27 @@ const (
 	// AuthServiceRevokeAllOtherSessionsProcedure is the fully-qualified name of the AuthService's
 	// RevokeAllOtherSessions RPC.
 	AuthServiceRevokeAllOtherSessionsProcedure = "/dmanager.v1.AuthService/RevokeAllOtherSessions"
+	// AuthServiceBeginPasskeyRegistrationProcedure is the fully-qualified name of the AuthService's
+	// BeginPasskeyRegistration RPC.
+	AuthServiceBeginPasskeyRegistrationProcedure = "/dmanager.v1.AuthService/BeginPasskeyRegistration"
+	// AuthServiceFinishPasskeyRegistrationProcedure is the fully-qualified name of the AuthService's
+	// FinishPasskeyRegistration RPC.
+	AuthServiceFinishPasskeyRegistrationProcedure = "/dmanager.v1.AuthService/FinishPasskeyRegistration"
+	// AuthServiceBeginPasskeyLoginProcedure is the fully-qualified name of the AuthService's
+	// BeginPasskeyLogin RPC.
+	AuthServiceBeginPasskeyLoginProcedure = "/dmanager.v1.AuthService/BeginPasskeyLogin"
+	// AuthServiceFinishPasskeyLoginProcedure is the fully-qualified name of the AuthService's
+	// FinishPasskeyLogin RPC.
+	AuthServiceFinishPasskeyLoginProcedure = "/dmanager.v1.AuthService/FinishPasskeyLogin"
+	// AuthServiceListPasskeysProcedure is the fully-qualified name of the AuthService's ListPasskeys
+	// RPC.
+	AuthServiceListPasskeysProcedure = "/dmanager.v1.AuthService/ListPasskeys"
+	// AuthServiceRenamePasskeyProcedure is the fully-qualified name of the AuthService's RenamePasskey
+	// RPC.
+	AuthServiceRenamePasskeyProcedure = "/dmanager.v1.AuthService/RenamePasskey"
+	// AuthServiceDeletePasskeyProcedure is the fully-qualified name of the AuthService's DeletePasskey
+	// RPC.
+	AuthServiceDeletePasskeyProcedure = "/dmanager.v1.AuthService/DeletePasskey"
 )
 
 // AuthServiceClient is a client for the dmanager.v1.AuthService service.
@@ -78,6 +99,16 @@ type AuthServiceClient interface {
 	RevokeSession(context.Context, *connect.Request[v1.RevokeSessionRequest]) (*connect.Response[v1.RevokeSessionResponse], error)
 	// Revoke all other active sessions for the authenticated user except the current one (Authenticated).
 	RevokeAllOtherSessions(context.Context, *connect.Request[v1.RevokeAllOtherSessionsRequest]) (*connect.Response[v1.RevokeAllOtherSessionsResponse], error)
+	// --- Passkey registration (Authenticated) ---
+	BeginPasskeyRegistration(context.Context, *connect.Request[v1.BeginPasskeyRegistrationRequest]) (*connect.Response[v1.BeginPasskeyRegistrationResponse], error)
+	FinishPasskeyRegistration(context.Context, *connect.Request[v1.FinishPasskeyRegistrationRequest]) (*connect.Response[v1.FinishPasskeyRegistrationResponse], error)
+	// --- Passkey login (Unauthenticated) ---
+	BeginPasskeyLogin(context.Context, *connect.Request[v1.BeginPasskeyLoginRequest]) (*connect.Response[v1.BeginPasskeyLoginResponse], error)
+	FinishPasskeyLogin(context.Context, *connect.Request[v1.FinishPasskeyLoginRequest]) (*connect.Response[v1.LoginResponse], error)
+	// --- Credential management (Authenticated) ---
+	ListPasskeys(context.Context, *connect.Request[v1.ListPasskeysRequest]) (*connect.Response[v1.ListPasskeysResponse], error)
+	RenamePasskey(context.Context, *connect.Request[v1.RenamePasskeyRequest]) (*connect.Response[v1.RenamePasskeyResponse], error)
+	DeletePasskey(context.Context, *connect.Request[v1.DeletePasskeyRequest]) (*connect.Response[v1.DeletePasskeyResponse], error)
 }
 
 // NewAuthServiceClient constructs a client for the dmanager.v1.AuthService service. By default, it
@@ -145,20 +176,69 @@ func NewAuthServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(authServiceMethods.ByName("RevokeAllOtherSessions")),
 			connect.WithClientOptions(opts...),
 		),
+		beginPasskeyRegistration: connect.NewClient[v1.BeginPasskeyRegistrationRequest, v1.BeginPasskeyRegistrationResponse](
+			httpClient,
+			baseURL+AuthServiceBeginPasskeyRegistrationProcedure,
+			connect.WithSchema(authServiceMethods.ByName("BeginPasskeyRegistration")),
+			connect.WithClientOptions(opts...),
+		),
+		finishPasskeyRegistration: connect.NewClient[v1.FinishPasskeyRegistrationRequest, v1.FinishPasskeyRegistrationResponse](
+			httpClient,
+			baseURL+AuthServiceFinishPasskeyRegistrationProcedure,
+			connect.WithSchema(authServiceMethods.ByName("FinishPasskeyRegistration")),
+			connect.WithClientOptions(opts...),
+		),
+		beginPasskeyLogin: connect.NewClient[v1.BeginPasskeyLoginRequest, v1.BeginPasskeyLoginResponse](
+			httpClient,
+			baseURL+AuthServiceBeginPasskeyLoginProcedure,
+			connect.WithSchema(authServiceMethods.ByName("BeginPasskeyLogin")),
+			connect.WithClientOptions(opts...),
+		),
+		finishPasskeyLogin: connect.NewClient[v1.FinishPasskeyLoginRequest, v1.LoginResponse](
+			httpClient,
+			baseURL+AuthServiceFinishPasskeyLoginProcedure,
+			connect.WithSchema(authServiceMethods.ByName("FinishPasskeyLogin")),
+			connect.WithClientOptions(opts...),
+		),
+		listPasskeys: connect.NewClient[v1.ListPasskeysRequest, v1.ListPasskeysResponse](
+			httpClient,
+			baseURL+AuthServiceListPasskeysProcedure,
+			connect.WithSchema(authServiceMethods.ByName("ListPasskeys")),
+			connect.WithClientOptions(opts...),
+		),
+		renamePasskey: connect.NewClient[v1.RenamePasskeyRequest, v1.RenamePasskeyResponse](
+			httpClient,
+			baseURL+AuthServiceRenamePasskeyProcedure,
+			connect.WithSchema(authServiceMethods.ByName("RenamePasskey")),
+			connect.WithClientOptions(opts...),
+		),
+		deletePasskey: connect.NewClient[v1.DeletePasskeyRequest, v1.DeletePasskeyResponse](
+			httpClient,
+			baseURL+AuthServiceDeletePasskeyProcedure,
+			connect.WithSchema(authServiceMethods.ByName("DeletePasskey")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // authServiceClient implements AuthServiceClient.
 type authServiceClient struct {
-	getServerStatus        *connect.Client[v1.GetServerStatusRequest, v1.GetServerStatusResponse]
-	setupAdmin             *connect.Client[v1.SetupAdminRequest, v1.SetupAdminResponse]
-	login                  *connect.Client[v1.LoginRequest, v1.LoginResponse]
-	logout                 *connect.Client[v1.LogoutRequest, v1.LogoutResponse]
-	getMe                  *connect.Client[v1.GetMeRequest, v1.GetMeResponse]
-	listAuthEvents         *connect.Client[v1.ListAuthEventsRequest, v1.ListAuthEventsResponse]
-	listSessions           *connect.Client[v1.ListSessionsRequest, v1.ListSessionsResponse]
-	revokeSession          *connect.Client[v1.RevokeSessionRequest, v1.RevokeSessionResponse]
-	revokeAllOtherSessions *connect.Client[v1.RevokeAllOtherSessionsRequest, v1.RevokeAllOtherSessionsResponse]
+	getServerStatus           *connect.Client[v1.GetServerStatusRequest, v1.GetServerStatusResponse]
+	setupAdmin                *connect.Client[v1.SetupAdminRequest, v1.SetupAdminResponse]
+	login                     *connect.Client[v1.LoginRequest, v1.LoginResponse]
+	logout                    *connect.Client[v1.LogoutRequest, v1.LogoutResponse]
+	getMe                     *connect.Client[v1.GetMeRequest, v1.GetMeResponse]
+	listAuthEvents            *connect.Client[v1.ListAuthEventsRequest, v1.ListAuthEventsResponse]
+	listSessions              *connect.Client[v1.ListSessionsRequest, v1.ListSessionsResponse]
+	revokeSession             *connect.Client[v1.RevokeSessionRequest, v1.RevokeSessionResponse]
+	revokeAllOtherSessions    *connect.Client[v1.RevokeAllOtherSessionsRequest, v1.RevokeAllOtherSessionsResponse]
+	beginPasskeyRegistration  *connect.Client[v1.BeginPasskeyRegistrationRequest, v1.BeginPasskeyRegistrationResponse]
+	finishPasskeyRegistration *connect.Client[v1.FinishPasskeyRegistrationRequest, v1.FinishPasskeyRegistrationResponse]
+	beginPasskeyLogin         *connect.Client[v1.BeginPasskeyLoginRequest, v1.BeginPasskeyLoginResponse]
+	finishPasskeyLogin        *connect.Client[v1.FinishPasskeyLoginRequest, v1.LoginResponse]
+	listPasskeys              *connect.Client[v1.ListPasskeysRequest, v1.ListPasskeysResponse]
+	renamePasskey             *connect.Client[v1.RenamePasskeyRequest, v1.RenamePasskeyResponse]
+	deletePasskey             *connect.Client[v1.DeletePasskeyRequest, v1.DeletePasskeyResponse]
 }
 
 // GetServerStatus calls dmanager.v1.AuthService.GetServerStatus.
@@ -206,6 +286,41 @@ func (c *authServiceClient) RevokeAllOtherSessions(ctx context.Context, req *con
 	return c.revokeAllOtherSessions.CallUnary(ctx, req)
 }
 
+// BeginPasskeyRegistration calls dmanager.v1.AuthService.BeginPasskeyRegistration.
+func (c *authServiceClient) BeginPasskeyRegistration(ctx context.Context, req *connect.Request[v1.BeginPasskeyRegistrationRequest]) (*connect.Response[v1.BeginPasskeyRegistrationResponse], error) {
+	return c.beginPasskeyRegistration.CallUnary(ctx, req)
+}
+
+// FinishPasskeyRegistration calls dmanager.v1.AuthService.FinishPasskeyRegistration.
+func (c *authServiceClient) FinishPasskeyRegistration(ctx context.Context, req *connect.Request[v1.FinishPasskeyRegistrationRequest]) (*connect.Response[v1.FinishPasskeyRegistrationResponse], error) {
+	return c.finishPasskeyRegistration.CallUnary(ctx, req)
+}
+
+// BeginPasskeyLogin calls dmanager.v1.AuthService.BeginPasskeyLogin.
+func (c *authServiceClient) BeginPasskeyLogin(ctx context.Context, req *connect.Request[v1.BeginPasskeyLoginRequest]) (*connect.Response[v1.BeginPasskeyLoginResponse], error) {
+	return c.beginPasskeyLogin.CallUnary(ctx, req)
+}
+
+// FinishPasskeyLogin calls dmanager.v1.AuthService.FinishPasskeyLogin.
+func (c *authServiceClient) FinishPasskeyLogin(ctx context.Context, req *connect.Request[v1.FinishPasskeyLoginRequest]) (*connect.Response[v1.LoginResponse], error) {
+	return c.finishPasskeyLogin.CallUnary(ctx, req)
+}
+
+// ListPasskeys calls dmanager.v1.AuthService.ListPasskeys.
+func (c *authServiceClient) ListPasskeys(ctx context.Context, req *connect.Request[v1.ListPasskeysRequest]) (*connect.Response[v1.ListPasskeysResponse], error) {
+	return c.listPasskeys.CallUnary(ctx, req)
+}
+
+// RenamePasskey calls dmanager.v1.AuthService.RenamePasskey.
+func (c *authServiceClient) RenamePasskey(ctx context.Context, req *connect.Request[v1.RenamePasskeyRequest]) (*connect.Response[v1.RenamePasskeyResponse], error) {
+	return c.renamePasskey.CallUnary(ctx, req)
+}
+
+// DeletePasskey calls dmanager.v1.AuthService.DeletePasskey.
+func (c *authServiceClient) DeletePasskey(ctx context.Context, req *connect.Request[v1.DeletePasskeyRequest]) (*connect.Response[v1.DeletePasskeyResponse], error) {
+	return c.deletePasskey.CallUnary(ctx, req)
+}
+
 // AuthServiceHandler is an implementation of the dmanager.v1.AuthService service.
 type AuthServiceHandler interface {
 	// Check the setup and auth status of the server (Unauthenticated).
@@ -226,6 +341,16 @@ type AuthServiceHandler interface {
 	RevokeSession(context.Context, *connect.Request[v1.RevokeSessionRequest]) (*connect.Response[v1.RevokeSessionResponse], error)
 	// Revoke all other active sessions for the authenticated user except the current one (Authenticated).
 	RevokeAllOtherSessions(context.Context, *connect.Request[v1.RevokeAllOtherSessionsRequest]) (*connect.Response[v1.RevokeAllOtherSessionsResponse], error)
+	// --- Passkey registration (Authenticated) ---
+	BeginPasskeyRegistration(context.Context, *connect.Request[v1.BeginPasskeyRegistrationRequest]) (*connect.Response[v1.BeginPasskeyRegistrationResponse], error)
+	FinishPasskeyRegistration(context.Context, *connect.Request[v1.FinishPasskeyRegistrationRequest]) (*connect.Response[v1.FinishPasskeyRegistrationResponse], error)
+	// --- Passkey login (Unauthenticated) ---
+	BeginPasskeyLogin(context.Context, *connect.Request[v1.BeginPasskeyLoginRequest]) (*connect.Response[v1.BeginPasskeyLoginResponse], error)
+	FinishPasskeyLogin(context.Context, *connect.Request[v1.FinishPasskeyLoginRequest]) (*connect.Response[v1.LoginResponse], error)
+	// --- Credential management (Authenticated) ---
+	ListPasskeys(context.Context, *connect.Request[v1.ListPasskeysRequest]) (*connect.Response[v1.ListPasskeysResponse], error)
+	RenamePasskey(context.Context, *connect.Request[v1.RenamePasskeyRequest]) (*connect.Response[v1.RenamePasskeyResponse], error)
+	DeletePasskey(context.Context, *connect.Request[v1.DeletePasskeyRequest]) (*connect.Response[v1.DeletePasskeyResponse], error)
 }
 
 // NewAuthServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -289,6 +414,48 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(authServiceMethods.ByName("RevokeAllOtherSessions")),
 		connect.WithHandlerOptions(opts...),
 	)
+	authServiceBeginPasskeyRegistrationHandler := connect.NewUnaryHandler(
+		AuthServiceBeginPasskeyRegistrationProcedure,
+		svc.BeginPasskeyRegistration,
+		connect.WithSchema(authServiceMethods.ByName("BeginPasskeyRegistration")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceFinishPasskeyRegistrationHandler := connect.NewUnaryHandler(
+		AuthServiceFinishPasskeyRegistrationProcedure,
+		svc.FinishPasskeyRegistration,
+		connect.WithSchema(authServiceMethods.ByName("FinishPasskeyRegistration")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceBeginPasskeyLoginHandler := connect.NewUnaryHandler(
+		AuthServiceBeginPasskeyLoginProcedure,
+		svc.BeginPasskeyLogin,
+		connect.WithSchema(authServiceMethods.ByName("BeginPasskeyLogin")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceFinishPasskeyLoginHandler := connect.NewUnaryHandler(
+		AuthServiceFinishPasskeyLoginProcedure,
+		svc.FinishPasskeyLogin,
+		connect.WithSchema(authServiceMethods.ByName("FinishPasskeyLogin")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceListPasskeysHandler := connect.NewUnaryHandler(
+		AuthServiceListPasskeysProcedure,
+		svc.ListPasskeys,
+		connect.WithSchema(authServiceMethods.ByName("ListPasskeys")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceRenamePasskeyHandler := connect.NewUnaryHandler(
+		AuthServiceRenamePasskeyProcedure,
+		svc.RenamePasskey,
+		connect.WithSchema(authServiceMethods.ByName("RenamePasskey")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceDeletePasskeyHandler := connect.NewUnaryHandler(
+		AuthServiceDeletePasskeyProcedure,
+		svc.DeletePasskey,
+		connect.WithSchema(authServiceMethods.ByName("DeletePasskey")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/dmanager.v1.AuthService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AuthServiceGetServerStatusProcedure:
@@ -309,6 +476,20 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 			authServiceRevokeSessionHandler.ServeHTTP(w, r)
 		case AuthServiceRevokeAllOtherSessionsProcedure:
 			authServiceRevokeAllOtherSessionsHandler.ServeHTTP(w, r)
+		case AuthServiceBeginPasskeyRegistrationProcedure:
+			authServiceBeginPasskeyRegistrationHandler.ServeHTTP(w, r)
+		case AuthServiceFinishPasskeyRegistrationProcedure:
+			authServiceFinishPasskeyRegistrationHandler.ServeHTTP(w, r)
+		case AuthServiceBeginPasskeyLoginProcedure:
+			authServiceBeginPasskeyLoginHandler.ServeHTTP(w, r)
+		case AuthServiceFinishPasskeyLoginProcedure:
+			authServiceFinishPasskeyLoginHandler.ServeHTTP(w, r)
+		case AuthServiceListPasskeysProcedure:
+			authServiceListPasskeysHandler.ServeHTTP(w, r)
+		case AuthServiceRenamePasskeyProcedure:
+			authServiceRenamePasskeyHandler.ServeHTTP(w, r)
+		case AuthServiceDeletePasskeyProcedure:
+			authServiceDeletePasskeyHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -352,4 +533,32 @@ func (UnimplementedAuthServiceHandler) RevokeSession(context.Context, *connect.R
 
 func (UnimplementedAuthServiceHandler) RevokeAllOtherSessions(context.Context, *connect.Request[v1.RevokeAllOtherSessionsRequest]) (*connect.Response[v1.RevokeAllOtherSessionsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AuthService.RevokeAllOtherSessions is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) BeginPasskeyRegistration(context.Context, *connect.Request[v1.BeginPasskeyRegistrationRequest]) (*connect.Response[v1.BeginPasskeyRegistrationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AuthService.BeginPasskeyRegistration is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) FinishPasskeyRegistration(context.Context, *connect.Request[v1.FinishPasskeyRegistrationRequest]) (*connect.Response[v1.FinishPasskeyRegistrationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AuthService.FinishPasskeyRegistration is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) BeginPasskeyLogin(context.Context, *connect.Request[v1.BeginPasskeyLoginRequest]) (*connect.Response[v1.BeginPasskeyLoginResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AuthService.BeginPasskeyLogin is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) FinishPasskeyLogin(context.Context, *connect.Request[v1.FinishPasskeyLoginRequest]) (*connect.Response[v1.LoginResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AuthService.FinishPasskeyLogin is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) ListPasskeys(context.Context, *connect.Request[v1.ListPasskeysRequest]) (*connect.Response[v1.ListPasskeysResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AuthService.ListPasskeys is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) RenamePasskey(context.Context, *connect.Request[v1.RenamePasskeyRequest]) (*connect.Response[v1.RenamePasskeyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AuthService.RenamePasskey is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) DeletePasskey(context.Context, *connect.Request[v1.DeletePasskeyRequest]) (*connect.Response[v1.DeletePasskeyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AuthService.DeletePasskey is not implemented"))
 }

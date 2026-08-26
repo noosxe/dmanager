@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file proto/dmanager/v1/auth.proto.
  */
 export const file_proto_dmanager_v1_auth: GenFile = /*@__PURE__*/
-  fileDesc("Chxwcm90by9kbWFuYWdlci92MS9hdXRoLnByb3RvEgtkbWFuYWdlci52MSIYChZHZXRTZXJ2ZXJTdGF0dXNSZXF1ZXN0Ii4KF0dldFNlcnZlclN0YXR1c1Jlc3BvbnNlEhMKC25lZWRzX3NldHVwGAEgASgIIjcKEVNldHVwQWRtaW5SZXF1ZXN0EhAKCHVzZXJuYW1lGAEgASgJEhAKCHBhc3N3b3JkGAIgASgJIjQKElNldHVwQWRtaW5SZXNwb25zZRIQCgh1c2VybmFtZRgBIAEoCRIMCgRyb2xlGAIgASgJIkcKDExvZ2luUmVxdWVzdBIQCgh1c2VybmFtZRgBIAEoCRIQCghwYXNzd29yZBgCIAEoCRITCgtyZW1lbWJlcl9tZRgDIAEoCCIvCg1Mb2dpblJlc3BvbnNlEhAKCHVzZXJuYW1lGAEgASgJEgwKBHJvbGUYAiABKAkiDwoNTG9nb3V0UmVxdWVzdCIQCg5Mb2dvdXRSZXNwb25zZSIOCgxHZXRNZVJlcXVlc3QiQAoNR2V0TWVSZXNwb25zZRIPCgd1c2VyX2lkGAEgASgDEhAKCHVzZXJuYW1lGAIgASgJEgwKBHJvbGUYAyABKAkinwEKCUF1dGhFdmVudBIKCgJpZBgBIAEoAxIUCgd1c2VyX2lkGAIgASgDSACIAQESEAoIdXNlcm5hbWUYAyABKAkSEgoKZXZlbnRfdHlwZRgEIAEoCRIOCgZkZXRhaWwYBSABKAkSLgoKY3JlYXRlZF9hdBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCCgoIX3VzZXJfaWQiSgoVTGlzdEF1dGhFdmVudHNSZXF1ZXN0Eg0KBWxpbWl0GAEgASgFEg4KBm9mZnNldBgCIAEoBRISCgpldmVudF90eXBlGAMgASgJIlUKFkxpc3RBdXRoRXZlbnRzUmVzcG9uc2USJgoGZXZlbnRzGAEgAygLMhYuZG1hbmFnZXIudjEuQXV0aEV2ZW50EhMKC3RvdGFsX2NvdW50GAIgASgDIqYCCgdTZXNzaW9uEhIKCnNlc3Npb25faWQYASABKAkSEgoKdXNlcl9hZ2VudBgCIAEoCRIUCgxkZXZpY2VfbGFiZWwYAyABKAkSLgoKY3JlYXRlZF9hdBgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMAoMbGFzdF9zZWVuX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgpleHBpcmVzX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBI3ChNhYnNvbHV0ZV9leHBpcmVzX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBISCgppc19jdXJyZW50GAggASgIIhUKE0xpc3RTZXNzaW9uc1JlcXVlc3QiPgoUTGlzdFNlc3Npb25zUmVzcG9uc2USJgoIc2Vzc2lvbnMYASADKAsyFC5kbWFuYWdlci52MS5TZXNzaW9uIioKFFJldm9rZVNlc3Npb25SZXF1ZXN0EhIKCnNlc3Npb25faWQYASABKAkiFwoVUmV2b2tlU2Vzc2lvblJlc3BvbnNlIh8KHVJldm9rZUFsbE90aGVyU2Vzc2lvbnNSZXF1ZXN0IjcKHlJldm9rZUFsbE90aGVyU2Vzc2lvbnNSZXNwb25zZRIVCg1yZXZva2VkX2NvdW50GAEgASgDMvgFCgtBdXRoU2VydmljZRJcCg9HZXRTZXJ2ZXJTdGF0dXMSIy5kbWFuYWdlci52MS5HZXRTZXJ2ZXJTdGF0dXNSZXF1ZXN0GiQuZG1hbmFnZXIudjEuR2V0U2VydmVyU3RhdHVzUmVzcG9uc2USTQoKU2V0dXBBZG1pbhIeLmRtYW5hZ2VyLnYxLlNldHVwQWRtaW5SZXF1ZXN0Gh8uZG1hbmFnZXIudjEuU2V0dXBBZG1pblJlc3BvbnNlEj4KBUxvZ2luEhkuZG1hbmFnZXIudjEuTG9naW5SZXF1ZXN0GhouZG1hbmFnZXIudjEuTG9naW5SZXNwb25zZRJBCgZMb2dvdXQSGi5kbWFuYWdlci52MS5Mb2dvdXRSZXF1ZXN0GhsuZG1hbmFnZXIudjEuTG9nb3V0UmVzcG9uc2USPgoFR2V0TWUSGS5kbWFuYWdlci52MS5HZXRNZVJlcXVlc3QaGi5kbWFuYWdlci52MS5HZXRNZVJlc3BvbnNlElkKDkxpc3RBdXRoRXZlbnRzEiIuZG1hbmFnZXIudjEuTGlzdEF1dGhFdmVudHNSZXF1ZXN0GiMuZG1hbmFnZXIudjEuTGlzdEF1dGhFdmVudHNSZXNwb25zZRJTCgxMaXN0U2Vzc2lvbnMSIC5kbWFuYWdlci52MS5MaXN0U2Vzc2lvbnNSZXF1ZXN0GiEuZG1hbmFnZXIudjEuTGlzdFNlc3Npb25zUmVzcG9uc2USVgoNUmV2b2tlU2Vzc2lvbhIhLmRtYW5hZ2VyLnYxLlJldm9rZVNlc3Npb25SZXF1ZXN0GiIuZG1hbmFnZXIudjEuUmV2b2tlU2Vzc2lvblJlc3BvbnNlEnEKFlJldm9rZUFsbE90aGVyU2Vzc2lvbnMSKi5kbWFuYWdlci52MS5SZXZva2VBbGxPdGhlclNlc3Npb25zUmVxdWVzdBorLmRtYW5hZ2VyLnYxLlJldm9rZUFsbE90aGVyU2Vzc2lvbnNSZXNwb25zZUI0WjJkbWFuYWdlci9pbnRlcm5hbC9nZW4vcHJvdG8vZG1hbmFnZXIvdjE7ZG1hbmFnZXJ2MWIGcHJvdG8z", [file_google_protobuf_timestamp]);
+  fileDesc("Chxwcm90by9kbWFuYWdlci92MS9hdXRoLnByb3RvEgtkbWFuYWdlci52MSIYChZHZXRTZXJ2ZXJTdGF0dXNSZXF1ZXN0Im0KF0dldFNlcnZlclN0YXR1c1Jlc3BvbnNlEhMKC25lZWRzX3NldHVwGAEgASgIEh0KFXBhc3NrZXlfbG9naW5fZW5hYmxlZBgCIAEoCBINCgVycF9pZBgDIAEoCRIPCgdvcmlnaW5zGAQgAygJIjcKEVNldHVwQWRtaW5SZXF1ZXN0EhAKCHVzZXJuYW1lGAEgASgJEhAKCHBhc3N3b3JkGAIgASgJIjQKElNldHVwQWRtaW5SZXNwb25zZRIQCgh1c2VybmFtZRgBIAEoCRIMCgRyb2xlGAIgASgJIkcKDExvZ2luUmVxdWVzdBIQCgh1c2VybmFtZRgBIAEoCRIQCghwYXNzd29yZBgCIAEoCRITCgtyZW1lbWJlcl9tZRgDIAEoCCIvCg1Mb2dpblJlc3BvbnNlEhAKCHVzZXJuYW1lGAEgASgJEgwKBHJvbGUYAiABKAkiDwoNTG9nb3V0UmVxdWVzdCIQCg5Mb2dvdXRSZXNwb25zZSIOCgxHZXRNZVJlcXVlc3QiQAoNR2V0TWVSZXNwb25zZRIPCgd1c2VyX2lkGAEgASgDEhAKCHVzZXJuYW1lGAIgASgJEgwKBHJvbGUYAyABKAkinwEKCUF1dGhFdmVudBIKCgJpZBgBIAEoAxIUCgd1c2VyX2lkGAIgASgDSACIAQESEAoIdXNlcm5hbWUYAyABKAkSEgoKZXZlbnRfdHlwZRgEIAEoCRIOCgZkZXRhaWwYBSABKAkSLgoKY3JlYXRlZF9hdBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCCgoIX3VzZXJfaWQiSgoVTGlzdEF1dGhFdmVudHNSZXF1ZXN0Eg0KBWxpbWl0GAEgASgFEg4KBm9mZnNldBgCIAEoBRISCgpldmVudF90eXBlGAMgASgJIlUKFkxpc3RBdXRoRXZlbnRzUmVzcG9uc2USJgoGZXZlbnRzGAEgAygLMhYuZG1hbmFnZXIudjEuQXV0aEV2ZW50EhMKC3RvdGFsX2NvdW50GAIgASgDIqYCCgdTZXNzaW9uEhIKCnNlc3Npb25faWQYASABKAkSEgoKdXNlcl9hZ2VudBgCIAEoCRIUCgxkZXZpY2VfbGFiZWwYAyABKAkSLgoKY3JlYXRlZF9hdBgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMAoMbGFzdF9zZWVuX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgpleHBpcmVzX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBI3ChNhYnNvbHV0ZV9leHBpcmVzX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBISCgppc19jdXJyZW50GAggASgIIhUKE0xpc3RTZXNzaW9uc1JlcXVlc3QiPgoUTGlzdFNlc3Npb25zUmVzcG9uc2USJgoIc2Vzc2lvbnMYASADKAsyFC5kbWFuYWdlci52MS5TZXNzaW9uIioKFFJldm9rZVNlc3Npb25SZXF1ZXN0EhIKCnNlc3Npb25faWQYASABKAkiFwoVUmV2b2tlU2Vzc2lvblJlc3BvbnNlIh8KHVJldm9rZUFsbE90aGVyU2Vzc2lvbnNSZXF1ZXN0IjcKHlJldm9rZUFsbE90aGVyU2Vzc2lvbnNSZXNwb25zZRIVCg1yZXZva2VkX2NvdW50GAEgASgDIi8KH0JlZ2luUGFzc2tleVJlZ2lzdHJhdGlvblJlcXVlc3QSDAoEbmFtZRgBIAEoCSI4CiBCZWdpblBhc3NrZXlSZWdpc3RyYXRpb25SZXNwb25zZRIUCgxvcHRpb25zX2pzb24YASABKAkiRwogRmluaXNoUGFzc2tleVJlZ2lzdHJhdGlvblJlcXVlc3QSDAoEbmFtZRgBIAEoCRIVCg1yZXNwb25zZV9qc29uGAIgASgJIkoKIUZpbmlzaFBhc3NrZXlSZWdpc3RyYXRpb25SZXNwb25zZRIlCgdwYXNza2V5GAEgASgLMhQuZG1hbmFnZXIudjEuUGFzc2tleSIaChhCZWdpblBhc3NrZXlMb2dpblJlcXVlc3QiMQoZQmVnaW5QYXNza2V5TG9naW5SZXNwb25zZRIUCgxvcHRpb25zX2pzb24YASABKAkiRwoZRmluaXNoUGFzc2tleUxvZ2luUmVxdWVzdBIVCg1yZXNwb25zZV9qc29uGAEgASgJEhMKC3JlbWVtYmVyX21lGAIgASgIIqMCCgdQYXNza2V5EgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSDgoGYWFndWlkGAMgASgJEhwKFGZyaWVuZGx5X2RldmljZV9uYW1lGAQgASgJEhcKD2JhY2t1cF9lbGlnaWJsZRgFIAEoCBIUCgxiYWNrdXBfc3RhdGUYBiABKAgSEgoKc2lnbl9jb3VudBgHIAEoBRIVCg1jbG9uZV93YXJuaW5nGAggASgIEi4KCmNyZWF0ZWRfYXQYCSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjUKDGxhc3RfdXNlZF9hdBgKIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIAIgBAUIPCg1fbGFzdF91c2VkX2F0IhUKE0xpc3RQYXNza2V5c1JlcXVlc3QiPgoUTGlzdFBhc3NrZXlzUmVzcG9uc2USJgoIcGFzc2tleXMYASADKAsyFC5kbWFuYWdlci52MS5QYXNza2V5IjAKFFJlbmFtZVBhc3NrZXlSZXF1ZXN0EgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkiPgoVUmVuYW1lUGFzc2tleVJlc3BvbnNlEiUKB3Bhc3NrZXkYASABKAsyFC5kbWFuYWdlci52MS5QYXNza2V5IiIKFERlbGV0ZVBhc3NrZXlSZXF1ZXN0EgoKAmlkGAEgASgJIhcKFURlbGV0ZVBhc3NrZXlSZXNwb25zZTKwCwoLQXV0aFNlcnZpY2USXAoPR2V0U2VydmVyU3RhdHVzEiMuZG1hbmFnZXIudjEuR2V0U2VydmVyU3RhdHVzUmVxdWVzdBokLmRtYW5hZ2VyLnYxLkdldFNlcnZlclN0YXR1c1Jlc3BvbnNlEk0KClNldHVwQWRtaW4SHi5kbWFuYWdlci52MS5TZXR1cEFkbWluUmVxdWVzdBofLmRtYW5hZ2VyLnYxLlNldHVwQWRtaW5SZXNwb25zZRI+CgVMb2dpbhIZLmRtYW5hZ2VyLnYxLkxvZ2luUmVxdWVzdBoaLmRtYW5hZ2VyLnYxLkxvZ2luUmVzcG9uc2USQQoGTG9nb3V0EhouZG1hbmFnZXIudjEuTG9nb3V0UmVxdWVzdBobLmRtYW5hZ2VyLnYxLkxvZ291dFJlc3BvbnNlEj4KBUdldE1lEhkuZG1hbmFnZXIudjEuR2V0TWVSZXF1ZXN0GhouZG1hbmFnZXIudjEuR2V0TWVSZXNwb25zZRJZCg5MaXN0QXV0aEV2ZW50cxIiLmRtYW5hZ2VyLnYxLkxpc3RBdXRoRXZlbnRzUmVxdWVzdBojLmRtYW5hZ2VyLnYxLkxpc3RBdXRoRXZlbnRzUmVzcG9uc2USUwoMTGlzdFNlc3Npb25zEiAuZG1hbmFnZXIudjEuTGlzdFNlc3Npb25zUmVxdWVzdBohLmRtYW5hZ2VyLnYxLkxpc3RTZXNzaW9uc1Jlc3BvbnNlElYKDVJldm9rZVNlc3Npb24SIS5kbWFuYWdlci52MS5SZXZva2VTZXNzaW9uUmVxdWVzdBoiLmRtYW5hZ2VyLnYxLlJldm9rZVNlc3Npb25SZXNwb25zZRJxChZSZXZva2VBbGxPdGhlclNlc3Npb25zEiouZG1hbmFnZXIudjEuUmV2b2tlQWxsT3RoZXJTZXNzaW9uc1JlcXVlc3QaKy5kbWFuYWdlci52MS5SZXZva2VBbGxPdGhlclNlc3Npb25zUmVzcG9uc2USdwoYQmVnaW5QYXNza2V5UmVnaXN0cmF0aW9uEiwuZG1hbmFnZXIudjEuQmVnaW5QYXNza2V5UmVnaXN0cmF0aW9uUmVxdWVzdBotLmRtYW5hZ2VyLnYxLkJlZ2luUGFzc2tleVJlZ2lzdHJhdGlvblJlc3BvbnNlEnoKGUZpbmlzaFBhc3NrZXlSZWdpc3RyYXRpb24SLS5kbWFuYWdlci52MS5GaW5pc2hQYXNza2V5UmVnaXN0cmF0aW9uUmVxdWVzdBouLmRtYW5hZ2VyLnYxLkZpbmlzaFBhc3NrZXlSZWdpc3RyYXRpb25SZXNwb25zZRJiChFCZWdpblBhc3NrZXlMb2dpbhIlLmRtYW5hZ2VyLnYxLkJlZ2luUGFzc2tleUxvZ2luUmVxdWVzdBomLmRtYW5hZ2VyLnYxLkJlZ2luUGFzc2tleUxvZ2luUmVzcG9uc2USWAoSRmluaXNoUGFzc2tleUxvZ2luEiYuZG1hbmFnZXIudjEuRmluaXNoUGFzc2tleUxvZ2luUmVxdWVzdBoaLmRtYW5hZ2VyLnYxLkxvZ2luUmVzcG9uc2USUwoMTGlzdFBhc3NrZXlzEiAuZG1hbmFnZXIudjEuTGlzdFBhc3NrZXlzUmVxdWVzdBohLmRtYW5hZ2VyLnYxLkxpc3RQYXNza2V5c1Jlc3BvbnNlElYKDVJlbmFtZVBhc3NrZXkSIS5kbWFuYWdlci52MS5SZW5hbWVQYXNza2V5UmVxdWVzdBoiLmRtYW5hZ2VyLnYxLlJlbmFtZVBhc3NrZXlSZXNwb25zZRJWCg1EZWxldGVQYXNza2V5EiEuZG1hbmFnZXIudjEuRGVsZXRlUGFzc2tleVJlcXVlc3QaIi5kbWFuYWdlci52MS5EZWxldGVQYXNza2V5UmVzcG9uc2VCNFoyZG1hbmFnZXIvaW50ZXJuYWwvZ2VuL3Byb3RvL2RtYW5hZ2VyL3YxO2RtYW5hZ2VydjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message dmanager.v1.GetServerStatusRequest
@@ -37,6 +37,27 @@ export type GetServerStatusResponse = Message<"dmanager.v1.GetServerStatusRespon
    * @generated from field: bool needs_setup = 1;
    */
   needsSetup: boolean;
+
+  /**
+   * Returns true if WebAuthn / Passkeys Relying Party is configured and usable.
+   *
+   * @generated from field: bool passkey_login_enabled = 2;
+   */
+  passkeyLoginEnabled: boolean;
+
+  /**
+   * Effective Relying Party ID.
+   *
+   * @generated from field: string rp_id = 3;
+   */
+  rpId: string;
+
+  /**
+   * Effective Allowed Origins.
+   *
+   * @generated from field: repeated string origins = 4;
+   */
+  origins: string[];
 };
 
 /**
@@ -439,6 +460,302 @@ export const RevokeAllOtherSessionsResponseSchema: GenMessage<RevokeAllOtherSess
   messageDesc(file_proto_dmanager_v1_auth, 19);
 
 /**
+ * @generated from message dmanager.v1.BeginPasskeyRegistrationRequest
+ */
+export type BeginPasskeyRegistrationRequest = Message<"dmanager.v1.BeginPasskeyRegistrationRequest"> & {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name: string;
+};
+
+/**
+ * Describes the message dmanager.v1.BeginPasskeyRegistrationRequest.
+ * Use `create(BeginPasskeyRegistrationRequestSchema)` to create a new message.
+ */
+export const BeginPasskeyRegistrationRequestSchema: GenMessage<BeginPasskeyRegistrationRequest> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_auth, 20);
+
+/**
+ * @generated from message dmanager.v1.BeginPasskeyRegistrationResponse
+ */
+export type BeginPasskeyRegistrationResponse = Message<"dmanager.v1.BeginPasskeyRegistrationResponse"> & {
+  /**
+   * JSON-encoded PublicKeyCredentialCreationOptions for @github/webauthn-json
+   *
+   * @generated from field: string options_json = 1;
+   */
+  optionsJson: string;
+};
+
+/**
+ * Describes the message dmanager.v1.BeginPasskeyRegistrationResponse.
+ * Use `create(BeginPasskeyRegistrationResponseSchema)` to create a new message.
+ */
+export const BeginPasskeyRegistrationResponseSchema: GenMessage<BeginPasskeyRegistrationResponse> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_auth, 21);
+
+/**
+ * @generated from message dmanager.v1.FinishPasskeyRegistrationRequest
+ */
+export type FinishPasskeyRegistrationRequest = Message<"dmanager.v1.FinishPasskeyRegistrationRequest"> & {
+  /**
+   * User-provided friendly name for this passkey
+   *
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * JSON-encoded RegistrationResponseJSON from @github/webauthn-json
+   *
+   * @generated from field: string response_json = 2;
+   */
+  responseJson: string;
+};
+
+/**
+ * Describes the message dmanager.v1.FinishPasskeyRegistrationRequest.
+ * Use `create(FinishPasskeyRegistrationRequestSchema)` to create a new message.
+ */
+export const FinishPasskeyRegistrationRequestSchema: GenMessage<FinishPasskeyRegistrationRequest> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_auth, 22);
+
+/**
+ * @generated from message dmanager.v1.FinishPasskeyRegistrationResponse
+ */
+export type FinishPasskeyRegistrationResponse = Message<"dmanager.v1.FinishPasskeyRegistrationResponse"> & {
+  /**
+   * @generated from field: dmanager.v1.Passkey passkey = 1;
+   */
+  passkey?: Passkey | undefined;
+};
+
+/**
+ * Describes the message dmanager.v1.FinishPasskeyRegistrationResponse.
+ * Use `create(FinishPasskeyRegistrationResponseSchema)` to create a new message.
+ */
+export const FinishPasskeyRegistrationResponseSchema: GenMessage<FinishPasskeyRegistrationResponse> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_auth, 23);
+
+/**
+ * @generated from message dmanager.v1.BeginPasskeyLoginRequest
+ */
+export type BeginPasskeyLoginRequest = Message<"dmanager.v1.BeginPasskeyLoginRequest"> & {
+};
+
+/**
+ * Describes the message dmanager.v1.BeginPasskeyLoginRequest.
+ * Use `create(BeginPasskeyLoginRequestSchema)` to create a new message.
+ */
+export const BeginPasskeyLoginRequestSchema: GenMessage<BeginPasskeyLoginRequest> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_auth, 24);
+
+/**
+ * @generated from message dmanager.v1.BeginPasskeyLoginResponse
+ */
+export type BeginPasskeyLoginResponse = Message<"dmanager.v1.BeginPasskeyLoginResponse"> & {
+  /**
+   * JSON-encoded PublicKeyCredentialRequestOptions for @github/webauthn-json (empty allow_credentials)
+   *
+   * @generated from field: string options_json = 1;
+   */
+  optionsJson: string;
+};
+
+/**
+ * Describes the message dmanager.v1.BeginPasskeyLoginResponse.
+ * Use `create(BeginPasskeyLoginResponseSchema)` to create a new message.
+ */
+export const BeginPasskeyLoginResponseSchema: GenMessage<BeginPasskeyLoginResponse> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_auth, 25);
+
+/**
+ * @generated from message dmanager.v1.FinishPasskeyLoginRequest
+ */
+export type FinishPasskeyLoginRequest = Message<"dmanager.v1.FinishPasskeyLoginRequest"> & {
+  /**
+   * JSON-encoded AuthenticationResponseJSON from @github/webauthn-json
+   *
+   * @generated from field: string response_json = 1;
+   */
+  responseJson: string;
+
+  /**
+   * @generated from field: bool remember_me = 2;
+   */
+  rememberMe: boolean;
+};
+
+/**
+ * Describes the message dmanager.v1.FinishPasskeyLoginRequest.
+ * Use `create(FinishPasskeyLoginRequestSchema)` to create a new message.
+ */
+export const FinishPasskeyLoginRequestSchema: GenMessage<FinishPasskeyLoginRequest> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_auth, 26);
+
+/**
+ * @generated from message dmanager.v1.Passkey
+ */
+export type Passkey = Message<"dmanager.v1.Passkey"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string aaguid = 3;
+   */
+  aaguid: string;
+
+  /**
+   * @generated from field: string friendly_device_name = 4;
+   */
+  friendlyDeviceName: string;
+
+  /**
+   * @generated from field: bool backup_eligible = 5;
+   */
+  backupEligible: boolean;
+
+  /**
+   * @generated from field: bool backup_state = 6;
+   */
+  backupState: boolean;
+
+  /**
+   * @generated from field: int32 sign_count = 7;
+   */
+  signCount: number;
+
+  /**
+   * @generated from field: bool clone_warning = 8;
+   */
+  cloneWarning: boolean;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 9;
+   */
+  createdAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: optional google.protobuf.Timestamp last_used_at = 10;
+   */
+  lastUsedAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message dmanager.v1.Passkey.
+ * Use `create(PasskeySchema)` to create a new message.
+ */
+export const PasskeySchema: GenMessage<Passkey> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_auth, 27);
+
+/**
+ * @generated from message dmanager.v1.ListPasskeysRequest
+ */
+export type ListPasskeysRequest = Message<"dmanager.v1.ListPasskeysRequest"> & {
+};
+
+/**
+ * Describes the message dmanager.v1.ListPasskeysRequest.
+ * Use `create(ListPasskeysRequestSchema)` to create a new message.
+ */
+export const ListPasskeysRequestSchema: GenMessage<ListPasskeysRequest> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_auth, 28);
+
+/**
+ * @generated from message dmanager.v1.ListPasskeysResponse
+ */
+export type ListPasskeysResponse = Message<"dmanager.v1.ListPasskeysResponse"> & {
+  /**
+   * @generated from field: repeated dmanager.v1.Passkey passkeys = 1;
+   */
+  passkeys: Passkey[];
+};
+
+/**
+ * Describes the message dmanager.v1.ListPasskeysResponse.
+ * Use `create(ListPasskeysResponseSchema)` to create a new message.
+ */
+export const ListPasskeysResponseSchema: GenMessage<ListPasskeysResponse> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_auth, 29);
+
+/**
+ * @generated from message dmanager.v1.RenamePasskeyRequest
+ */
+export type RenamePasskeyRequest = Message<"dmanager.v1.RenamePasskeyRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name: string;
+};
+
+/**
+ * Describes the message dmanager.v1.RenamePasskeyRequest.
+ * Use `create(RenamePasskeyRequestSchema)` to create a new message.
+ */
+export const RenamePasskeyRequestSchema: GenMessage<RenamePasskeyRequest> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_auth, 30);
+
+/**
+ * @generated from message dmanager.v1.RenamePasskeyResponse
+ */
+export type RenamePasskeyResponse = Message<"dmanager.v1.RenamePasskeyResponse"> & {
+  /**
+   * @generated from field: dmanager.v1.Passkey passkey = 1;
+   */
+  passkey?: Passkey | undefined;
+};
+
+/**
+ * Describes the message dmanager.v1.RenamePasskeyResponse.
+ * Use `create(RenamePasskeyResponseSchema)` to create a new message.
+ */
+export const RenamePasskeyResponseSchema: GenMessage<RenamePasskeyResponse> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_auth, 31);
+
+/**
+ * @generated from message dmanager.v1.DeletePasskeyRequest
+ */
+export type DeletePasskeyRequest = Message<"dmanager.v1.DeletePasskeyRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+};
+
+/**
+ * Describes the message dmanager.v1.DeletePasskeyRequest.
+ * Use `create(DeletePasskeyRequestSchema)` to create a new message.
+ */
+export const DeletePasskeyRequestSchema: GenMessage<DeletePasskeyRequest> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_auth, 32);
+
+/**
+ * @generated from message dmanager.v1.DeletePasskeyResponse
+ */
+export type DeletePasskeyResponse = Message<"dmanager.v1.DeletePasskeyResponse"> & {
+};
+
+/**
+ * Describes the message dmanager.v1.DeletePasskeyResponse.
+ * Use `create(DeletePasskeyResponseSchema)` to create a new message.
+ */
+export const DeletePasskeyResponseSchema: GenMessage<DeletePasskeyResponse> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_auth, 33);
+
+/**
  * @generated from service dmanager.v1.AuthService
  */
 export const AuthService: GenService<{
@@ -531,6 +848,68 @@ export const AuthService: GenService<{
     methodKind: "unary";
     input: typeof RevokeAllOtherSessionsRequestSchema;
     output: typeof RevokeAllOtherSessionsResponseSchema;
+  },
+  /**
+   * --- Passkey registration (Authenticated) ---
+   *
+   * @generated from rpc dmanager.v1.AuthService.BeginPasskeyRegistration
+   */
+  beginPasskeyRegistration: {
+    methodKind: "unary";
+    input: typeof BeginPasskeyRegistrationRequestSchema;
+    output: typeof BeginPasskeyRegistrationResponseSchema;
+  },
+  /**
+   * @generated from rpc dmanager.v1.AuthService.FinishPasskeyRegistration
+   */
+  finishPasskeyRegistration: {
+    methodKind: "unary";
+    input: typeof FinishPasskeyRegistrationRequestSchema;
+    output: typeof FinishPasskeyRegistrationResponseSchema;
+  },
+  /**
+   * --- Passkey login (Unauthenticated) ---
+   *
+   * @generated from rpc dmanager.v1.AuthService.BeginPasskeyLogin
+   */
+  beginPasskeyLogin: {
+    methodKind: "unary";
+    input: typeof BeginPasskeyLoginRequestSchema;
+    output: typeof BeginPasskeyLoginResponseSchema;
+  },
+  /**
+   * @generated from rpc dmanager.v1.AuthService.FinishPasskeyLogin
+   */
+  finishPasskeyLogin: {
+    methodKind: "unary";
+    input: typeof FinishPasskeyLoginRequestSchema;
+    output: typeof LoginResponseSchema;
+  },
+  /**
+   * --- Credential management (Authenticated) ---
+   *
+   * @generated from rpc dmanager.v1.AuthService.ListPasskeys
+   */
+  listPasskeys: {
+    methodKind: "unary";
+    input: typeof ListPasskeysRequestSchema;
+    output: typeof ListPasskeysResponseSchema;
+  },
+  /**
+   * @generated from rpc dmanager.v1.AuthService.RenamePasskey
+   */
+  renamePasskey: {
+    methodKind: "unary";
+    input: typeof RenamePasskeyRequestSchema;
+    output: typeof RenamePasskeyResponseSchema;
+  },
+  /**
+   * @generated from rpc dmanager.v1.AuthService.DeletePasskey
+   */
+  deletePasskey: {
+    methodKind: "unary";
+    input: typeof DeletePasskeyRequestSchema;
+    output: typeof DeletePasskeyResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_proto_dmanager_v1_auth, 0);

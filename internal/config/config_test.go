@@ -40,6 +40,9 @@ func TestConfigDefaults(t *testing.T) {
 	if cfg.Auth.BreachedPasswordCheck {
 		t.Errorf("expected default breached_password_check false, got true")
 	}
+	if cfg.WebAuthn.RequireUserVerification != UserVerificationPreferred {
+		t.Errorf("expected default webauthn.require_user_verification 'preferred', got %q", cfg.WebAuthn.RequireUserVerification)
+	}
 }
 
 func TestConfigYAML(t *testing.T) {
@@ -59,6 +62,12 @@ auth:
   secure_cookies: always
   bcrypt_cost: 14
   breached_password_check: true
+webauthn:
+  rp_id: "dmanager.example.com"
+  origins:
+    - "https://dmanager.example.com"
+    - "https://localhost:9283"
+  require_user_verification: "required"
 `
 	if err := os.WriteFile(yamlPath, []byte(content), 0600); err != nil {
 		t.Fatalf("failed to write test yaml: %v", err)
@@ -96,6 +105,15 @@ auth:
 	if !cfg.Auth.BreachedPasswordCheck {
 		t.Errorf("expected breached_password_check true, got false")
 	}
+	if cfg.WebAuthn.RPID != "dmanager.example.com" {
+		t.Errorf("expected rp_id 'dmanager.example.com', got %q", cfg.WebAuthn.RPID)
+	}
+	if len(cfg.WebAuthn.Origins) != 2 || cfg.WebAuthn.Origins[0] != "https://dmanager.example.com" {
+		t.Errorf("unexpected origins: %v", cfg.WebAuthn.Origins)
+	}
+	if cfg.WebAuthn.RequireUserVerification != "required" {
+		t.Errorf("expected require_user_verification 'required', got %q", cfg.WebAuthn.RequireUserVerification)
+	}
 }
 
 func TestConfigEnvOverrides(t *testing.T) {
@@ -107,6 +125,9 @@ func TestConfigEnvOverrides(t *testing.T) {
 	t.Setenv("DMANAGER_AUTH_SECURE_COOKIES", "never")
 	t.Setenv("DMANAGER_AUTH_BCRYPT_COST", "13")
 	t.Setenv("DMANAGER_AUTH_BREACHED_PASSWORD_CHECK", "true")
+	t.Setenv("DMANAGER_WEBAUTHN_RP_ID", "auth.local")
+	t.Setenv("DMANAGER_WEBAUTHN_ORIGINS", "http://localhost:9283,https://auth.local:9283")
+	t.Setenv("DMANAGER_WEBAUTHN_REQUIRE_USER_VERIFICATION", "preferred")
 
 	cfg, err := Load("")
 	if err != nil {
@@ -137,6 +158,12 @@ func TestConfigEnvOverrides(t *testing.T) {
 	}
 	if cfg.Auth.BcryptCost != 13 {
 		t.Errorf("expected bcrypt_cost 13, got %d", cfg.Auth.BcryptCost)
+	}
+	if cfg.WebAuthn.RPID != "auth.local" {
+		t.Errorf("expected rp_id 'auth.local', got %q", cfg.WebAuthn.RPID)
+	}
+	if len(cfg.WebAuthn.Origins) != 2 || cfg.WebAuthn.Origins[0] != "http://localhost:9283" {
+		t.Errorf("unexpected origins: %v", cfg.WebAuthn.Origins)
 	}
 }
 
@@ -194,6 +221,21 @@ func TestConfigValidation(t *testing.T) {
 			name: "bcrypt cost too high",
 			mutate: func(c *Config) {
 				c.Auth.BcryptCost = 32
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid webauthn require_user_verification",
+			mutate: func(c *Config) {
+				c.WebAuthn.RequireUserVerification = "mandatory"
+			},
+			wantErr: true,
+		},
+		{
+			name: "webauthn rp_id set without origins",
+			mutate: func(c *Config) {
+				c.WebAuthn.RPID = "localhost"
+				c.WebAuthn.Origins = []string{}
 			},
 			wantErr: true,
 		},

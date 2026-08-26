@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { authClient, settingsClient } from "../client";
 import { ToastProvider } from "../context/ToastContext";
 import type {
+  GetServerStatusResponse,
   ListAuthEventsResponse,
+  ListPasskeysResponse,
   ListSessionsResponse,
   RevokeAllOtherSessionsResponse,
   RevokeSessionResponse,
@@ -14,6 +16,12 @@ import type {
 } from "../gen/proto/dmanager/v1/settings_pb";
 import { Settings } from "./Settings";
 
+// Mock @github/webauthn-json
+vi.mock("@github/webauthn-json", () => ({
+  create: vi.fn().mockResolvedValue({ id: "mock-cred-id", rawId: "mock-cred-id" }),
+  get: vi.fn().mockResolvedValue({ id: "mock-cred-id", rawId: "mock-cred-id" }),
+}));
+
 // Mock the clients
 vi.mock("../client", () => ({
   settingsClient: {
@@ -23,6 +31,12 @@ vi.mock("../client", () => ({
     getRegistryStatus: vi.fn(),
   },
   authClient: {
+    getServerStatus: vi.fn(),
+    listPasskeys: vi.fn(),
+    beginPasskeyRegistration: vi.fn(),
+    finishPasskeyRegistration: vi.fn(),
+    renamePasskey: vi.fn(),
+    deletePasskey: vi.fn(),
     listSessions: vi.fn(),
     revokeSession: vi.fn(),
     revokeAllOtherSessions: vi.fn(),
@@ -33,6 +47,33 @@ vi.mock("../client", () => ({
 describe("Settings Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+
+    vi.mocked(authClient.getServerStatus).mockResolvedValue({
+      needsSetup: false,
+      passkeyLoginEnabled: true,
+      rpId: "localhost",
+      origins: ["http://localhost:9283"],
+      $typeName: "dmanager.v1.GetServerStatusResponse",
+    } as unknown as GetServerStatusResponse);
+
+    vi.mocked(authClient.listPasskeys).mockResolvedValue({
+      passkeys: [
+        {
+          id: "cred-1",
+          name: "Work MacBook",
+          aaguid: "00000000",
+          friendlyDeviceName: "iCloud Keychain",
+          backupEligible: true,
+          backupState: true,
+          signCount: 1,
+          cloneWarning: false,
+          createdAt: { seconds: BigInt(1700000000), nanos: 0 },
+          lastUsedAt: { seconds: BigInt(1700000000), nanos: 0 },
+          $typeName: "dmanager.v1.Passkey",
+        },
+      ],
+      $typeName: "dmanager.v1.ListPasskeysResponse",
+    } as unknown as ListPasskeysResponse);
 
     vi.mocked(settingsClient.getSettings).mockResolvedValue({
       gotifyUrl: "https://gotify.example.com",
@@ -202,6 +243,56 @@ describe("Settings Component", () => {
 
     await waitFor(() => {
       expect(authClient.revokeAllOtherSessions).toHaveBeenCalled();
+    });
+  });
+
+  it("renders passkeys list with friendly name and synced badge", async () => {
+    render(
+      <ToastProvider>
+        <Settings />
+      </ToastProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /security & sessions/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /security & sessions/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Work MacBook")).toBeInTheDocument();
+      expect(screen.getByText("Model: iCloud Keychain")).toBeInTheDocument();
+      expect(screen.getByText("Synced Passkey")).toBeInTheDocument();
+    });
+  });
+
+  it("deletes a passkey successfully", async () => {
+    vi.mocked(authClient.deletePasskey).mockResolvedValue({
+      $typeName: "dmanager.v1.DeletePasskeyResponse",
+    });
+
+    render(
+      <ToastProvider>
+        <Settings />
+      </ToastProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /security & sessions/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /security & sessions/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Work MacBook")).toBeInTheDocument();
+    });
+
+    const deleteBtn = screen.getByRole("button", { name: /^Delete$/i });
+    fireEvent.click(deleteBtn);
+
+    await waitFor(() => {
+      expect(authClient.deletePasskey).toHaveBeenCalledWith({ id: "cred-1" });
+      expect(screen.queryByText("Work MacBook")).not.toBeInTheDocument();
     });
   });
 });

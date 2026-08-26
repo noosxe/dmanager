@@ -33,6 +33,19 @@ service AuthService {
 
   // Revoke all other active sessions for the authenticated user except the current one (Authenticated).
   rpc RevokeAllOtherSessions(RevokeAllOtherSessionsRequest) returns (RevokeAllOtherSessionsResponse);
+
+  // --- Passkey registration (Authenticated) ---
+  rpc BeginPasskeyRegistration(BeginPasskeyRegistrationRequest) returns (BeginPasskeyRegistrationResponse);
+  rpc FinishPasskeyRegistration(FinishPasskeyRegistrationRequest) returns (FinishPasskeyRegistrationResponse);
+
+  // --- Passkey login (Unauthenticated) ---
+  rpc BeginPasskeyLogin(BeginPasskeyLoginRequest) returns (BeginPasskeyLoginResponse);
+  rpc FinishPasskeyLogin(FinishPasskeyLoginRequest) returns (LoginResponse);
+
+  // --- Credential management (Authenticated) ---
+  rpc ListPasskeys(ListPasskeysRequest) returns (ListPasskeysResponse);
+  rpc RenamePasskey(RenamePasskeyRequest) returns (RenamePasskeyResponse);
+  rpc DeletePasskey(DeletePasskeyRequest) returns (DeletePasskeyResponse);
 }
 
 message GetServerStatusRequest {}
@@ -40,6 +53,12 @@ message GetServerStatusRequest {}
 message GetServerStatusResponse {
   // Returns true if no users exist in the database, triggering onboarding.
   bool needs_setup = 1;
+  // Returns true if WebAuthn / Passkeys Relying Party is configured and usable.
+  bool passkey_login_enabled = 2;
+  // Effective Relying Party ID.
+  string rp_id = 3;
+  // Effective Allowed Origins.
+  repeated string origins = 4;
 }
 
 message SetupAdminRequest {
@@ -123,3 +142,71 @@ message RevokeAllOtherSessionsRequest {}
 message RevokeAllOtherSessionsResponse {
   int64 revoked_count = 1;
 }
+
+message BeginPasskeyRegistrationRequest {
+  string name = 1;
+}
+
+message BeginPasskeyRegistrationResponse {
+  // JSON-encoded PublicKeyCredentialCreationOptions for @github/webauthn-json
+  string options_json = 1;
+}
+
+message FinishPasskeyRegistrationRequest {
+  // User-provided friendly name for this passkey
+  string name = 1;
+  // JSON-encoded RegistrationResponseJSON from @github/webauthn-json
+  string response_json = 2;
+}
+
+message FinishPasskeyRegistrationResponse {
+  Passkey passkey = 1;
+}
+
+message BeginPasskeyLoginRequest {}
+
+message BeginPasskeyLoginResponse {
+  // JSON-encoded PublicKeyCredentialRequestOptions for @github/webauthn-json (empty allow_credentials)
+  string options_json = 1;
+}
+
+message FinishPasskeyLoginRequest {
+  // JSON-encoded AuthenticationResponseJSON from @github/webauthn-json
+  string response_json = 1;
+  bool remember_me = 2;
+}
+
+message Passkey {
+  string id = 1;
+  string name = 2;
+  string aaguid = 3;
+  string friendly_device_name = 4;
+  bool backup_eligible = 5;
+  bool backup_state = 6;
+  int32 sign_count = 7;
+  bool clone_warning = 8;
+  google.protobuf.Timestamp created_at = 9;
+  optional google.protobuf.Timestamp last_used_at = 10;
+}
+
+message ListPasskeysRequest {}
+
+message ListPasskeysResponse {
+  repeated Passkey passkeys = 1;
+}
+
+message RenamePasskeyRequest {
+  string id = 1;
+  string name = 2;
+}
+
+message RenamePasskeyResponse {
+  Passkey passkey = 1;
+}
+
+message DeletePasskeyRequest {
+  string id = 1;
+}
+
+message DeletePasskeyResponse {}
+

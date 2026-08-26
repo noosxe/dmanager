@@ -148,4 +148,62 @@ describe("Login Component", () => {
       ).toBeInTheDocument();
     });
   });
+
+  it("renders passkey button when passkeyLoginEnabled is true", () => {
+    const loginWithPasskeyMock = vi.fn();
+    vi.mocked(useAuth).mockReturnValue({
+      login: loginMock,
+      loginWithPasskey: loginWithPasskeyMock,
+      passkeyLoginEnabled: true,
+    } as unknown as ReturnType<typeof useAuth>);
+
+    render(<Login />);
+    expect(screen.getByRole("button", { name: /sign in with passkey/i })).toBeInTheDocument();
+  });
+
+  it("does not render passkey button when passkeyLoginEnabled is false", () => {
+    const loginWithPasskeyMock = vi.fn();
+    vi.mocked(useAuth).mockReturnValue({
+      login: loginMock,
+      loginWithPasskey: loginWithPasskeyMock,
+      passkeyLoginEnabled: false,
+    } as unknown as ReturnType<typeof useAuth>);
+
+    render(<Login />);
+    expect(screen.queryByRole("button", { name: /sign in with passkey/i })).not.toBeInTheDocument();
+  });
+
+  it("triggers loginWithPasskey when clicking passkey button", async () => {
+    const loginWithPasskeyMock = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(useAuth).mockReturnValue({
+      login: loginMock,
+      loginWithPasskey: loginWithPasskeyMock,
+      passkeyLoginEnabled: true,
+    } as unknown as ReturnType<typeof useAuth>);
+
+    render(<Login />);
+    const passkeyBtn = screen.getByRole("button", { name: /sign in with passkey/i });
+    fireEvent.click(passkeyBtn);
+
+    await waitFor(() => {
+      expect(loginWithPasskeyMock).toHaveBeenCalledWith(false);
+    });
+  });
+
+  it("handles passkey login error by displaying error banner", async () => {
+    const loginWithPasskeyMock = vi.fn().mockRejectedValue(new Error("Passkey cancelled by user"));
+    vi.mocked(useAuth).mockReturnValue({
+      login: loginMock,
+      loginWithPasskey: loginWithPasskeyMock,
+      passkeyLoginEnabled: true,
+    } as unknown as ReturnType<typeof useAuth>);
+
+    render(<Login />);
+    const passkeyBtn = screen.getByRole("button", { name: /sign in with passkey/i });
+    fireEvent.click(passkeyBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText("Passkey cancelled by user")).toBeInTheDocument();
+    });
+  });
 });

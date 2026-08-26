@@ -75,13 +75,31 @@ func TestMigrationBackfillAndRollback(t *testing.T) {
 		t.Fatalf("failed to query auth_events: %v", err)
 	}
 
-	// 5. Test rollback (Down to version 2)
+	// 5. Run migration 5 (00005_webauthn.sql)
+	err = goose.UpTo(dbConn, "migrations", 5)
+	if err != nil {
+		t.Fatalf("failed to run migration 5: %v", err)
+	}
+
+	// Verify webauthn tables exist
+	var credsCount int
+	err = dbConn.QueryRow(`SELECT COUNT(*) FROM webauthn_credentials`).Scan(&credsCount)
+	if err != nil {
+		t.Fatalf("failed to query webauthn_credentials: %v", err)
+	}
+	var challengesCount int
+	err = dbConn.QueryRow(`SELECT COUNT(*) FROM webauthn_challenges`).Scan(&challengesCount)
+	if err != nil {
+		t.Fatalf("failed to query webauthn_challenges: %v", err)
+	}
+
+	// 6. Test rollback (Down to version 2)
 	err = goose.DownTo(dbConn, "migrations", 2)
 	if err != nil {
 		t.Fatalf("failed to rollback migrations down to version 2: %v", err)
 	}
 
-	// Verify columns were dropped
+	// Verify columns and tables were dropped
 	var colCount int
 	err = dbConn.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('sessions') WHERE name IN ('last_seen_at', 'absolute_expires_at', 'user_agent')`).Scan(&colCount)
 	if err != nil {
@@ -91,7 +109,7 @@ func TestMigrationBackfillAndRollback(t *testing.T) {
 		t.Errorf("expected 0 new columns after rollback, found %d", colCount)
 	}
 
-	// 6. Migrate up completely again
+	// 7. Migrate up completely again
 	err = goose.Up(dbConn, "migrations")
 	if err != nil {
 		t.Fatalf("failed to re-run migrations up: %v", err)
