@@ -143,3 +143,68 @@ func TestStartPurgeJobCancellation(t *testing.T) {
 		t.Errorf("purge job continued running after cancel: before=%d, after=%d", countBefore, countAfter)
 	}
 }
+
+func TestAuthEventsPurgeJob(t *testing.T) {
+	queries := newTestDB(t)
+	ctx := context.Background()
+
+	const eventLoginSuccess = "login_success"
+
+	// 1. Create a recent event
+	_, err := queries.CreateAuthEvent(ctx, db.CreateAuthEventParams{
+		Username: "user1",
+		Event:    eventLoginSuccess,
+		Detail:   "ip: 127.0.0.1",
+	})
+	if err != nil {
+		t.Fatalf("failed to create recent event: %v", err)
+	}
+
+	// 2. Create an event
+	_, err = queries.CreateAuthEvent(ctx, db.CreateAuthEventParams{
+		Username: "user2",
+		Event:    "login_failed",
+		Detail:   "ip: 10.0.0.1",
+	})
+	if err != nil {
+		t.Fatalf("failed to create old event: %v", err)
+	}
+
+	// Count should be 2
+	count, err := queries.CountAuthEvents(ctx)
+	if err != nil {
+		t.Fatalf("failed to count events: %v", err)
+	}
+	if count != 2 {
+		t.Errorf("expected 2 events before purge, got %d", count)
+	}
+
+	// Purge with 90-day retention does not delete recent events (created just now)
+	purgeFn := AuthEventsPurgeFunc(queries, 90*24*time.Hour)
+	err = purgeFn(ctx)
+	if err != nil {
+		t.Fatalf("purge failed: %v", err)
+	}
+
+	count, err = queries.CountAuthEvents(ctx)
+	if err != nil {
+		t.Fatalf("failed to count events: %v", err)
+	}
+	if count != 2 {
+		t.Errorf("expected 2 events to survive 90-day purge, got %d", count)
+	}
+
+	// Purge with future cutoff timestamp removes everything
+	err = queries.PurgeExpiredAuthEvents(ctx, time.Now().Add(time.Hour))
+	if err != nil {
+		t.Fatalf("purge with future cutoff failed: %v", err)
+	}
+
+	count, err = queries.CountAuthEvents(ctx)
+	if err != nil {
+		t.Fatalf("failed to count events: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("expected 0 events after full purge, got %d", count)
+	}
+}

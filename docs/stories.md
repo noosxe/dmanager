@@ -1012,7 +1012,7 @@ graph TD
 
 ---
 
-### STORY-049: Auth Audit Trail Schema, Event Writes, and ListAuthEvents RPC
+### STORY-049: Auth Audit Trail Schema, Event Writes, and ListAuthEvents RPC (DONE)
 - **Scope:** Database Schema, Audit Logging, and ListAuthEvents RPC
 - **Estimated Size:** Medium (~250 LOC)
 - **Dependencies:** `STORY-044`, `STORY-045`
@@ -1039,7 +1039,7 @@ graph TD
 
 ---
 
-### STORY-050: Session Management RPCs, Device Identification & Settings Security Tab
+### STORY-050: Session Management RPCs, Device Identification & Settings Security Tab (DONE)
 - **Scope:** Session Management RPCs, Device Identification & Settings UI
 - **Estimated Size:** Medium (~350 LOC)
 - **Dependencies:** `STORY-049`

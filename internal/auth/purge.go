@@ -22,6 +22,17 @@ func SessionPurgeFunc(queries *db.Queries) PurgeFunc {
 	}
 }
 
+// AuthEventsPurgeFunc returns a PurgeFunc that purges auth events older than the retention period (default: 90 days).
+func AuthEventsPurgeFunc(queries *db.Queries, retention time.Duration) PurgeFunc {
+	if retention <= 0 {
+		retention = 90 * 24 * time.Hour
+	}
+	return func(ctx context.Context) error {
+		cutoff := time.Now().Add(-retention)
+		return queries.PurgeExpiredAuthEvents(ctx, cutoff)
+	}
+}
+
 // StartPurgeJob starts a background goroutine that periodically executes the given purge functions.
 // It stops when ctx is cancelled.
 func StartPurgeJob(ctx context.Context, logger *slog.Logger, interval time.Duration, purgeFuncs ...PurgeFunc) {

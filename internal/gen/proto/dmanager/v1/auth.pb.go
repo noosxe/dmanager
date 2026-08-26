@@ -9,6 +9,7 @@ package dmanagerv1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -486,11 +487,547 @@ func (x *GetMeResponse) GetRole() string {
 	return ""
 }
 
+type AuthEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	UserId        *int64                 `protobuf:"varint,2,opt,name=user_id,json=userId,proto3,oneof" json:"user_id,omitempty"`
+	Username      string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
+	EventType     string                 `protobuf:"bytes,4,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"`
+	Detail        string                 `protobuf:"bytes,5,opt,name=detail,proto3" json:"detail,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuthEvent) Reset() {
+	*x = AuthEvent{}
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuthEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuthEvent) ProtoMessage() {}
+
+func (x *AuthEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuthEvent.ProtoReflect.Descriptor instead.
+func (*AuthEvent) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_auth_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *AuthEvent) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *AuthEvent) GetUserId() int64 {
+	if x != nil && x.UserId != nil {
+		return *x.UserId
+	}
+	return 0
+}
+
+func (x *AuthEvent) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *AuthEvent) GetEventType() string {
+	if x != nil {
+		return x.EventType
+	}
+	return ""
+}
+
+func (x *AuthEvent) GetDetail() string {
+	if x != nil {
+		return x.Detail
+	}
+	return ""
+}
+
+func (x *AuthEvent) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+type ListAuthEventsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Limit         int32                  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	Offset        int32                  `protobuf:"varint,2,opt,name=offset,proto3" json:"offset,omitempty"`
+	EventType     string                 `protobuf:"bytes,3,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAuthEventsRequest) Reset() {
+	*x = ListAuthEventsRequest{}
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAuthEventsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAuthEventsRequest) ProtoMessage() {}
+
+func (x *ListAuthEventsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAuthEventsRequest.ProtoReflect.Descriptor instead.
+func (*ListAuthEventsRequest) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_auth_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *ListAuthEventsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListAuthEventsRequest) GetOffset() int32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+func (x *ListAuthEventsRequest) GetEventType() string {
+	if x != nil {
+		return x.EventType
+	}
+	return ""
+}
+
+type ListAuthEventsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Events        []*AuthEvent           `protobuf:"bytes,1,rep,name=events,proto3" json:"events,omitempty"`
+	TotalCount    int64                  `protobuf:"varint,2,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAuthEventsResponse) Reset() {
+	*x = ListAuthEventsResponse{}
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAuthEventsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAuthEventsResponse) ProtoMessage() {}
+
+func (x *ListAuthEventsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAuthEventsResponse.ProtoReflect.Descriptor instead.
+func (*ListAuthEventsResponse) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_auth_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *ListAuthEventsResponse) GetEvents() []*AuthEvent {
+	if x != nil {
+		return x.Events
+	}
+	return nil
+}
+
+func (x *ListAuthEventsResponse) GetTotalCount() int64 {
+	if x != nil {
+		return x.TotalCount
+	}
+	return 0
+}
+
+type Session struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	SessionId         string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	UserAgent         string                 `protobuf:"bytes,2,opt,name=user_agent,json=userAgent,proto3" json:"user_agent,omitempty"`
+	DeviceLabel       string                 `protobuf:"bytes,3,opt,name=device_label,json=deviceLabel,proto3" json:"device_label,omitempty"`
+	CreatedAt         *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	LastSeenAt        *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=last_seen_at,json=lastSeenAt,proto3" json:"last_seen_at,omitempty"`
+	ExpiresAt         *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	AbsoluteExpiresAt *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=absolute_expires_at,json=absoluteExpiresAt,proto3" json:"absolute_expires_at,omitempty"`
+	IsCurrent         bool                   `protobuf:"varint,8,opt,name=is_current,json=isCurrent,proto3" json:"is_current,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *Session) Reset() {
+	*x = Session{}
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Session) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Session) ProtoMessage() {}
+
+func (x *Session) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Session.ProtoReflect.Descriptor instead.
+func (*Session) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_auth_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *Session) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *Session) GetUserAgent() string {
+	if x != nil {
+		return x.UserAgent
+	}
+	return ""
+}
+
+func (x *Session) GetDeviceLabel() string {
+	if x != nil {
+		return x.DeviceLabel
+	}
+	return ""
+}
+
+func (x *Session) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *Session) GetLastSeenAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.LastSeenAt
+	}
+	return nil
+}
+
+func (x *Session) GetExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return nil
+}
+
+func (x *Session) GetAbsoluteExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.AbsoluteExpiresAt
+	}
+	return nil
+}
+
+func (x *Session) GetIsCurrent() bool {
+	if x != nil {
+		return x.IsCurrent
+	}
+	return false
+}
+
+type ListSessionsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSessionsRequest) Reset() {
+	*x = ListSessionsRequest{}
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSessionsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSessionsRequest) ProtoMessage() {}
+
+func (x *ListSessionsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSessionsRequest.ProtoReflect.Descriptor instead.
+func (*ListSessionsRequest) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_auth_proto_rawDescGZIP(), []int{14}
+}
+
+type ListSessionsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Sessions      []*Session             `protobuf:"bytes,1,rep,name=sessions,proto3" json:"sessions,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSessionsResponse) Reset() {
+	*x = ListSessionsResponse{}
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSessionsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSessionsResponse) ProtoMessage() {}
+
+func (x *ListSessionsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSessionsResponse.ProtoReflect.Descriptor instead.
+func (*ListSessionsResponse) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_auth_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *ListSessionsResponse) GetSessions() []*Session {
+	if x != nil {
+		return x.Sessions
+	}
+	return nil
+}
+
+type RevokeSessionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RevokeSessionRequest) Reset() {
+	*x = RevokeSessionRequest{}
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RevokeSessionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RevokeSessionRequest) ProtoMessage() {}
+
+func (x *RevokeSessionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RevokeSessionRequest.ProtoReflect.Descriptor instead.
+func (*RevokeSessionRequest) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_auth_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *RevokeSessionRequest) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+type RevokeSessionResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RevokeSessionResponse) Reset() {
+	*x = RevokeSessionResponse{}
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RevokeSessionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RevokeSessionResponse) ProtoMessage() {}
+
+func (x *RevokeSessionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RevokeSessionResponse.ProtoReflect.Descriptor instead.
+func (*RevokeSessionResponse) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_auth_proto_rawDescGZIP(), []int{17}
+}
+
+type RevokeAllOtherSessionsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RevokeAllOtherSessionsRequest) Reset() {
+	*x = RevokeAllOtherSessionsRequest{}
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RevokeAllOtherSessionsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RevokeAllOtherSessionsRequest) ProtoMessage() {}
+
+func (x *RevokeAllOtherSessionsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RevokeAllOtherSessionsRequest.ProtoReflect.Descriptor instead.
+func (*RevokeAllOtherSessionsRequest) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_auth_proto_rawDescGZIP(), []int{18}
+}
+
+type RevokeAllOtherSessionsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RevokedCount  int64                  `protobuf:"varint,1,opt,name=revoked_count,json=revokedCount,proto3" json:"revoked_count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RevokeAllOtherSessionsResponse) Reset() {
+	*x = RevokeAllOtherSessionsResponse{}
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RevokeAllOtherSessionsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RevokeAllOtherSessionsResponse) ProtoMessage() {}
+
+func (x *RevokeAllOtherSessionsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RevokeAllOtherSessionsResponse.ProtoReflect.Descriptor instead.
+func (*RevokeAllOtherSessionsResponse) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_auth_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *RevokeAllOtherSessionsResponse) GetRevokedCount() int64 {
+	if x != nil {
+		return x.RevokedCount
+	}
+	return 0
+}
+
 var File_proto_dmanager_v1_auth_proto protoreflect.FileDescriptor
 
 const file_proto_dmanager_v1_auth_proto_rawDesc = "" +
 	"\n" +
-	"\x1cproto/dmanager/v1/auth.proto\x12\vdmanager.v1\"\x18\n" +
+	"\x1cproto/dmanager/v1/auth.proto\x12\vdmanager.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x18\n" +
 	"\x16GetServerStatusRequest\":\n" +
 	"\x17GetServerStatusResponse\x12\x1f\n" +
 	"\vneeds_setup\x18\x01 \x01(\bR\n" +
@@ -515,14 +1052,63 @@ const file_proto_dmanager_v1_auth_proto_rawDesc = "" +
 	"\rGetMeResponse\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\x03R\x06userId\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12\x12\n" +
-	"\x04role\x18\x03 \x01(\tR\x04role2\xfd\x02\n" +
+	"\x04role\x18\x03 \x01(\tR\x04role\"\xd3\x01\n" +
+	"\tAuthEvent\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x1c\n" +
+	"\auser_id\x18\x02 \x01(\x03H\x00R\x06userId\x88\x01\x01\x12\x1a\n" +
+	"\busername\x18\x03 \x01(\tR\busername\x12\x1d\n" +
+	"\n" +
+	"event_type\x18\x04 \x01(\tR\teventType\x12\x16\n" +
+	"\x06detail\x18\x05 \x01(\tR\x06detail\x129\n" +
+	"\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAtB\n" +
+	"\n" +
+	"\b_user_id\"d\n" +
+	"\x15ListAuthEventsRequest\x12\x14\n" +
+	"\x05limit\x18\x01 \x01(\x05R\x05limit\x12\x16\n" +
+	"\x06offset\x18\x02 \x01(\x05R\x06offset\x12\x1d\n" +
+	"\n" +
+	"event_type\x18\x03 \x01(\tR\teventType\"i\n" +
+	"\x16ListAuthEventsResponse\x12.\n" +
+	"\x06events\x18\x01 \x03(\v2\x16.dmanager.v1.AuthEventR\x06events\x12\x1f\n" +
+	"\vtotal_count\x18\x02 \x01(\x03R\n" +
+	"totalCount\"\x89\x03\n" +
+	"\aSession\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1d\n" +
+	"\n" +
+	"user_agent\x18\x02 \x01(\tR\tuserAgent\x12!\n" +
+	"\fdevice_label\x18\x03 \x01(\tR\vdeviceLabel\x129\n" +
+	"\n" +
+	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12<\n" +
+	"\flast_seen_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"lastSeenAt\x129\n" +
+	"\n" +
+	"expires_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x12J\n" +
+	"\x13absolute_expires_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\x11absoluteExpiresAt\x12\x1d\n" +
+	"\n" +
+	"is_current\x18\b \x01(\bR\tisCurrent\"\x15\n" +
+	"\x13ListSessionsRequest\"H\n" +
+	"\x14ListSessionsResponse\x120\n" +
+	"\bsessions\x18\x01 \x03(\v2\x14.dmanager.v1.SessionR\bsessions\"5\n" +
+	"\x14RevokeSessionRequest\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\"\x17\n" +
+	"\x15RevokeSessionResponse\"\x1f\n" +
+	"\x1dRevokeAllOtherSessionsRequest\"E\n" +
+	"\x1eRevokeAllOtherSessionsResponse\x12#\n" +
+	"\rrevoked_count\x18\x01 \x01(\x03R\frevokedCount2\xf8\x05\n" +
 	"\vAuthService\x12\\\n" +
 	"\x0fGetServerStatus\x12#.dmanager.v1.GetServerStatusRequest\x1a$.dmanager.v1.GetServerStatusResponse\x12M\n" +
 	"\n" +
 	"SetupAdmin\x12\x1e.dmanager.v1.SetupAdminRequest\x1a\x1f.dmanager.v1.SetupAdminResponse\x12>\n" +
 	"\x05Login\x12\x19.dmanager.v1.LoginRequest\x1a\x1a.dmanager.v1.LoginResponse\x12A\n" +
 	"\x06Logout\x12\x1a.dmanager.v1.LogoutRequest\x1a\x1b.dmanager.v1.LogoutResponse\x12>\n" +
-	"\x05GetMe\x12\x19.dmanager.v1.GetMeRequest\x1a\x1a.dmanager.v1.GetMeResponseB4Z2dmanager/internal/gen/proto/dmanager/v1;dmanagerv1b\x06proto3"
+	"\x05GetMe\x12\x19.dmanager.v1.GetMeRequest\x1a\x1a.dmanager.v1.GetMeResponse\x12Y\n" +
+	"\x0eListAuthEvents\x12\".dmanager.v1.ListAuthEventsRequest\x1a#.dmanager.v1.ListAuthEventsResponse\x12S\n" +
+	"\fListSessions\x12 .dmanager.v1.ListSessionsRequest\x1a!.dmanager.v1.ListSessionsResponse\x12V\n" +
+	"\rRevokeSession\x12!.dmanager.v1.RevokeSessionRequest\x1a\".dmanager.v1.RevokeSessionResponse\x12q\n" +
+	"\x16RevokeAllOtherSessions\x12*.dmanager.v1.RevokeAllOtherSessionsRequest\x1a+.dmanager.v1.RevokeAllOtherSessionsResponseB4Z2dmanager/internal/gen/proto/dmanager/v1;dmanagerv1b\x06proto3"
 
 var (
 	file_proto_dmanager_v1_auth_proto_rawDescOnce sync.Once
@@ -536,35 +1122,61 @@ func file_proto_dmanager_v1_auth_proto_rawDescGZIP() []byte {
 	return file_proto_dmanager_v1_auth_proto_rawDescData
 }
 
-var file_proto_dmanager_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_proto_dmanager_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_proto_dmanager_v1_auth_proto_goTypes = []any{
-	(*GetServerStatusRequest)(nil),  // 0: dmanager.v1.GetServerStatusRequest
-	(*GetServerStatusResponse)(nil), // 1: dmanager.v1.GetServerStatusResponse
-	(*SetupAdminRequest)(nil),       // 2: dmanager.v1.SetupAdminRequest
-	(*SetupAdminResponse)(nil),      // 3: dmanager.v1.SetupAdminResponse
-	(*LoginRequest)(nil),            // 4: dmanager.v1.LoginRequest
-	(*LoginResponse)(nil),           // 5: dmanager.v1.LoginResponse
-	(*LogoutRequest)(nil),           // 6: dmanager.v1.LogoutRequest
-	(*LogoutResponse)(nil),          // 7: dmanager.v1.LogoutResponse
-	(*GetMeRequest)(nil),            // 8: dmanager.v1.GetMeRequest
-	(*GetMeResponse)(nil),           // 9: dmanager.v1.GetMeResponse
+	(*GetServerStatusRequest)(nil),         // 0: dmanager.v1.GetServerStatusRequest
+	(*GetServerStatusResponse)(nil),        // 1: dmanager.v1.GetServerStatusResponse
+	(*SetupAdminRequest)(nil),              // 2: dmanager.v1.SetupAdminRequest
+	(*SetupAdminResponse)(nil),             // 3: dmanager.v1.SetupAdminResponse
+	(*LoginRequest)(nil),                   // 4: dmanager.v1.LoginRequest
+	(*LoginResponse)(nil),                  // 5: dmanager.v1.LoginResponse
+	(*LogoutRequest)(nil),                  // 6: dmanager.v1.LogoutRequest
+	(*LogoutResponse)(nil),                 // 7: dmanager.v1.LogoutResponse
+	(*GetMeRequest)(nil),                   // 8: dmanager.v1.GetMeRequest
+	(*GetMeResponse)(nil),                  // 9: dmanager.v1.GetMeResponse
+	(*AuthEvent)(nil),                      // 10: dmanager.v1.AuthEvent
+	(*ListAuthEventsRequest)(nil),          // 11: dmanager.v1.ListAuthEventsRequest
+	(*ListAuthEventsResponse)(nil),         // 12: dmanager.v1.ListAuthEventsResponse
+	(*Session)(nil),                        // 13: dmanager.v1.Session
+	(*ListSessionsRequest)(nil),            // 14: dmanager.v1.ListSessionsRequest
+	(*ListSessionsResponse)(nil),           // 15: dmanager.v1.ListSessionsResponse
+	(*RevokeSessionRequest)(nil),           // 16: dmanager.v1.RevokeSessionRequest
+	(*RevokeSessionResponse)(nil),          // 17: dmanager.v1.RevokeSessionResponse
+	(*RevokeAllOtherSessionsRequest)(nil),  // 18: dmanager.v1.RevokeAllOtherSessionsRequest
+	(*RevokeAllOtherSessionsResponse)(nil), // 19: dmanager.v1.RevokeAllOtherSessionsResponse
+	(*timestamppb.Timestamp)(nil),          // 20: google.protobuf.Timestamp
 }
 var file_proto_dmanager_v1_auth_proto_depIdxs = []int32{
-	0, // 0: dmanager.v1.AuthService.GetServerStatus:input_type -> dmanager.v1.GetServerStatusRequest
-	2, // 1: dmanager.v1.AuthService.SetupAdmin:input_type -> dmanager.v1.SetupAdminRequest
-	4, // 2: dmanager.v1.AuthService.Login:input_type -> dmanager.v1.LoginRequest
-	6, // 3: dmanager.v1.AuthService.Logout:input_type -> dmanager.v1.LogoutRequest
-	8, // 4: dmanager.v1.AuthService.GetMe:input_type -> dmanager.v1.GetMeRequest
-	1, // 5: dmanager.v1.AuthService.GetServerStatus:output_type -> dmanager.v1.GetServerStatusResponse
-	3, // 6: dmanager.v1.AuthService.SetupAdmin:output_type -> dmanager.v1.SetupAdminResponse
-	5, // 7: dmanager.v1.AuthService.Login:output_type -> dmanager.v1.LoginResponse
-	7, // 8: dmanager.v1.AuthService.Logout:output_type -> dmanager.v1.LogoutResponse
-	9, // 9: dmanager.v1.AuthService.GetMe:output_type -> dmanager.v1.GetMeResponse
-	5, // [5:10] is the sub-list for method output_type
-	0, // [0:5] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	20, // 0: dmanager.v1.AuthEvent.created_at:type_name -> google.protobuf.Timestamp
+	10, // 1: dmanager.v1.ListAuthEventsResponse.events:type_name -> dmanager.v1.AuthEvent
+	20, // 2: dmanager.v1.Session.created_at:type_name -> google.protobuf.Timestamp
+	20, // 3: dmanager.v1.Session.last_seen_at:type_name -> google.protobuf.Timestamp
+	20, // 4: dmanager.v1.Session.expires_at:type_name -> google.protobuf.Timestamp
+	20, // 5: dmanager.v1.Session.absolute_expires_at:type_name -> google.protobuf.Timestamp
+	13, // 6: dmanager.v1.ListSessionsResponse.sessions:type_name -> dmanager.v1.Session
+	0,  // 7: dmanager.v1.AuthService.GetServerStatus:input_type -> dmanager.v1.GetServerStatusRequest
+	2,  // 8: dmanager.v1.AuthService.SetupAdmin:input_type -> dmanager.v1.SetupAdminRequest
+	4,  // 9: dmanager.v1.AuthService.Login:input_type -> dmanager.v1.LoginRequest
+	6,  // 10: dmanager.v1.AuthService.Logout:input_type -> dmanager.v1.LogoutRequest
+	8,  // 11: dmanager.v1.AuthService.GetMe:input_type -> dmanager.v1.GetMeRequest
+	11, // 12: dmanager.v1.AuthService.ListAuthEvents:input_type -> dmanager.v1.ListAuthEventsRequest
+	14, // 13: dmanager.v1.AuthService.ListSessions:input_type -> dmanager.v1.ListSessionsRequest
+	16, // 14: dmanager.v1.AuthService.RevokeSession:input_type -> dmanager.v1.RevokeSessionRequest
+	18, // 15: dmanager.v1.AuthService.RevokeAllOtherSessions:input_type -> dmanager.v1.RevokeAllOtherSessionsRequest
+	1,  // 16: dmanager.v1.AuthService.GetServerStatus:output_type -> dmanager.v1.GetServerStatusResponse
+	3,  // 17: dmanager.v1.AuthService.SetupAdmin:output_type -> dmanager.v1.SetupAdminResponse
+	5,  // 18: dmanager.v1.AuthService.Login:output_type -> dmanager.v1.LoginResponse
+	7,  // 19: dmanager.v1.AuthService.Logout:output_type -> dmanager.v1.LogoutResponse
+	9,  // 20: dmanager.v1.AuthService.GetMe:output_type -> dmanager.v1.GetMeResponse
+	12, // 21: dmanager.v1.AuthService.ListAuthEvents:output_type -> dmanager.v1.ListAuthEventsResponse
+	15, // 22: dmanager.v1.AuthService.ListSessions:output_type -> dmanager.v1.ListSessionsResponse
+	17, // 23: dmanager.v1.AuthService.RevokeSession:output_type -> dmanager.v1.RevokeSessionResponse
+	19, // 24: dmanager.v1.AuthService.RevokeAllOtherSessions:output_type -> dmanager.v1.RevokeAllOtherSessionsResponse
+	16, // [16:25] is the sub-list for method output_type
+	7,  // [7:16] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_proto_dmanager_v1_auth_proto_init() }
@@ -572,13 +1184,14 @@ func file_proto_dmanager_v1_auth_proto_init() {
 	if File_proto_dmanager_v1_auth_proto != nil {
 		return
 	}
+	file_proto_dmanager_v1_auth_proto_msgTypes[10].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_dmanager_v1_auth_proto_rawDesc), len(file_proto_dmanager_v1_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

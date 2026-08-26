@@ -4,13 +4,15 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file proto/dmanager/v1/auth.proto.
  */
 export const file_proto_dmanager_v1_auth: GenFile = /*@__PURE__*/
-  fileDesc("Chxwcm90by9kbWFuYWdlci92MS9hdXRoLnByb3RvEgtkbWFuYWdlci52MSIYChZHZXRTZXJ2ZXJTdGF0dXNSZXF1ZXN0Ii4KF0dldFNlcnZlclN0YXR1c1Jlc3BvbnNlEhMKC25lZWRzX3NldHVwGAEgASgIIjcKEVNldHVwQWRtaW5SZXF1ZXN0EhAKCHVzZXJuYW1lGAEgASgJEhAKCHBhc3N3b3JkGAIgASgJIjQKElNldHVwQWRtaW5SZXNwb25zZRIQCgh1c2VybmFtZRgBIAEoCRIMCgRyb2xlGAIgASgJIkcKDExvZ2luUmVxdWVzdBIQCgh1c2VybmFtZRgBIAEoCRIQCghwYXNzd29yZBgCIAEoCRITCgtyZW1lbWJlcl9tZRgDIAEoCCIvCg1Mb2dpblJlc3BvbnNlEhAKCHVzZXJuYW1lGAEgASgJEgwKBHJvbGUYAiABKAkiDwoNTG9nb3V0UmVxdWVzdCIQCg5Mb2dvdXRSZXNwb25zZSIOCgxHZXRNZVJlcXVlc3QiQAoNR2V0TWVSZXNwb25zZRIPCgd1c2VyX2lkGAEgASgDEhAKCHVzZXJuYW1lGAIgASgJEgwKBHJvbGUYAyABKAky/QIKC0F1dGhTZXJ2aWNlElwKD0dldFNlcnZlclN0YXR1cxIjLmRtYW5hZ2VyLnYxLkdldFNlcnZlclN0YXR1c1JlcXVlc3QaJC5kbWFuYWdlci52MS5HZXRTZXJ2ZXJTdGF0dXNSZXNwb25zZRJNCgpTZXR1cEFkbWluEh4uZG1hbmFnZXIudjEuU2V0dXBBZG1pblJlcXVlc3QaHy5kbWFuYWdlci52MS5TZXR1cEFkbWluUmVzcG9uc2USPgoFTG9naW4SGS5kbWFuYWdlci52MS5Mb2dpblJlcXVlc3QaGi5kbWFuYWdlci52MS5Mb2dpblJlc3BvbnNlEkEKBkxvZ291dBIaLmRtYW5hZ2VyLnYxLkxvZ291dFJlcXVlc3QaGy5kbWFuYWdlci52MS5Mb2dvdXRSZXNwb25zZRI+CgVHZXRNZRIZLmRtYW5hZ2VyLnYxLkdldE1lUmVxdWVzdBoaLmRtYW5hZ2VyLnYxLkdldE1lUmVzcG9uc2VCNFoyZG1hbmFnZXIvaW50ZXJuYWwvZ2VuL3Byb3RvL2RtYW5hZ2VyL3YxO2RtYW5hZ2VydjFiBnByb3RvMw");
+  fileDesc("Chxwcm90by9kbWFuYWdlci92MS9hdXRoLnByb3RvEgtkbWFuYWdlci52MSIYChZHZXRTZXJ2ZXJTdGF0dXNSZXF1ZXN0Ii4KF0dldFNlcnZlclN0YXR1c1Jlc3BvbnNlEhMKC25lZWRzX3NldHVwGAEgASgIIjcKEVNldHVwQWRtaW5SZXF1ZXN0EhAKCHVzZXJuYW1lGAEgASgJEhAKCHBhc3N3b3JkGAIgASgJIjQKElNldHVwQWRtaW5SZXNwb25zZRIQCgh1c2VybmFtZRgBIAEoCRIMCgRyb2xlGAIgASgJIkcKDExvZ2luUmVxdWVzdBIQCgh1c2VybmFtZRgBIAEoCRIQCghwYXNzd29yZBgCIAEoCRITCgtyZW1lbWJlcl9tZRgDIAEoCCIvCg1Mb2dpblJlc3BvbnNlEhAKCHVzZXJuYW1lGAEgASgJEgwKBHJvbGUYAiABKAkiDwoNTG9nb3V0UmVxdWVzdCIQCg5Mb2dvdXRSZXNwb25zZSIOCgxHZXRNZVJlcXVlc3QiQAoNR2V0TWVSZXNwb25zZRIPCgd1c2VyX2lkGAEgASgDEhAKCHVzZXJuYW1lGAIgASgJEgwKBHJvbGUYAyABKAkinwEKCUF1dGhFdmVudBIKCgJpZBgBIAEoAxIUCgd1c2VyX2lkGAIgASgDSACIAQESEAoIdXNlcm5hbWUYAyABKAkSEgoKZXZlbnRfdHlwZRgEIAEoCRIOCgZkZXRhaWwYBSABKAkSLgoKY3JlYXRlZF9hdBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCCgoIX3VzZXJfaWQiSgoVTGlzdEF1dGhFdmVudHNSZXF1ZXN0Eg0KBWxpbWl0GAEgASgFEg4KBm9mZnNldBgCIAEoBRISCgpldmVudF90eXBlGAMgASgJIlUKFkxpc3RBdXRoRXZlbnRzUmVzcG9uc2USJgoGZXZlbnRzGAEgAygLMhYuZG1hbmFnZXIudjEuQXV0aEV2ZW50EhMKC3RvdGFsX2NvdW50GAIgASgDIqYCCgdTZXNzaW9uEhIKCnNlc3Npb25faWQYASABKAkSEgoKdXNlcl9hZ2VudBgCIAEoCRIUCgxkZXZpY2VfbGFiZWwYAyABKAkSLgoKY3JlYXRlZF9hdBgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMAoMbGFzdF9zZWVuX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgpleHBpcmVzX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBI3ChNhYnNvbHV0ZV9leHBpcmVzX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBISCgppc19jdXJyZW50GAggASgIIhUKE0xpc3RTZXNzaW9uc1JlcXVlc3QiPgoUTGlzdFNlc3Npb25zUmVzcG9uc2USJgoIc2Vzc2lvbnMYASADKAsyFC5kbWFuYWdlci52MS5TZXNzaW9uIioKFFJldm9rZVNlc3Npb25SZXF1ZXN0EhIKCnNlc3Npb25faWQYASABKAkiFwoVUmV2b2tlU2Vzc2lvblJlc3BvbnNlIh8KHVJldm9rZUFsbE90aGVyU2Vzc2lvbnNSZXF1ZXN0IjcKHlJldm9rZUFsbE90aGVyU2Vzc2lvbnNSZXNwb25zZRIVCg1yZXZva2VkX2NvdW50GAEgASgDMvgFCgtBdXRoU2VydmljZRJcCg9HZXRTZXJ2ZXJTdGF0dXMSIy5kbWFuYWdlci52MS5HZXRTZXJ2ZXJTdGF0dXNSZXF1ZXN0GiQuZG1hbmFnZXIudjEuR2V0U2VydmVyU3RhdHVzUmVzcG9uc2USTQoKU2V0dXBBZG1pbhIeLmRtYW5hZ2VyLnYxLlNldHVwQWRtaW5SZXF1ZXN0Gh8uZG1hbmFnZXIudjEuU2V0dXBBZG1pblJlc3BvbnNlEj4KBUxvZ2luEhkuZG1hbmFnZXIudjEuTG9naW5SZXF1ZXN0GhouZG1hbmFnZXIudjEuTG9naW5SZXNwb25zZRJBCgZMb2dvdXQSGi5kbWFuYWdlci52MS5Mb2dvdXRSZXF1ZXN0GhsuZG1hbmFnZXIudjEuTG9nb3V0UmVzcG9uc2USPgoFR2V0TWUSGS5kbWFuYWdlci52MS5HZXRNZVJlcXVlc3QaGi5kbWFuYWdlci52MS5HZXRNZVJlc3BvbnNlElkKDkxpc3RBdXRoRXZlbnRzEiIuZG1hbmFnZXIudjEuTGlzdEF1dGhFdmVudHNSZXF1ZXN0GiMuZG1hbmFnZXIudjEuTGlzdEF1dGhFdmVudHNSZXNwb25zZRJTCgxMaXN0U2Vzc2lvbnMSIC5kbWFuYWdlci52MS5MaXN0U2Vzc2lvbnNSZXF1ZXN0GiEuZG1hbmFnZXIudjEuTGlzdFNlc3Npb25zUmVzcG9uc2USVgoNUmV2b2tlU2Vzc2lvbhIhLmRtYW5hZ2VyLnYxLlJldm9rZVNlc3Npb25SZXF1ZXN0GiIuZG1hbmFnZXIudjEuUmV2b2tlU2Vzc2lvblJlc3BvbnNlEnEKFlJldm9rZUFsbE90aGVyU2Vzc2lvbnMSKi5kbWFuYWdlci52MS5SZXZva2VBbGxPdGhlclNlc3Npb25zUmVxdWVzdBorLmRtYW5hZ2VyLnYxLlJldm9rZUFsbE90aGVyU2Vzc2lvbnNSZXNwb25zZUI0WjJkbWFuYWdlci9pbnRlcm5hbC9nZW4vcHJvdG8vZG1hbmFnZXIvdjE7ZG1hbmFnZXJ2MWIGcHJvdG8z", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message dmanager.v1.GetServerStatusRequest
@@ -204,6 +206,239 @@ export const GetMeResponseSchema: GenMessage<GetMeResponse> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_auth, 9);
 
 /**
+ * @generated from message dmanager.v1.AuthEvent
+ */
+export type AuthEvent = Message<"dmanager.v1.AuthEvent"> & {
+  /**
+   * @generated from field: int64 id = 1;
+   */
+  id: bigint;
+
+  /**
+   * @generated from field: optional int64 user_id = 2;
+   */
+  userId?: bigint | undefined;
+
+  /**
+   * @generated from field: string username = 3;
+   */
+  username: string;
+
+  /**
+   * @generated from field: string event_type = 4;
+   */
+  eventType: string;
+
+  /**
+   * @generated from field: string detail = 5;
+   */
+  detail: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 6;
+   */
+  createdAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message dmanager.v1.AuthEvent.
+ * Use `create(AuthEventSchema)` to create a new message.
+ */
+export const AuthEventSchema: GenMessage<AuthEvent> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_auth, 10);
+
+/**
+ * @generated from message dmanager.v1.ListAuthEventsRequest
+ */
+export type ListAuthEventsRequest = Message<"dmanager.v1.ListAuthEventsRequest"> & {
+  /**
+   * @generated from field: int32 limit = 1;
+   */
+  limit: number;
+
+  /**
+   * @generated from field: int32 offset = 2;
+   */
+  offset: number;
+
+  /**
+   * @generated from field: string event_type = 3;
+   */
+  eventType: string;
+};
+
+/**
+ * Describes the message dmanager.v1.ListAuthEventsRequest.
+ * Use `create(ListAuthEventsRequestSchema)` to create a new message.
+ */
+export const ListAuthEventsRequestSchema: GenMessage<ListAuthEventsRequest> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_auth, 11);
+
+/**
+ * @generated from message dmanager.v1.ListAuthEventsResponse
+ */
+export type ListAuthEventsResponse = Message<"dmanager.v1.ListAuthEventsResponse"> & {
+  /**
+   * @generated from field: repeated dmanager.v1.AuthEvent events = 1;
+   */
+  events: AuthEvent[];
+
+  /**
+   * @generated from field: int64 total_count = 2;
+   */
+  totalCount: bigint;
+};
+
+/**
+ * Describes the message dmanager.v1.ListAuthEventsResponse.
+ * Use `create(ListAuthEventsResponseSchema)` to create a new message.
+ */
+export const ListAuthEventsResponseSchema: GenMessage<ListAuthEventsResponse> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_auth, 12);
+
+/**
+ * @generated from message dmanager.v1.Session
+ */
+export type Session = Message<"dmanager.v1.Session"> & {
+  /**
+   * @generated from field: string session_id = 1;
+   */
+  sessionId: string;
+
+  /**
+   * @generated from field: string user_agent = 2;
+   */
+  userAgent: string;
+
+  /**
+   * @generated from field: string device_label = 3;
+   */
+  deviceLabel: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 4;
+   */
+  createdAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp last_seen_at = 5;
+   */
+  lastSeenAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp expires_at = 6;
+   */
+  expiresAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp absolute_expires_at = 7;
+   */
+  absoluteExpiresAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: bool is_current = 8;
+   */
+  isCurrent: boolean;
+};
+
+/**
+ * Describes the message dmanager.v1.Session.
+ * Use `create(SessionSchema)` to create a new message.
+ */
+export const SessionSchema: GenMessage<Session> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_auth, 13);
+
+/**
+ * @generated from message dmanager.v1.ListSessionsRequest
+ */
+export type ListSessionsRequest = Message<"dmanager.v1.ListSessionsRequest"> & {
+};
+
+/**
+ * Describes the message dmanager.v1.ListSessionsRequest.
+ * Use `create(ListSessionsRequestSchema)` to create a new message.
+ */
+export const ListSessionsRequestSchema: GenMessage<ListSessionsRequest> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_auth, 14);
+
+/**
+ * @generated from message dmanager.v1.ListSessionsResponse
+ */
+export type ListSessionsResponse = Message<"dmanager.v1.ListSessionsResponse"> & {
+  /**
+   * @generated from field: repeated dmanager.v1.Session sessions = 1;
+   */
+  sessions: Session[];
+};
+
+/**
+ * Describes the message dmanager.v1.ListSessionsResponse.
+ * Use `create(ListSessionsResponseSchema)` to create a new message.
+ */
+export const ListSessionsResponseSchema: GenMessage<ListSessionsResponse> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_auth, 15);
+
+/**
+ * @generated from message dmanager.v1.RevokeSessionRequest
+ */
+export type RevokeSessionRequest = Message<"dmanager.v1.RevokeSessionRequest"> & {
+  /**
+   * @generated from field: string session_id = 1;
+   */
+  sessionId: string;
+};
+
+/**
+ * Describes the message dmanager.v1.RevokeSessionRequest.
+ * Use `create(RevokeSessionRequestSchema)` to create a new message.
+ */
+export const RevokeSessionRequestSchema: GenMessage<RevokeSessionRequest> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_auth, 16);
+
+/**
+ * @generated from message dmanager.v1.RevokeSessionResponse
+ */
+export type RevokeSessionResponse = Message<"dmanager.v1.RevokeSessionResponse"> & {
+};
+
+/**
+ * Describes the message dmanager.v1.RevokeSessionResponse.
+ * Use `create(RevokeSessionResponseSchema)` to create a new message.
+ */
+export const RevokeSessionResponseSchema: GenMessage<RevokeSessionResponse> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_auth, 17);
+
+/**
+ * @generated from message dmanager.v1.RevokeAllOtherSessionsRequest
+ */
+export type RevokeAllOtherSessionsRequest = Message<"dmanager.v1.RevokeAllOtherSessionsRequest"> & {
+};
+
+/**
+ * Describes the message dmanager.v1.RevokeAllOtherSessionsRequest.
+ * Use `create(RevokeAllOtherSessionsRequestSchema)` to create a new message.
+ */
+export const RevokeAllOtherSessionsRequestSchema: GenMessage<RevokeAllOtherSessionsRequest> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_auth, 18);
+
+/**
+ * @generated from message dmanager.v1.RevokeAllOtherSessionsResponse
+ */
+export type RevokeAllOtherSessionsResponse = Message<"dmanager.v1.RevokeAllOtherSessionsResponse"> & {
+  /**
+   * @generated from field: int64 revoked_count = 1;
+   */
+  revokedCount: bigint;
+};
+
+/**
+ * Describes the message dmanager.v1.RevokeAllOtherSessionsResponse.
+ * Use `create(RevokeAllOtherSessionsResponseSchema)` to create a new message.
+ */
+export const RevokeAllOtherSessionsResponseSchema: GenMessage<RevokeAllOtherSessionsResponse> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_auth, 19);
+
+/**
  * @generated from service dmanager.v1.AuthService
  */
 export const AuthService: GenService<{
@@ -256,6 +491,46 @@ export const AuthService: GenService<{
     methodKind: "unary";
     input: typeof GetMeRequestSchema;
     output: typeof GetMeResponseSchema;
+  },
+  /**
+   * List authentication audit events (Authenticated, viewers see own, admins see all).
+   *
+   * @generated from rpc dmanager.v1.AuthService.ListAuthEvents
+   */
+  listAuthEvents: {
+    methodKind: "unary";
+    input: typeof ListAuthEventsRequestSchema;
+    output: typeof ListAuthEventsResponseSchema;
+  },
+  /**
+   * List active sessions for the authenticated user (Authenticated).
+   *
+   * @generated from rpc dmanager.v1.AuthService.ListSessions
+   */
+  listSessions: {
+    methodKind: "unary";
+    input: typeof ListSessionsRequestSchema;
+    output: typeof ListSessionsResponseSchema;
+  },
+  /**
+   * Revoke a specific active session for the authenticated user (Authenticated).
+   *
+   * @generated from rpc dmanager.v1.AuthService.RevokeSession
+   */
+  revokeSession: {
+    methodKind: "unary";
+    input: typeof RevokeSessionRequestSchema;
+    output: typeof RevokeSessionResponseSchema;
+  },
+  /**
+   * Revoke all other active sessions for the authenticated user except the current one (Authenticated).
+   *
+   * @generated from rpc dmanager.v1.AuthService.RevokeAllOtherSessions
+   */
+  revokeAllOtherSessions: {
+    methodKind: "unary";
+    input: typeof RevokeAllOtherSessionsRequestSchema;
+    output: typeof RevokeAllOtherSessionsResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_proto_dmanager_v1_auth, 0);

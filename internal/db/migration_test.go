@@ -41,7 +41,7 @@ func TestMigrationBackfillAndRollback(t *testing.T) {
 	}
 
 	// 2. Run migration 3 (00003_session_clocks.sql)
-	err = goose.Up(dbConn, "migrations")
+	err = goose.UpTo(dbConn, "migrations", 3)
 	if err != nil {
 		t.Fatalf("failed to run migration 3: %v", err)
 	}
@@ -62,15 +62,28 @@ func TestMigrationBackfillAndRollback(t *testing.T) {
 		t.Errorf("expected last_seen_at to have default value, got %v", lastSeenAt)
 	}
 
-	// 4. Test rollback (Down to version 2)
-	err = goose.Down(dbConn, "migrations")
+	// 4. Run migration 4 (00004_auth_audit_and_sessions.sql)
+	err = goose.UpTo(dbConn, "migrations", 4)
 	if err != nil {
-		t.Fatalf("failed to rollback migration 3: %v", err)
+		t.Fatalf("failed to run migration 4: %v", err)
+	}
+
+	// Verify auth_events table and user_agent column exist
+	var authEventsCount int
+	err = dbConn.QueryRow(`SELECT COUNT(*) FROM auth_events`).Scan(&authEventsCount)
+	if err != nil {
+		t.Fatalf("failed to query auth_events: %v", err)
+	}
+
+	// 5. Test rollback (Down to version 2)
+	err = goose.DownTo(dbConn, "migrations", 2)
+	if err != nil {
+		t.Fatalf("failed to rollback migrations down to version 2: %v", err)
 	}
 
 	// Verify columns were dropped
 	var colCount int
-	err = dbConn.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('sessions') WHERE name IN ('last_seen_at', 'absolute_expires_at')`).Scan(&colCount)
+	err = dbConn.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('sessions') WHERE name IN ('last_seen_at', 'absolute_expires_at', 'user_agent')`).Scan(&colCount)
 	if err != nil {
 		t.Fatalf("failed to check pragma_table_info: %v", err)
 	}
@@ -78,7 +91,7 @@ func TestMigrationBackfillAndRollback(t *testing.T) {
 		t.Errorf("expected 0 new columns after rollback, found %d", colCount)
 	}
 
-	// 5. Migrate up again
+	// 6. Migrate up completely again
 	err = goose.Up(dbConn, "migrations")
 	if err != nil {
 		t.Fatalf("failed to re-run migrations up: %v", err)
