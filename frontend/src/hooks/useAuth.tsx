@@ -37,6 +37,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuth = async () => {
     try {
+      try {
+        const status = await authClient.getServerStatus({});
+        setNeedsSetup(status.needsSetup);
+        setPasskeyLoginEnabled(status.passkeyLoginEnabled);
+      } catch (statusErr) {
+        console.error("Failed to check server setup status:", statusErr);
+      }
+
       const response = await authClient.getMe({});
       if (response.username) {
         const loggedUser = { username: response.username, role: response.role };
@@ -58,15 +66,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsAuthenticated(false);
         localStorage.removeItem("dmanager_user");
         localStorage.removeItem("dmanager_token");
-
-        // Check if setup is needed and passkey status
-        try {
-          const status = await authClient.getServerStatus({});
-          setNeedsSetup(status.needsSetup);
-          setPasskeyLoginEnabled(status.passkeyLoginEnabled);
-        } catch (statusErr) {
-          console.error("Failed to check server setup status:", statusErr);
-        }
       } else {
         console.error("Failed to fetch user profiles:", error);
       }
@@ -161,9 +160,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setUser(null);
       setIsAuthenticated(false);
-      setNeedsSetup(false);
       localStorage.removeItem("dmanager_user");
       localStorage.removeItem("dmanager_token");
+      try {
+        const status = await authClient.getServerStatus({});
+        setNeedsSetup(status.needsSetup);
+        setPasskeyLoginEnabled(status.passkeyLoginEnabled);
+      } catch (statusErr) {
+        console.error("Failed to check server setup status on logout:", statusErr);
+      }
       setIsLoading(false);
     }
   };
