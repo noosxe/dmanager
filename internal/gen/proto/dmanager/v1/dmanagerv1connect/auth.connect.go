@@ -44,6 +44,18 @@ const (
 	AuthServiceLogoutProcedure = "/dmanager.v1.AuthService/Logout"
 	// AuthServiceGetMeProcedure is the fully-qualified name of the AuthService's GetMe RPC.
 	AuthServiceGetMeProcedure = "/dmanager.v1.AuthService/GetMe"
+	// AuthServiceListAuthEventsProcedure is the fully-qualified name of the AuthService's
+	// ListAuthEvents RPC.
+	AuthServiceListAuthEventsProcedure = "/dmanager.v1.AuthService/ListAuthEvents"
+	// AuthServiceListSessionsProcedure is the fully-qualified name of the AuthService's ListSessions
+	// RPC.
+	AuthServiceListSessionsProcedure = "/dmanager.v1.AuthService/ListSessions"
+	// AuthServiceRevokeSessionProcedure is the fully-qualified name of the AuthService's RevokeSession
+	// RPC.
+	AuthServiceRevokeSessionProcedure = "/dmanager.v1.AuthService/RevokeSession"
+	// AuthServiceRevokeAllOtherSessionsProcedure is the fully-qualified name of the AuthService's
+	// RevokeAllOtherSessions RPC.
+	AuthServiceRevokeAllOtherSessionsProcedure = "/dmanager.v1.AuthService/RevokeAllOtherSessions"
 )
 
 // AuthServiceClient is a client for the dmanager.v1.AuthService service.
@@ -58,6 +70,14 @@ type AuthServiceClient interface {
 	Logout(context.Context, *connect.Request[v1.LogoutRequest]) (*connect.Response[v1.LogoutResponse], error)
 	// Retrieve current active user profile details (Authenticated).
 	GetMe(context.Context, *connect.Request[v1.GetMeRequest]) (*connect.Response[v1.GetMeResponse], error)
+	// List authentication audit events (Authenticated, viewers see own, admins see all).
+	ListAuthEvents(context.Context, *connect.Request[v1.ListAuthEventsRequest]) (*connect.Response[v1.ListAuthEventsResponse], error)
+	// List active sessions for the authenticated user (Authenticated).
+	ListSessions(context.Context, *connect.Request[v1.ListSessionsRequest]) (*connect.Response[v1.ListSessionsResponse], error)
+	// Revoke a specific active session for the authenticated user (Authenticated).
+	RevokeSession(context.Context, *connect.Request[v1.RevokeSessionRequest]) (*connect.Response[v1.RevokeSessionResponse], error)
+	// Revoke all other active sessions for the authenticated user except the current one (Authenticated).
+	RevokeAllOtherSessions(context.Context, *connect.Request[v1.RevokeAllOtherSessionsRequest]) (*connect.Response[v1.RevokeAllOtherSessionsResponse], error)
 }
 
 // NewAuthServiceClient constructs a client for the dmanager.v1.AuthService service. By default, it
@@ -101,16 +121,44 @@ func NewAuthServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(authServiceMethods.ByName("GetMe")),
 			connect.WithClientOptions(opts...),
 		),
+		listAuthEvents: connect.NewClient[v1.ListAuthEventsRequest, v1.ListAuthEventsResponse](
+			httpClient,
+			baseURL+AuthServiceListAuthEventsProcedure,
+			connect.WithSchema(authServiceMethods.ByName("ListAuthEvents")),
+			connect.WithClientOptions(opts...),
+		),
+		listSessions: connect.NewClient[v1.ListSessionsRequest, v1.ListSessionsResponse](
+			httpClient,
+			baseURL+AuthServiceListSessionsProcedure,
+			connect.WithSchema(authServiceMethods.ByName("ListSessions")),
+			connect.WithClientOptions(opts...),
+		),
+		revokeSession: connect.NewClient[v1.RevokeSessionRequest, v1.RevokeSessionResponse](
+			httpClient,
+			baseURL+AuthServiceRevokeSessionProcedure,
+			connect.WithSchema(authServiceMethods.ByName("RevokeSession")),
+			connect.WithClientOptions(opts...),
+		),
+		revokeAllOtherSessions: connect.NewClient[v1.RevokeAllOtherSessionsRequest, v1.RevokeAllOtherSessionsResponse](
+			httpClient,
+			baseURL+AuthServiceRevokeAllOtherSessionsProcedure,
+			connect.WithSchema(authServiceMethods.ByName("RevokeAllOtherSessions")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // authServiceClient implements AuthServiceClient.
 type authServiceClient struct {
-	getServerStatus *connect.Client[v1.GetServerStatusRequest, v1.GetServerStatusResponse]
-	setupAdmin      *connect.Client[v1.SetupAdminRequest, v1.SetupAdminResponse]
-	login           *connect.Client[v1.LoginRequest, v1.LoginResponse]
-	logout          *connect.Client[v1.LogoutRequest, v1.LogoutResponse]
-	getMe           *connect.Client[v1.GetMeRequest, v1.GetMeResponse]
+	getServerStatus        *connect.Client[v1.GetServerStatusRequest, v1.GetServerStatusResponse]
+	setupAdmin             *connect.Client[v1.SetupAdminRequest, v1.SetupAdminResponse]
+	login                  *connect.Client[v1.LoginRequest, v1.LoginResponse]
+	logout                 *connect.Client[v1.LogoutRequest, v1.LogoutResponse]
+	getMe                  *connect.Client[v1.GetMeRequest, v1.GetMeResponse]
+	listAuthEvents         *connect.Client[v1.ListAuthEventsRequest, v1.ListAuthEventsResponse]
+	listSessions           *connect.Client[v1.ListSessionsRequest, v1.ListSessionsResponse]
+	revokeSession          *connect.Client[v1.RevokeSessionRequest, v1.RevokeSessionResponse]
+	revokeAllOtherSessions *connect.Client[v1.RevokeAllOtherSessionsRequest, v1.RevokeAllOtherSessionsResponse]
 }
 
 // GetServerStatus calls dmanager.v1.AuthService.GetServerStatus.
@@ -138,6 +186,26 @@ func (c *authServiceClient) GetMe(ctx context.Context, req *connect.Request[v1.G
 	return c.getMe.CallUnary(ctx, req)
 }
 
+// ListAuthEvents calls dmanager.v1.AuthService.ListAuthEvents.
+func (c *authServiceClient) ListAuthEvents(ctx context.Context, req *connect.Request[v1.ListAuthEventsRequest]) (*connect.Response[v1.ListAuthEventsResponse], error) {
+	return c.listAuthEvents.CallUnary(ctx, req)
+}
+
+// ListSessions calls dmanager.v1.AuthService.ListSessions.
+func (c *authServiceClient) ListSessions(ctx context.Context, req *connect.Request[v1.ListSessionsRequest]) (*connect.Response[v1.ListSessionsResponse], error) {
+	return c.listSessions.CallUnary(ctx, req)
+}
+
+// RevokeSession calls dmanager.v1.AuthService.RevokeSession.
+func (c *authServiceClient) RevokeSession(ctx context.Context, req *connect.Request[v1.RevokeSessionRequest]) (*connect.Response[v1.RevokeSessionResponse], error) {
+	return c.revokeSession.CallUnary(ctx, req)
+}
+
+// RevokeAllOtherSessions calls dmanager.v1.AuthService.RevokeAllOtherSessions.
+func (c *authServiceClient) RevokeAllOtherSessions(ctx context.Context, req *connect.Request[v1.RevokeAllOtherSessionsRequest]) (*connect.Response[v1.RevokeAllOtherSessionsResponse], error) {
+	return c.revokeAllOtherSessions.CallUnary(ctx, req)
+}
+
 // AuthServiceHandler is an implementation of the dmanager.v1.AuthService service.
 type AuthServiceHandler interface {
 	// Check the setup and auth status of the server (Unauthenticated).
@@ -150,6 +218,14 @@ type AuthServiceHandler interface {
 	Logout(context.Context, *connect.Request[v1.LogoutRequest]) (*connect.Response[v1.LogoutResponse], error)
 	// Retrieve current active user profile details (Authenticated).
 	GetMe(context.Context, *connect.Request[v1.GetMeRequest]) (*connect.Response[v1.GetMeResponse], error)
+	// List authentication audit events (Authenticated, viewers see own, admins see all).
+	ListAuthEvents(context.Context, *connect.Request[v1.ListAuthEventsRequest]) (*connect.Response[v1.ListAuthEventsResponse], error)
+	// List active sessions for the authenticated user (Authenticated).
+	ListSessions(context.Context, *connect.Request[v1.ListSessionsRequest]) (*connect.Response[v1.ListSessionsResponse], error)
+	// Revoke a specific active session for the authenticated user (Authenticated).
+	RevokeSession(context.Context, *connect.Request[v1.RevokeSessionRequest]) (*connect.Response[v1.RevokeSessionResponse], error)
+	// Revoke all other active sessions for the authenticated user except the current one (Authenticated).
+	RevokeAllOtherSessions(context.Context, *connect.Request[v1.RevokeAllOtherSessionsRequest]) (*connect.Response[v1.RevokeAllOtherSessionsResponse], error)
 }
 
 // NewAuthServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -189,6 +265,30 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(authServiceMethods.ByName("GetMe")),
 		connect.WithHandlerOptions(opts...),
 	)
+	authServiceListAuthEventsHandler := connect.NewUnaryHandler(
+		AuthServiceListAuthEventsProcedure,
+		svc.ListAuthEvents,
+		connect.WithSchema(authServiceMethods.ByName("ListAuthEvents")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceListSessionsHandler := connect.NewUnaryHandler(
+		AuthServiceListSessionsProcedure,
+		svc.ListSessions,
+		connect.WithSchema(authServiceMethods.ByName("ListSessions")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceRevokeSessionHandler := connect.NewUnaryHandler(
+		AuthServiceRevokeSessionProcedure,
+		svc.RevokeSession,
+		connect.WithSchema(authServiceMethods.ByName("RevokeSession")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceRevokeAllOtherSessionsHandler := connect.NewUnaryHandler(
+		AuthServiceRevokeAllOtherSessionsProcedure,
+		svc.RevokeAllOtherSessions,
+		connect.WithSchema(authServiceMethods.ByName("RevokeAllOtherSessions")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/dmanager.v1.AuthService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AuthServiceGetServerStatusProcedure:
@@ -201,6 +301,14 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 			authServiceLogoutHandler.ServeHTTP(w, r)
 		case AuthServiceGetMeProcedure:
 			authServiceGetMeHandler.ServeHTTP(w, r)
+		case AuthServiceListAuthEventsProcedure:
+			authServiceListAuthEventsHandler.ServeHTTP(w, r)
+		case AuthServiceListSessionsProcedure:
+			authServiceListSessionsHandler.ServeHTTP(w, r)
+		case AuthServiceRevokeSessionProcedure:
+			authServiceRevokeSessionHandler.ServeHTTP(w, r)
+		case AuthServiceRevokeAllOtherSessionsProcedure:
+			authServiceRevokeAllOtherSessionsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -228,4 +336,20 @@ func (UnimplementedAuthServiceHandler) Logout(context.Context, *connect.Request[
 
 func (UnimplementedAuthServiceHandler) GetMe(context.Context, *connect.Request[v1.GetMeRequest]) (*connect.Response[v1.GetMeResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AuthService.GetMe is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) ListAuthEvents(context.Context, *connect.Request[v1.ListAuthEventsRequest]) (*connect.Response[v1.ListAuthEventsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AuthService.ListAuthEvents is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) ListSessions(context.Context, *connect.Request[v1.ListSessionsRequest]) (*connect.Response[v1.ListSessionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AuthService.ListSessions is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) RevokeSession(context.Context, *connect.Request[v1.RevokeSessionRequest]) (*connect.Response[v1.RevokeSessionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AuthService.RevokeSession is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) RevokeAllOtherSessions(context.Context, *connect.Request[v1.RevokeAllOtherSessionsRequest]) (*connect.Response[v1.RevokeAllOtherSessionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AuthService.RevokeAllOtherSessions is not implemented"))
 }

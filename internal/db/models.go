@@ -5,8 +5,18 @@
 package db
 
 import (
+	"database/sql"
 	"time"
 )
+
+type AuthEvent struct {
+	ID        int64
+	UserID    sql.NullInt64
+	Username  string
+	Event     string
+	Detail    string
+	CreatedAt time.Time
+}
 
 type Container struct {
 	ID                string
@@ -30,6 +40,7 @@ type Session struct {
 	CreatedAt         time.Time
 	LastSeenAt        time.Time
 	AbsoluteExpiresAt time.Time
+	UserAgent         string
 }
 
 type Setting struct {

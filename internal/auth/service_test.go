@@ -22,6 +22,8 @@ import (
 const (
 	testAdminUsername = "admin"
 	testPassword      = "password12345"
+	wrongPassword     = "wrongpassword"
+	eventLoginSuccess = "login_success"
 )
 
 func newTestDB(t *testing.T) *db.Queries {
@@ -201,7 +203,7 @@ func TestLogin(t *testing.T) {
 	// Wrong password
 	_, err = svc.Login(ctx, connect.NewRequest(&v1.LoginRequest{
 		Username: testAdminUsername,
-		Password: "wrongpassword",
+		Password: wrongPassword,
 	}))
 	if err == nil {
 		t.Fatal("expected error for wrong password, got nil")
@@ -456,5 +458,308 @@ func TestLoginTimingEqualization(t *testing.T) {
 	}
 	if connect.CodeOf(err) != connect.CodeUnauthenticated {
 		t.Errorf("expected CodeUnauthenticated, got %v", err)
+	}
+}
+
+func TestAuthEventsLoggingOnDecisionPoints(t *testing.T) {
+	queries := newTestDB(t)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), false)
+	ctx := context.Background()
+
+	// 1. Setup Admin writes setup_admin event
+	_, err := svc.SetupAdmin(ctx, connect.NewRequest(&v1.SetupAdminRequest{
+		Username: testAdminUsername,
+		Password: testPassword,
+	}))
+	if err != nil {
+		t.Fatalf("setup admin failed: %v", err)
+	}
+
+	// 2. Failed login writes login_failed event
+	_, err = svc.Login(ctx, connect.NewRequest(&v1.LoginRequest{
+		Username: testAdminUsername,
+		Password: wrongPassword,
+	}))
+	if err == nil {
+		t.Fatalf("expected login to fail")
+	}
+
+	// 3. Successful login writes login_success event
+	loginReq := connect.NewRequest(&v1.LoginRequest{
+		Username: testAdminUsername,
+		Password: testPassword,
+	})
+	loginReq.Header().Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36")
+	loginResp, err := svc.Login(ctx, loginReq)
+	if err != nil {
+		t.Fatalf("login failed: %v", err)
+	}
+
+	// 4. Logout writes logout event
+	cookie := loginResp.Header().Get("Set-Cookie")
+	sessionID := parseSessionCookie(cookie)
+	user, _ := queries.GetUserByUsername(ctx, testAdminUsername)
+	authedCtx := WithUser(WithSessionID(ctx, sessionID), user)
+
+	logoutReq := connect.NewRequest(&v1.LogoutRequest{})
+	logoutReq.Header().Set("Cookie", cookie)
+	_, err = svc.Logout(authedCtx, logoutReq)
+	if err != nil {
+		t.Fatalf("logout failed: %v", err)
+	}
+
+	// Verify all events recorded in DB
+	events, err := queries.ListAuthEvents(ctx, db.ListAuthEventsParams{Limit: 10, Offset: 0})
+	if err != nil {
+		t.Fatalf("failed to list auth events: %v", err)
+	}
+	if len(events) < 4 {
+		t.Fatalf("expected at least 4 events, got %d", len(events))
+	}
+
+	// Verify no passwords, tokens, or session IDs leaked in event details
+	forbiddenSubstrings := []string{testPassword, sessionID, "Bearer", "token="}
+	for _, e := range events {
+		for _, forbidden := range forbiddenSubstrings {
+			if strings.Contains(e.Detail, forbidden) {
+				t.Errorf("event detail %q leaked sensitive secret %q", e.Detail, forbidden)
+			}
+		}
+	}
+}
+
+func TestListAuthEventsScoping(t *testing.T) {
+	queries := newTestDB(t)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), false)
+	ctx := context.Background()
+
+	// Create admin and viewer users
+	admin, err := queries.CreateUser(ctx, db.CreateUserParams{
+		Username:     "adminuser",
+		PasswordHash: testDummyHash,
+		Role:         adminRole,
+	})
+	if err != nil {
+		t.Fatalf("failed to create admin: %v", err)
+	}
+
+	viewer, err := queries.CreateUser(ctx, db.CreateUserParams{
+		Username:     "vieweruser",
+		PasswordHash: testDummyHash,
+		Role:         viewerRole,
+	})
+	if err != nil {
+		t.Fatalf("failed to create viewer: %v", err)
+	}
+
+	// Record events for both
+	_, _ = queries.CreateAuthEvent(ctx, db.CreateAuthEventParams{
+		UserID:   sql.NullInt64{Int64: admin.ID, Valid: true},
+		Username: admin.Username,
+		Event:    eventLoginSuccess,
+		Detail:   "admin login",
+	})
+	_, _ = queries.CreateAuthEvent(ctx, db.CreateAuthEventParams{
+		UserID:   sql.NullInt64{Int64: viewer.ID, Valid: true},
+		Username: viewer.Username,
+		Event:    eventLoginSuccess,
+		Detail:   "viewer login",
+	})
+
+	// Viewer requests events -> sees only own event
+	viewerCtx := WithUser(ctx, viewer)
+	viewerResp, err := svc.ListAuthEvents(viewerCtx, connect.NewRequest(&v1.ListAuthEventsRequest{}))
+	if err != nil {
+		t.Fatalf("viewer list failed: %v", err)
+	}
+	if len(viewerResp.Msg.Events) != 1 || viewerResp.Msg.TotalCount != 1 {
+		t.Errorf("viewer should see only 1 event, got %d (total: %d)", len(viewerResp.Msg.Events), viewerResp.Msg.TotalCount)
+	}
+	if viewerResp.Msg.Events[0].Username != viewer.Username {
+		t.Errorf("viewer saw event for %q, expected %q", viewerResp.Msg.Events[0].Username, viewer.Username)
+	}
+
+	// Admin requests events -> sees both events
+	adminCtx := WithUser(ctx, admin)
+	adminResp, err := svc.ListAuthEvents(adminCtx, connect.NewRequest(&v1.ListAuthEventsRequest{}))
+	if err != nil {
+		t.Fatalf("admin list failed: %v", err)
+	}
+	if len(adminResp.Msg.Events) != 2 || adminResp.Msg.TotalCount != 2 {
+		t.Errorf("admin should see 2 events, got %d (total: %d)", len(adminResp.Msg.Events), adminResp.Msg.TotalCount)
+	}
+}
+
+func TestSessionManagementAndRevocation(t *testing.T) {
+	queries := newTestDB(t)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), false)
+	ctx := context.Background()
+
+	user, err := queries.CreateUser(ctx, db.CreateUserParams{
+		Username:     "sessionuser",
+		PasswordHash: testDummyHash,
+		Role:         viewerRole,
+	})
+	if err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
+
+	otherUser, err := queries.CreateUser(ctx, db.CreateUserParams{
+		Username:     "otheruser",
+		PasswordHash: testDummyHash,
+		Role:         viewerRole,
+	})
+	if err != nil {
+		t.Fatalf("failed to create other user: %v", err)
+	}
+
+	now := time.Now()
+	// Create 2 sessions for user
+	session1, _ := queries.CreateSession(ctx, db.CreateSessionParams{
+		SessionID:         "token-111",
+		UserID:            user.ID,
+		UserAgent:         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+		ExpiresAt:         now.Add(24 * time.Hour),
+		LastSeenAt:        now,
+		AbsoluteExpiresAt: now.Add(720 * time.Hour),
+	})
+	session2, _ := queries.CreateSession(ctx, db.CreateSessionParams{
+		SessionID:         "token-222",
+		UserID:            user.ID,
+		UserAgent:         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/17.0 Safari/605.1.15",
+		ExpiresAt:         now.Add(24 * time.Hour),
+		LastSeenAt:        now.Add(-time.Hour),
+		AbsoluteExpiresAt: now.Add(720 * time.Hour),
+	})
+
+	// Create 1 session for other user
+	sessionOther, _ := queries.CreateSession(ctx, db.CreateSessionParams{
+		SessionID:         "token-other-333",
+		UserID:            otherUser.ID,
+		UserAgent:         "curl/7.88.1",
+		ExpiresAt:         now.Add(24 * time.Hour),
+		LastSeenAt:        now,
+		AbsoluteExpiresAt: now.Add(720 * time.Hour),
+	})
+
+	authedCtx := WithSessionID(WithUser(ctx, user), session1.SessionID)
+
+	// 1. ListSessions returns user's 2 sessions only, with device label & is_current
+	listResp, err := svc.ListSessions(authedCtx, connect.NewRequest(&v1.ListSessionsRequest{}))
+	if err != nil {
+		t.Fatalf("list sessions failed: %v", err)
+	}
+	if len(listResp.Msg.Sessions) != 2 {
+		t.Fatalf("expected 2 sessions, got %d", len(listResp.Msg.Sessions))
+	}
+	var currentFound bool
+	for _, s := range listResp.Msg.Sessions {
+		switch s.SessionId {
+		case session1.SessionID:
+			if !s.IsCurrent {
+				t.Errorf("expected session1 to have IsCurrent=true")
+			}
+			currentFound = true
+			if s.DeviceLabel != "Chrome · Windows" {
+				t.Errorf("expected Chrome · Windows, got %q", s.DeviceLabel)
+			}
+		case session2.SessionID:
+			if s.IsCurrent {
+				t.Errorf("expected session2 to have IsCurrent=false")
+			}
+			if s.DeviceLabel != "Safari · macOS" {
+				t.Errorf("expected Safari · macOS, got %q", s.DeviceLabel)
+			}
+		}
+	}
+	if !currentFound {
+		t.Errorf("current session was not in list")
+	}
+
+	// 2. Revoking foreign session ID returns NotFound (no existence leak)
+	_, err = svc.RevokeSession(authedCtx, connect.NewRequest(&v1.RevokeSessionRequest{
+		SessionId: sessionOther.SessionID,
+	}))
+	if err == nil {
+		t.Fatalf("expected revoking foreign session to return error")
+	}
+	if connect.CodeOf(err) != connect.CodeNotFound {
+		t.Errorf("expected CodeNotFound, got %v", err)
+	}
+
+	// 3. Revoking own second session succeeds
+	_, err = svc.RevokeSession(authedCtx, connect.NewRequest(&v1.RevokeSessionRequest{
+		SessionId: session2.SessionID,
+	}))
+	if err != nil {
+		t.Fatalf("revoke own session failed: %v", err)
+	}
+
+	// 4. RevokeAllOtherSessions preserves current session
+	// Re-add a session first
+	_, _ = queries.CreateSession(ctx, db.CreateSessionParams{
+		SessionID:         "token-444",
+		UserID:            user.ID,
+		UserAgent:         "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/119.0",
+		ExpiresAt:         now.Add(24 * time.Hour),
+		LastSeenAt:        now,
+		AbsoluteExpiresAt: now.Add(720 * time.Hour),
+	})
+
+	revokeAllResp, err := svc.RevokeAllOtherSessions(authedCtx, connect.NewRequest(&v1.RevokeAllOtherSessionsRequest{}))
+	if err != nil {
+		t.Fatalf("revoke all other sessions failed: %v", err)
+	}
+	if revokeAllResp.Msg.RevokedCount != 1 {
+		t.Errorf("expected 1 other session revoked, got %d", revokeAllResp.Msg.RevokedCount)
+	}
+
+	// Current session still valid
+	_, err = queries.GetSession(ctx, session1.SessionID)
+	if err != nil {
+		t.Errorf("current session should still exist in DB: %v", err)
+	}
+}
+
+func TestFormatDeviceLabel(t *testing.T) {
+	tests := []struct {
+		ua   string
+		want string
+	}{
+		{
+			ua:   "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+			want: "Chrome · Linux",
+		},
+		{
+			ua:   "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0",
+			want: "Firefox · Windows",
+		},
+		{
+			ua:   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15",
+			want: "Safari · macOS",
+		},
+		{
+			ua:   "Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Mobile/15E148 Safari/604.1",
+			want: "Safari · iOS",
+		},
+		{
+			ua:   "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/120.0.6099.43 Mobile Safari/537.36",
+			want: "Chrome · Android",
+		},
+		{
+			ua:   "curl/7.88.1",
+			want: "curl",
+		},
+		{
+			ua:   "",
+			want: "Unknown Device",
+		},
+	}
+
+	for _, tc := range tests {
+		got := formatDeviceLabel(tc.ua)
+		if got != tc.want {
+			t.Errorf("formatDeviceLabel(%q) = %q, want %q", tc.ua, got, tc.want)
+		}
 	}
 }

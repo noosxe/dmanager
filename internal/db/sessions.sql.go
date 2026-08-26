@@ -11,14 +11,15 @@ import (
 )
 
 const createSession = `-- name: CreateSession :one
-INSERT INTO sessions (session_id, user_id, expires_at, last_seen_at, absolute_expires_at)
-VALUES (?, ?, ?, ?, ?)
-RETURNING session_id, user_id, expires_at, created_at, last_seen_at, absolute_expires_at
+INSERT INTO sessions (session_id, user_id, user_agent, expires_at, last_seen_at, absolute_expires_at)
+VALUES (?, ?, ?, ?, ?, ?)
+RETURNING session_id, user_id, expires_at, created_at, last_seen_at, absolute_expires_at, user_agent
 `
 
 type CreateSessionParams struct {
 	SessionID         string
 	UserID            int64
+	UserAgent         string
 	ExpiresAt         time.Time
 	LastSeenAt        time.Time
 	AbsoluteExpiresAt time.Time
@@ -28,6 +29,7 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (S
 	row := q.db.QueryRowContext(ctx, createSession,
 		arg.SessionID,
 		arg.UserID,
+		arg.UserAgent,
 		arg.ExpiresAt,
 		arg.LastSeenAt,
 		arg.AbsoluteExpiresAt,
@@ -40,6 +42,7 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (S
 		&i.CreatedAt,
 		&i.LastSeenAt,
 		&i.AbsoluteExpiresAt,
+		&i.UserAgent,
 	)
 	return i, err
 }
@@ -51,6 +54,23 @@ DELETE FROM sessions WHERE session_id = ?
 func (q *Queries) DeleteSession(ctx context.Context, sessionID string) error {
 	_, err := q.db.ExecContext(ctx, deleteSession, sessionID)
 	return err
+}
+
+const deleteSessionByIDAndUser = `-- name: DeleteSessionByIDAndUser :execrows
+DELETE FROM sessions WHERE session_id = ? AND user_id = ?
+`
+
+type DeleteSessionByIDAndUserParams struct {
+	SessionID string
+	UserID    int64
+}
+
+func (q *Queries) DeleteSessionByIDAndUser(ctx context.Context, arg DeleteSessionByIDAndUserParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteSessionByIDAndUser, arg.SessionID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const deleteSessionsByUser = `-- name: DeleteSessionsByUser :execrows
@@ -71,7 +91,7 @@ func (q *Queries) DeleteSessionsByUser(ctx context.Context, arg DeleteSessionsBy
 }
 
 const getSession = `-- name: GetSession :one
-SELECT session_id, user_id, expires_at, created_at, last_seen_at, absolute_expires_at FROM sessions WHERE session_id = ? LIMIT 1
+SELECT session_id, user_id, expires_at, created_at, last_seen_at, absolute_expires_at, user_agent FROM sessions WHERE session_id = ? LIMIT 1
 `
 
 func (q *Queries) GetSession(ctx context.Context, sessionID string) (Session, error) {
@@ -84,12 +104,13 @@ func (q *Queries) GetSession(ctx context.Context, sessionID string) (Session, er
 		&i.CreatedAt,
 		&i.LastSeenAt,
 		&i.AbsoluteExpiresAt,
+		&i.UserAgent,
 	)
 	return i, err
 }
 
 const listSessionsByUser = `-- name: ListSessionsByUser :many
-SELECT s.session_id, s.user_id, s.expires_at, s.created_at, s.last_seen_at, s.absolute_expires_at, u.username FROM sessions s JOIN users u ON u.id = s.user_id
+SELECT s.session_id, s.user_id, s.expires_at, s.created_at, s.last_seen_at, s.absolute_expires_at, s.user_agent, u.username FROM sessions s JOIN users u ON u.id = s.user_id
 WHERE s.user_id = ? ORDER BY s.last_seen_at DESC
 `
 
@@ -100,6 +121,7 @@ type ListSessionsByUserRow struct {
 	CreatedAt         time.Time
 	LastSeenAt        time.Time
 	AbsoluteExpiresAt time.Time
+	UserAgent         string
 	Username          string
 }
 
@@ -119,6 +141,7 @@ func (q *Queries) ListSessionsByUser(ctx context.Context, userID int64) ([]ListS
 			&i.CreatedAt,
 			&i.LastSeenAt,
 			&i.AbsoluteExpiresAt,
+			&i.UserAgent,
 			&i.Username,
 		); err != nil {
 			return nil, err

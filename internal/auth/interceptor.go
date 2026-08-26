@@ -97,15 +97,19 @@ var procedureRoles = map[string]ProcedureRole{
 	dmanagerv1connect.AuthServiceLoginProcedure:           RoleUnauthenticated,
 
 	// Viewer procedures (any authenticated user)
-	dmanagerv1connect.AuthServiceLogoutProcedure:                RoleViewer,
-	dmanagerv1connect.AuthServiceGetMeProcedure:                 RoleViewer,
-	dmanagerv1connect.ContainerServiceListContainersProcedure:   RoleViewer,
-	dmanagerv1connect.ContainerServiceGetContainerLogsProcedure: RoleViewer,
-	dmanagerv1connect.ContainerServiceStreamContainersProcedure: RoleViewer,
-	dmanagerv1connect.SettingsServiceGetSettingsProcedure:       RoleViewer,
-	dmanagerv1connect.SettingsServiceGetRegistryStatusProcedure: RoleViewer,
-	dmanagerv1connect.LogServiceGetSystemLogsProcedure:          RoleViewer,
-	dmanagerv1connect.LogServiceSyncLogsProcedure:               RoleViewer,
+	dmanagerv1connect.AuthServiceLogoutProcedure:                 RoleViewer,
+	dmanagerv1connect.AuthServiceGetMeProcedure:                  RoleViewer,
+	dmanagerv1connect.AuthServiceListAuthEventsProcedure:         RoleViewer,
+	dmanagerv1connect.AuthServiceListSessionsProcedure:           RoleViewer,
+	dmanagerv1connect.AuthServiceRevokeSessionProcedure:          RoleViewer,
+	dmanagerv1connect.AuthServiceRevokeAllOtherSessionsProcedure: RoleViewer,
+	dmanagerv1connect.ContainerServiceListContainersProcedure:    RoleViewer,
+	dmanagerv1connect.ContainerServiceGetContainerLogsProcedure:  RoleViewer,
+	dmanagerv1connect.ContainerServiceStreamContainersProcedure:  RoleViewer,
+	dmanagerv1connect.SettingsServiceGetSettingsProcedure:        RoleViewer,
+	dmanagerv1connect.SettingsServiceGetRegistryStatusProcedure:  RoleViewer,
+	dmanagerv1connect.LogServiceGetSystemLogsProcedure:           RoleViewer,
+	dmanagerv1connect.LogServiceSyncLogsProcedure:                RoleViewer,
 
 	// Admin procedures (requires User.Role == "admin")
 	dmanagerv1connect.ContainerServiceStartContainerProcedure:         RoleAdmin,

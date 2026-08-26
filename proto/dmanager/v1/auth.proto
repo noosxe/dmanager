@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package dmanager.v1;
 
+import "google/protobuf/timestamp.proto";
+
 option go_package = "dmanager/internal/gen/proto/dmanager/v1;dmanagerv1";
 
 service AuthService {
@@ -19,6 +21,18 @@ service AuthService {
 
   // Retrieve current active user profile details (Authenticated).
   rpc GetMe(GetMeRequest) returns (GetMeResponse);
+
+  // List authentication audit events (Authenticated, viewers see own, admins see all).
+  rpc ListAuthEvents(ListAuthEventsRequest) returns (ListAuthEventsResponse);
+
+  // List active sessions for the authenticated user (Authenticated).
+  rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse);
+
+  // Revoke a specific active session for the authenticated user (Authenticated).
+  rpc RevokeSession(RevokeSessionRequest) returns (RevokeSessionResponse);
+
+  // Revoke all other active sessions for the authenticated user except the current one (Authenticated).
+  rpc RevokeAllOtherSessions(RevokeAllOtherSessionsRequest) returns (RevokeAllOtherSessionsResponse);
 }
 
 message GetServerStatusRequest {}
@@ -59,4 +73,53 @@ message GetMeResponse {
   int64 user_id = 1;
   string username = 2;
   string role = 3;
+}
+
+message AuthEvent {
+  int64 id = 1;
+  optional int64 user_id = 2;
+  string username = 3;
+  string event_type = 4;
+  string detail = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+message ListAuthEventsRequest {
+  int32 limit = 1;
+  int32 offset = 2;
+  string event_type = 3;
+}
+
+message ListAuthEventsResponse {
+  repeated AuthEvent events = 1;
+  int64 total_count = 2;
+}
+
+message Session {
+  string session_id = 1;
+  string user_agent = 2;
+  string device_label = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp last_seen_at = 5;
+  google.protobuf.Timestamp expires_at = 6;
+  google.protobuf.Timestamp absolute_expires_at = 7;
+  bool is_current = 8;
+}
+
+message ListSessionsRequest {}
+
+message ListSessionsResponse {
+  repeated Session sessions = 1;
+}
+
+message RevokeSessionRequest {
+  string session_id = 1;
+}
+
+message RevokeSessionResponse {}
+
+message RevokeAllOtherSessionsRequest {}
+
+message RevokeAllOtherSessionsResponse {
+  int64 revoked_count = 1;
 }
