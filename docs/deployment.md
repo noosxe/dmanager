@@ -23,6 +23,7 @@ This document details the procedure and requirements to deploy the `dmanager` ap
 | `server.port` | `DMANAGER_SERVER_PORT` | `9283` | Port for the HTTP/ConnectRPC server. |
 | `server.db_path` | `DMANAGER_SERVER_DB_PATH` | `/var/lib/dmanager/dmanager.db` | Persistent SQLite path. |
 | `server.allowed_origins` | `DMANAGER_SERVER_ALLOWED_ORIGINS` | `[]` | CORS comma-separated allowed origins list. |
+| `server.trusted_proxy` | `DMANAGER_SERVER_TRUSTED_PROXY` | `false` | When true, trusts `X-Forwarded-For` header for client IP extraction. |
 | `docker.host` | `DMANAGER_DOCKER_HOST` | `unix:///var/run/docker.sock` | Path to Docker unix socket. |
 | `scheduler.interval_minutes` | `DMANAGER_SCHEDULER_INTERVAL_MINUTES` | `60` | Schedule frequency for registry update checks. |
 | `auth.session_idle_timeout` | `DMANAGER_AUTH_SESSION_IDLE_TIMEOUT` | `168h` | Sliding idle timeout for standard sessions (7 days). |
@@ -31,6 +32,7 @@ This document details the procedure and requirements to deploy the `dmanager` ap
 | `auth.remember_me_absolute_timeout` | `DMANAGER_AUTH_REMEMBER_ME_ABSOLUTE_TIMEOUT` | `2160h` | Absolute lifetime cap for "Remember me" sessions (90 days). |
 | `auth.secure_cookies` | `DMANAGER_AUTH_SECURE_COOKIES` | `auto` | Cookie `Secure` attribute mode (`auto`, `always`, `never`). |
 | `auth.bcrypt_cost` | `DMANAGER_AUTH_BCRYPT_COST` | `12` | Bcrypt hashing work factor for new passwords (min 4, max 31). |
+| `auth.breached_password_check` | `DMANAGER_AUTH_BREACHED_PASSWORD_CHECK` | `false` | Enable HIBP k-anonymity breached password verification on setup. |
 
 ### 2.2. Private Registry Configuration
 
