@@ -33,6 +33,13 @@ func AuthEventsPurgeFunc(queries *db.Queries, retention time.Duration) PurgeFunc
 	}
 }
 
+// WebAuthnChallengesPurgeFunc returns a PurgeFunc that purges expired or consumed WebAuthn challenges.
+func WebAuthnChallengesPurgeFunc(queries *db.Queries) PurgeFunc {
+	return func(ctx context.Context) error {
+		return queries.PurgeExpiredWebAuthnChallenges(ctx, time.Now())
+	}
+}
+
 // StartPurgeJob starts a background goroutine that periodically executes the given purge functions.
 // It stops when ctx is cancelled.
 func StartPurgeJob(ctx context.Context, logger *slog.Logger, interval time.Duration, purgeFuncs ...PurgeFunc) {

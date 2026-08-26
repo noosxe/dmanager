@@ -61,7 +61,13 @@ func (*GetServerStatusRequest) Descriptor() ([]byte, []int) {
 type GetServerStatusResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Returns true if no users exist in the database, triggering onboarding.
-	NeedsSetup    bool `protobuf:"varint,1,opt,name=needs_setup,json=needsSetup,proto3" json:"needs_setup,omitempty"`
+	NeedsSetup bool `protobuf:"varint,1,opt,name=needs_setup,json=needsSetup,proto3" json:"needs_setup,omitempty"`
+	// Returns true if WebAuthn / Passkeys Relying Party is configured and usable.
+	PasskeyLoginEnabled bool `protobuf:"varint,2,opt,name=passkey_login_enabled,json=passkeyLoginEnabled,proto3" json:"passkey_login_enabled,omitempty"`
+	// Effective Relying Party ID.
+	RpId string `protobuf:"bytes,3,opt,name=rp_id,json=rpId,proto3" json:"rp_id,omitempty"`
+	// Effective Allowed Origins.
+	Origins       []string `protobuf:"bytes,4,rep,name=origins,proto3" json:"origins,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -101,6 +107,27 @@ func (x *GetServerStatusResponse) GetNeedsSetup() bool {
 		return x.NeedsSetup
 	}
 	return false
+}
+
+func (x *GetServerStatusResponse) GetPasskeyLoginEnabled() bool {
+	if x != nil {
+		return x.PasskeyLoginEnabled
+	}
+	return false
+}
+
+func (x *GetServerStatusResponse) GetRpId() string {
+	if x != nil {
+		return x.RpId
+	}
+	return ""
+}
+
+func (x *GetServerStatusResponse) GetOrigins() []string {
+	if x != nil {
+		return x.Origins
+	}
+	return nil
 }
 
 type SetupAdminRequest struct {
@@ -1023,15 +1050,711 @@ func (x *RevokeAllOtherSessionsResponse) GetRevokedCount() int64 {
 	return 0
 }
 
+type BeginPasskeyRegistrationRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BeginPasskeyRegistrationRequest) Reset() {
+	*x = BeginPasskeyRegistrationRequest{}
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BeginPasskeyRegistrationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BeginPasskeyRegistrationRequest) ProtoMessage() {}
+
+func (x *BeginPasskeyRegistrationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BeginPasskeyRegistrationRequest.ProtoReflect.Descriptor instead.
+func (*BeginPasskeyRegistrationRequest) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_auth_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *BeginPasskeyRegistrationRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+type BeginPasskeyRegistrationResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// JSON-encoded PublicKeyCredentialCreationOptions for @github/webauthn-json
+	OptionsJson   string `protobuf:"bytes,1,opt,name=options_json,json=optionsJson,proto3" json:"options_json,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BeginPasskeyRegistrationResponse) Reset() {
+	*x = BeginPasskeyRegistrationResponse{}
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BeginPasskeyRegistrationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BeginPasskeyRegistrationResponse) ProtoMessage() {}
+
+func (x *BeginPasskeyRegistrationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BeginPasskeyRegistrationResponse.ProtoReflect.Descriptor instead.
+func (*BeginPasskeyRegistrationResponse) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_auth_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *BeginPasskeyRegistrationResponse) GetOptionsJson() string {
+	if x != nil {
+		return x.OptionsJson
+	}
+	return ""
+}
+
+type FinishPasskeyRegistrationRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// User-provided friendly name for this passkey
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// JSON-encoded RegistrationResponseJSON from @github/webauthn-json
+	ResponseJson  string `protobuf:"bytes,2,opt,name=response_json,json=responseJson,proto3" json:"response_json,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FinishPasskeyRegistrationRequest) Reset() {
+	*x = FinishPasskeyRegistrationRequest{}
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinishPasskeyRegistrationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinishPasskeyRegistrationRequest) ProtoMessage() {}
+
+func (x *FinishPasskeyRegistrationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinishPasskeyRegistrationRequest.ProtoReflect.Descriptor instead.
+func (*FinishPasskeyRegistrationRequest) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_auth_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *FinishPasskeyRegistrationRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *FinishPasskeyRegistrationRequest) GetResponseJson() string {
+	if x != nil {
+		return x.ResponseJson
+	}
+	return ""
+}
+
+type FinishPasskeyRegistrationResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Passkey       *Passkey               `protobuf:"bytes,1,opt,name=passkey,proto3" json:"passkey,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FinishPasskeyRegistrationResponse) Reset() {
+	*x = FinishPasskeyRegistrationResponse{}
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinishPasskeyRegistrationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinishPasskeyRegistrationResponse) ProtoMessage() {}
+
+func (x *FinishPasskeyRegistrationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinishPasskeyRegistrationResponse.ProtoReflect.Descriptor instead.
+func (*FinishPasskeyRegistrationResponse) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_auth_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *FinishPasskeyRegistrationResponse) GetPasskey() *Passkey {
+	if x != nil {
+		return x.Passkey
+	}
+	return nil
+}
+
+type BeginPasskeyLoginRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BeginPasskeyLoginRequest) Reset() {
+	*x = BeginPasskeyLoginRequest{}
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BeginPasskeyLoginRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BeginPasskeyLoginRequest) ProtoMessage() {}
+
+func (x *BeginPasskeyLoginRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BeginPasskeyLoginRequest.ProtoReflect.Descriptor instead.
+func (*BeginPasskeyLoginRequest) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_auth_proto_rawDescGZIP(), []int{24}
+}
+
+type BeginPasskeyLoginResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// JSON-encoded PublicKeyCredentialRequestOptions for @github/webauthn-json (empty allow_credentials)
+	OptionsJson   string `protobuf:"bytes,1,opt,name=options_json,json=optionsJson,proto3" json:"options_json,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BeginPasskeyLoginResponse) Reset() {
+	*x = BeginPasskeyLoginResponse{}
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BeginPasskeyLoginResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BeginPasskeyLoginResponse) ProtoMessage() {}
+
+func (x *BeginPasskeyLoginResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BeginPasskeyLoginResponse.ProtoReflect.Descriptor instead.
+func (*BeginPasskeyLoginResponse) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_auth_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *BeginPasskeyLoginResponse) GetOptionsJson() string {
+	if x != nil {
+		return x.OptionsJson
+	}
+	return ""
+}
+
+type FinishPasskeyLoginRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// JSON-encoded AuthenticationResponseJSON from @github/webauthn-json
+	ResponseJson  string `protobuf:"bytes,1,opt,name=response_json,json=responseJson,proto3" json:"response_json,omitempty"`
+	RememberMe    bool   `protobuf:"varint,2,opt,name=remember_me,json=rememberMe,proto3" json:"remember_me,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FinishPasskeyLoginRequest) Reset() {
+	*x = FinishPasskeyLoginRequest{}
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinishPasskeyLoginRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinishPasskeyLoginRequest) ProtoMessage() {}
+
+func (x *FinishPasskeyLoginRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinishPasskeyLoginRequest.ProtoReflect.Descriptor instead.
+func (*FinishPasskeyLoginRequest) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_auth_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *FinishPasskeyLoginRequest) GetResponseJson() string {
+	if x != nil {
+		return x.ResponseJson
+	}
+	return ""
+}
+
+func (x *FinishPasskeyLoginRequest) GetRememberMe() bool {
+	if x != nil {
+		return x.RememberMe
+	}
+	return false
+}
+
+type Passkey struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Id                 string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name               string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Aaguid             string                 `protobuf:"bytes,3,opt,name=aaguid,proto3" json:"aaguid,omitempty"`
+	FriendlyDeviceName string                 `protobuf:"bytes,4,opt,name=friendly_device_name,json=friendlyDeviceName,proto3" json:"friendly_device_name,omitempty"`
+	BackupEligible     bool                   `protobuf:"varint,5,opt,name=backup_eligible,json=backupEligible,proto3" json:"backup_eligible,omitempty"`
+	BackupState        bool                   `protobuf:"varint,6,opt,name=backup_state,json=backupState,proto3" json:"backup_state,omitempty"`
+	SignCount          int32                  `protobuf:"varint,7,opt,name=sign_count,json=signCount,proto3" json:"sign_count,omitempty"`
+	CloneWarning       bool                   `protobuf:"varint,8,opt,name=clone_warning,json=cloneWarning,proto3" json:"clone_warning,omitempty"`
+	CreatedAt          *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	LastUsedAt         *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=last_used_at,json=lastUsedAt,proto3,oneof" json:"last_used_at,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *Passkey) Reset() {
+	*x = Passkey{}
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Passkey) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Passkey) ProtoMessage() {}
+
+func (x *Passkey) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Passkey.ProtoReflect.Descriptor instead.
+func (*Passkey) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_auth_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *Passkey) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Passkey) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Passkey) GetAaguid() string {
+	if x != nil {
+		return x.Aaguid
+	}
+	return ""
+}
+
+func (x *Passkey) GetFriendlyDeviceName() string {
+	if x != nil {
+		return x.FriendlyDeviceName
+	}
+	return ""
+}
+
+func (x *Passkey) GetBackupEligible() bool {
+	if x != nil {
+		return x.BackupEligible
+	}
+	return false
+}
+
+func (x *Passkey) GetBackupState() bool {
+	if x != nil {
+		return x.BackupState
+	}
+	return false
+}
+
+func (x *Passkey) GetSignCount() int32 {
+	if x != nil {
+		return x.SignCount
+	}
+	return 0
+}
+
+func (x *Passkey) GetCloneWarning() bool {
+	if x != nil {
+		return x.CloneWarning
+	}
+	return false
+}
+
+func (x *Passkey) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *Passkey) GetLastUsedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.LastUsedAt
+	}
+	return nil
+}
+
+type ListPasskeysRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPasskeysRequest) Reset() {
+	*x = ListPasskeysRequest{}
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPasskeysRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPasskeysRequest) ProtoMessage() {}
+
+func (x *ListPasskeysRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPasskeysRequest.ProtoReflect.Descriptor instead.
+func (*ListPasskeysRequest) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_auth_proto_rawDescGZIP(), []int{28}
+}
+
+type ListPasskeysResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Passkeys      []*Passkey             `protobuf:"bytes,1,rep,name=passkeys,proto3" json:"passkeys,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPasskeysResponse) Reset() {
+	*x = ListPasskeysResponse{}
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPasskeysResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPasskeysResponse) ProtoMessage() {}
+
+func (x *ListPasskeysResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPasskeysResponse.ProtoReflect.Descriptor instead.
+func (*ListPasskeysResponse) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_auth_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *ListPasskeysResponse) GetPasskeys() []*Passkey {
+	if x != nil {
+		return x.Passkeys
+	}
+	return nil
+}
+
+type RenamePasskeyRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RenamePasskeyRequest) Reset() {
+	*x = RenamePasskeyRequest{}
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RenamePasskeyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RenamePasskeyRequest) ProtoMessage() {}
+
+func (x *RenamePasskeyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RenamePasskeyRequest.ProtoReflect.Descriptor instead.
+func (*RenamePasskeyRequest) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_auth_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *RenamePasskeyRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *RenamePasskeyRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+type RenamePasskeyResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Passkey       *Passkey               `protobuf:"bytes,1,opt,name=passkey,proto3" json:"passkey,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RenamePasskeyResponse) Reset() {
+	*x = RenamePasskeyResponse{}
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RenamePasskeyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RenamePasskeyResponse) ProtoMessage() {}
+
+func (x *RenamePasskeyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RenamePasskeyResponse.ProtoReflect.Descriptor instead.
+func (*RenamePasskeyResponse) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_auth_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *RenamePasskeyResponse) GetPasskey() *Passkey {
+	if x != nil {
+		return x.Passkey
+	}
+	return nil
+}
+
+type DeletePasskeyRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeletePasskeyRequest) Reset() {
+	*x = DeletePasskeyRequest{}
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeletePasskeyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeletePasskeyRequest) ProtoMessage() {}
+
+func (x *DeletePasskeyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeletePasskeyRequest.ProtoReflect.Descriptor instead.
+func (*DeletePasskeyRequest) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_auth_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *DeletePasskeyRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type DeletePasskeyResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeletePasskeyResponse) Reset() {
+	*x = DeletePasskeyResponse{}
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeletePasskeyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeletePasskeyResponse) ProtoMessage() {}
+
+func (x *DeletePasskeyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_auth_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeletePasskeyResponse.ProtoReflect.Descriptor instead.
+func (*DeletePasskeyResponse) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_auth_proto_rawDescGZIP(), []int{33}
+}
+
 var File_proto_dmanager_v1_auth_proto protoreflect.FileDescriptor
 
 const file_proto_dmanager_v1_auth_proto_rawDesc = "" +
 	"\n" +
 	"\x1cproto/dmanager/v1/auth.proto\x12\vdmanager.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x18\n" +
-	"\x16GetServerStatusRequest\":\n" +
+	"\x16GetServerStatusRequest\"\x9d\x01\n" +
 	"\x17GetServerStatusResponse\x12\x1f\n" +
 	"\vneeds_setup\x18\x01 \x01(\bR\n" +
-	"needsSetup\"K\n" +
+	"needsSetup\x122\n" +
+	"\x15passkey_login_enabled\x18\x02 \x01(\bR\x13passkeyLoginEnabled\x12\x13\n" +
+	"\x05rp_id\x18\x03 \x01(\tR\x04rpId\x12\x18\n" +
+	"\aorigins\x18\x04 \x03(\tR\aorigins\"K\n" +
 	"\x11SetupAdminRequest\x12\x1a\n" +
 	"\busername\x18\x01 \x01(\tR\busername\x12\x1a\n" +
 	"\bpassword\x18\x02 \x01(\tR\bpassword\"D\n" +
@@ -1097,7 +1820,50 @@ const file_proto_dmanager_v1_auth_proto_rawDesc = "" +
 	"\x15RevokeSessionResponse\"\x1f\n" +
 	"\x1dRevokeAllOtherSessionsRequest\"E\n" +
 	"\x1eRevokeAllOtherSessionsResponse\x12#\n" +
-	"\rrevoked_count\x18\x01 \x01(\x03R\frevokedCount2\xf8\x05\n" +
+	"\rrevoked_count\x18\x01 \x01(\x03R\frevokedCount\"5\n" +
+	"\x1fBeginPasskeyRegistrationRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\"E\n" +
+	" BeginPasskeyRegistrationResponse\x12!\n" +
+	"\foptions_json\x18\x01 \x01(\tR\voptionsJson\"[\n" +
+	" FinishPasskeyRegistrationRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12#\n" +
+	"\rresponse_json\x18\x02 \x01(\tR\fresponseJson\"S\n" +
+	"!FinishPasskeyRegistrationResponse\x12.\n" +
+	"\apasskey\x18\x01 \x01(\v2\x14.dmanager.v1.PasskeyR\apasskey\"\x1a\n" +
+	"\x18BeginPasskeyLoginRequest\">\n" +
+	"\x19BeginPasskeyLoginResponse\x12!\n" +
+	"\foptions_json\x18\x01 \x01(\tR\voptionsJson\"a\n" +
+	"\x19FinishPasskeyLoginRequest\x12#\n" +
+	"\rresponse_json\x18\x01 \x01(\tR\fresponseJson\x12\x1f\n" +
+	"\vremember_me\x18\x02 \x01(\bR\n" +
+	"rememberMe\"\x96\x03\n" +
+	"\aPasskey\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
+	"\x06aaguid\x18\x03 \x01(\tR\x06aaguid\x120\n" +
+	"\x14friendly_device_name\x18\x04 \x01(\tR\x12friendlyDeviceName\x12'\n" +
+	"\x0fbackup_eligible\x18\x05 \x01(\bR\x0ebackupEligible\x12!\n" +
+	"\fbackup_state\x18\x06 \x01(\bR\vbackupState\x12\x1d\n" +
+	"\n" +
+	"sign_count\x18\a \x01(\x05R\tsignCount\x12#\n" +
+	"\rclone_warning\x18\b \x01(\bR\fcloneWarning\x129\n" +
+	"\n" +
+	"created_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12A\n" +
+	"\flast_used_at\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampH\x00R\n" +
+	"lastUsedAt\x88\x01\x01B\x0f\n" +
+	"\r_last_used_at\"\x15\n" +
+	"\x13ListPasskeysRequest\"H\n" +
+	"\x14ListPasskeysResponse\x120\n" +
+	"\bpasskeys\x18\x01 \x03(\v2\x14.dmanager.v1.PasskeyR\bpasskeys\":\n" +
+	"\x14RenamePasskeyRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\"G\n" +
+	"\x15RenamePasskeyResponse\x12.\n" +
+	"\apasskey\x18\x01 \x01(\v2\x14.dmanager.v1.PasskeyR\apasskey\"&\n" +
+	"\x14DeletePasskeyRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\x17\n" +
+	"\x15DeletePasskeyResponse2\xb0\v\n" +
 	"\vAuthService\x12\\\n" +
 	"\x0fGetServerStatus\x12#.dmanager.v1.GetServerStatusRequest\x1a$.dmanager.v1.GetServerStatusResponse\x12M\n" +
 	"\n" +
@@ -1108,7 +1874,14 @@ const file_proto_dmanager_v1_auth_proto_rawDesc = "" +
 	"\x0eListAuthEvents\x12\".dmanager.v1.ListAuthEventsRequest\x1a#.dmanager.v1.ListAuthEventsResponse\x12S\n" +
 	"\fListSessions\x12 .dmanager.v1.ListSessionsRequest\x1a!.dmanager.v1.ListSessionsResponse\x12V\n" +
 	"\rRevokeSession\x12!.dmanager.v1.RevokeSessionRequest\x1a\".dmanager.v1.RevokeSessionResponse\x12q\n" +
-	"\x16RevokeAllOtherSessions\x12*.dmanager.v1.RevokeAllOtherSessionsRequest\x1a+.dmanager.v1.RevokeAllOtherSessionsResponseB4Z2dmanager/internal/gen/proto/dmanager/v1;dmanagerv1b\x06proto3"
+	"\x16RevokeAllOtherSessions\x12*.dmanager.v1.RevokeAllOtherSessionsRequest\x1a+.dmanager.v1.RevokeAllOtherSessionsResponse\x12w\n" +
+	"\x18BeginPasskeyRegistration\x12,.dmanager.v1.BeginPasskeyRegistrationRequest\x1a-.dmanager.v1.BeginPasskeyRegistrationResponse\x12z\n" +
+	"\x19FinishPasskeyRegistration\x12-.dmanager.v1.FinishPasskeyRegistrationRequest\x1a..dmanager.v1.FinishPasskeyRegistrationResponse\x12b\n" +
+	"\x11BeginPasskeyLogin\x12%.dmanager.v1.BeginPasskeyLoginRequest\x1a&.dmanager.v1.BeginPasskeyLoginResponse\x12X\n" +
+	"\x12FinishPasskeyLogin\x12&.dmanager.v1.FinishPasskeyLoginRequest\x1a\x1a.dmanager.v1.LoginResponse\x12S\n" +
+	"\fListPasskeys\x12 .dmanager.v1.ListPasskeysRequest\x1a!.dmanager.v1.ListPasskeysResponse\x12V\n" +
+	"\rRenamePasskey\x12!.dmanager.v1.RenamePasskeyRequest\x1a\".dmanager.v1.RenamePasskeyResponse\x12V\n" +
+	"\rDeletePasskey\x12!.dmanager.v1.DeletePasskeyRequest\x1a\".dmanager.v1.DeletePasskeyResponseB4Z2dmanager/internal/gen/proto/dmanager/v1;dmanagerv1b\x06proto3"
 
 var (
 	file_proto_dmanager_v1_auth_proto_rawDescOnce sync.Once
@@ -1122,61 +1895,94 @@ func file_proto_dmanager_v1_auth_proto_rawDescGZIP() []byte {
 	return file_proto_dmanager_v1_auth_proto_rawDescData
 }
 
-var file_proto_dmanager_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_proto_dmanager_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 34)
 var file_proto_dmanager_v1_auth_proto_goTypes = []any{
-	(*GetServerStatusRequest)(nil),         // 0: dmanager.v1.GetServerStatusRequest
-	(*GetServerStatusResponse)(nil),        // 1: dmanager.v1.GetServerStatusResponse
-	(*SetupAdminRequest)(nil),              // 2: dmanager.v1.SetupAdminRequest
-	(*SetupAdminResponse)(nil),             // 3: dmanager.v1.SetupAdminResponse
-	(*LoginRequest)(nil),                   // 4: dmanager.v1.LoginRequest
-	(*LoginResponse)(nil),                  // 5: dmanager.v1.LoginResponse
-	(*LogoutRequest)(nil),                  // 6: dmanager.v1.LogoutRequest
-	(*LogoutResponse)(nil),                 // 7: dmanager.v1.LogoutResponse
-	(*GetMeRequest)(nil),                   // 8: dmanager.v1.GetMeRequest
-	(*GetMeResponse)(nil),                  // 9: dmanager.v1.GetMeResponse
-	(*AuthEvent)(nil),                      // 10: dmanager.v1.AuthEvent
-	(*ListAuthEventsRequest)(nil),          // 11: dmanager.v1.ListAuthEventsRequest
-	(*ListAuthEventsResponse)(nil),         // 12: dmanager.v1.ListAuthEventsResponse
-	(*Session)(nil),                        // 13: dmanager.v1.Session
-	(*ListSessionsRequest)(nil),            // 14: dmanager.v1.ListSessionsRequest
-	(*ListSessionsResponse)(nil),           // 15: dmanager.v1.ListSessionsResponse
-	(*RevokeSessionRequest)(nil),           // 16: dmanager.v1.RevokeSessionRequest
-	(*RevokeSessionResponse)(nil),          // 17: dmanager.v1.RevokeSessionResponse
-	(*RevokeAllOtherSessionsRequest)(nil),  // 18: dmanager.v1.RevokeAllOtherSessionsRequest
-	(*RevokeAllOtherSessionsResponse)(nil), // 19: dmanager.v1.RevokeAllOtherSessionsResponse
-	(*timestamppb.Timestamp)(nil),          // 20: google.protobuf.Timestamp
+	(*GetServerStatusRequest)(nil),            // 0: dmanager.v1.GetServerStatusRequest
+	(*GetServerStatusResponse)(nil),           // 1: dmanager.v1.GetServerStatusResponse
+	(*SetupAdminRequest)(nil),                 // 2: dmanager.v1.SetupAdminRequest
+	(*SetupAdminResponse)(nil),                // 3: dmanager.v1.SetupAdminResponse
+	(*LoginRequest)(nil),                      // 4: dmanager.v1.LoginRequest
+	(*LoginResponse)(nil),                     // 5: dmanager.v1.LoginResponse
+	(*LogoutRequest)(nil),                     // 6: dmanager.v1.LogoutRequest
+	(*LogoutResponse)(nil),                    // 7: dmanager.v1.LogoutResponse
+	(*GetMeRequest)(nil),                      // 8: dmanager.v1.GetMeRequest
+	(*GetMeResponse)(nil),                     // 9: dmanager.v1.GetMeResponse
+	(*AuthEvent)(nil),                         // 10: dmanager.v1.AuthEvent
+	(*ListAuthEventsRequest)(nil),             // 11: dmanager.v1.ListAuthEventsRequest
+	(*ListAuthEventsResponse)(nil),            // 12: dmanager.v1.ListAuthEventsResponse
+	(*Session)(nil),                           // 13: dmanager.v1.Session
+	(*ListSessionsRequest)(nil),               // 14: dmanager.v1.ListSessionsRequest
+	(*ListSessionsResponse)(nil),              // 15: dmanager.v1.ListSessionsResponse
+	(*RevokeSessionRequest)(nil),              // 16: dmanager.v1.RevokeSessionRequest
+	(*RevokeSessionResponse)(nil),             // 17: dmanager.v1.RevokeSessionResponse
+	(*RevokeAllOtherSessionsRequest)(nil),     // 18: dmanager.v1.RevokeAllOtherSessionsRequest
+	(*RevokeAllOtherSessionsResponse)(nil),    // 19: dmanager.v1.RevokeAllOtherSessionsResponse
+	(*BeginPasskeyRegistrationRequest)(nil),   // 20: dmanager.v1.BeginPasskeyRegistrationRequest
+	(*BeginPasskeyRegistrationResponse)(nil),  // 21: dmanager.v1.BeginPasskeyRegistrationResponse
+	(*FinishPasskeyRegistrationRequest)(nil),  // 22: dmanager.v1.FinishPasskeyRegistrationRequest
+	(*FinishPasskeyRegistrationResponse)(nil), // 23: dmanager.v1.FinishPasskeyRegistrationResponse
+	(*BeginPasskeyLoginRequest)(nil),          // 24: dmanager.v1.BeginPasskeyLoginRequest
+	(*BeginPasskeyLoginResponse)(nil),         // 25: dmanager.v1.BeginPasskeyLoginResponse
+	(*FinishPasskeyLoginRequest)(nil),         // 26: dmanager.v1.FinishPasskeyLoginRequest
+	(*Passkey)(nil),                           // 27: dmanager.v1.Passkey
+	(*ListPasskeysRequest)(nil),               // 28: dmanager.v1.ListPasskeysRequest
+	(*ListPasskeysResponse)(nil),              // 29: dmanager.v1.ListPasskeysResponse
+	(*RenamePasskeyRequest)(nil),              // 30: dmanager.v1.RenamePasskeyRequest
+	(*RenamePasskeyResponse)(nil),             // 31: dmanager.v1.RenamePasskeyResponse
+	(*DeletePasskeyRequest)(nil),              // 32: dmanager.v1.DeletePasskeyRequest
+	(*DeletePasskeyResponse)(nil),             // 33: dmanager.v1.DeletePasskeyResponse
+	(*timestamppb.Timestamp)(nil),             // 34: google.protobuf.Timestamp
 }
 var file_proto_dmanager_v1_auth_proto_depIdxs = []int32{
-	20, // 0: dmanager.v1.AuthEvent.created_at:type_name -> google.protobuf.Timestamp
+	34, // 0: dmanager.v1.AuthEvent.created_at:type_name -> google.protobuf.Timestamp
 	10, // 1: dmanager.v1.ListAuthEventsResponse.events:type_name -> dmanager.v1.AuthEvent
-	20, // 2: dmanager.v1.Session.created_at:type_name -> google.protobuf.Timestamp
-	20, // 3: dmanager.v1.Session.last_seen_at:type_name -> google.protobuf.Timestamp
-	20, // 4: dmanager.v1.Session.expires_at:type_name -> google.protobuf.Timestamp
-	20, // 5: dmanager.v1.Session.absolute_expires_at:type_name -> google.protobuf.Timestamp
+	34, // 2: dmanager.v1.Session.created_at:type_name -> google.protobuf.Timestamp
+	34, // 3: dmanager.v1.Session.last_seen_at:type_name -> google.protobuf.Timestamp
+	34, // 4: dmanager.v1.Session.expires_at:type_name -> google.protobuf.Timestamp
+	34, // 5: dmanager.v1.Session.absolute_expires_at:type_name -> google.protobuf.Timestamp
 	13, // 6: dmanager.v1.ListSessionsResponse.sessions:type_name -> dmanager.v1.Session
-	0,  // 7: dmanager.v1.AuthService.GetServerStatus:input_type -> dmanager.v1.GetServerStatusRequest
-	2,  // 8: dmanager.v1.AuthService.SetupAdmin:input_type -> dmanager.v1.SetupAdminRequest
-	4,  // 9: dmanager.v1.AuthService.Login:input_type -> dmanager.v1.LoginRequest
-	6,  // 10: dmanager.v1.AuthService.Logout:input_type -> dmanager.v1.LogoutRequest
-	8,  // 11: dmanager.v1.AuthService.GetMe:input_type -> dmanager.v1.GetMeRequest
-	11, // 12: dmanager.v1.AuthService.ListAuthEvents:input_type -> dmanager.v1.ListAuthEventsRequest
-	14, // 13: dmanager.v1.AuthService.ListSessions:input_type -> dmanager.v1.ListSessionsRequest
-	16, // 14: dmanager.v1.AuthService.RevokeSession:input_type -> dmanager.v1.RevokeSessionRequest
-	18, // 15: dmanager.v1.AuthService.RevokeAllOtherSessions:input_type -> dmanager.v1.RevokeAllOtherSessionsRequest
-	1,  // 16: dmanager.v1.AuthService.GetServerStatus:output_type -> dmanager.v1.GetServerStatusResponse
-	3,  // 17: dmanager.v1.AuthService.SetupAdmin:output_type -> dmanager.v1.SetupAdminResponse
-	5,  // 18: dmanager.v1.AuthService.Login:output_type -> dmanager.v1.LoginResponse
-	7,  // 19: dmanager.v1.AuthService.Logout:output_type -> dmanager.v1.LogoutResponse
-	9,  // 20: dmanager.v1.AuthService.GetMe:output_type -> dmanager.v1.GetMeResponse
-	12, // 21: dmanager.v1.AuthService.ListAuthEvents:output_type -> dmanager.v1.ListAuthEventsResponse
-	15, // 22: dmanager.v1.AuthService.ListSessions:output_type -> dmanager.v1.ListSessionsResponse
-	17, // 23: dmanager.v1.AuthService.RevokeSession:output_type -> dmanager.v1.RevokeSessionResponse
-	19, // 24: dmanager.v1.AuthService.RevokeAllOtherSessions:output_type -> dmanager.v1.RevokeAllOtherSessionsResponse
-	16, // [16:25] is the sub-list for method output_type
-	7,  // [7:16] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	27, // 7: dmanager.v1.FinishPasskeyRegistrationResponse.passkey:type_name -> dmanager.v1.Passkey
+	34, // 8: dmanager.v1.Passkey.created_at:type_name -> google.protobuf.Timestamp
+	34, // 9: dmanager.v1.Passkey.last_used_at:type_name -> google.protobuf.Timestamp
+	27, // 10: dmanager.v1.ListPasskeysResponse.passkeys:type_name -> dmanager.v1.Passkey
+	27, // 11: dmanager.v1.RenamePasskeyResponse.passkey:type_name -> dmanager.v1.Passkey
+	0,  // 12: dmanager.v1.AuthService.GetServerStatus:input_type -> dmanager.v1.GetServerStatusRequest
+	2,  // 13: dmanager.v1.AuthService.SetupAdmin:input_type -> dmanager.v1.SetupAdminRequest
+	4,  // 14: dmanager.v1.AuthService.Login:input_type -> dmanager.v1.LoginRequest
+	6,  // 15: dmanager.v1.AuthService.Logout:input_type -> dmanager.v1.LogoutRequest
+	8,  // 16: dmanager.v1.AuthService.GetMe:input_type -> dmanager.v1.GetMeRequest
+	11, // 17: dmanager.v1.AuthService.ListAuthEvents:input_type -> dmanager.v1.ListAuthEventsRequest
+	14, // 18: dmanager.v1.AuthService.ListSessions:input_type -> dmanager.v1.ListSessionsRequest
+	16, // 19: dmanager.v1.AuthService.RevokeSession:input_type -> dmanager.v1.RevokeSessionRequest
+	18, // 20: dmanager.v1.AuthService.RevokeAllOtherSessions:input_type -> dmanager.v1.RevokeAllOtherSessionsRequest
+	20, // 21: dmanager.v1.AuthService.BeginPasskeyRegistration:input_type -> dmanager.v1.BeginPasskeyRegistrationRequest
+	22, // 22: dmanager.v1.AuthService.FinishPasskeyRegistration:input_type -> dmanager.v1.FinishPasskeyRegistrationRequest
+	24, // 23: dmanager.v1.AuthService.BeginPasskeyLogin:input_type -> dmanager.v1.BeginPasskeyLoginRequest
+	26, // 24: dmanager.v1.AuthService.FinishPasskeyLogin:input_type -> dmanager.v1.FinishPasskeyLoginRequest
+	28, // 25: dmanager.v1.AuthService.ListPasskeys:input_type -> dmanager.v1.ListPasskeysRequest
+	30, // 26: dmanager.v1.AuthService.RenamePasskey:input_type -> dmanager.v1.RenamePasskeyRequest
+	32, // 27: dmanager.v1.AuthService.DeletePasskey:input_type -> dmanager.v1.DeletePasskeyRequest
+	1,  // 28: dmanager.v1.AuthService.GetServerStatus:output_type -> dmanager.v1.GetServerStatusResponse
+	3,  // 29: dmanager.v1.AuthService.SetupAdmin:output_type -> dmanager.v1.SetupAdminResponse
+	5,  // 30: dmanager.v1.AuthService.Login:output_type -> dmanager.v1.LoginResponse
+	7,  // 31: dmanager.v1.AuthService.Logout:output_type -> dmanager.v1.LogoutResponse
+	9,  // 32: dmanager.v1.AuthService.GetMe:output_type -> dmanager.v1.GetMeResponse
+	12, // 33: dmanager.v1.AuthService.ListAuthEvents:output_type -> dmanager.v1.ListAuthEventsResponse
+	15, // 34: dmanager.v1.AuthService.ListSessions:output_type -> dmanager.v1.ListSessionsResponse
+	17, // 35: dmanager.v1.AuthService.RevokeSession:output_type -> dmanager.v1.RevokeSessionResponse
+	19, // 36: dmanager.v1.AuthService.RevokeAllOtherSessions:output_type -> dmanager.v1.RevokeAllOtherSessionsResponse
+	21, // 37: dmanager.v1.AuthService.BeginPasskeyRegistration:output_type -> dmanager.v1.BeginPasskeyRegistrationResponse
+	23, // 38: dmanager.v1.AuthService.FinishPasskeyRegistration:output_type -> dmanager.v1.FinishPasskeyRegistrationResponse
+	25, // 39: dmanager.v1.AuthService.BeginPasskeyLogin:output_type -> dmanager.v1.BeginPasskeyLoginResponse
+	5,  // 40: dmanager.v1.AuthService.FinishPasskeyLogin:output_type -> dmanager.v1.LoginResponse
+	29, // 41: dmanager.v1.AuthService.ListPasskeys:output_type -> dmanager.v1.ListPasskeysResponse
+	31, // 42: dmanager.v1.AuthService.RenamePasskey:output_type -> dmanager.v1.RenamePasskeyResponse
+	33, // 43: dmanager.v1.AuthService.DeletePasskey:output_type -> dmanager.v1.DeletePasskeyResponse
+	28, // [28:44] is the sub-list for method output_type
+	12, // [12:28] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_proto_dmanager_v1_auth_proto_init() }
@@ -1185,13 +1991,14 @@ func file_proto_dmanager_v1_auth_proto_init() {
 		return
 	}
 	file_proto_dmanager_v1_auth_proto_msgTypes[10].OneofWrappers = []any{}
+	file_proto_dmanager_v1_auth_proto_msgTypes[27].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_dmanager_v1_auth_proto_rawDesc), len(file_proto_dmanager_v1_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   20,
+			NumMessages:   34,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

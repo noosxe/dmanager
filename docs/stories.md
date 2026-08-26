@@ -1063,7 +1063,7 @@ graph TD
 
 ---
 
-### STORY-051: WebAuthn Foundation — Config, Dependencies, Schema & Lifecycle
+### STORY-051: WebAuthn Foundation — Config, Dependencies, Schema & Lifecycle [DONE]
 - **Scope:** WebAuthn Infrastructure, DB Migrations & Server Configuration
 - **Estimated Size:** Medium (~300 LOC)
 - **Dependencies:** `STORY-049`, `STORY-050`
@@ -1090,7 +1090,7 @@ graph TD
 
 ---
 
-### STORY-052: Passkey Registration Ceremony, Credential Management & Settings UI
+### STORY-052: Passkey Registration Ceremony, Credential Management & Settings UI [DONE]
 - **Scope:** Passkey Registration RPCs, Credential Management & Settings UI
 - **Estimated Size:** Large (~500 LOC)
 - **Dependencies:** `STORY-051`
@@ -1116,7 +1116,7 @@ graph TD
 
 ---
 
-### STORY-053: Passkey Usernameless Login Ceremony & Login UI
+### STORY-053: Passkey Usernameless Login Ceremony & Login UI [DONE]
 - **Scope:** Discoverable Passkey Login Flow & Login Page UI
 - **Estimated Size:** Medium (~350 LOC)
 - **Dependencies:** `STORY-051`, `STORY-052`

@@ -125,13 +125,14 @@ var serveCmd = &cobra.Command{
 			}
 		})
 
-		authSvc := auth.NewService(queries, logger.With("module", "auth"), cfg.Auth, cfg.Server.TrustedProxy)
+		authSvc := auth.NewService(queries, logger.With("module", "auth"), cfg.Auth, cfg.WebAuthn, cfg.Server.TrustedProxy)
 		authInterceptor := auth.NewInterceptor(queries, logger.With("module", "auth"), cfg.Auth.SessionIdleTimeout)
 
-		// Start background purge jobs (expired sessions, 90-day auth events)
+		// Start background purge jobs (expired sessions, 90-day auth events, webauthn challenges)
 		auth.StartPurgeJob(srvCtx, logger.With("module", "auth"), time.Hour,
 			auth.SessionPurgeFunc(queries),
 			auth.AuthEventsPurgeFunc(queries, 90*24*time.Hour),
+			auth.WebAuthnChallengesPurgeFunc(queries),
 		)
 
 		// 4. Set up HTTP handler/mux

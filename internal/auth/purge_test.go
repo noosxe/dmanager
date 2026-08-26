@@ -208,3 +208,86 @@ func TestAuthEventsPurgeJob(t *testing.T) {
 		t.Errorf("expected 0 events after full purge, got %d", count)
 	}
 }
+
+func TestWebAuthnChallengesPurgeJob(t *testing.T) {
+	queries := newTestDB(t)
+	ctx := context.Background()
+	now := time.Now()
+	const (
+		challengeKindReg = "registration"
+		challengeKindLog = "login"
+	)
+
+	// 1. Active unconsumed challenge
+	active, err := queries.CreateWebAuthnChallenge(ctx, db.CreateWebAuthnChallengeParams{
+		Challenge: []byte("active-challenge"),
+		Kind:      challengeKindReg,
+		UserID:    sql.NullInt64{Int64: 1, Valid: true},
+		ExpiresAt: now.Add(2 * time.Minute),
+	})
+	if err != nil {
+		t.Fatalf("failed to create active challenge: %v", err)
+	}
+
+	// 2. Consumed challenge
+	consumed, err := queries.CreateWebAuthnChallenge(ctx, db.CreateWebAuthnChallengeParams{
+		Challenge: []byte("consumed-challenge"),
+		Kind:      challengeKindLog,
+		UserID:    sql.NullInt64{Valid: false},
+		ExpiresAt: now.Add(2 * time.Minute),
+	})
+	if err != nil {
+		t.Fatalf("failed to create consumed challenge: %v", err)
+	}
+	_ = queries.ConsumeWebAuthnChallenge(ctx, consumed.ID)
+
+	// 3. Expired unconsumed challenge
+	_, err = queries.CreateWebAuthnChallenge(ctx, db.CreateWebAuthnChallengeParams{
+		Challenge: []byte("expired-challenge"),
+		Kind:      challengeKindLog,
+		UserID:    sql.NullInt64{Valid: false},
+		ExpiresAt: now.Add(-10 * time.Minute),
+	})
+	if err != nil {
+		t.Fatalf("failed to create expired challenge: %v", err)
+	}
+
+	// Run purge
+	purgeFn := WebAuthnChallengesPurgeFunc(queries)
+	err = purgeFn(ctx)
+	if err != nil {
+		t.Fatalf("purge failed: %v", err)
+	}
+
+	// Check active challenge survives and is unconsumed
+	found, err := queries.GetUnconsumedWebAuthnChallenge(ctx, db.GetUnconsumedWebAuthnChallengeParams{
+		Challenge: []byte("active-challenge"),
+		Kind:      challengeKindReg,
+		ExpiresAt: now,
+	})
+	if err != nil {
+		t.Fatalf("expected active challenge to survive: %v", err)
+	}
+	if found.ID != active.ID {
+		t.Errorf("expected active challenge ID %d, got %d", active.ID, found.ID)
+	}
+
+	// Check consumed and expired challenges are gone
+	_, err = queries.GetUnconsumedWebAuthnChallenge(ctx, db.GetUnconsumedWebAuthnChallengeParams{
+		Challenge: []byte("consumed-challenge"),
+		Kind:      "login",
+		ExpiresAt: now,
+	})
+	if !errors.Is(err, sql.ErrNoRows) {
+		t.Errorf("expected consumed challenge to be purged, got: %v", err)
+	}
+
+	_, err = queries.GetUnconsumedWebAuthnChallenge(ctx, db.GetUnconsumedWebAuthnChallengeParams{
+		Challenge: []byte("expired-challenge"),
+		Kind:      "login",
+		ExpiresAt: now,
+	})
+	if !errors.Is(err, sql.ErrNoRows) {
+		t.Errorf("expected expired challenge to be purged, got: %v", err)
+	}
+}

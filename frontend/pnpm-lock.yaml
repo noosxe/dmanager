@@ -23,6 +23,9 @@ importers:
       '@fontsource/plus-jakarta-sans':
         specifier: ^5.3.0
         version: 5.3.0
+      '@github/webauthn-json':
+        specifier: ^2.1.1
+        version: 2.1.1
       '@tanstack/react-router':
         specifier: ^1.170.18
         version: 1.170.18(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -270,6 +273,11 @@ packages:
 
   '@fontsource/plus-jakarta-sans@5.3.0':
     resolution: {integrity: sha512-9WRw3G74Ve4cyPApAZSXLPY5DiLOZXDn7Q7dIBjFBpA0Pj56ljDItEdy2UUajjJxRuTg2HkMLO5C3K2nAQORWg==}
+
+  '@github/webauthn-json@2.1.1':
+    resolution: {integrity: sha512-XrftRn4z75SnaJOmZQbt7Mk+IIjqVHw+glDGOxuHwXkZBZh/MBoRS7MHjSZMDaLhT4RjN2VqiEU7EOYleuJWSQ==}
+    deprecated: 'Deprecated: Modern browsers support built-in WebAuthn JSON methods. Please use native browser methods instead. For more information, visit https://github.com/github/webauthn-json'
+    hasBin: true
 
   '@img/sharp-darwin-arm64@0.33.5':
     resolution: {integrity: sha512-UT4p+iz/2H4twwAoLCqfA9UH5pI6DggwKEGuaPy7nCVQ8ZsiY5PIcrRvD1DzuY3qYL07NtIQcWnBSY/heikIFQ==}
@@ -1655,6 +1663,8 @@ snapshots:
   '@fontsource/jetbrains-mono@5.3.0': {}
 
   '@fontsource/plus-jakarta-sans@5.3.0': {}
+
+  '@github/webauthn-json@2.1.1': {}
 
   '@img/sharp-darwin-arm64@0.33.5':
     optionalDependencies:

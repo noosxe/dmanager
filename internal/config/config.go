@@ -34,6 +34,10 @@ const (
 	SecureCookiesAuto   = "auto"
 	SecureCookiesAlways = "always"
 	SecureCookiesNever  = "never"
+
+	UserVerificationPreferred   = "preferred"
+	UserVerificationRequired    = "required"
+	UserVerificationDiscouraged = "discouraged"
 )
 
 type SchedulerConfig struct {
@@ -50,11 +54,18 @@ type AuthConfig struct {
 	BreachedPasswordCheck     bool          `koanf:"breached_password_check"`
 }
 
+type WebAuthnConfig struct {
+	RPID                    string   `koanf:"rp_id"`
+	Origins                 []string `koanf:"origins"`
+	RequireUserVerification string   `koanf:"require_user_verification"`
+}
+
 type Config struct {
 	Server     ServerConfig    `koanf:"server"`
 	Docker     DockerConfig    `koanf:"docker"`
 	Scheduler  SchedulerConfig `koanf:"scheduler"`
 	Auth       AuthConfig      `koanf:"auth"`
+	WebAuthn   WebAuthnConfig  `koanf:"webauthn"`
 	Registries []Registry      `koanf:"registries"`
 }
 
@@ -80,6 +91,20 @@ func (c *Config) Validate() error {
 	if c.Auth.BcryptCost < 4 || c.Auth.BcryptCost > 31 {
 		return fmt.Errorf("auth.bcrypt_cost must be between 4 and 31, got %d", c.Auth.BcryptCost)
 	}
+
+	if c.WebAuthn.RequireUserVerification == "" {
+		c.WebAuthn.RequireUserVerification = UserVerificationPreferred
+	}
+	switch c.WebAuthn.RequireUserVerification {
+	case UserVerificationPreferred, UserVerificationRequired, UserVerificationDiscouraged:
+	default:
+		return fmt.Errorf("webauthn.require_user_verification must be one of 'preferred', 'required', 'discouraged', got %q", c.WebAuthn.RequireUserVerification)
+	}
+
+	if c.WebAuthn.RPID != "" && len(c.WebAuthn.Origins) == 0 {
+		return fmt.Errorf("webauthn.origins cannot be empty when webauthn.rp_id is set")
+	}
+
 	return nil
 }
 
@@ -89,18 +114,19 @@ func Load(configPath string) (*Config, error) {
 
 	// 1. Load default fallback values
 	defaults := map[string]interface{}{
-		"server.port":                       "9283",
-		"server.db_path":                    "dmanager.db",
-		"server.trusted_proxy":              false,
-		"docker.host":                       "unix:///var/run/docker.sock",
-		"scheduler.interval_minutes":        60,
-		"auth.session_idle_timeout":         168 * time.Hour,
-		"auth.session_absolute_timeout":     720 * time.Hour,
-		"auth.remember_me_idle_timeout":     720 * time.Hour,
-		"auth.remember_me_absolute_timeout": 2160 * time.Hour,
-		"auth.secure_cookies":               SecureCookiesAuto,
-		"auth.bcrypt_cost":                  12,
-		"auth.breached_password_check":      false,
+		"server.port":                        "9283",
+		"server.db_path":                     "dmanager.db",
+		"server.trusted_proxy":               false,
+		"docker.host":                        "unix:///var/run/docker.sock",
+		"scheduler.interval_minutes":         60,
+		"auth.session_idle_timeout":          168 * time.Hour,
+		"auth.session_absolute_timeout":      720 * time.Hour,
+		"auth.remember_me_idle_timeout":      720 * time.Hour,
+		"auth.remember_me_absolute_timeout":  2160 * time.Hour,
+		"auth.secure_cookies":                SecureCookiesAuto,
+		"auth.bcrypt_cost":                   12,
+		"auth.breached_password_check":       false,
+		"webauthn.require_user_verification": "preferred",
 	}
 	if err := k.Load(confmap.Provider(defaults, "."), nil); err != nil {
 		return nil, fmt.Errorf("failed to load default configuration: %w", err)
@@ -162,6 +188,20 @@ func Load(configPath string) (*Config, error) {
 			if strings.HasPrefix(key, "auth_") {
 				sub := strings.TrimPrefix(key, "auth_")
 				return "auth." + sub, v
+			}
+			if strings.HasPrefix(key, "webauthn_") {
+				sub := strings.TrimPrefix(key, "webauthn_")
+				if sub == "origins" {
+					var origins []string
+					for _, part := range strings.Split(v, ",") {
+						trimmed := strings.TrimSpace(part)
+						if trimmed != "" {
+							origins = append(origins, trimmed)
+						}
+					}
+					return "webauthn.origins", origins
+				}
+				return "webauthn." + sub, v
 			}
 			// Registries are handled in manual post-processing
 			return "", nil

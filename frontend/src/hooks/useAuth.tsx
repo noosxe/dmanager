@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { ConnectError, Code } from "@connectrpc/connect";
+import { get as webauthnGet } from "@github/webauthn-json";
 import { authClient } from "../client";
-
 
 export interface User {
   username: string;
@@ -13,7 +13,9 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   needsSetup: boolean;
+  passkeyLoginEnabled: boolean;
   login: (username: string, password: string, rememberMe?: boolean) => Promise<void>;
+  loginWithPasskey: (rememberMe?: boolean) => Promise<void>;
   setupAdmin: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
@@ -31,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [needsSetup, setNeedsSetup] = useState<boolean>(false);
+  const [passkeyLoginEnabled, setPasskeyLoginEnabled] = useState<boolean>(false);
 
   const checkAuth = async () => {
     try {
@@ -56,10 +59,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem("dmanager_user");
         localStorage.removeItem("dmanager_token");
 
-        // Check if setup is needed
+        // Check if setup is needed and passkey status
         try {
           const status = await authClient.getServerStatus({});
           setNeedsSetup(status.needsSetup);
+          setPasskeyLoginEnabled(status.passkeyLoginEnabled);
         } catch (statusErr) {
           console.error("Failed to check server setup status:", statusErr);
         }
@@ -79,6 +83,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     try {
       const response = await authClient.login({ username, password, rememberMe });
+      const loggedUser = { username: response.username, role: response.role };
+      setUser(loggedUser);
+      setIsAuthenticated(true);
+      setNeedsSetup(false);
+      localStorage.setItem("dmanager_user", JSON.stringify(loggedUser));
+      localStorage.setItem("dmanager_token", "session_active");
+    } catch (error) {
+      setUser(null);
+      setIsAuthenticated(false);
+      localStorage.removeItem("dmanager_user");
+      localStorage.removeItem("dmanager_token");
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loginWithPasskey = async (rememberMe = false) => {
+    setIsLoading(true);
+    try {
+      const beginResp = await authClient.beginPasskeyLogin({});
+      const options = JSON.parse(beginResp.optionsJson);
+      const credential = await webauthnGet({ publicKey: options });
+      const response = await authClient.finishPasskeyLogin({
+        responseJson: JSON.stringify(credential),
+        rememberMe,
+      });
       const loggedUser = { username: response.username, role: response.role };
       setUser(loggedUser);
       setIsAuthenticated(true);
@@ -144,7 +175,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated,
         isLoading,
         needsSetup,
+        passkeyLoginEnabled,
         login,
+        loginWithPasskey,
         setupAdmin,
         logout,
         checkAuth,
