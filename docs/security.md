@@ -73,6 +73,10 @@ The system supports two user roles:
 | `Login` | `AuthService` | None | Unauthenticated |
 | `Logout` | `AuthService` | `viewer` | Authenticated |
 | `GetMe` | `AuthService` | `viewer` | Authenticated |
+| `ListAuthEvents` | `AuthService` | `viewer` | Authenticated (Viewer sees own; Admin sees all) |
+| `ListSessions` | `AuthService` | `viewer` | Authenticated (Own sessions only) |
+| `RevokeSession` | `AuthService` | `viewer` | Authenticated (Own session only) |
+| `RevokeAllOtherSessions` | `AuthService` | `viewer` | Authenticated (Own sessions only) |
 | `ListContainers` | `ContainerService` | `viewer` | Authenticated |
 | `GetContainerLogs` | `ContainerService` | `viewer` | Authenticated |
 | `StreamContainers` | `ContainerService` | `viewer` | Authenticated |
