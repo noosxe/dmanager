@@ -46,6 +46,9 @@ graph TD
     F38 --> F39["STORY-039: Private Registry Status Monitoring (DONE)"]
     F39 --> F40["STORY-040: Frontend Table View and View Switcher (DONE)"]
     F40 --> S41["STORY-041: Eliminate QEMU from Multi-Architecture Docker Builds (DONE)"]
+    S41 --> S42["STORY-042: Two-Clock Session Model & Sliding Renewal"]
+    S42 --> S43["STORY-043: Auth Configuration & Cookie Hardening"]
+    S42 --> S44["STORY-044: Background Purge Job for Expired Sessions"]
 ```
 
 
@@ -862,6 +865,68 @@ graph TD
   - `.github/workflows/docker.yml` (modified)
 - **Validation Check:**
   - Verify that the Dockerfile build compiles for both `linux/amd64` and `linux/arm64` locally.
+
+---
+
+### STORY-042: Two-Clock Session Model & Sliding Renewal
+- **Scope:** Backend Database & Authentication Interceptor
+- **Estimated Size:** Medium (~250 LOC)
+- **Dependencies:** `STORY-041`
+- **Goal:** Implement the OWASP-standard two-clock session lifecycle model with sliding idle expiration and an absolute ceiling cap, including schema migration and lazy renewal in the ConnectRPC interceptor.
+- **Tasks:**
+  1. Create migration `00003_session_clocks.sql` to add `last_seen_at` and `absolute_expires_at` columns, backfill existing records, and create an index on `last_seen_at`.
+  2. Update SQLC queries in `internal/db/queries/sessions.sql` (`TouchSession`, `ListSessionsByUser`, `DeleteSessionsByUser`, `CreateSession`, `PurgeExpiredSessions`).
+  3. Update `internal/auth/interceptor.go` to reject expired sessions and slide `expires_at` only after half the idle timeout has elapsed, clamped to `absolute_expires_at`.
+- **Files Affected:**
+  - `internal/db/migrations/00003_session_clocks.sql` (new)
+  - `internal/db/queries/sessions.sql` (modified)
+  - `internal/auth/interceptor.go` (modified)
+- **Validation Check:**
+  - Run `sqlc generate`.
+  - Run database migration and session interceptor unit tests.
+
+---
+
+### STORY-043: Auth Configuration & Cookie Hardening
+- **Scope:** Backend Configuration, Cookies & Frontend Login Form
+- **Estimated Size:** Medium (~250 LOC)
+- **Dependencies:** `STORY-042`
+- **Goal:** Introduce `auth.*` configuration section in koanf, enforce cookie `Secure` and `Max-Age` headers, upgrade bcrypt cost to 12, and support the "Remember me" option on backend and frontend.
+- **Tasks:**
+  1. Add `AuthConfig` to `internal/config/config.go` with environment variable mappings and strict validation.
+  2. Update `proto/dmanager/v1/auth.proto` to add `remember_me` in `LoginRequest` and regenerate code.
+  3. Implement `issueSession` in `internal/auth/service.go` setting `Max-Age` and proper `Secure` mode (`auto`, `always`, `never`).
+  4. Use `cfg.Auth.BcryptCost` (default 12) for `SetupAdmin`.
+  5. Add "Remember me" checkbox to `frontend/src/components/Login.tsx` and pass parameter through `useAuth.tsx`.
+- **Files Affected:**
+  - `internal/config/config.go` (modified)
+  - `proto/dmanager/v1/auth.proto` (modified)
+  - `internal/auth/service.go` (modified)
+  - `frontend/src/components/Login.tsx` (modified)
+  - `frontend/src/hooks/useAuth.tsx` (modified)
+- **Validation Check:**
+  - Run `go test ./internal/config/... ./internal/auth/...`
+  - Run Biome check and React tests.
+
+---
+
+### STORY-044: Background Purge Job for Expired Sessions
+- **Scope:** Background Daemon Maintenance
+- **Estimated Size:** Small (~150 LOC)
+- **Dependencies:** `STORY-042`
+- **Goal:** Run an extensible background purge job on an hourly ticker to remove sessions expired by either idle or absolute clocks.
+- **Tasks:**
+  1. Update `PurgeExpiredSessions` query to delete sessions where `expires_at < ? OR absolute_expires_at < ?`.
+  2. Implement `StartPurgeJob` in `internal/auth/purge.go` supporting multiple purge handlers with error logging.
+  3. Wire the purge job into `cmd/serve.go` with graceful shutdown context.
+- **Files Affected:**
+  - `internal/auth/purge.go` (new)
+  - `internal/auth/purge_test.go` (new)
+  - `cmd/serve.go` (modified)
+- **Validation Check:**
+  - Run unit and integration tests for purge job with SQLite.
+  - Verify zero linter issues (`golangci-lint run`).
+
 
 
 
