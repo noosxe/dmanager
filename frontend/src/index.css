@@ -349,6 +349,30 @@ body {
   margin-top: 2px;
 }
 
+/* Checkbox group styling */
+.auth-checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: -4px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.auth-checkbox-group input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.auth-checkbox-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
 /* Submit button styling */
 .auth-submit-btn {
   display: flex;

@@ -15,14 +15,19 @@ import (
 )
 
 type Interceptor struct {
-	queries *db.Queries
-	logger  *slog.Logger
+	queries     *db.Queries
+	logger      *slog.Logger
+	idleTimeout time.Duration
 }
 
-func NewInterceptor(queries *db.Queries, logger *slog.Logger) *Interceptor {
+func NewInterceptor(queries *db.Queries, logger *slog.Logger, idleTimeout time.Duration) *Interceptor {
+	if idleTimeout <= 0 {
+		idleTimeout = 168 * time.Hour
+	}
 	return &Interceptor{
-		queries: queries,
-		logger:  logger,
+		queries:     queries,
+		logger:      logger,
+		idleTimeout: idleTimeout,
 	}
 }
 
@@ -40,9 +45,27 @@ func (i *Interceptor) authenticate(ctx context.Context, cookieHeader string) (co
 		return ctx, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to query session: %w", err))
 	}
 
-	if session.ExpiresAt.Before(time.Now()) {
+	now := time.Now()
+	if now.After(session.AbsoluteExpiresAt) {
 		_ = i.queries.DeleteSession(ctx, sessionID)
 		return ctx, connect.NewError(connect.CodeUnauthenticated, errors.New("session expired"))
+	}
+	if now.After(session.ExpiresAt) {
+		_ = i.queries.DeleteSession(ctx, sessionID)
+		return ctx, connect.NewError(connect.CodeUnauthenticated, errors.New("session expired"))
+	}
+
+	// Slide only when now > expires_at - idle_timeout/2 (avoid a DB write on every request), clamped to absolute_expires_at
+	if now.After(session.ExpiresAt.Add(-i.idleTimeout / 2)) {
+		newIdle := now.Add(i.idleTimeout)
+		if newIdle.After(session.AbsoluteExpiresAt) {
+			newIdle = session.AbsoluteExpiresAt
+		}
+		_ = i.queries.TouchSession(ctx, db.TouchSessionParams{
+			SessionID:  session.SessionID,
+			ExpiresAt:  newIdle,
+			LastSeenAt: now,
+		})
 	}
 
 	user, err := i.queries.GetUser(ctx, session.UserID)

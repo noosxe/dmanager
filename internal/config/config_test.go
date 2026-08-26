@@ -3,125 +3,190 @@ package config
 import (
 	"os"
 	"path/filepath"
-	"reflect"
 	"testing"
+	"time"
 )
 
-func TestLoadDefaults(t *testing.T) {
+func TestConfigDefaults(t *testing.T) {
 	cfg, err := Load("")
 	if err != nil {
-		t.Fatalf("unexpected error loading config: %v", err)
+		t.Fatalf("failed to load default config: %v", err)
 	}
 
 	if cfg.Server.Port != "9283" {
-		t.Errorf("expected Server.Port to be 9283, got %q", cfg.Server.Port)
+		t.Errorf("expected default port 9283, got %s", cfg.Server.Port)
 	}
-	if cfg.Server.DBPath != "dmanager.db" {
-		t.Errorf("expected Server.DBPath to be dmanager.db, got %q", cfg.Server.DBPath)
+	if cfg.Auth.SessionIdleTimeout != 168*time.Hour {
+		t.Errorf("expected default session_idle_timeout 168h, got %v", cfg.Auth.SessionIdleTimeout)
 	}
-	if cfg.Docker.Host != "unix:///var/run/docker.sock" {
-		t.Errorf("expected Docker.Host to be unix:///var/run/docker.sock, got %q", cfg.Docker.Host)
+	if cfg.Auth.SessionAbsoluteTimeout != 720*time.Hour {
+		t.Errorf("expected default session_absolute_timeout 720h, got %v", cfg.Auth.SessionAbsoluteTimeout)
 	}
-	if cfg.Scheduler.IntervalMinutes != 60 {
-		t.Errorf("expected Scheduler.IntervalMinutes to be 60, got %d", cfg.Scheduler.IntervalMinutes)
+	if cfg.Auth.RememberMeIdleTimeout != 720*time.Hour {
+		t.Errorf("expected default remember_me_idle_timeout 720h, got %v", cfg.Auth.RememberMeIdleTimeout)
+	}
+	if cfg.Auth.RememberMeAbsoluteTimeout != 2160*time.Hour {
+		t.Errorf("expected default remember_me_absolute_timeout 2160h, got %v", cfg.Auth.RememberMeAbsoluteTimeout)
+	}
+	if cfg.Auth.SecureCookies != SecureCookiesAuto {
+		t.Errorf("expected default secure_cookies auto, got %s", cfg.Auth.SecureCookies)
+	}
+	if cfg.Auth.BcryptCost != 12 {
+		t.Errorf("expected default bcrypt_cost 12, got %d", cfg.Auth.BcryptCost)
 	}
 }
 
-func TestLoadYAML(t *testing.T) {
-	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "config.yaml")
+func TestConfigYAML(t *testing.T) {
+	tempDir := t.TempDir()
+	yamlPath := filepath.Join(tempDir, "config.yaml")
 
-	yamlContent := `
+	content := `
 server:
-  port: "9090"
-  db_path: "custom.db"
-  allowed_origins:
-    - "http://localhost:3000"
-    - "http://example.com"
-docker:
-  host: "tcp://localhost:2375"
-scheduler:
-  interval_minutes: 30
-registries:
-  - host: "registry1.com"
-    username: "user1"
-    password: "pass1"
-  - host: "registry2.com"
-    username: "user2"
-    password: "pass2"
+  port: "8080"
+  db_path: "/tmp/custom.db"
+auth:
+  session_idle_timeout: 48h
+  session_absolute_timeout: 120h
+  remember_me_idle_timeout: 100h
+  remember_me_absolute_timeout: 300h
+  secure_cookies: always
+  bcrypt_cost: 14
 `
-	if err := os.WriteFile(configPath, []byte(yamlContent), 0600); err != nil {
-		t.Fatalf("failed to write temp config file: %v", err)
+	if err := os.WriteFile(yamlPath, []byte(content), 0600); err != nil {
+		t.Fatalf("failed to write test yaml: %v", err)
 	}
 
-	cfg, err := Load(configPath)
+	cfg, err := Load(yamlPath)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf("failed to load yaml config: %v", err)
 	}
 
-	if cfg.Server.Port != "9090" {
-		t.Errorf("expected Port 9090, got %q", cfg.Server.Port)
+	if cfg.Server.Port != "8080" {
+		t.Errorf("expected port 8080, got %s", cfg.Server.Port)
 	}
-	if cfg.Server.DBPath != "custom.db" {
-		t.Errorf("expected DBPath custom.db, got %q", cfg.Server.DBPath)
+	if cfg.Auth.SessionIdleTimeout != 48*time.Hour {
+		t.Errorf("expected session_idle_timeout 48h, got %v", cfg.Auth.SessionIdleTimeout)
 	}
-	expectedOrigins := []string{"http://localhost:3000", "http://example.com"}
-	if !reflect.DeepEqual(cfg.Server.AllowedOrigins, expectedOrigins) {
-		t.Errorf("expected AllowedOrigins %v, got %v", expectedOrigins, cfg.Server.AllowedOrigins)
+	if cfg.Auth.SessionAbsoluteTimeout != 120*time.Hour {
+		t.Errorf("expected session_absolute_timeout 120h, got %v", cfg.Auth.SessionAbsoluteTimeout)
 	}
-	if cfg.Docker.Host != "tcp://localhost:2375" {
-		t.Errorf("expected Docker Host tcp://localhost:2375, got %q", cfg.Docker.Host)
+	if cfg.Auth.RememberMeIdleTimeout != 100*time.Hour {
+		t.Errorf("expected remember_me_idle_timeout 100h, got %v", cfg.Auth.RememberMeIdleTimeout)
 	}
-	if cfg.Scheduler.IntervalMinutes != 30 {
-		t.Errorf("expected IntervalMinutes 30, got %d", cfg.Scheduler.IntervalMinutes)
+	if cfg.Auth.RememberMeAbsoluteTimeout != 300*time.Hour {
+		t.Errorf("expected remember_me_absolute_timeout 300h, got %v", cfg.Auth.RememberMeAbsoluteTimeout)
 	}
-	if len(cfg.Registries) != 2 {
-		t.Errorf("expected 2 registries, got %d", len(cfg.Registries))
-	} else {
-		if cfg.Registries[0].Host != "registry1.com" || cfg.Registries[0].Username != "user1" {
-			t.Errorf("registry 0 mismatch: %+v", cfg.Registries[0])
-		}
-		if cfg.Registries[1].Host != "registry2.com" || cfg.Registries[1].Username != "user2" {
-			t.Errorf("registry 1 mismatch: %+v", cfg.Registries[1])
-		}
+	if cfg.Auth.SecureCookies != "always" {
+		t.Errorf("expected secure_cookies always, got %s", cfg.Auth.SecureCookies)
+	}
+	if cfg.Auth.BcryptCost != 14 {
+		t.Errorf("expected bcrypt_cost 14, got %d", cfg.Auth.BcryptCost)
 	}
 }
 
-func TestLoadEnvOverrides(t *testing.T) {
-	t.Setenv("DMANAGER_SERVER_PORT", "9999")
-	t.Setenv("DMANAGER_SERVER_DB_PATH", "env.db")
-	t.Setenv("DMANAGER_SERVER_ALLOWED_ORIGINS", "http://env1.com,http://env2.com")
-	t.Setenv("DMANAGER_DOCKER_HOST", "tcp://env:2375")
-	t.Setenv("DMANAGER_SCHEDULER_INTERVAL_MINUTES", "15")
-	t.Setenv("DMANAGER_REGISTRIES_0_HOST", "envreg.com")
-	t.Setenv("DMANAGER_REGISTRIES_0_USERNAME", "envuser")
-	t.Setenv("DMANAGER_REGISTRIES_0_PASSWORD", "envpass")
+func TestConfigEnvOverrides(t *testing.T) {
+	t.Setenv("DMANAGER_AUTH_SESSION_IDLE_TIMEOUT", "24h")
+	t.Setenv("DMANAGER_AUTH_SESSION_ABSOLUTE_TIMEOUT", "48h")
+	t.Setenv("DMANAGER_AUTH_REMEMBER_ME_IDLE_TIMEOUT", "72h")
+	t.Setenv("DMANAGER_AUTH_REMEMBER_ME_ABSOLUTE_TIMEOUT", "168h")
+	t.Setenv("DMANAGER_AUTH_SECURE_COOKIES", "never")
+	t.Setenv("DMANAGER_AUTH_BCRYPT_COST", "13")
 
 	cfg, err := Load("")
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf("failed to load env config: %v", err)
 	}
 
-	if cfg.Server.Port != "9999" {
-		t.Errorf("expected Port 9999, got %q", cfg.Server.Port)
+	if cfg.Auth.SessionIdleTimeout != 24*time.Hour {
+		t.Errorf("expected session_idle_timeout 24h, got %v", cfg.Auth.SessionIdleTimeout)
 	}
-	if cfg.Server.DBPath != "env.db" {
-		t.Errorf("expected DBPath env.db, got %q", cfg.Server.DBPath)
+	if cfg.Auth.SessionAbsoluteTimeout != 48*time.Hour {
+		t.Errorf("expected session_absolute_timeout 48h, got %v", cfg.Auth.SessionAbsoluteTimeout)
 	}
-	expectedOrigins := []string{"http://env1.com", "http://env2.com"}
-	if !reflect.DeepEqual(cfg.Server.AllowedOrigins, expectedOrigins) {
-		t.Errorf("expected AllowedOrigins %v, got %v", expectedOrigins, cfg.Server.AllowedOrigins)
+	if cfg.Auth.RememberMeIdleTimeout != 72*time.Hour {
+		t.Errorf("expected remember_me_idle_timeout 72h, got %v", cfg.Auth.RememberMeIdleTimeout)
 	}
-	if cfg.Docker.Host != "tcp://env:2375" {
-		t.Errorf("expected Docker Host tcp://env:2375, got %q", cfg.Docker.Host)
+	if cfg.Auth.RememberMeAbsoluteTimeout != 168*time.Hour {
+		t.Errorf("expected remember_me_absolute_timeout 168h, got %v", cfg.Auth.RememberMeAbsoluteTimeout)
 	}
-	if cfg.Scheduler.IntervalMinutes != 15 {
-		t.Errorf("expected IntervalMinutes 15, got %d", cfg.Scheduler.IntervalMinutes)
+	if cfg.Auth.SecureCookies != "never" {
+		t.Errorf("expected secure_cookies never, got %s", cfg.Auth.SecureCookies)
 	}
-	if len(cfg.Registries) < 1 {
-		t.Fatalf("expected at least 1 registry from env override, got 0")
+	if cfg.Auth.BcryptCost != 13 {
+		t.Errorf("expected bcrypt_cost 13, got %d", cfg.Auth.BcryptCost)
 	}
-	if cfg.Registries[0].Host != "envreg.com" || cfg.Registries[0].Username != "envuser" || cfg.Registries[0].Password != "envpass" {
-		t.Errorf("registry 0 env override mismatch: %+v", cfg.Registries[0])
+}
+
+func TestConfigValidation(t *testing.T) {
+	tests := []struct {
+		name    string
+		mutate  func(c *Config)
+		wantErr bool
+	}{
+		{
+			name: "idle timeout zero",
+			mutate: func(c *Config) {
+				c.Auth.SessionIdleTimeout = 0
+			},
+			wantErr: true,
+		},
+		{
+			name: "absolute timeout less than idle timeout",
+			mutate: func(c *Config) {
+				c.Auth.SessionIdleTimeout = 100 * time.Hour
+				c.Auth.SessionAbsoluteTimeout = 50 * time.Hour
+			},
+			wantErr: true,
+		},
+		{
+			name: "remember_me idle zero",
+			mutate: func(c *Config) {
+				c.Auth.RememberMeIdleTimeout = 0
+			},
+			wantErr: true,
+		},
+		{
+			name: "remember_me absolute less than idle",
+			mutate: func(c *Config) {
+				c.Auth.RememberMeIdleTimeout = 100 * time.Hour
+				c.Auth.RememberMeAbsoluteTimeout = 50 * time.Hour
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid secure_cookies",
+			mutate: func(c *Config) {
+				c.Auth.SecureCookies = "sometimes"
+			},
+			wantErr: true,
+		},
+		{
+			name: "bcrypt cost too low",
+			mutate: func(c *Config) {
+				c.Auth.BcryptCost = 3
+			},
+			wantErr: true,
+		},
+		{
+			name: "bcrypt cost too high",
+			mutate: func(c *Config) {
+				c.Auth.BcryptCost = 32
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg, err := Load("")
+			if err != nil {
+				t.Fatalf("failed to load base config: %v", err)
+			}
+			tt.mutate(cfg)
+			err = cfg.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
 }

@@ -723,10 +723,13 @@ func TestGetContainerLogs(t *testing.T) {
 
 	// Seed sessions
 	viewerSessionID := "viewer-session-token-12345"
+	now := time.Now()
 	_, err = queries.CreateSession(context.Background(), db.CreateSessionParams{
-		SessionID: viewerSessionID,
-		UserID:    viewerUser.ID,
-		ExpiresAt: time.Now().Add(24 * time.Hour),
+		SessionID:         viewerSessionID,
+		UserID:            viewerUser.ID,
+		ExpiresAt:         now.Add(24 * time.Hour),
+		LastSeenAt:        now,
+		AbsoluteExpiresAt: now.Add(720 * time.Hour),
 	})
 	if err != nil {
 		t.Fatalf("failed to create viewer session: %v", err)
@@ -734,9 +737,11 @@ func TestGetContainerLogs(t *testing.T) {
 
 	adminSessionID := "admin-session-token-12345"
 	_, err = queries.CreateSession(context.Background(), db.CreateSessionParams{
-		SessionID: adminSessionID,
-		UserID:    adminUser.ID,
-		ExpiresAt: time.Now().Add(24 * time.Hour),
+		SessionID:         adminSessionID,
+		UserID:            adminUser.ID,
+		ExpiresAt:         now.Add(24 * time.Hour),
+		LastSeenAt:        now,
+		AbsoluteExpiresAt: now.Add(720 * time.Hour),
 	})
 	if err != nil {
 		t.Fatalf("failed to create admin session: %v", err)
@@ -800,7 +805,7 @@ func TestGetContainerLogs(t *testing.T) {
 	svc := NewService(dbConn, broker, dockerClient, slog.Default(), nil)
 
 	// Setup Connect handler / server with the Authentication Interceptor
-	interceptor := auth.NewInterceptor(queries, slog.Default())
+	interceptor := auth.NewInterceptor(queries, slog.Default(), 0)
 	mux := http.NewServeMux()
 	path, handler := dmanagerv1connect.NewContainerServiceHandler(svc, connect.WithInterceptors(interceptor))
 	mux.Handle(path, handler)

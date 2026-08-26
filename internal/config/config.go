@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/confmap"
@@ -28,15 +29,56 @@ type DockerConfig struct {
 	Host string `koanf:"host"`
 }
 
+const (
+	SecureCookiesAuto   = "auto"
+	SecureCookiesAlways = "always"
+	SecureCookiesNever  = "never"
+)
+
 type SchedulerConfig struct {
 	IntervalMinutes int `koanf:"interval_minutes"`
+}
+
+type AuthConfig struct {
+	SessionIdleTimeout        time.Duration `koanf:"session_idle_timeout"`
+	SessionAbsoluteTimeout    time.Duration `koanf:"session_absolute_timeout"`
+	RememberMeIdleTimeout     time.Duration `koanf:"remember_me_idle_timeout"`
+	RememberMeAbsoluteTimeout time.Duration `koanf:"remember_me_absolute_timeout"`
+	SecureCookies             string        `koanf:"secure_cookies"`
+	BcryptCost                int           `koanf:"bcrypt_cost"`
 }
 
 type Config struct {
 	Server     ServerConfig    `koanf:"server"`
 	Docker     DockerConfig    `koanf:"docker"`
 	Scheduler  SchedulerConfig `koanf:"scheduler"`
+	Auth       AuthConfig      `koanf:"auth"`
 	Registries []Registry      `koanf:"registries"`
+}
+
+// Validate verifies that the loaded configuration contains valid parameters.
+func (c *Config) Validate() error {
+	if c.Auth.SessionIdleTimeout <= 0 {
+		return fmt.Errorf("auth.session_idle_timeout must be greater than 0")
+	}
+	if c.Auth.SessionAbsoluteTimeout < c.Auth.SessionIdleTimeout {
+		return fmt.Errorf("auth.session_absolute_timeout must be greater than or equal to auth.session_idle_timeout")
+	}
+	if c.Auth.RememberMeIdleTimeout <= 0 {
+		return fmt.Errorf("auth.remember_me_idle_timeout must be greater than 0")
+	}
+	if c.Auth.RememberMeAbsoluteTimeout < c.Auth.RememberMeIdleTimeout {
+		return fmt.Errorf("auth.remember_me_absolute_timeout must be greater than or equal to auth.remember_me_idle_timeout")
+	}
+	switch c.Auth.SecureCookies {
+	case SecureCookiesAuto, SecureCookiesAlways, SecureCookiesNever:
+	default:
+		return fmt.Errorf("auth.secure_cookies must be one of 'auto', 'always', 'never', got %q", c.Auth.SecureCookies)
+	}
+	if c.Auth.BcryptCost < 4 || c.Auth.BcryptCost > 31 {
+		return fmt.Errorf("auth.bcrypt_cost must be between 4 and 31, got %d", c.Auth.BcryptCost)
+	}
+	return nil
 }
 
 // Load loads configuration from the specified path, default paths, and environment variables.
@@ -45,10 +87,16 @@ func Load(configPath string) (*Config, error) {
 
 	// 1. Load default fallback values
 	defaults := map[string]interface{}{
-		"server.port":                "9283",
-		"server.db_path":             "dmanager.db",
-		"docker.host":                "unix:///var/run/docker.sock",
-		"scheduler.interval_minutes": 60,
+		"server.port":                       "9283",
+		"server.db_path":                    "dmanager.db",
+		"docker.host":                       "unix:///var/run/docker.sock",
+		"scheduler.interval_minutes":        60,
+		"auth.session_idle_timeout":         168 * time.Hour,
+		"auth.session_absolute_timeout":     720 * time.Hour,
+		"auth.remember_me_idle_timeout":     720 * time.Hour,
+		"auth.remember_me_absolute_timeout": 2160 * time.Hour,
+		"auth.secure_cookies":               SecureCookiesAuto,
+		"auth.bcrypt_cost":                  12,
 	}
 	if err := k.Load(confmap.Provider(defaults, "."), nil); err != nil {
 		return nil, fmt.Errorf("failed to load default configuration: %w", err)
@@ -107,6 +155,10 @@ func Load(configPath string) (*Config, error) {
 				sub := strings.TrimPrefix(key, "scheduler_")
 				return "scheduler." + sub, v
 			}
+			if strings.HasPrefix(key, "auth_") {
+				sub := strings.TrimPrefix(key, "auth_")
+				return "auth." + sub, v
+			}
 			// Registries are handled in manual post-processing
 			return "", nil
 		},
@@ -119,6 +171,10 @@ func Load(configPath string) (*Config, error) {
 	var cfg Config
 	if err := k.Unmarshal("", &cfg); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal configuration: %w", err)
+	}
+
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid configuration: %w", err)
 	}
 
 	// 4. Manually post-process DMANAGER_REGISTRIES_ environment variables

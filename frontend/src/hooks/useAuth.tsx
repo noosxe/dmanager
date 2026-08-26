@@ -13,7 +13,7 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   needsSetup: boolean;
-  login: (username: string, password: string) => Promise<void>;
+  login: (username: string, password: string, rememberMe?: boolean) => Promise<void>;
   setupAdmin: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
@@ -75,10 +75,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth();
   }, []);
 
-  const login = async (username: string, password: string) => {
+  const login = async (username: string, password: string, rememberMe = false) => {
     setIsLoading(true);
     try {
-      const response = await authClient.login({ username, password });
+      const response = await authClient.login({ username, password, rememberMe });
       const loggedUser = { username: response.username, role: response.role };
       setUser(loggedUser);
       setIsAuthenticated(true);

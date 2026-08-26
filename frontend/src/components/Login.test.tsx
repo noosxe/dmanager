@@ -81,7 +81,29 @@ describe("Login Component", () => {
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
-      expect(loginMock).toHaveBeenCalledWith("admin", "password123");
+      expect(loginMock).toHaveBeenCalledWith("admin", "password123", false);
+    });
+  });
+
+  it("submits the form with rememberMe true when checked", async () => {
+    loginMock.mockResolvedValueOnce(undefined);
+
+    render(<Login />);
+    const usernameInput = screen.getByLabelText(/username/i);
+    const passwordInput = screen.getByLabelText(/password/i, { selector: "input" });
+    const rememberMeCheckbox = screen.getByLabelText(/remember me/i);
+    const submitBtn = screen.getByRole("button", { name: /sign in/i });
+
+    expect(rememberMeCheckbox).not.toBeChecked();
+    fireEvent.click(rememberMeCheckbox);
+    expect(rememberMeCheckbox).toBeChecked();
+
+    fireEvent.change(usernameInput, { target: { value: "admin" } });
+    fireEvent.change(passwordInput, { target: { value: "password123" } });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(loginMock).toHaveBeenCalledWith("admin", "password123", true);
     });
   });
 

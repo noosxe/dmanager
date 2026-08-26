@@ -46,9 +46,9 @@ graph TD
     F38 --> F39["STORY-039: Private Registry Status Monitoring (DONE)"]
     F39 --> F40["STORY-040: Frontend Table View and View Switcher (DONE)"]
     F40 --> S41["STORY-041: Eliminate QEMU from Multi-Architecture Docker Builds (DONE)"]
-    S41 --> S42["STORY-042: Two-Clock Session Model & Sliding Renewal"]
-    S42 --> S43["STORY-043: Auth Configuration & Cookie Hardening"]
-    S42 --> S44["STORY-044: Background Purge Job for Expired Sessions"]
+    S41 --> S42["STORY-042: Two-Clock Session Model & Sliding Renewal (DONE)"]
+    S42 --> S43["STORY-043: Auth Configuration & Cookie Hardening (DONE)"]
+    S42 --> S44["STORY-044: Background Purge Job for Expired Sessions (DONE)"]
 ```
 
 
@@ -868,7 +868,7 @@ graph TD
 
 ---
 
-### STORY-042: Two-Clock Session Model & Sliding Renewal
+### STORY-042: Two-Clock Session Model & Sliding Renewal [DONE]
 - **Scope:** Backend Database & Authentication Interceptor
 - **Estimated Size:** Medium (~250 LOC)
 - **Dependencies:** `STORY-041`
@@ -887,7 +887,7 @@ graph TD
 
 ---
 
-### STORY-043: Auth Configuration & Cookie Hardening
+### STORY-043: Auth Configuration & Cookie Hardening [DONE]
 - **Scope:** Backend Configuration, Cookies & Frontend Login Form
 - **Estimated Size:** Medium (~250 LOC)
 - **Dependencies:** `STORY-042`
@@ -910,7 +910,7 @@ graph TD
 
 ---
 
-### STORY-044: Background Purge Job for Expired Sessions
+### STORY-044: Background Purge Job for Expired Sessions [DONE]
 - **Scope:** Background Daemon Maintenance
 - **Estimated Size:** Small (~150 LOC)
 - **Dependencies:** `STORY-042`
