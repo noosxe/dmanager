@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"net/http"
 	"strings"
 	"time"
@@ -23,12 +24,16 @@ import (
 const adminRole = "admin"
 
 type Service struct {
-	Queries *db.Queries
-	logger  *slog.Logger
-	cfg     config.AuthConfig
+	Queries           *db.Queries
+	logger            *slog.Logger
+	cfg               config.AuthConfig
+	trustedProxy      bool
+	dummyHash         []byte
+	rateLimiter       *RateLimiter
+	passwordValidator *PasswordValidator
 }
 
-func NewService(queries *db.Queries, logger *slog.Logger, cfg config.AuthConfig) *Service {
+func NewService(queries *db.Queries, logger *slog.Logger, cfg config.AuthConfig, trustedProxy bool) *Service {
 	if cfg.SessionIdleTimeout <= 0 {
 		cfg.SessionIdleTimeout = 168 * time.Hour
 	}
@@ -48,10 +53,19 @@ func NewService(queries *db.Queries, logger *slog.Logger, cfg config.AuthConfig)
 		cfg.BcryptCost = 12
 	}
 
+	dummyHash, err := bcrypt.GenerateFromPassword([]byte("dummy-timing-equalization-password-hash"), cfg.BcryptCost)
+	if err != nil && logger != nil {
+		logger.Warn("Failed to generate dummy bcrypt hash for timing equalization", "error", err)
+	}
+
 	return &Service{
-		Queries: queries,
-		logger:  logger,
-		cfg:     cfg,
+		Queries:           queries,
+		logger:            logger,
+		cfg:               cfg,
+		trustedProxy:      trustedProxy,
+		dummyHash:         dummyHash,
+		rateLimiter:       NewRateLimiter(trustedProxy),
+		passwordValidator: NewPasswordValidator(cfg.BreachedPasswordCheck, logger),
 	}
 }
 
@@ -72,6 +86,10 @@ func (s *Service) SetupAdmin(ctx context.Context, req *connect.Request[v1.SetupA
 
 	if username == "" || password == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("username and password are required"))
+	}
+
+	if err := s.passwordValidator.Validate(password); err != nil {
+		return nil, err
 	}
 
 	count, err := s.Queries.CountUsers(ctx)
@@ -165,9 +183,27 @@ func (s *Service) Login(ctx context.Context, req *connect.Request[v1.LoginReques
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("username and password are required"))
 	}
 
+	clientIP := ExtractClientIP(req.Header(), req.Peer().Addr, s.trustedProxy)
+
+	locked, retryAfter := s.rateLimiter.Check(username, clientIP, time.Now())
+	if locked {
+		retrySec := int(math.Ceil(retryAfter.Seconds()))
+		if retrySec < 1 {
+			retrySec = 1
+		}
+		return nil, connect.NewError(
+			connect.CodeResourceExhausted,
+			fmt.Errorf("too many failed login attempts, please try again in %d seconds", retrySec),
+		)
+	}
+
 	user, err := s.Queries.GetUserByUsername(ctx, username)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			if len(s.dummyHash) > 0 {
+				_ = bcrypt.CompareHashAndPassword(s.dummyHash, []byte(password))
+			}
+			s.rateLimiter.RecordFailure(username, clientIP, time.Now())
 			return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid credentials"))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to query user: %w", err))
@@ -175,8 +211,11 @@ func (s *Service) Login(ctx context.Context, req *connect.Request[v1.LoginReques
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
 	if err != nil {
+		s.rateLimiter.RecordFailure(username, clientIP, time.Now())
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid credentials"))
 	}
+
+	s.rateLimiter.RecordSuccess(username)
 
 	_, cookieHeader, err := s.issueSession(ctx, user.ID, req.Msg.RememberMe, req.Header())
 	if err != nil {

@@ -1,3 +1,4 @@
+import { ConnectError } from "@connectrpc/connect";
 import { Eye, EyeOff, Loader2, Lock, ShieldAlert, Sparkles, Terminal, User } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
@@ -49,8 +50,12 @@ export function Login() {
       await login(username.trim(), password, rememberMe);
     } catch (err: unknown) {
       console.error(err);
-      const message = err instanceof Error ? err.message : String(err);
-      setError(message || "Invalid username or password");
+      if (err instanceof ConnectError) {
+        setError(err.rawMessage || err.message);
+      } else {
+        const message = err instanceof Error ? err.message : String(err);
+        setError(message || "Invalid username or password");
+      }
     } finally {
       setIsSubmitting(false);
     }

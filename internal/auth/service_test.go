@@ -21,7 +21,7 @@ import (
 
 const (
 	testAdminUsername = "admin"
-	testPassword      = "password123"
+	testPassword      = "password12345"
 )
 
 func newTestDB(t *testing.T) *db.Queries {
@@ -52,7 +52,7 @@ func testAuthConfig() config.AuthConfig {
 
 func TestGetServerStatus(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig())
+	svc := NewService(queries, slog.Default(), testAuthConfig(), false)
 	ctx := context.Background()
 
 	resp, err := svc.GetServerStatus(ctx, connect.NewRequest(&v1.GetServerStatusRequest{}))
@@ -83,7 +83,7 @@ func TestGetServerStatus(t *testing.T) {
 
 func TestSetupAdmin(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig())
+	svc := NewService(queries, slog.Default(), testAuthConfig(), false)
 	ctx := context.Background()
 
 	resp, err := svc.SetupAdmin(ctx, connect.NewRequest(&v1.SetupAdminRequest{
@@ -125,7 +125,7 @@ func TestSetupAdmin(t *testing.T) {
 
 func TestLogin(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig())
+	svc := NewService(queries, slog.Default(), testAuthConfig(), false)
 	ctx := context.Background()
 
 	_, err := svc.SetupAdmin(ctx, connect.NewRequest(&v1.SetupAdminRequest{
@@ -214,7 +214,7 @@ func TestLogin(t *testing.T) {
 
 func TestLoginLegacyBcryptCost10(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig())
+	svc := NewService(queries, slog.Default(), testAuthConfig(), false)
 	ctx := context.Background()
 
 	// Seed user with legacy cost 10 hash
@@ -308,7 +308,7 @@ func TestCookieSecureMatrix(t *testing.T) {
 
 func TestGetMe(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig())
+	svc := NewService(queries, slog.Default(), testAuthConfig(), false)
 
 	user := db.User{
 		ID:       42,
@@ -337,7 +337,7 @@ func TestGetMe(t *testing.T) {
 
 func TestLogout(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig())
+	svc := NewService(queries, slog.Default(), testAuthConfig(), false)
 	ctx := context.Background()
 
 	_, err := svc.SetupAdmin(ctx, connect.NewRequest(&v1.SetupAdminRequest{
@@ -376,5 +376,85 @@ func TestLogout(t *testing.T) {
 	_, err = queries.GetSession(context.Background(), sessionID)
 	if !errors.Is(err, sql.ErrNoRows) {
 		t.Errorf("expected session to be deleted, queries.GetSession returned: %v", err)
+	}
+}
+
+func TestSetupAdminPasswordPolicyRejection(t *testing.T) {
+	queries := newTestDB(t)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), false)
+	ctx := context.Background()
+
+	// Less than 12 chars should be rejected
+	_, err := svc.SetupAdmin(ctx, connect.NewRequest(&v1.SetupAdminRequest{
+		Username: testAdminUsername,
+		Password: "short11char",
+	}))
+	if err == nil {
+		t.Fatalf("expected password < 12 chars to be rejected, got nil")
+	}
+	if connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Errorf("expected CodeInvalidArgument, got %v", err)
+	}
+}
+
+func TestLoginRateLimitingThrottling(t *testing.T) {
+	queries := newTestDB(t)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), false)
+	ctx := context.Background()
+
+	_, err := svc.SetupAdmin(ctx, connect.NewRequest(&v1.SetupAdminRequest{
+		Username: testAdminUsername,
+		Password: testPassword,
+	}))
+	if err != nil {
+		t.Fatalf("setup failed: %v", err)
+	}
+
+	// 5 failed login attempts
+	for i := 1; i <= 5; i++ {
+		_, loginErr := svc.Login(ctx, connect.NewRequest(&v1.LoginRequest{
+			Username: testAdminUsername,
+			Password: "wrongpassword",
+		}))
+		if loginErr == nil {
+			t.Fatalf("attempt %d: expected login to fail", i)
+		}
+		if connect.CodeOf(loginErr) != connect.CodeUnauthenticated {
+			t.Errorf("attempt %d: expected CodeUnauthenticated, got %v", i, connect.CodeOf(loginErr))
+		}
+	}
+
+	// 6th attempt should be blocked by rate limiter with CodeResourceExhausted
+	_, err = svc.Login(ctx, connect.NewRequest(&v1.LoginRequest{
+		Username: testAdminUsername,
+		Password: testPassword, // Even with correct password, account/IP is locked out
+	}))
+	if err == nil {
+		t.Fatalf("expected 6th attempt to be blocked by rate limiter, got nil")
+	}
+	if connect.CodeOf(err) != connect.CodeResourceExhausted {
+		t.Errorf("expected CodeResourceExhausted, got %v (%v)", connect.CodeOf(err), err)
+	}
+}
+
+func TestLoginTimingEqualization(t *testing.T) {
+	queries := newTestDB(t)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), false)
+	ctx := context.Background()
+
+	if len(svc.dummyHash) == 0 {
+		t.Fatalf("expected dummyHash to be initialized in Service")
+	}
+
+	// Non-existent user login executes dummy compare without panic/error crash
+	_, err := svc.Login(ctx, connect.NewRequest(&v1.LoginRequest{
+		Username: "nonexistentuser",
+		Password: "randompassword123",
+	}))
+	if err == nil {
+		t.Fatalf("expected non-existent user to fail")
+	}
+	if connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Errorf("expected CodeUnauthenticated, got %v", err)
 	}
 }

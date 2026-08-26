@@ -34,6 +34,12 @@ func TestConfigDefaults(t *testing.T) {
 	if cfg.Auth.BcryptCost != 12 {
 		t.Errorf("expected default bcrypt_cost 12, got %d", cfg.Auth.BcryptCost)
 	}
+	if cfg.Server.TrustedProxy {
+		t.Errorf("expected default trusted_proxy false, got true")
+	}
+	if cfg.Auth.BreachedPasswordCheck {
+		t.Errorf("expected default breached_password_check false, got true")
+	}
 }
 
 func TestConfigYAML(t *testing.T) {
@@ -44,6 +50,7 @@ func TestConfigYAML(t *testing.T) {
 server:
   port: "8080"
   db_path: "/tmp/custom.db"
+  trusted_proxy: true
 auth:
   session_idle_timeout: 48h
   session_absolute_timeout: 120h
@@ -51,6 +58,7 @@ auth:
   remember_me_absolute_timeout: 300h
   secure_cookies: always
   bcrypt_cost: 14
+  breached_password_check: true
 `
 	if err := os.WriteFile(yamlPath, []byte(content), 0600); err != nil {
 		t.Fatalf("failed to write test yaml: %v", err)
@@ -63,6 +71,9 @@ auth:
 
 	if cfg.Server.Port != "8080" {
 		t.Errorf("expected port 8080, got %s", cfg.Server.Port)
+	}
+	if !cfg.Server.TrustedProxy {
+		t.Errorf("expected trusted_proxy true, got false")
 	}
 	if cfg.Auth.SessionIdleTimeout != 48*time.Hour {
 		t.Errorf("expected session_idle_timeout 48h, got %v", cfg.Auth.SessionIdleTimeout)
@@ -82,19 +93,31 @@ auth:
 	if cfg.Auth.BcryptCost != 14 {
 		t.Errorf("expected bcrypt_cost 14, got %d", cfg.Auth.BcryptCost)
 	}
+	if !cfg.Auth.BreachedPasswordCheck {
+		t.Errorf("expected breached_password_check true, got false")
+	}
 }
 
 func TestConfigEnvOverrides(t *testing.T) {
+	t.Setenv("DMANAGER_SERVER_TRUSTED_PROXY", "true")
 	t.Setenv("DMANAGER_AUTH_SESSION_IDLE_TIMEOUT", "24h")
 	t.Setenv("DMANAGER_AUTH_SESSION_ABSOLUTE_TIMEOUT", "48h")
 	t.Setenv("DMANAGER_AUTH_REMEMBER_ME_IDLE_TIMEOUT", "72h")
 	t.Setenv("DMANAGER_AUTH_REMEMBER_ME_ABSOLUTE_TIMEOUT", "168h")
 	t.Setenv("DMANAGER_AUTH_SECURE_COOKIES", "never")
 	t.Setenv("DMANAGER_AUTH_BCRYPT_COST", "13")
+	t.Setenv("DMANAGER_AUTH_BREACHED_PASSWORD_CHECK", "true")
 
 	cfg, err := Load("")
 	if err != nil {
 		t.Fatalf("failed to load env config: %v", err)
+	}
+
+	if !cfg.Server.TrustedProxy {
+		t.Errorf("expected env server.trusted_proxy true, got false")
+	}
+	if !cfg.Auth.BreachedPasswordCheck {
+		t.Errorf("expected env auth.breached_password_check true, got false")
 	}
 
 	if cfg.Auth.SessionIdleTimeout != 24*time.Hour {
