@@ -49,10 +49,10 @@ graph TD
     S41 --> S42["STORY-042: Two-Clock Session Model & Sliding Renewal (DONE)"]
     S42 --> S43["STORY-043: Auth Configuration & Cookie Hardening (DONE)"]
     S42 --> S44["STORY-044: Background Purge Job for Expired Sessions (DONE)"]
-    S44 --> S45["STORY-045: Connect Interceptor RBAC Enforcement & Procedure Coverage"]
-    S45 --> S46["STORY-046: Sliding Window Login Rate Limiting & Exponential Lockout"]
-    S46 --> S47["STORY-047: Timing Equalization, Password Policy & Breached Check"]
-    S45 --> S48["STORY-048: Require Authentication for LogService/SyncLogs"]
+    S44 --> S45["STORY-045: Connect Interceptor RBAC Enforcement & Procedure Coverage (DONE)"]
+    S45 --> S46["STORY-046: Sliding Window Login Rate Limiting & Exponential Lockout (DONE)"]
+    S46 --> S47["STORY-047: Timing Equalization, Password Policy & Breached Check (DONE)"]
+    S45 --> S48["STORY-048: Require Authentication for LogService/SyncLogs (DONE)"]
 ```
 
 
@@ -933,7 +933,7 @@ graph TD
 
 ---
 
-### STORY-045: Connect Interceptor RBAC Enforcement & Procedure Coverage
+### STORY-045: Connect Interceptor RBAC Enforcement & Procedure Coverage (DONE)
 - **Scope:** Backend Authentication Interceptor & Security Matrix
 - **Estimated Size:** Medium (~200 LOC)
 - **Dependencies:** `STORY-042`
@@ -951,7 +951,7 @@ graph TD
 
 ---
 
-### STORY-046: Sliding Window Login Rate Limiting & Exponential Lockout
+### STORY-046: Sliding Window Login Rate Limiting & Exponential Lockout (DONE)
 - **Scope:** Backend Login Throttling & Frontend Error Handling
 - **Estimated Size:** Medium (~250 LOC)
 - **Dependencies:** `STORY-045`
@@ -971,7 +971,7 @@ graph TD
 
 ---
 
-### STORY-047: Timing Equalization, Password Policy & Breached Check
+### STORY-047: Timing Equalization, Password Policy & Breached Check (DONE)
 - **Scope:** Backend Auth Service, Config & Password Validation
 - **Estimated Size:** Medium (~250 LOC)
 - **Dependencies:** `STORY-043`
@@ -992,7 +992,7 @@ graph TD
 
 ---
 
-### STORY-048: Require Authentication for LogService/SyncLogs
+### STORY-048: Require Authentication for LogService/SyncLogs (DONE)
 - **Scope:** Backend Interceptor Allowlist & Frontend Log Syncer
 - **Estimated Size:** Small (~100 LOC)
 - **Dependencies:** `STORY-045`

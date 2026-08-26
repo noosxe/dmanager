@@ -12,6 +12,8 @@ import (
 	"dmanager/internal/db"
 )
 
+const testDummyHash = "dummyhash"
+
 func TestSessionPurgeJob(t *testing.T) {
 	queries := newTestDB(t)
 	ctx := context.Background()
@@ -19,8 +21,8 @@ func TestSessionPurgeJob(t *testing.T) {
 	// Create user
 	user, err := queries.CreateUser(ctx, db.CreateUserParams{
 		Username:     "purgemaster",
-		PasswordHash: "dummyhash",
-		Role:         "admin",
+		PasswordHash: testDummyHash,
+		Role:         adminRole,
 	})
 	if err != nil {
 		t.Fatalf("failed to create user: %v", err)

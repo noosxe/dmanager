@@ -1,3 +1,4 @@
+import { Code, ConnectError } from "@connectrpc/connect";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuth } from "../hooks/useAuth";
@@ -122,6 +123,29 @@ describe("Login Component", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Invalid username or password")).toBeInTheDocument();
+    });
+  });
+
+  it("displays rate limiting lockout error banner", async () => {
+    const rateLimitError = new ConnectError(
+      "too many failed login attempts, please try again in 60 seconds",
+      Code.ResourceExhausted,
+    );
+    loginMock.mockRejectedValueOnce(rateLimitError);
+
+    render(<Login />);
+    const usernameInput = screen.getByLabelText(/username/i);
+    const passwordInput = screen.getByLabelText(/password/i, { selector: "input" });
+    const submitBtn = screen.getByRole("button", { name: /sign in/i });
+
+    fireEvent.change(usernameInput, { target: { value: "admin" } });
+    fireEvent.change(passwordInput, { target: { value: "password123" } });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/too many failed login attempts, please try again in 60 seconds/i),
+      ).toBeInTheDocument();
     });
   });
 });

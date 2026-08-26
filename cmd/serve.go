@@ -125,7 +125,7 @@ var serveCmd = &cobra.Command{
 			}
 		})
 
-		authSvc := auth.NewService(queries, logger.With("module", "auth"), cfg.Auth)
+		authSvc := auth.NewService(queries, logger.With("module", "auth"), cfg.Auth, cfg.Server.TrustedProxy)
 		authInterceptor := auth.NewInterceptor(queries, logger.With("module", "auth"), cfg.Auth.SessionIdleTimeout)
 
 		// Start background expired session purge job

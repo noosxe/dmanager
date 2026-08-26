@@ -1,5 +1,6 @@
-import { logDb } from "./logger";
+import { Code, ConnectError } from "@connectrpc/connect";
 import { logClient } from "../client";
+import { logDb } from "./logger";
 
 let isSyncing = false;
 let syncTimeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -52,8 +53,15 @@ export async function syncPendingLogs() {
         break;
       }
     }
-  } catch (err) {
-    // Fail silently or handle locally to avoid console.error loops
+  } catch (err: unknown) {
+    if (err instanceof ConnectError && err.code === Code.Unauthenticated) {
+      // Unauthenticated session, drop local queue to prevent infinite retry storm
+      try {
+        await logDb.logs.clear();
+      } catch {
+        // Ignore DB clear errors
+      }
+    }
   } finally {
     isSyncing = false;
   }

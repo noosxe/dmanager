@@ -12,6 +12,7 @@ import (
 	connect "connectrpc.com/connect"
 
 	"dmanager/internal/db"
+	"dmanager/internal/gen/proto/dmanager/v1/dmanagerv1connect"
 )
 
 type Interceptor struct {
@@ -81,15 +82,61 @@ func (i *Interceptor) authenticate(ctx context.Context, cookieHeader string) (co
 	return ctx, nil
 }
 
+type ProcedureRole int
+
+const (
+	RoleUnauthenticated ProcedureRole = iota
+	RoleViewer
+	RoleAdmin
+)
+
+var procedureRoles = map[string]ProcedureRole{
+	// Unauthenticated allowlist
+	dmanagerv1connect.AuthServiceGetServerStatusProcedure: RoleUnauthenticated,
+	dmanagerv1connect.AuthServiceSetupAdminProcedure:      RoleUnauthenticated,
+	dmanagerv1connect.AuthServiceLoginProcedure:           RoleUnauthenticated,
+
+	// Viewer procedures (any authenticated user)
+	dmanagerv1connect.AuthServiceLogoutProcedure:                RoleViewer,
+	dmanagerv1connect.AuthServiceGetMeProcedure:                 RoleViewer,
+	dmanagerv1connect.ContainerServiceListContainersProcedure:   RoleViewer,
+	dmanagerv1connect.ContainerServiceGetContainerLogsProcedure: RoleViewer,
+	dmanagerv1connect.ContainerServiceStreamContainersProcedure: RoleViewer,
+	dmanagerv1connect.SettingsServiceGetSettingsProcedure:       RoleViewer,
+	dmanagerv1connect.SettingsServiceGetRegistryStatusProcedure: RoleViewer,
+	dmanagerv1connect.LogServiceGetSystemLogsProcedure:          RoleViewer,
+	dmanagerv1connect.LogServiceSyncLogsProcedure:               RoleViewer,
+
+	// Admin procedures (requires User.Role == "admin")
+	dmanagerv1connect.ContainerServiceStartContainerProcedure:         RoleAdmin,
+	dmanagerv1connect.ContainerServiceStopContainerProcedure:          RoleAdmin,
+	dmanagerv1connect.ContainerServiceUpgradeContainerProcedure:       RoleAdmin,
+	dmanagerv1connect.ContainerServiceSetContainerAutoUpdateProcedure: RoleAdmin,
+	dmanagerv1connect.ContainerServiceCheckContainerUpdatesProcedure:  RoleAdmin,
+	dmanagerv1connect.SettingsServiceUpdateSettingsProcedure:          RoleAdmin,
+	dmanagerv1connect.SettingsServiceTestGotifyNotificationProcedure:  RoleAdmin,
+}
+
+func getProcedureRole(procedure string) (ProcedureRole, bool) {
+	role, ok := procedureRoles[procedure]
+	return role, ok
+}
+
 func (i *Interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 	return connect.UnaryFunc(func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 		procedure := req.Spec().Procedure
 		cookieHeader := req.Header().Get("Cookie")
 
+		requiredRole, classified := getProcedureRole(procedure)
+		if !classified {
+			i.logger.Error("Unclassified procedure blocked", "procedure", procedure)
+			return nil, connect.NewError(connect.CodeInternal, errors.New("procedure is not registered in access control matrix"))
+		}
+
 		var authCtx context.Context
 		var err error
 
-		if isUnauthenticatedProcedure(procedure) {
+		if requiredRole == RoleUnauthenticated {
 			authCtx = ctx
 			if sessionID := parseSessionCookie(cookieHeader); sessionID != "" {
 				if actx, aerr := i.authenticate(ctx, cookieHeader); aerr == nil {
@@ -101,6 +148,14 @@ func (i *Interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 			if err != nil {
 				i.logger.Info("Unauthorized request blocked", "procedure", procedure, "error", err)
 				return nil, err
+			}
+
+			if requiredRole == RoleAdmin {
+				u, _ := UserFromContext(authCtx)
+				if u.Role != adminRole {
+					i.logger.Info("Forbidden request blocked", "procedure", procedure, "user", u.Username, "role", u.Role)
+					return nil, connect.NewError(connect.CodePermissionDenied, errors.New("admin role required"))
+				}
 			}
 		}
 
@@ -140,10 +195,16 @@ func (i *Interceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) co
 		procedure := conn.Spec().Procedure
 		cookieHeader := conn.RequestHeader().Get("Cookie")
 
+		requiredRole, classified := getProcedureRole(procedure)
+		if !classified {
+			i.logger.Error("Unclassified streaming procedure blocked", "procedure", procedure)
+			return connect.NewError(connect.CodeInternal, errors.New("procedure is not registered in access control matrix"))
+		}
+
 		var authCtx context.Context
 		var err error
 
-		if isUnauthenticatedProcedure(procedure) {
+		if requiredRole == RoleUnauthenticated {
 			authCtx = ctx
 			if sessionID := parseSessionCookie(cookieHeader); sessionID != "" {
 				if actx, aerr := i.authenticate(ctx, cookieHeader); aerr == nil {
@@ -155,6 +216,14 @@ func (i *Interceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) co
 			if err != nil {
 				i.logger.Info("Unauthorized streaming request blocked", "procedure", procedure, "error", err)
 				return err
+			}
+
+			if requiredRole == RoleAdmin {
+				u, _ := UserFromContext(authCtx)
+				if u.Role != adminRole {
+					i.logger.Info("Forbidden streaming request blocked", "procedure", procedure, "user", u.Username, "role", u.Role)
+					return connect.NewError(connect.CodePermissionDenied, errors.New("admin role required"))
+				}
 			}
 		}
 
@@ -184,11 +253,4 @@ func (i *Interceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) co
 		}
 		return streamErr
 	})
-}
-
-func isUnauthenticatedProcedure(procedure string) bool {
-	return procedure == "/dmanager.v1.AuthService/GetServerStatus" ||
-		procedure == "/dmanager.v1.AuthService/SetupAdmin" ||
-		procedure == "/dmanager.v1.AuthService/Login" ||
-		procedure == "/dmanager.v1.LogService/SyncLogs"
 }

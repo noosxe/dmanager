@@ -1,3 +1,4 @@
+import { Code, ConnectError } from "@connectrpc/connect";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { logClient } from "../client";
 import { logDb } from "./logger";
@@ -15,6 +16,7 @@ vi.mock("./logger", () => {
     limit: vi.fn().mockReturnThis(),
     toArray: vi.fn(),
     bulkDelete: vi.fn().mockResolvedValue(undefined),
+    clear: vi.fn().mockResolvedValue(undefined),
   };
   return {
     logDb: {
@@ -75,5 +77,20 @@ describe("Browser Idle-Time Syncer", () => {
 
     expect(logClient.syncLogs).toHaveBeenCalledTimes(1);
     expect(logDb.logs.bulkDelete).not.toHaveBeenCalled();
+  });
+
+  it("should clear local logs queue on Code.Unauthenticated to prevent retry storm", async () => {
+    const mockLogs = [
+      { id: 1, level: "INFO", message: "msg 1", timestamp: "2026-01-01T00:00:00Z", component: "Comp", metadata: "{}" },
+    ];
+    vi.mocked(logDb.logs.toArray).mockResolvedValueOnce(mockLogs);
+
+    const unauthErr = new ConnectError("unauthenticated", Code.Unauthenticated);
+    vi.mocked(logClient.syncLogs).mockRejectedValueOnce(unauthErr);
+
+    await syncPendingLogs();
+
+    expect(logClient.syncLogs).toHaveBeenCalledTimes(1);
+    expect(logDb.logs.clear).toHaveBeenCalledTimes(1);
   });
 });

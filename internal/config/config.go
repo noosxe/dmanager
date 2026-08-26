@@ -23,6 +23,7 @@ type ServerConfig struct {
 	Port           string   `koanf:"port"`
 	DBPath         string   `koanf:"db_path"`
 	AllowedOrigins []string `koanf:"allowed_origins"`
+	TrustedProxy   bool     `koanf:"trusted_proxy"`
 }
 
 type DockerConfig struct {
@@ -46,6 +47,7 @@ type AuthConfig struct {
 	RememberMeAbsoluteTimeout time.Duration `koanf:"remember_me_absolute_timeout"`
 	SecureCookies             string        `koanf:"secure_cookies"`
 	BcryptCost                int           `koanf:"bcrypt_cost"`
+	BreachedPasswordCheck     bool          `koanf:"breached_password_check"`
 }
 
 type Config struct {
@@ -89,6 +91,7 @@ func Load(configPath string) (*Config, error) {
 	defaults := map[string]interface{}{
 		"server.port":                       "9283",
 		"server.db_path":                    "dmanager.db",
+		"server.trusted_proxy":              false,
 		"docker.host":                       "unix:///var/run/docker.sock",
 		"scheduler.interval_minutes":        60,
 		"auth.session_idle_timeout":         168 * time.Hour,
@@ -97,6 +100,7 @@ func Load(configPath string) (*Config, error) {
 		"auth.remember_me_absolute_timeout": 2160 * time.Hour,
 		"auth.secure_cookies":               SecureCookiesAuto,
 		"auth.bcrypt_cost":                  12,
+		"auth.breached_password_check":      false,
 	}
 	if err := k.Load(confmap.Provider(defaults, "."), nil); err != nil {
 		return nil, fmt.Errorf("failed to load default configuration: %w", err)
