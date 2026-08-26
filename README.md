@@ -273,7 +273,7 @@ docker build -t dmanager:local .
 
 ### Running the binary directly
 
-If you prefer to run outside Docker (requires Go 1.26+, Node.js 24+, and pnpm):
+If you prefer to run outside Docker (requires Go 1.27+, Node.js 24+, and pnpm):
 
 ```bash
 # Build frontend

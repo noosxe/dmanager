@@ -109,9 +109,9 @@ The backend is built in Go, prioritizing performance, strict type-safety, and mi
 
 ### 2.7. Code Quality & Standards (golangci-lint)
 * **Linting & Quality Control:** Go backend code standards are enforced via `golangci-lint`.
-* **Version Pinning & Reproducibility:** To ensure identical results between local development and CI pipelines, we pin the linter to a specific version: **`v2.12.2`**.
-  * **Local Environment:** The Nix `flake.nix` dev shell is configured to provide `golangci-lint` at version `v2.12.2`.
-  * **CI/CD Integration:** The CI pipeline (e.g., GitHub Actions) runs natively without Nix. The workflow configuration explicitly specifies the version input parameter (for example, utilizing `golangci/golangci-lint-action` with `version: v2.12.2`). This alignment guarantees that the exact same rule configurations and parsing engine version are applied across all environments.
+* **Version Pinning & Reproducibility:** To ensure identical results between local development and CI pipelines, we pin the linter to a specific version: **`v2.13.1`**.
+  * **Local Environment:** The Nix `flake.nix` dev shell is configured to provide `golangci-lint` at version `v2.13.1`.
+  * **CI/CD Integration:** The CI pipeline (e.g., GitHub Actions) runs natively without Nix. The workflow configuration explicitly specifies the version input parameter (for example, utilizing `golangci/golangci-lint-action` with `version: v2.13.1`). This alignment guarantees that the exact same rule configurations and parsing engine version are applied across all environments.
 * **Linter Profiles:** Enables standard linters including `govet`, `staticcheck`, `errcheck`, `unused`, and `gosec` for security auditing.
 * **Configuration:** Standardized in a `.golangci.yml` configuration file at the repository root, ensuring consistent code analysis locally and in CI pipelines.
 
