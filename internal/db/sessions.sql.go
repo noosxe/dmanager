@@ -11,25 +11,35 @@ import (
 )
 
 const createSession = `-- name: CreateSession :one
-INSERT INTO sessions (session_id, user_id, expires_at)
-VALUES (?, ?, ?)
-RETURNING session_id, user_id, expires_at, created_at
+INSERT INTO sessions (session_id, user_id, expires_at, last_seen_at, absolute_expires_at)
+VALUES (?, ?, ?, ?, ?)
+RETURNING session_id, user_id, expires_at, created_at, last_seen_at, absolute_expires_at
 `
 
 type CreateSessionParams struct {
-	SessionID string
-	UserID    int64
-	ExpiresAt time.Time
+	SessionID         string
+	UserID            int64
+	ExpiresAt         time.Time
+	LastSeenAt        time.Time
+	AbsoluteExpiresAt time.Time
 }
 
 func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error) {
-	row := q.db.QueryRowContext(ctx, createSession, arg.SessionID, arg.UserID, arg.ExpiresAt)
+	row := q.db.QueryRowContext(ctx, createSession,
+		arg.SessionID,
+		arg.UserID,
+		arg.ExpiresAt,
+		arg.LastSeenAt,
+		arg.AbsoluteExpiresAt,
+	)
 	var i Session
 	err := row.Scan(
 		&i.SessionID,
 		&i.UserID,
 		&i.ExpiresAt,
 		&i.CreatedAt,
+		&i.LastSeenAt,
+		&i.AbsoluteExpiresAt,
 	)
 	return i, err
 }
@@ -43,8 +53,25 @@ func (q *Queries) DeleteSession(ctx context.Context, sessionID string) error {
 	return err
 }
 
+const deleteSessionsByUser = `-- name: DeleteSessionsByUser :execrows
+DELETE FROM sessions WHERE user_id = ? AND session_id != ?
+`
+
+type DeleteSessionsByUserParams struct {
+	UserID    int64
+	SessionID string
+}
+
+func (q *Queries) DeleteSessionsByUser(ctx context.Context, arg DeleteSessionsByUserParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteSessionsByUser, arg.UserID, arg.SessionID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const getSession = `-- name: GetSession :one
-SELECT session_id, user_id, expires_at, created_at FROM sessions WHERE session_id = ? LIMIT 1
+SELECT session_id, user_id, expires_at, created_at, last_seen_at, absolute_expires_at FROM sessions WHERE session_id = ? LIMIT 1
 `
 
 func (q *Queries) GetSession(ctx context.Context, sessionID string) (Session, error) {
@@ -55,15 +82,83 @@ func (q *Queries) GetSession(ctx context.Context, sessionID string) (Session, er
 		&i.UserID,
 		&i.ExpiresAt,
 		&i.CreatedAt,
+		&i.LastSeenAt,
+		&i.AbsoluteExpiresAt,
 	)
 	return i, err
 }
 
-const purgeExpiredSessions = `-- name: PurgeExpiredSessions :exec
-DELETE FROM sessions WHERE expires_at < ?
+const listSessionsByUser = `-- name: ListSessionsByUser :many
+SELECT s.session_id, s.user_id, s.expires_at, s.created_at, s.last_seen_at, s.absolute_expires_at, u.username FROM sessions s JOIN users u ON u.id = s.user_id
+WHERE s.user_id = ? ORDER BY s.last_seen_at DESC
 `
 
-func (q *Queries) PurgeExpiredSessions(ctx context.Context, expiresAt time.Time) error {
-	_, err := q.db.ExecContext(ctx, purgeExpiredSessions, expiresAt)
+type ListSessionsByUserRow struct {
+	SessionID         string
+	UserID            int64
+	ExpiresAt         time.Time
+	CreatedAt         time.Time
+	LastSeenAt        time.Time
+	AbsoluteExpiresAt time.Time
+	Username          string
+}
+
+func (q *Queries) ListSessionsByUser(ctx context.Context, userID int64) ([]ListSessionsByUserRow, error) {
+	rows, err := q.db.QueryContext(ctx, listSessionsByUser, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListSessionsByUserRow
+	for rows.Next() {
+		var i ListSessionsByUserRow
+		if err := rows.Scan(
+			&i.SessionID,
+			&i.UserID,
+			&i.ExpiresAt,
+			&i.CreatedAt,
+			&i.LastSeenAt,
+			&i.AbsoluteExpiresAt,
+			&i.Username,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const purgeExpiredSessions = `-- name: PurgeExpiredSessions :exec
+DELETE FROM sessions WHERE expires_at < ? OR absolute_expires_at < ?
+`
+
+type PurgeExpiredSessionsParams struct {
+	ExpiresAt         time.Time
+	AbsoluteExpiresAt time.Time
+}
+
+func (q *Queries) PurgeExpiredSessions(ctx context.Context, arg PurgeExpiredSessionsParams) error {
+	_, err := q.db.ExecContext(ctx, purgeExpiredSessions, arg.ExpiresAt, arg.AbsoluteExpiresAt)
+	return err
+}
+
+const touchSession = `-- name: TouchSession :exec
+UPDATE sessions SET expires_at = ?, last_seen_at = ? WHERE session_id = ?
+`
+
+type TouchSessionParams struct {
+	ExpiresAt  time.Time
+	LastSeenAt time.Time
+	SessionID  string
+}
+
+func (q *Queries) TouchSession(ctx context.Context, arg TouchSessionParams) error {
+	_, err := q.db.ExecContext(ctx, touchSession, arg.ExpiresAt, arg.LastSeenAt, arg.SessionID)
 	return err
 }

@@ -24,10 +24,12 @@ type Container struct {
 }
 
 type Session struct {
-	SessionID string
-	UserID    int64
-	ExpiresAt time.Time
-	CreatedAt time.Time
+	SessionID         string
+	UserID            int64
+	ExpiresAt         time.Time
+	CreatedAt         time.Time
+	LastSeenAt        time.Time
+	AbsoluteExpiresAt time.Time
 }
 
 type Setting struct {

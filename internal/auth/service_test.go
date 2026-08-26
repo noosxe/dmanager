@@ -5,12 +5,16 @@ import (
 	"database/sql"
 	"errors"
 	"log/slog"
+	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	connect "connectrpc.com/connect"
 	_ "github.com/ncruces/go-sqlite3/driver"
+	"golang.org/x/crypto/bcrypt"
 
+	"dmanager/internal/config"
 	"dmanager/internal/db"
 	v1 "dmanager/internal/gen/proto/dmanager/v1"
 )
@@ -35,9 +39,20 @@ func newTestDB(t *testing.T) *db.Queries {
 	return db.New(dbConn)
 }
 
+func testAuthConfig() config.AuthConfig {
+	return config.AuthConfig{
+		SessionIdleTimeout:        168 * time.Hour,
+		SessionAbsoluteTimeout:    720 * time.Hour,
+		RememberMeIdleTimeout:     720 * time.Hour,
+		RememberMeAbsoluteTimeout: 2160 * time.Hour,
+		SecureCookies:             config.SecureCookiesAuto,
+		BcryptCost:                12,
+	}
+}
+
 func TestGetServerStatus(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default())
+	svc := NewService(queries, slog.Default(), testAuthConfig())
 	ctx := context.Background()
 
 	resp, err := svc.GetServerStatus(ctx, connect.NewRequest(&v1.GetServerStatusRequest{}))
@@ -68,7 +83,7 @@ func TestGetServerStatus(t *testing.T) {
 
 func TestSetupAdmin(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default())
+	svc := NewService(queries, slog.Default(), testAuthConfig())
 	ctx := context.Background()
 
 	resp, err := svc.SetupAdmin(ctx, connect.NewRequest(&v1.SetupAdminRequest{
@@ -80,6 +95,19 @@ func TestSetupAdmin(t *testing.T) {
 	}
 	if resp.Msg.Username != testAdminUsername || resp.Msg.Role != adminRole {
 		t.Errorf("unexpected response: %+v", resp.Msg)
+	}
+
+	// Verify bcrypt cost 12
+	user, err := queries.GetUserByUsername(ctx, testAdminUsername)
+	if err != nil {
+		t.Fatalf("failed to get user: %v", err)
+	}
+	cost, err := bcrypt.Cost([]byte(user.PasswordHash))
+	if err != nil {
+		t.Fatalf("failed to get bcrypt cost: %v", err)
+	}
+	if cost != 12 {
+		t.Errorf("expected bcrypt cost 12, got %d", cost)
 	}
 
 	_, err = svc.SetupAdmin(ctx, connect.NewRequest(&v1.SetupAdminRequest{
@@ -97,7 +125,7 @@ func TestSetupAdmin(t *testing.T) {
 
 func TestLogin(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default())
+	svc := NewService(queries, slog.Default(), testAuthConfig())
 	ctx := context.Background()
 
 	_, err := svc.SetupAdmin(ctx, connect.NewRequest(&v1.SetupAdminRequest{
@@ -108,9 +136,11 @@ func TestLogin(t *testing.T) {
 		t.Fatalf("setup failed: %v", err)
 	}
 
+	// Standard login (remember_me = false)
 	resp, err := svc.Login(ctx, connect.NewRequest(&v1.LoginRequest{
-		Username: testAdminUsername,
-		Password: testPassword,
+		Username:   testAdminUsername,
+		Password:   testPassword,
+		RememberMe: false,
 	}))
 	if err != nil {
 		t.Fatalf("login failed: %v", err)
@@ -123,7 +153,52 @@ func TestLogin(t *testing.T) {
 	if !strings.Contains(cookie, "session_id=") {
 		t.Errorf("expected Set-Cookie with session_id, got %q", cookie)
 	}
+	expectedMaxAge := int((168 * time.Hour).Seconds())
+	if !strings.Contains(cookie, "Max-Age=604800") {
+		t.Errorf("expected Max-Age=%d in cookie, got %q", expectedMaxAge, cookie)
+	}
 
+	// Verify session row in DB has correct idle and absolute timeouts
+	sessionID := parseSessionCookie(cookie)
+	sessionRow, err := queries.GetSession(ctx, sessionID)
+	if err != nil {
+		t.Fatalf("failed to query session: %v", err)
+	}
+	if sessionRow.ExpiresAt.Before(time.Now().Add(167 * time.Hour)) {
+		t.Errorf("unexpected expires_at: %v", sessionRow.ExpiresAt)
+	}
+	if sessionRow.AbsoluteExpiresAt.Before(time.Now().Add(719 * time.Hour)) {
+		t.Errorf("unexpected absolute_expires_at: %v", sessionRow.AbsoluteExpiresAt)
+	}
+
+	// Remember-me login
+	reqRemember := connect.NewRequest(&v1.LoginRequest{
+		Username:   testAdminUsername,
+		Password:   testPassword,
+		RememberMe: true,
+	})
+	respRemember, err := svc.Login(ctx, reqRemember)
+	if err != nil {
+		t.Fatalf("login with remember_me failed: %v", err)
+	}
+	cookieRemember := respRemember.Header().Get("Set-Cookie")
+	expectedRememberMaxAge := int((720 * time.Hour).Seconds())
+	if !strings.Contains(cookieRemember, "Max-Age=2592000") {
+		t.Errorf("expected Max-Age=%d in remember-me cookie, got %q", expectedRememberMaxAge, cookieRemember)
+	}
+	sessionIDRemember := parseSessionCookie(cookieRemember)
+	sessionRowRemember, err := queries.GetSession(ctx, sessionIDRemember)
+	if err != nil {
+		t.Fatalf("failed to query session: %v", err)
+	}
+	if sessionRowRemember.ExpiresAt.Before(time.Now().Add(719 * time.Hour)) {
+		t.Errorf("unexpected remember-me expires_at: %v", sessionRowRemember.ExpiresAt)
+	}
+	if sessionRowRemember.AbsoluteExpiresAt.Before(time.Now().Add(2159 * time.Hour)) {
+		t.Errorf("unexpected remember-me absolute_expires_at: %v", sessionRowRemember.AbsoluteExpiresAt)
+	}
+
+	// Wrong password
 	_, err = svc.Login(ctx, connect.NewRequest(&v1.LoginRequest{
 		Username: testAdminUsername,
 		Password: "wrongpassword",
@@ -137,9 +212,103 @@ func TestLogin(t *testing.T) {
 	}
 }
 
+func TestLoginLegacyBcryptCost10(t *testing.T) {
+	queries := newTestDB(t)
+	svc := NewService(queries, slog.Default(), testAuthConfig())
+	ctx := context.Background()
+
+	// Seed user with legacy cost 10 hash
+	hash10, err := bcrypt.GenerateFromPassword([]byte("legacyPass123"), 10)
+	if err != nil {
+		t.Fatalf("failed to hash password: %v", err)
+	}
+
+	const legacyUsername = "legacyuser"
+	const legacyRole = "viewer"
+
+	_, err = queries.CreateUser(ctx, db.CreateUserParams{
+		Username:     legacyUsername,
+		PasswordHash: string(hash10),
+		Role:         legacyRole,
+	})
+	if err != nil {
+		t.Fatalf("failed to seed legacy user: %v", err)
+	}
+
+	// Attempt login
+	resp, err := svc.Login(ctx, connect.NewRequest(&v1.LoginRequest{
+		Username: legacyUsername,
+		Password: "legacyPass123",
+	}))
+	if err != nil {
+		t.Fatalf("legacy login failed: %v", err)
+	}
+	if resp.Msg.Username != legacyUsername || resp.Msg.Role != legacyRole {
+		t.Errorf("unexpected response: %+v", resp.Msg)
+	}
+}
+
+func TestCookieSecureMatrix(t *testing.T) {
+	const xForwardedProto = "X-Forwarded-Proto"
+	const protoHTTPS = "https"
+	tests := []struct {
+		name          string
+		secureCookies string
+		reqHeader     http.Header
+		wantSecure    bool
+	}{
+		{
+			name:          "auto mode without https header",
+			secureCookies: config.SecureCookiesAuto,
+			reqHeader:     http.Header{},
+			wantSecure:    false,
+		},
+		{
+			name:          "auto mode with https header",
+			secureCookies: config.SecureCookiesAuto,
+			reqHeader:     http.Header{xForwardedProto: []string{protoHTTPS}},
+			wantSecure:    true,
+		},
+		{
+			name:          "always mode without https header",
+			secureCookies: config.SecureCookiesAlways,
+			reqHeader:     http.Header{},
+			wantSecure:    true,
+		},
+		{
+			name:          "always mode with https header",
+			secureCookies: config.SecureCookiesAlways,
+			reqHeader:     http.Header{xForwardedProto: []string{protoHTTPS}},
+			wantSecure:    true,
+		},
+		{
+			name:          "never mode with https header",
+			secureCookies: config.SecureCookiesNever,
+			reqHeader:     http.Header{xForwardedProto: []string{protoHTTPS}},
+			wantSecure:    false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cookie := formatSessionCookie("test-session-123", 3600, tt.secureCookies, tt.reqHeader)
+			hasSecure := strings.Contains(cookie, "; Secure")
+			if hasSecure != tt.wantSecure {
+				t.Errorf("formatSessionCookie() secure = %v, want %v (cookie: %s)", hasSecure, tt.wantSecure, cookie)
+			}
+			if !strings.Contains(cookie, "Max-Age=3600") {
+				t.Errorf("expected Max-Age=3600, got %s", cookie)
+			}
+			if !strings.Contains(cookie, "HttpOnly") || !strings.Contains(cookie, "SameSite=Lax") || !strings.Contains(cookie, "Path=/") {
+				t.Errorf("cookie missing expected attributes: %s", cookie)
+			}
+		})
+	}
+}
+
 func TestGetMe(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default())
+	svc := NewService(queries, slog.Default(), testAuthConfig())
 
 	user := db.User{
 		ID:       42,
@@ -168,7 +337,7 @@ func TestGetMe(t *testing.T) {
 
 func TestLogout(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default())
+	svc := NewService(queries, slog.Default(), testAuthConfig())
 	ctx := context.Background()
 
 	_, err := svc.SetupAdmin(ctx, connect.NewRequest(&v1.SetupAdminRequest{

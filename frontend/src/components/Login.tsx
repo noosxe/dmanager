@@ -7,6 +7,7 @@ export function Login() {
   const { login } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,7 +46,7 @@ export function Login() {
 
     setIsSubmitting(true);
     try {
-      await login(username.trim(), password);
+      await login(username.trim(), password, rememberMe);
     } catch (err: unknown) {
       console.error(err);
       const message = err instanceof Error ? err.message : String(err);
@@ -135,6 +136,17 @@ export function Login() {
               <span className="error-text">{validationErrors.password}</span>
             )}
           </div>
+
+          <label className="auth-checkbox-group" htmlFor="remember-me">
+            <input
+              id="remember-me"
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              disabled={isSubmitting}
+            />
+            <span className="auth-checkbox-label">Remember me</span>
+          </label>
 
           <button type="submit" className="auth-submit-btn" disabled={isSubmitting}>
             {isSubmitting ? (

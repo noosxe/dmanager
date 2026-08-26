@@ -1,0 +1,143 @@
+package auth
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+	"log/slog"
+	"sync/atomic"
+	"testing"
+	"time"
+
+	"dmanager/internal/db"
+)
+
+func TestSessionPurgeJob(t *testing.T) {
+	queries := newTestDB(t)
+	ctx := context.Background()
+
+	// Create user
+	user, err := queries.CreateUser(ctx, db.CreateUserParams{
+		Username:     "purgemaster",
+		PasswordHash: "dummyhash",
+		Role:         "admin",
+	})
+	if err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
+
+	now := time.Now()
+
+	// 1. Valid session (both clocks in future)
+	_, err = queries.CreateSession(ctx, db.CreateSessionParams{
+		SessionID:         "valid-session",
+		UserID:            user.ID,
+		ExpiresAt:         now.Add(1 * time.Hour),
+		LastSeenAt:        now,
+		AbsoluteExpiresAt: now.Add(24 * time.Hour),
+	})
+	if err != nil {
+		t.Fatalf("failed to create valid session: %v", err)
+	}
+
+	// 2. Idle expired session
+	_, err = queries.CreateSession(ctx, db.CreateSessionParams{
+		SessionID:         "idle-expired-session",
+		UserID:            user.ID,
+		ExpiresAt:         now.Add(-10 * time.Minute),
+		LastSeenAt:        now.Add(-20 * time.Minute),
+		AbsoluteExpiresAt: now.Add(24 * time.Hour),
+	})
+	if err != nil {
+		t.Fatalf("failed to create idle-expired session: %v", err)
+	}
+
+	// 3. Absolute expired session
+	_, err = queries.CreateSession(ctx, db.CreateSessionParams{
+		SessionID:         "absolute-expired-session",
+		UserID:            user.ID,
+		ExpiresAt:         now.Add(10 * time.Minute),
+		LastSeenAt:        now,
+		AbsoluteExpiresAt: now.Add(-10 * time.Minute),
+	})
+	if err != nil {
+		t.Fatalf("failed to create absolute-expired session: %v", err)
+	}
+
+	// Run purge once
+	RunPurgeOnce(ctx, slog.Default(), SessionPurgeFunc(queries))
+
+	// Assert survivors
+	if _, err := queries.GetSession(ctx, "valid-session"); err != nil {
+		t.Errorf("expected valid-session to survive, got err: %v", err)
+	}
+	if _, err := queries.GetSession(ctx, "idle-expired-session"); !errors.Is(err, sql.ErrNoRows) {
+		t.Errorf("expected idle-expired-session to be purged, got: %v", err)
+	}
+	if _, err := queries.GetSession(ctx, "absolute-expired-session"); !errors.Is(err, sql.ErrNoRows) {
+		t.Errorf("expected absolute-expired-session to be purged, got: %v", err)
+	}
+}
+
+func TestExtensiblePurgeRunnerErrorHandling(t *testing.T) {
+	ctx := context.Background()
+
+	var firstCalled, secondCalled, thirdCalled atomic.Bool
+
+	fn1 := func(ctx context.Context) error {
+		firstCalled.Store(true)
+		return nil
+	}
+	fn2 := func(ctx context.Context) error {
+		secondCalled.Store(true)
+		return errors.New("simulated error")
+	}
+	fn3 := func(ctx context.Context) error {
+		thirdCalled.Store(true)
+		return nil
+	}
+
+	RunPurgeOnce(ctx, slog.Default(), fn1, fn2, fn3)
+
+	if !firstCalled.Load() {
+		t.Errorf("expected fn1 to be called")
+	}
+	if !secondCalled.Load() {
+		t.Errorf("expected fn2 to be called")
+	}
+	if !thirdCalled.Load() {
+		t.Errorf("expected fn3 to be called despite fn2 error")
+	}
+}
+
+func TestStartPurgeJobCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	var counter atomic.Int32
+	purgeFn := func(ctx context.Context) error {
+		counter.Add(1)
+		return nil
+	}
+
+	StartPurgeJob(ctx, slog.Default(), 10*time.Millisecond, purgeFn)
+
+	// Wait for a couple ticks
+	time.Sleep(35 * time.Millisecond)
+
+	// Cancel context to stop goroutine
+	cancel()
+
+	countBefore := counter.Load()
+	if countBefore == 0 {
+		t.Errorf("expected purge job to have run at least once, got 0")
+	}
+
+	// Wait to verify it has stopped
+	time.Sleep(30 * time.Millisecond)
+	countAfter := counter.Load()
+
+	// Should not have fired again after cancellation
+	if countAfter > countBefore+1 {
+		t.Errorf("purge job continued running after cancel: before=%d, after=%d", countBefore, countAfter)
+	}
+}

@@ -125,8 +125,11 @@ var serveCmd = &cobra.Command{
 			}
 		})
 
-		authSvc := auth.NewService(queries, logger.With("module", "auth"))
-		authInterceptor := auth.NewInterceptor(queries, logger.With("module", "auth"))
+		authSvc := auth.NewService(queries, logger.With("module", "auth"), cfg.Auth)
+		authInterceptor := auth.NewInterceptor(queries, logger.With("module", "auth"), cfg.Auth.SessionIdleTimeout)
+
+		// Start background expired session purge job
+		auth.StartPurgeJob(srvCtx, logger.With("module", "auth"), time.Hour, auth.SessionPurgeFunc(queries))
 
 		// 4. Set up HTTP handler/mux
 		mux := http.NewServeMux()
