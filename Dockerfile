@@ -24,7 +24,7 @@ RUN pnpm --dir frontend run build
 
 
 # Stage 2: Backend Builder
-FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS backend-builder
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS backend-builder
 WORKDIR /app
 
 # Configure CGO-free build parameters

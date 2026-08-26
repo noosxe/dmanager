@@ -19,8 +19,8 @@
         # Latest stable PNPM overridden with our pinned LTS Node
         pnpm = pkgs.pnpm.override { nodejs-slim = nodejs; };
 
-        # Latest stable Go package
-        go = pkgs.go;
+        # Latest stable Go package (Go 1.27)
+        go = pkgs.go_1_27;
       in
       {
         devShells.default = pkgs.mkShell {

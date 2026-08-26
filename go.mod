@@ -1,6 +1,6 @@
 module dmanager
 
-go 1.25.7
+go 1.27.0
 
 require (
 	connectrpc.com/connect v1.20.0
