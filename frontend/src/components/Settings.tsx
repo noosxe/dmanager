@@ -1,4 +1,5 @@
 import { create as webauthnCreate } from "@github/webauthn-json";
+import { Link, useParams } from "@tanstack/react-router";
 import {
   Activity,
   Check,
@@ -30,8 +31,25 @@ import { useToast } from "../context/ToastContext";
 import type { AuthEvent, Passkey, Session } from "../gen/proto/dmanager/v1/auth_pb";
 import type { RegistryStatus } from "../gen/proto/dmanager/v1/settings_pb";
 
-export function Settings() {
-  const [activeTab, setActiveTab] = useState<"general" | "security">("general");
+interface SettingsProps {
+  initialTab?: "general" | "security";
+}
+
+export function Settings({ initialTab }: SettingsProps = {}) {
+  const params = useParams({ strict: false }) as { tab?: string } | undefined;
+  const routeTab = params?.tab;
+
+  const [localTab, setLocalTab] = useState<"general" | "security">(
+    routeTab === "security" || initialTab === "security" ? "security" : "general",
+  );
+
+  useEffect(() => {
+    if (routeTab === "security" || routeTab === "general") {
+      setLocalTab(routeTab);
+    }
+  }, [routeTab]);
+
+  const activeTab = localTab;
 
   // General Settings State
   const [gotifyUrl, setGotifyUrl] = useState("");
@@ -432,22 +450,24 @@ export function Settings() {
       </div>
 
       <div className="settings-nav-tabs">
-        <button
-          type="button"
+        <Link
+          to="/settings/$tab"
+          params={{ tab: "general" }}
           className={`settings-nav-tab ${activeTab === "general" ? "active" : ""}`}
-          onClick={() => setActiveTab("general")}
+          onClick={() => setLocalTab("general")}
         >
           <SettingsIcon size={16} />
           <span>General</span>
-        </button>
-        <button
-          type="button"
+        </Link>
+        <Link
+          to="/settings/$tab"
+          params={{ tab: "security" }}
           className={`settings-nav-tab ${activeTab === "security" ? "active" : ""}`}
-          onClick={() => setActiveTab("security")}
+          onClick={() => setLocalTab("security")}
         >
           <Shield size={16} />
           <span>Security & Sessions</span>
-        </button>
+        </Link>
       </div>
 
       {activeTab === "general" && (
