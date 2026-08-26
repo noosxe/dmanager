@@ -49,6 +49,10 @@ graph TD
     S41 --> S42["STORY-042: Two-Clock Session Model & Sliding Renewal (DONE)"]
     S42 --> S43["STORY-043: Auth Configuration & Cookie Hardening (DONE)"]
     S42 --> S44["STORY-044: Background Purge Job for Expired Sessions (DONE)"]
+    S44 --> S45["STORY-045: Connect Interceptor RBAC Enforcement & Procedure Coverage"]
+    S45 --> S46["STORY-046: Sliding Window Login Rate Limiting & Exponential Lockout"]
+    S46 --> S47["STORY-047: Timing Equalization, Password Policy & Breached Check"]
+    S45 --> S48["STORY-048: Require Authentication for LogService/SyncLogs"]
 ```
 
 
@@ -926,6 +930,83 @@ graph TD
 - **Validation Check:**
   - Run unit and integration tests for purge job with SQLite.
   - Verify zero linter issues (`golangci-lint run`).
+
+---
+
+### STORY-045: Connect Interceptor RBAC Enforcement & Procedure Coverage
+- **Scope:** Backend Authentication Interceptor & Security Matrix
+- **Estimated Size:** Medium (~200 LOC)
+- **Dependencies:** `STORY-042`
+- **Goal:** Enforce admin vs viewer RBAC classifications in `WrapUnary` and `WrapStreamingHandler`, returning `PermissionDenied` when a non-admin calls admin endpoints, and enforce a strict automated coverage test verifying every RPC procedure is uniquely classified.
+- **Tasks:**
+  1. Define classification table in `internal/auth/interceptor.go` (unauthenticated, viewer, admin).
+  2. Implement role check in interceptors after authentication, logging denials with username and procedure.
+  3. Create comprehensive coverage test in `internal/auth/interceptor_test.go` asserting all proto procedures are classified in exactly one bucket.
+- **Files Affected:**
+  - `internal/auth/interceptor.go` (modified)
+  - `internal/auth/interceptor_test.go` (modified)
+- **Validation Check:**
+  - Coverage test passes and fails when any procedure is omitted.
+  - Table-driven unit tests over all procedures and roles.
+
+---
+
+### STORY-046: Sliding Window Login Rate Limiting & Exponential Lockout
+- **Scope:** Backend Login Throttling & Frontend Error Handling
+- **Estimated Size:** Medium (~250 LOC)
+- **Dependencies:** `STORY-045`
+- **Goal:** Protect login endpoints against brute-force attacks using sliding window rate limiting keyed by both username and source IP, with exponential lockout backoff.
+- **Tasks:**
+  1. Implement in-memory rate limiter in `internal/auth/ratelimit.go` (15-minute sliding window, 5-failure threshold, backoff: 1m, 2m, 4m, 8m, capped at 15m).
+  2. Implement client IP extraction supporting `X-Forwarded-For` when `server.trusted_proxy` is enabled and `RemoteAddr` fallback.
+  3. Wire rate limiting into `Service.Login`, returning `CodeResourceExhausted` with retry metadata.
+  4. Update `frontend/src/components/Login.tsx` to display retry-after lockout message.
+- **Files Affected:**
+  - `internal/auth/ratelimit.go` (new)
+  - `internal/auth/ratelimit_test.go` (new)
+  - `internal/auth/service.go` (modified)
+  - `frontend/src/components/Login.tsx` (modified)
+- **Validation Check:**
+  - Unit tests for counter increments, reset on success, lockout backoff, and memory eviction.
+
+---
+
+### STORY-047: Timing Equalization, Password Policy & Breached Check
+- **Scope:** Backend Auth Service, Config & Password Validation
+- **Estimated Size:** Medium (~250 LOC)
+- **Dependencies:** `STORY-043`
+- **Goal:** Equalize login execution timing against username enumeration attacks, enforce a minimum 12-character password policy, and provide optional HIBP k-anonymity breached-password verification.
+- **Tasks:**
+  1. Initialize fixed dummy bcrypt hash in `Service` and execute `bcrypt.CompareHashAndPassword` on `sql.ErrNoRows` in `Login`.
+  2. Create `ValidatePassword` helper enforcing ≥12 characters and optional HIBP k-anonymity check.
+  3. Add `auth.breached_password_check` to `internal/config/config.go`.
+  4. Update `frontend/src/components/Setup.tsx` validation to 12 characters minimum with passphrase hint.
+- **Files Affected:**
+  - `internal/auth/service.go` (modified)
+  - `internal/auth/password.go` (new)
+  - `internal/auth/password_test.go` (new)
+  - `internal/config/config.go` (modified)
+  - `frontend/src/components/Setup.tsx` (modified)
+- **Validation Check:**
+  - Unit tests for dummy hash execution, length rules, and mock HIBP API responses (hit, miss, network outage fail-open).
+
+---
+
+### STORY-048: Require Authentication for LogService/SyncLogs
+- **Scope:** Backend Interceptor Allowlist & Frontend Log Syncer
+- **Estimated Size:** Small (~100 LOC)
+- **Dependencies:** `STORY-045`
+- **Goal:** Move `LogService/SyncLogs` from unauthenticated allowlist to authenticated viewer bucket and handle unauthenticated responses gracefully in frontend syncer.
+- **Tasks:**
+  1. Remove `/dmanager.v1.LogService/SyncLogs` from unauthenticated allowlist in `internal/auth/interceptor.go`.
+  2. Classify `SyncLogs` as viewer procedure.
+  3. Update `frontend/src/services/syncer.ts` to clear queue on unauthenticated errors.
+- **Files Affected:**
+  - `internal/auth/interceptor.go` (modified)
+  - `frontend/src/services/syncer.ts` (modified)
+- **Validation Check:**
+  - Verify unauthenticated requests to `SyncLogs` return `Unauthenticated`.
+  - Verify authenticated sessions sync logs properly.
 
 
 

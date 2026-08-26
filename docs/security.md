@@ -29,8 +29,10 @@ graph TD
 
 ## 2. Authentication & Session Management
 
-### 2.1. Password Hashing
+### 2.1. Password Hashing & Policy
 * **Standard:** All passwords must be hashed using **bcrypt** with a minimum work factor (cost) of `12`.
+* **Password Policy:** Minimum length of `12` characters. Passphrases are recommended; no arbitrary composition or special character rules (per NIST SP 800-63B guidelines).
+* **Breached Password Verification:** Optional HIBP k-anonymity check (`auth.breached_password_check`, disabled by default). When enabled, validates hashes via range API without sending full plaintext or hashes. Fails open on upstream network issues to preserve availability.
 * **Verification:** Raw passwords must never be stored in the database or logged under any circumstances.
 
 ### 2.2. Session Token Generation & Two-Clock Lifecycle
@@ -49,14 +51,18 @@ graph TD
   * `Max-Age`: Matches the idle session timeout to synchronize browser-side and server-side expiration.
   * `Path=/`: Restricts cookie scope to the root path.
 
+### 2.4. Rate Limiting & Timing Side-Channel Mitigation
+* **Timing Equalization:** `Login` performs a dummy bcrypt hash comparison on username misses to equalize execution duration between valid and non-existent usernames.
+* **Rate Limiting:** Failed login attempts are throttled using in-memory sliding window counters tracked independently per username and per source IP. 5 failures trigger exponential lockout backoff (1m, 2m, 4m, 8m, capped at 15m), returning `ResourceExhausted` with retry metadata.
+
 ---
 
 ## 3. Authorization & Access Control (RBAC)
 
 ### 3.1. User Roles
 The system supports two user roles:
-1. `admin`: Has full privileges to list, start, stop, configure, and upgrade containers, as well as purge logs.
-2. `viewer`: Read-only access to view the dashboard and stream logs. Cannot trigger container state transitions or write updates.
+1. `admin`: Full privileges to manage containers, execute lifecycles/updates, change system settings, and trigger notification tests.
+2. `viewer`: Read-only access to view the dashboard, read settings, and stream logs. Cannot mutate container states or update configurations.
 
 ### 3.2. Endpoint Access Control Matrix
 
@@ -69,11 +75,18 @@ The system supports two user roles:
 | `GetMe` | `AuthService` | `viewer` | Authenticated |
 | `ListContainers` | `ContainerService` | `viewer` | Authenticated |
 | `GetContainerLogs` | `ContainerService` | `viewer` | Authenticated |
+| `StreamContainers` | `ContainerService` | `viewer` | Authenticated |
 | `StartContainer` | `ContainerService` | `admin` | Authenticated + Admin |
 | `StopContainer` | `ContainerService` | `admin` | Authenticated + Admin |
+| `UpgradeContainer` | `ContainerService` | `admin` | Authenticated + Admin |
 | `SetContainerAutoUpdate` | `ContainerService` | `admin` | Authenticated + Admin |
 | `CheckContainerUpdates` | `ContainerService` | `admin` | Authenticated + Admin |
-| `SyncLogs` | `LogService` | None | Unauthenticated / Authenticated |
+| `GetSettings` | `SettingsService` | `viewer` | Authenticated |
+| `GetRegistryStatus` | `SettingsService` | `viewer` | Authenticated |
+| `UpdateSettings` | `SettingsService` | `admin` | Authenticated + Admin |
+| `TestGotifyNotification` | `SettingsService` | `admin` | Authenticated + Admin |
+| `GetSystemLogs` | `LogService` | `viewer` | Authenticated |
+| `SyncLogs` | `LogService` | `viewer` | Authenticated |
 
 ---
 
