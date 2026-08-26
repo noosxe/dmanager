@@ -33,6 +33,9 @@ This document details the procedure and requirements to deploy the `dmanager` ap
 | `auth.secure_cookies` | `DMANAGER_AUTH_SECURE_COOKIES` | `auto` | Cookie `Secure` attribute mode (`auto`, `always`, `never`). |
 | `auth.bcrypt_cost` | `DMANAGER_AUTH_BCRYPT_COST` | `12` | Bcrypt hashing work factor for new passwords (min 4, max 31). |
 | `auth.breached_password_check` | `DMANAGER_AUTH_BREACHED_PASSWORD_CHECK` | `false` | Enable HIBP k-anonymity breached password verification on setup. |
+| `webauthn.rp_id` | `DMANAGER_WEBAUTHN_RP_ID` | `""` | Relying Party ID for passkeys (domain without port). |
+| `webauthn.origins` | `DMANAGER_WEBAUTHN_ORIGINS` | `[]` | Allowed origins (scheme+host+port) authorized for passkeys. |
+| `webauthn.require_user_verification` | `DMANAGER_WEBAUTHN_REQUIRE_USER_VERIFICATION` | `preferred` | User verification policy (`preferred` or `required`). |
 
 ### 2.2. Private Registry Configuration
 

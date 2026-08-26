@@ -55,6 +55,13 @@ graph TD
 * **Timing Equalization:** `Login` performs a dummy bcrypt hash comparison on username misses to equalize execution duration between valid and non-existent usernames.
 * **Rate Limiting:** Failed login attempts are throttled using in-memory sliding window counters tracked independently per username and per source IP. 5 failures trigger exponential lockout backoff (1m, 2m, 4m, 8m, capped at 15m), returning `ResourceExhausted` with retry metadata.
 
+### 2.5. WebAuthn & Passkey Security Model
+* **Relying Party (RP) Binding:** `rp_id` and `origins` must be statically pinned in configuration. Origins are never dynamically derived from request headers to prevent DNS rebinding or origin spoofing attacks.
+* **Discoverable Resident Keys:** Usernameless login uses resident keys (`require_resident_key = preferred`) with empty `allow_credentials` on `BeginPasskeyLogin`, allowing platform authenticators to resolve the user handle.
+* **Challenge Lifetimes & Single-Use:** Cryptographic challenges have a 120-second TTL stored in SQLite, enforced at single-use (`consumed = 1`), and purged periodically.
+* **Clone Detection:** Authenticator signature counter (`sign_count`) is tracked per credential. If a newly asserted count is non-zero and less than or equal to the recorded count, the login is rejected and flagged with `clone_warning = 1`.
+* **Lockout Guardrails:** Users cannot delete their last remaining authentication factor (e.g. deleting the last passkey when no password exists).
+
 ---
 
 ## 3. Authorization & Access Control (RBAC)
@@ -71,8 +78,15 @@ The system supports two user roles:
 | `GetServerStatus` | `AuthService` | None | Unauthenticated |
 | `SetupAdmin` | `AuthService` | None | Unauthenticated (Only if user count is 0) |
 | `Login` | `AuthService` | None | Unauthenticated |
+| `BeginPasskeyLogin` | `AuthService` | None | Unauthenticated |
+| `FinishPasskeyLogin` | `AuthService` | None | Unauthenticated |
 | `Logout` | `AuthService` | `viewer` | Authenticated |
 | `GetMe` | `AuthService` | `viewer` | Authenticated |
+| `BeginPasskeyRegistration` | `AuthService` | `viewer` | Authenticated |
+| `FinishPasskeyRegistration` | `AuthService` | `viewer` | Authenticated |
+| `ListPasskeys` | `AuthService` | `viewer` | Authenticated (Own passkeys only) |
+| `RenamePasskey` | `AuthService` | `viewer` | Authenticated (Own passkeys only) |
+| `DeletePasskey` | `AuthService` | `viewer` | Authenticated (Own passkeys only; lockout guardrail) |
 | `ListAuthEvents` | `AuthService` | `viewer` | Authenticated (Viewer sees own; Admin sees all) |
 | `ListSessions` | `AuthService` | `viewer` | Authenticated (Own sessions only) |
 | `RevokeSession` | `AuthService` | `viewer` | Authenticated (Own session only) |

@@ -1061,6 +1061,85 @@ graph TD
   - Unit and integration tests for session listing, foreign session revocation protection, and revoke-all-others.
   - Frontend component tests for Security tab, sessions list, and auth events feed.
 
+---
+
+### STORY-051: WebAuthn Foundation — Config, Dependencies, Schema & Lifecycle
+- **Scope:** WebAuthn Infrastructure, DB Migrations & Server Configuration
+- **Estimated Size:** Medium (~300 LOC)
+- **Dependencies:** `STORY-049`, `STORY-050`
+- **Goal:** Add `go-webauthn/webauthn` and `@github/webauthn-json` dependencies, define `webauthn` koanf configuration, create `webauthn_credentials` and `webauthn_challenges` migrations, write sqlc queries with single-use challenge consumption, and register challenge purge job.
+- **Tasks:**
+  1. Add Go dependency `github.com/go-webauthn/webauthn` and npm dependency `@github/webauthn-json`.
+  2. Create goose migration `00005_webauthn.sql` creating `webauthn_credentials` and `webauthn_challenges`.
+  3. Write SQL queries in `internal/db/queries/webauthn.sql` for credentials CRUD and challenges single-use verification/purging.
+  4. Add `webauthn` configuration section to `internal/config/config.go` with strict validation.
+  5. Add `passkey_login_enabled` to `GetServerStatusResponse` in `proto/dmanager/v1/auth.proto`.
+  6. Register `WebAuthnChallengesPurgeFunc` in background purge worker.
+- **Files Affected:**
+  - `go.mod`, `go.sum`, `frontend/package.json`
+  - `internal/db/migrations/00005_webauthn.sql` (new)
+  - `internal/db/queries/webauthn.sql` (new)
+  - `internal/config/config.go` (modified)
+  - `proto/dmanager/v1/auth.proto` (modified)
+  - `cmd/serve.go` (modified)
+- **Validation Check:**
+  - Startup rejects invalid/mismatched RP config.
+  - Challenge queries enforce single-use (`consumed`) and TTL at the query level.
+  - `passkey_login_enabled` is false when unconfigured, true when valid.
+  - Migration rollback & backfill test.
+
+---
+
+### STORY-052: Passkey Registration Ceremony, Credential Management & Settings UI
+- **Scope:** Passkey Registration RPCs, Credential Management & Settings UI
+- **Estimated Size:** Large (~500 LOC)
+- **Dependencies:** `STORY-051`
+- **Goal:** Implement `BeginPasskeyRegistration`, `FinishPasskeyRegistration`, `ListPasskeys`, `RenamePasskey`, and `DeletePasskey` RPCs with AAGUID friendly device naming, lockout guardrails, and Settings Security tab UI.
+- **Tasks:**
+  1. Add Passkey registration & management RPCs to `proto/dmanager/v1/auth.proto`.
+  2. Implement registration ceremony and management methods in `internal/auth/webauthn.go` and `internal/auth/service.go`.
+  3. Classify all 5 RPCs as viewer in Connect interceptor with 100% reflection coverage.
+  4. Implement Settings Security tab Passkeys UI (add passkey with ceremony via `@github/webauthn-json`, rename, delete with confirmation and lockout guardrail, device labeling).
+  5. Write audit events on `passkey_added` and `passkey_removed`.
+- **Files Affected:**
+  - `proto/dmanager/v1/auth.proto` (modified)
+  - `internal/auth/service.go` (modified)
+  - `internal/auth/webauthn.go` (new)
+  - `frontend/src/components/Settings.tsx` (modified)
+  - `frontend/src/components/Settings.test.tsx` (modified)
+- **Validation Check:**
+  - Full registration ceremony automated tests.
+  - Replay of used challenge and expired challenge rejected.
+  - Same credential duplicate registration rejected via exclude list.
+  - Lockout guardrail prevents deleting only remaining login factor.
+  - Settings UI tests for add, list, rename, delete.
+
+---
+
+### STORY-053: Passkey Usernameless Login Ceremony & Login UI
+- **Scope:** Discoverable Passkey Login Flow & Login Page UI
+- **Estimated Size:** Medium (~350 LOC)
+- **Dependencies:** `STORY-051`, `STORY-052`
+- **Goal:** Implement `BeginPasskeyLogin` and `FinishPasskeyLogin` for passwordless, usernameless discoverable credentials, clone detection, rate limiting, and Login UI.
+- **Tasks:**
+  1. Add `BeginPasskeyLogin` and `FinishPasskeyLogin` to `proto/dmanager/v1/auth.proto`.
+  2. Implement login ceremony in `internal/auth/webauthn.go` and `internal/auth/service.go` (resolves user from credential user handle, checks sign count clone warning, issues session).
+  3. Classify both RPCs as unauthenticated in Connect interceptor with 100% reflection coverage.
+  4. Update `frontend/src/components/Login.tsx` with "Sign in with Passkey" button when `passkey_login_enabled`, seamless fallback to username/password, and shared remember-me checkbox.
+  5. Write audit events on `login_success` / `login_failed` with method `passkey`.
+- **Files Affected:**
+  - `proto/dmanager/v1/auth.proto` (modified)
+  - `internal/auth/service.go` (modified)
+  - `internal/auth/webauthn.go` (modified)
+  - `frontend/src/components/Login.tsx` (modified)
+  - `frontend/src/components/Login.test.tsx` (modified)
+- **Validation Check:**
+  - Usernameless login automated tests.
+  - Verification checks: consumed challenge, expired challenge, wrong origin, bad signature, clone detection (`clone_warning = 1`), user verification rules.
+  - 6 rapid failed passkey attempts trigger `ResourceExhausted` rate limiter.
+  - Login UI tests for passkey button and password fallback.
+
+
 
 
 
