@@ -606,6 +606,7 @@ func (s *Service) FinishPasskeyRegistration(ctx context.Context, req *connect.Re
 		Challenge:        challengeStr,
 		UserID:           webUser.WebAuthnID(),
 		UserVerification: getUserVerificationRequirement(s.webauthnCfg.RequireUserVerification),
+		CredParams:       webauthn.CredentialParametersDefault(),
 	}
 
 	cred, err := s.webauthn.CreateCredential(webUser, sessionData, parsedResponse)
