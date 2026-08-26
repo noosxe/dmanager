@@ -53,6 +53,8 @@ graph TD
     S45 --> S46["STORY-046: Sliding Window Login Rate Limiting & Exponential Lockout (DONE)"]
     S46 --> S47["STORY-047: Timing Equalization, Password Policy & Breached Check (DONE)"]
     S45 --> S48["STORY-048: Require Authentication for LogService/SyncLogs (DONE)"]
+    S45 --> S49["STORY-049: Auth Audit Trail Schema, Event Writes, and ListAuthEvents RPC"]
+    S49 --> S50["STORY-050: Session Management RPCs, Device Identification & Settings Security Tab"]
 ```
 
 
@@ -1007,6 +1009,57 @@ graph TD
 - **Validation Check:**
   - Verify unauthenticated requests to `SyncLogs` return `Unauthenticated`.
   - Verify authenticated sessions sync logs properly.
+
+---
+
+### STORY-049: Auth Audit Trail Schema, Event Writes, and ListAuthEvents RPC
+- **Scope:** Database Schema, Audit Logging, and ListAuthEvents RPC
+- **Estimated Size:** Medium (~250 LOC)
+- **Dependencies:** `STORY-044`, `STORY-045`
+- **Goal:** Track all authentication events in `auth_events` table (logins, failures, logouts, rate limits, revocations, admin setups), implement 90-day retention purge, and provide the `ListAuthEvents` RPC (viewers see own events, admins see all).
+- **Tasks:**
+  1. Create goose migration `00004_auth_audit_and_sessions.sql` creating `auth_events` table and adding `user_agent` to `sessions`.
+  2. Write SQL queries in `sql/queries/auth_events.sql` for event insertion, admin/viewer listing with pagination, and 90-day purge.
+  3. Update `proto/dmanager/v1/auth.proto` with `AuthEvent`, `ListAuthEventsRequest`, `ListAuthEventsResponse`, and `ListAuthEvents` RPC.
+  4. Write events at every auth decision point in `internal/auth/service.go` ensuring zero sensitive credentials/tokens are ever stored.
+  5. Implement `ListAuthEvents` in `Service` with viewer vs admin scoping.
+  6. Register 90-day auth events purge job in `cmd/serve.go`.
+- **Files Affected:**
+  - `internal/db/migrations/00004_auth_audit_and_sessions.sql` (new)
+  - `sql/queries/auth_events.sql` (new)
+  - `proto/dmanager/v1/auth.proto` (modified)
+  - `internal/auth/service.go` (modified)
+  - `internal/auth/purge.go` (modified)
+  - `cmd/serve.go` (modified)
+- **Validation Check:**
+  - Integration and unit tests verifying event writes for all decision points.
+  - Tests ensuring viewer cannot access other users' audit events while admin sees all.
+  - Purge job retention tests (91-day old events purged, 89-day old retained).
+  - No credential/token substrings present in detail fields.
+
+---
+
+### STORY-050: Session Management RPCs, Device Identification & Settings Security Tab
+- **Scope:** Session Management RPCs, Device Identification & Settings UI
+- **Estimated Size:** Medium (~350 LOC)
+- **Dependencies:** `STORY-049`
+- **Goal:** Provide `ListSessions`, `RevokeSession`, and `RevokeAllOtherSessions` RPCs with User-Agent device parsing, and build the Settings → Security tab with active sessions management and recent auth events feed.
+- **Tasks:**
+  1. Update `sql/queries/sessions.sql` with user_agent recording and session deletion by user/id.
+  2. Add `ListSessions`, `RevokeSession`, and `RevokeAllOtherSessions` to `proto/dmanager/v1/auth.proto`.
+  3. Implement session listing, device label formatting (e.g. "Chrome · Linux"), and revocation methods in `internal/auth/service.go`.
+  4. Add Security tab to `frontend/src/components/Settings.tsx` with active sessions list (with "current" badge, revoke button, and revoke all others action) and recent auth events feed.
+  5. Add optimistic updates with rollback and toast feedback on session revocation.
+- **Files Affected:**
+  - `sql/queries/sessions.sql` (modified)
+  - `proto/dmanager/v1/auth.proto` (modified)
+  - `internal/auth/service.go` (modified)
+  - `internal/auth/service_test.go` (modified)
+  - `frontend/src/components/Settings.tsx` (modified)
+  - `frontend/src/components/Settings.test.tsx` (modified)
+- **Validation Check:**
+  - Unit and integration tests for session listing, foreign session revocation protection, and revoke-all-others.
+  - Frontend component tests for Security tab, sessions list, and auth events feed.
 
 
 
