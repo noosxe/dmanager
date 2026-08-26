@@ -96,7 +96,7 @@ const logsRoute = createRoute({
 });
 
 // 7. Settings route
-const settingsRoute = createRoute({
+const settingsIndexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/settings",
   beforeLoad: ({ context }) => {
@@ -105,6 +105,23 @@ const settingsRoute = createRoute({
     }
     if (!context.auth.isAuthenticated) {
       throw redirect({ to: "/login" });
+    }
+    throw redirect({ to: "/settings/$tab", params: { tab: "general" } });
+  },
+});
+
+const settingsTabRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/settings/$tab",
+  beforeLoad: ({ context, params }) => {
+    if (context.auth.needsSetup) {
+      throw redirect({ to: "/setup" });
+    }
+    if (!context.auth.isAuthenticated) {
+      throw redirect({ to: "/login" });
+    }
+    if (params.tab !== "general" && params.tab !== "security") {
+      throw redirect({ to: "/settings/$tab", params: { tab: "general" } });
     }
   },
   component: () => (
@@ -120,7 +137,8 @@ const routeTree = rootRoute.addChildren([
   loginRoute,
   setupRoute,
   logsRoute,
-  settingsRoute,
+  settingsIndexRoute,
+  settingsTabRoute,
 ]);
 
 // 7. Define the router instance

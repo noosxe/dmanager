@@ -16,6 +16,31 @@ import type {
 } from "../gen/proto/dmanager/v1/settings_pb";
 import { Settings } from "./Settings";
 
+// Mock @tanstack/react-router
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({
+    children,
+    className,
+    onClick,
+  }: {
+    children?: React.ReactNode;
+    className?: string;
+    onClick?: (e: React.MouseEvent) => void;
+  }) => (
+    <button
+      type="button"
+      className={className}
+      onClick={(e) => {
+        e.preventDefault();
+        if (onClick) onClick(e);
+      }}
+    >
+      {children}
+    </button>
+  ),
+  useParams: () => ({ tab: "general" }),
+}));
+
 // Mock @github/webauthn-json
 vi.mock("@github/webauthn-json", () => ({
   create: vi.fn().mockResolvedValue({ id: "mock-cred-id", rawId: "mock-cred-id" }),

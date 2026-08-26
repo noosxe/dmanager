@@ -86,9 +86,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </Link>
 
             <Link
-              to="/settings"
+              to="/settings/$tab"
+              params={{ tab: "general" }}
               className="menu-item"
               activeProps={{ className: "menu-item active" }}
+              activeOptions={{ exact: false }}
               onClick={closeSidebar}
             >
               <Settings size={18} />
