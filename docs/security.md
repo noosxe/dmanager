@@ -33,18 +33,20 @@ graph TD
 * **Standard:** All passwords must be hashed using **bcrypt** with a minimum work factor (cost) of `12`.
 * **Verification:** Raw passwords must never be stored in the database or logged under any circumstances.
 
-### 2.2. Session Token Generation
+### 2.2. Session Token Generation & Two-Clock Lifecycle
 * **Standard:** Session identifiers must be generated using a cryptographically secure random number generator (`crypto/rand` in Go) with a length of 32 bytes, encoded as a 64-character hexadecimal string.
-* **Storage:**
-  * Sessions must be stored in the SQLite `sessions` table with an explicit `expires_at` timestamp (default: 24 hours).
-  * Expired sessions must be purged periodically to prevent database bloating.
+* **Storage & Lifetimes:**
+  * Sessions are governed by a two-clock model: a sliding idle timeout (`expires_at`, default: 7 days, 30 days for "Remember me") and an absolute expiry cap (`absolute_expires_at`, default: 30 days, 90 days for "Remember me").
+  * Sliding activity updates occur lazily (only after half of the idle timeout has elapsed) to minimize database write churn.
+  * Expired sessions (by either idle or absolute deadline) are rejected upon access and cleaned up by a recurring background purge job.
 
 ### 2.3. Transport Cookies
 * **Standard:** The session token must be transmitted via HTTP headers using `Set-Cookie`.
 * **Cookie Flags:**
   * `HttpOnly`: Prevents client-side scripts (XSS) from reading the token.
-  * `Secure`: Forces transmission only over encrypted HTTPS connections (enabled in production environments).
+  * `Secure`: Configurable mode (`auto`, `always`, `never`). In `auto` mode, enforced whenever the request is served over HTTPS or carries `X-Forwarded-Proto: https`.
   * `SameSite=Lax`: Mitigates Cross-Site Request Forgery (CSRF) while allowing normal top-level navigations.
+  * `Max-Age`: Matches the idle session timeout to synchronize browser-side and server-side expiration.
   * `Path=/`: Restricts cookie scope to the root path.
 
 ---

@@ -25,6 +25,12 @@ This document details the procedure and requirements to deploy the `dmanager` ap
 | `server.allowed_origins` | `DMANAGER_SERVER_ALLOWED_ORIGINS` | `[]` | CORS comma-separated allowed origins list. |
 | `docker.host` | `DMANAGER_DOCKER_HOST` | `unix:///var/run/docker.sock` | Path to Docker unix socket. |
 | `scheduler.interval_minutes` | `DMANAGER_SCHEDULER_INTERVAL_MINUTES` | `60` | Schedule frequency for registry update checks. |
+| `auth.session_idle_timeout` | `DMANAGER_AUTH_SESSION_IDLE_TIMEOUT` | `168h` | Sliding idle timeout for standard sessions (7 days). |
+| `auth.session_absolute_timeout` | `DMANAGER_AUTH_SESSION_ABSOLUTE_TIMEOUT` | `720h` | Absolute lifetime cap for standard sessions (30 days). |
+| `auth.remember_me_idle_timeout` | `DMANAGER_AUTH_REMEMBER_ME_IDLE_TIMEOUT` | `720h` | Sliding idle timeout for "Remember me" sessions (30 days). |
+| `auth.remember_me_absolute_timeout` | `DMANAGER_AUTH_REMEMBER_ME_ABSOLUTE_TIMEOUT` | `2160h` | Absolute lifetime cap for "Remember me" sessions (90 days). |
+| `auth.secure_cookies` | `DMANAGER_AUTH_SECURE_COOKIES` | `auto` | Cookie `Secure` attribute mode (`auto`, `always`, `never`). |
+| `auth.bcrypt_cost` | `DMANAGER_AUTH_BCRYPT_COST` | `12` | Bcrypt hashing work factor for new passwords (min 4, max 31). |
 
 ### 2.2. Private Registry Configuration
 

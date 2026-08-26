@@ -35,7 +35,9 @@ Tracks active user session identifiers linked to secure browser cookies.
 | :--- | :--- | :--- | :--- |
 | `session_id` | TEXT | PRIMARY KEY | Cryptographically secure 32-byte hex-encoded session key. |
 | `user_id` | INTEGER | NOT NULL REFERENCES `users` (`id`) ON DELETE CASCADE | Reference to the associated user. |
-| `expires_at` | DATETIME | NOT NULL | Session expiration date/time. |
+| `expires_at` | DATETIME | NOT NULL | Idle session expiration date/time (sliding). |
+| `last_seen_at` | DATETIME | NOT NULL DEFAULT CURRENT_TIMESTAMP | Timestamp of last user activity. |
+| `absolute_expires_at` | DATETIME | NOT NULL | Hard absolute session expiry ceiling. |
 | `created_at` | DATETIME | NOT NULL DEFAULT CURRENT_TIMESTAMP | Session creation timestamp. |
 
 ### 2.3. `containers` Table
@@ -72,6 +74,7 @@ Stores system-wide configuration keys and values (e.g. Gotify notification setti
 To optimize query operations and enforce relational integrity:
 * **Unique Username:** Enforced by unique constraint and automatic unique index on `users(username)`.
 * **Session Lookups:** Index on `sessions(expires_at)` to allow rapid purging of expired tokens.
+* **Session Last Seen:** Index on `sessions(last_seen_at)` to optimize sliding activity updates and ordering.
 * **Session User Foreign Key Index:** Index on `sessions(user_id)` to speed up cascading deletion lookups.
 * **Auto-Update Scheduler Scanning:** Index on `containers(auto_update, update_available)` to instantly scan for containers that are flagged for auto-deployment when a check triggers.
 
@@ -144,6 +147,21 @@ INSERT INTO settings (key, value) VALUES ('gotify_token', '');
 -- +goose Down
 DROP TABLE IF EXISTS settings;
 ```
+
+### `00003_session_clocks.sql`
+```sql
+-- +goose Up
+ALTER TABLE sessions ADD COLUMN last_seen_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE sessions ADD COLUMN absolute_expires_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP;
+UPDATE sessions SET absolute_expires_at = expires_at;
+
+CREATE INDEX idx_sessions_last_seen_at ON sessions(last_seen_at);
+
+-- +goose Down
+DROP INDEX IF EXISTS idx_sessions_last_seen_at;
+ALTER TABLE sessions DROP COLUMN absolute_expires_at;
+ALTER TABLE sessions DROP COLUMN last_seen_at;
+```
 ---
 
 ## 5. SQLC Query Definitions
@@ -170,8 +188,8 @@ SELECT COUNT(*) FROM users;
 ### `sessions.sql`
 ```sql
 -- name: CreateSession :one
-INSERT INTO sessions (session_id, user_id, expires_at)
-VALUES (?, ?, ?)
+INSERT INTO sessions (session_id, user_id, expires_at, last_seen_at, absolute_expires_at)
+VALUES (?, ?, ?, ?, ?)
 RETURNING *;
 
 -- name: GetSession :one
@@ -180,8 +198,18 @@ SELECT * FROM sessions WHERE session_id = ? LIMIT 1;
 -- name: DeleteSession :exec
 DELETE FROM sessions WHERE session_id = ?;
 
+-- name: TouchSession :exec
+UPDATE sessions SET expires_at = ?, last_seen_at = ? WHERE session_id = ?;
+
+-- name: ListSessionsByUser :many
+SELECT s.*, u.username FROM sessions s JOIN users u ON u.id = s.user_id
+WHERE s.user_id = ? ORDER BY s.last_seen_at DESC;
+
+-- name: DeleteSessionsByUser :execrows
+DELETE FROM sessions WHERE user_id = ? AND session_id != ?;
+
 -- name: PurgeExpiredSessions :exec
-DELETE FROM sessions WHERE expires_at < ?;
+DELETE FROM sessions WHERE expires_at < ? OR absolute_expires_at < ?;
 ```
 
 ### `containers.sql`

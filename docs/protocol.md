@@ -71,6 +71,7 @@ message SetupAdminResponse {
 message LoginRequest {
   string username = 1;
   string password = 2;
+  bool remember_me = 3;
 }
 
 message LoginResponse {
