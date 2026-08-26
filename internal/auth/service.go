@@ -79,7 +79,11 @@ func NewService(queries *db.Queries, logger *slog.Logger, cfg config.AuthConfig,
 		web, werr = webauthn.New(wcfg)
 		if werr != nil && logger != nil {
 			logger.Warn("Failed to initialize WebAuthn Relying Party", "error", werr)
+		} else if logger != nil {
+			logger.Info("WebAuthn Relying Party initialized", "rp_id", webauthnCfg.RPID, "origins", webauthnCfg.Origins, "user_verification", webauthnCfg.RequireUserVerification)
 		}
+	} else if logger != nil {
+		logger.Info("WebAuthn / Passkeys not configured (RPID and Origins required)", "rp_id", webauthnCfg.RPID, "origins", webauthnCfg.Origins)
 	}
 
 	return &Service{
