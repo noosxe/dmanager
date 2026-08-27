@@ -59,6 +59,12 @@ message GetServerStatusResponse {
   string rp_id = 3;
   // Effective Allowed Origins.
   repeated string origins = 4;
+  // Server version (ldflags-injected), e.g. "v0.8.0" or "dev".
+  string version = 5;
+  // Commit the binary was built from ("none" if not injected).
+  string commit = 6;
+  // Build timestamp, RFC3339 ("unknown" if not injected).
+  string build_date = 7;
 }
 
 message SetupAdminRequest {

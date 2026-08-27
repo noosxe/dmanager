@@ -20,6 +20,7 @@ import (
 	"dmanager/internal/config"
 	"dmanager/internal/db"
 	v1 "dmanager/internal/gen/proto/dmanager/v1"
+	"dmanager/internal/version"
 )
 
 const (
@@ -75,6 +76,10 @@ func TestGetServerStatus(t *testing.T) {
 	resp, err := svc.GetServerStatus(ctx, connect.NewRequest(&v1.GetServerStatusRequest{}))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.Msg.Version != version.Version || resp.Msg.Commit != version.Commit || resp.Msg.BuildDate != version.Date {
+		t.Errorf("expected build metadata (version=%q commit=%q date=%q), got (version=%q commit=%q date=%q)",
+			version.Version, version.Commit, version.Date, resp.Msg.Version, resp.Msg.Commit, resp.Msg.BuildDate)
 	}
 	if !resp.Msg.NeedsSetup {
 		t.Errorf("expected NeedsSetup to be true, got false")

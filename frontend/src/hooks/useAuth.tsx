@@ -8,12 +8,19 @@ export interface User {
   role: string;
 }
 
+export interface ServerInfo {
+  version: string;
+  commit: string;
+  buildDate: string;
+}
+
 export interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   needsSetup: boolean;
   passkeyLoginEnabled: boolean;
+  serverInfo: ServerInfo | null;
   login: (username: string, password: string, rememberMe?: boolean) => Promise<void>;
   loginWithPasskey: (rememberMe?: boolean) => Promise<void>;
   setupAdmin: (username: string, password: string) => Promise<void>;
@@ -34,6 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [needsSetup, setNeedsSetup] = useState<boolean>(false);
   const [passkeyLoginEnabled, setPasskeyLoginEnabled] = useState<boolean>(false);
+  const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
 
   const checkAuth = async () => {
     try {
@@ -41,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const status = await authClient.getServerStatus({});
         setNeedsSetup(status.needsSetup);
         setPasskeyLoginEnabled(status.passkeyLoginEnabled);
+        setServerInfo({ version: status.version, commit: status.commit, buildDate: status.buildDate });
       } catch (statusErr) {
         console.error("Failed to check server setup status:", statusErr);
       }
@@ -166,6 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const status = await authClient.getServerStatus({});
         setNeedsSetup(status.needsSetup);
         setPasskeyLoginEnabled(status.passkeyLoginEnabled);
+        setServerInfo({ version: status.version, commit: status.commit, buildDate: status.buildDate });
       } catch (statusErr) {
         console.error("Failed to check server setup status on logout:", statusErr);
       }
@@ -181,6 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         needsSetup,
         passkeyLoginEnabled,
+        serverInfo,
         login,
         loginWithPasskey,
         setupAdmin,

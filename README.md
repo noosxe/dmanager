@@ -284,9 +284,9 @@ cd frontend && pnpm install && pnpm build && cd ..
 
 # Build backend (embeds frontend assets; version metadata comes from git)
 go build -o dmanager \
-  -ldflags="-X dmanager/cmd.version=$(git describe --tags --always --dirty) \
-            -X dmanager/cmd.commit=$(git rev-parse --short HEAD) \
-            -X dmanager/cmd.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" .
+  -ldflags="-X dmanager/internal/version.Version=$(git describe --tags --always --dirty) \
+            -X dmanager/internal/version.Commit=$(git rev-parse --short HEAD) \
+            -X dmanager/internal/version.Date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" .
 
 # Run
 ./dmanager serve --config config.yaml
