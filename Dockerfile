@@ -53,9 +53,9 @@ ARG COMMIT=none
 # Build static backend binary with version metadata baked in
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
     -ldflags="-s -w \
-      -X dmanager/cmd.version=${VERSION} \
-      -X dmanager/cmd.commit=${COMMIT} \
-      -X dmanager/cmd.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+      -X dmanager/internal/version.Version=${VERSION} \
+      -X dmanager/internal/version.Commit=${COMMIT} \
+      -X dmanager/internal/version.Date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     -o dmanager .
 
 

@@ -9,7 +9,7 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { user, logout } = useAuth();
+  const { user, logout, serverInfo } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const toggleSidebar = () => {
@@ -133,6 +133,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <LogOut size={16} />
             </button>
           </div>
+
+          {serverInfo && (
+            <div
+              className="sidebar-version"
+              title={
+                serverInfo.commit !== "none"
+                  ? `commit ${serverInfo.commit} · built ${serverInfo.buildDate}`
+                  : undefined
+              }
+            >
+              {serverInfo.version}
+            </div>
+          )}
         </div>
       </aside>
 

@@ -23,6 +23,7 @@ import (
 	"dmanager/internal/config"
 	"dmanager/internal/db"
 	v1 "dmanager/internal/gen/proto/dmanager/v1"
+	"dmanager/internal/version"
 )
 
 const (
@@ -126,6 +127,9 @@ func (s *Service) GetServerStatus(ctx context.Context, req *connect.Request[v1.G
 		PasskeyLoginEnabled: s.webauthn != nil,
 		RpId:                s.webauthnCfg.RPID,
 		Origins:             s.webauthnCfg.Origins,
+		Version:             version.Version,
+		Commit:              version.Commit,
+		BuildDate:           version.Date,
 	}), nil
 }
 
