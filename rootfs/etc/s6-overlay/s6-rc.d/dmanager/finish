@@ -1,0 +1,24 @@
+#!/command/with-contenv sh
+# s6-rc finish args: $1 = exit code of the service, or 256 if it was killed
+# by an uncaught signal; $2 = signal number (only meaningful when $1 = 256).
+#
+# By default s6-supervise restarts the run script forever, which makes a
+# broken deployment (e.g. docker.sock not mounted, unwritable DB) look like
+# a healthy container. Bring the whole container down instead so the failure
+# is visible (exit status + restart flapping), matching "the Docker way":
+# https://github.com/just-containers/s6-overlay#writing-an-optional-finish-script
+e=0
+if [ "$1" -eq 256 ] && [ "$2" -eq 15 ]; then
+  # SIGTERM: the container is shutting down and dmanager already exited
+  # gracefully (or was killed by the shutdown sweep); nothing to do.
+  exit 0
+elif [ "$1" -eq 256 ]; then
+  e=$((128 + $2))
+else
+  e="$1"
+fi
+if [ "$e" -ne 0 ]; then
+  echo "dmanager exited with status $1 (signal ${2:-none}); stopping container" >&2
+  echo "$e" > /run/s6-linux-init-container-results/exitcode
+  /run/s6/basedir/bin/halt
+fi
