@@ -68,17 +68,26 @@ RUN apk add --no-cache ca-certificates xz curl
 # Accept target architecture from Buildx
 ARG TARGETARCH
 ARG S6_OVERLAY_VERSION=3.2.0.2
+# SHA-256 digests of the release tarballs, cross-checked against the .sha256
+# sidecar files published at:
+# https://github.com/just-containers/s6-overlay/releases/tag/v${S6_OVERLAY_VERSION}
+ARG S6_NOARCH_SHA256=6dbcde158a3e78b9bb141d7bcb5ccb421e563523babbe2c64470e76f4fd02dae
+ARG S6_AMD64_SHA256=59289456ab1761e277bd456a95e737c06b03ede99158beb24f12b165a904f478
+ARG S6_ARM64_SHA256=8b22a2eaca4bf0b27a43d36e65c89d2701738f628d1abd0cea5569619f66f785
+ARG S6_ARM_SHA256=e00b0d94f2cf1e4178c922c7b90181a619981103be635fe5fb0c9547e4193c52
 
 # Download and extract s6-overlay for the target arch into a temporary directory
 RUN mkdir -p /tmp/s6-root && \
     case "${TARGETARCH}" in \
-        amd64)   S6_ARCH="x86_64" ;; \
-        arm64)   S6_ARCH="aarch64" ;; \
-        arm)     S6_ARCH="arm" ;; \
+        amd64)   S6_ARCH="x86_64";  S6_SHA256="${S6_AMD64_SHA256}" ;; \
+        arm64)   S6_ARCH="aarch64"; S6_SHA256="${S6_ARM64_SHA256}" ;; \
+        arm)     S6_ARCH="arm";     S6_SHA256="${S6_ARM_SHA256}" ;; \
         *)       echo "Unsupported arch: ${TARGETARCH}"; exit 1 ;; \
     esac && \
     curl -sSfL -o /tmp/s6-overlay-noarch.tar.xz "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz" && \
     curl -sSfL -o /tmp/s6-overlay-${S6_ARCH}.tar.xz "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz" && \
+    echo "${S6_NOARCH_SHA256}  /tmp/s6-overlay-noarch.tar.xz" | sha256sum -c - && \
+    echo "${S6_SHA256}  /tmp/s6-overlay-${S6_ARCH}.tar.xz" | sha256sum -c - && \
     tar -C /tmp/s6-root -Jxpf /tmp/s6-overlay-noarch.tar.xz && \
     tar -C /tmp/s6-root -Jxpf /tmp/s6-overlay-${S6_ARCH}.tar.xz
 
