@@ -43,6 +43,9 @@ jobs:
           tags: |
             ghcr.io/${{ steps.string.outputs.repo_name }}:${{ github.ref_name }}
             ghcr.io/${{ steps.string.outputs.repo_name }}:latest
+          build-args: |
+            VERSION=${{ github.ref_name }}
+            COMMIT=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

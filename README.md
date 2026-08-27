@@ -267,8 +267,11 @@ dmanager uses a multi-stage Dockerfile that compiles both the React frontend and
 # Build the image locally
 docker compose build
 
-# Or build directly
-docker build -t dmanager:local .
+# Or build directly, injecting version metadata from git
+docker build -t dmanager:local \
+  --build-arg VERSION=$(git describe --tags --always --dirty) \
+  --build-arg COMMIT=$(git rev-parse --short HEAD) \
+  .
 ```
 
 ### Running the binary directly
@@ -279,8 +282,11 @@ If you prefer to run outside Docker (requires Go 1.27+, Node.js 24+, and pnpm):
 # Build frontend
 cd frontend && pnpm install && pnpm build && cd ..
 
-# Build backend (embeds frontend assets)
-go build -o dmanager .
+# Build backend (embeds frontend assets; version metadata comes from git)
+go build -o dmanager \
+  -ldflags="-X dmanager/cmd.version=$(git describe --tags --always --dirty) \
+            -X dmanager/cmd.commit=$(git rev-parse --short HEAD) \
+            -X dmanager/cmd.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" .
 
 # Run
 ./dmanager serve --config config.yaml

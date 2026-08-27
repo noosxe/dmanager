@@ -46,8 +46,17 @@ COPY internal/ ./internal/
 ARG TARGETOS
 ARG TARGETARCH
 
-# Build static backend binary
-RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags="-s -w" -o dmanager .
+# Build metadata injected into the binary (override with --build-arg)
+ARG VERSION=dev
+ARG COMMIT=none
+
+# Build static backend binary with version metadata baked in
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
+    -ldflags="-s -w \
+      -X dmanager/cmd.version=${VERSION} \
+      -X dmanager/cmd.commit=${COMMIT} \
+      -X dmanager/cmd.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    -o dmanager .
 
 
 # Stage 3: Downloader (runs natively on build host, no QEMU)
