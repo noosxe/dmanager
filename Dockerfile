@@ -105,6 +105,14 @@ COPY --from=backend-builder /app/dmanager /usr/local/bin/dmanager
 # Copy s6 process supervision structure (permissions preserved from Git/host)
 COPY rootfs/ /
 
+# Shutdown timing: s6 waits indefinitely for s6-rc services to exit after
+# SIGTERM, then sweeps stragglers after S6_KILL_GRACETIME (default 3000ms).
+# The app drains in milliseconds (cmd/serve.go graceful shutdown), so a 500ms
+# sweep keeps `docker stop` fast; docker-compose.yml raises the overall
+# stop_grace_period above the app's 10s drain budget, which is the real
+# ceiling (docker SIGKILLs PID 1 at its own stop timeout).
+ENV S6_KILL_GRACETIME=500
+
 # Expose HTTP port
 EXPOSE 9283
 
