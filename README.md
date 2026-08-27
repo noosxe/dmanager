@@ -259,49 +259,22 @@ environment:
 
 ---
 
-## Building from source
+## Security notes
 
-dmanager uses a multi-stage Dockerfile that compiles both the React frontend and Go backend into a single static binary:
+### Why the container runs as root
 
-```bash
-# Build the image locally
-docker compose build
+The `dmanager` service runs as root inside the container because it needs
+read/write access to the host's Docker socket (`/var/run/docker.sock`),
+which is typically owned by `root:docker` with mode `660`. Mapping that
+group to an unprivileged in-container user is host-specific (the `docker`
+group GID varies between hosts), and Docker socket access is equivalent to
+root on the host regardless of the UID inside the container — so dropping
+privileges in-container adds little real isolation while the socket is
+mounted.
 
-# Or build directly, injecting version metadata from git
-docker build -t dmanager:local \
-  --build-arg VERSION=$(git describe --tags --always --dirty) \
-  --build-arg COMMIT=$(git rev-parse --short HEAD) \
-  .
-```
-
-### Running the binary directly
-
-If you prefer to run outside Docker (requires Go 1.27+, Node.js 24+, and pnpm):
-
-```bash
-# Build frontend
-cd frontend && pnpm install && pnpm build && cd ..
-
-# Build backend (embeds frontend assets; version metadata comes from git)
-go build -o dmanager \
-  -ldflags="-X dmanager/internal/version.Version=$(git describe --tags --always --dirty) \
-            -X dmanager/internal/version.Commit=$(git rev-parse --short HEAD) \
-            -X dmanager/internal/version.Date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" .
-
-# Run
-./dmanager serve --config config.yaml
-```
-
-#### CLI flags
-
-| Flag | Short | Default | Description |
-|------|-------|---------|-------------|
-| `--config` | `-c` | *(auto-detect)* | Path to the YAML configuration file. |
-| `--port` | `-p` | `9283` | Port to listen on (overrides config). |
-| `--db` | `-d` | `dmanager.db` | Path to SQLite database file (overrides config). |
-
----
-
-## License
-
-See [LICENSE](LICENSE) for details.
+If you run under rootless Docker or Podman where the socket is already
+user-accessible, the standard [s6-overlay privilege-drop
+pattern](https://github.com/just-containers/s6-overlay#dropping-privileges)
+applies — create a `dmanager` user in the image, `chown /var/lib/dmanager`
+before startup, and prefix the exec line in
+`rootfs/etc/s6-overlay/s6-rc.d/dmanager/run` with `s6-setuidgid dmanager`.
