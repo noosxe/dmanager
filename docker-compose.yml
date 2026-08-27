@@ -5,6 +5,9 @@ services:
       dockerfile: Dockerfile
     container_name: dmanager
     restart: unless-stopped
+    # Raise docker's stop timeout above the app's 10s graceful-drain budget; s6
+    # waits indefinitely for s6-rc services, so docker is the real ceiling.
+    stop_grace_period: 15s
     ports:
       - "9283:9283"
     volumes:
