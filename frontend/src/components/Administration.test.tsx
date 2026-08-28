@@ -506,7 +506,7 @@ describe("Administration Component", () => {
     render(<Administration />);
 
     const volumesTab = screen.getByText("Volumes").closest("button");
-    expect(volumesTab).toHaveClass("settings-nav-tab");
+    expect(volumesTab).toHaveClass("page-tab");
     expect(volumesTab).not.toHaveClass("active");
     expect(screen.getAllByText("Images")[0].closest("button")).toHaveClass("active");
   });

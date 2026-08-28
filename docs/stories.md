@@ -67,7 +67,7 @@ graph TD
     A59 --> A60["STORY-060: Image Delete via ConfirmDialog (#177) (DONE)"]
     A59 --> A61["STORY-061: Passkey & Destructive Confirmations (#178) (DONE)"]
     A61 --> A62["STORY-062: Administration Containers-Style Layout (#189) (DONE)"]
-    A62 --> A63["STORY-063: Generic PageTabs & Settings Shell Refinement (#192)"]
+    A62 --> A63["STORY-063: Generic PageTabs & Settings Shell Refinement (#192) (DONE)"]
 ```
 
 
@@ -1338,7 +1338,7 @@ graph TD
   - `pnpm check`, `pnpm test`, `pnpm build` pass.
   - Visual: Administration header/stat/table spacing matches the containers dashboard rhythm; tabs unchanged.
 
-### STORY-063: Generic PageTabs Component & Settings Shell Refinement (issue #192)
+### STORY-063: Generic PageTabs Component & Settings Shell Refinement (issue #192) [DONE]
 - **Scope:** Frontend only — shared tab-bar extraction; Settings spacing made gap-based; no behavior changes
 - **Estimated Size:** Small (~120 LOC)
 - **Dependencies:** STORY-062 (Administration's gap-based root is where the doubled spacing shows)
