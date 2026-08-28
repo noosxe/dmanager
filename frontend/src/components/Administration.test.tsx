@@ -126,7 +126,7 @@ describe("Administration Component", () => {
     render(<Administration />);
 
     // Tab bar
-    expect(screen.getByText("Images")).toBeInTheDocument();
+    expect(screen.getAllByText("Images")).toHaveLength(2); // tab bar + stat card label
     expect(screen.getByText("Volumes")).toBeInTheDocument();
     expect(screen.getByText("Networks")).toBeInTheDocument();
 
@@ -144,7 +144,7 @@ describe("Administration Component", () => {
     expect(screen.getByText("nginx")).toBeInTheDocument();
     expect(screen.getByText("latest")).toBeInTheDocument();
     expect(screen.getByText("abc123def456")).toBeInTheDocument();
-    expect(screen.getByText("143 MB")).toBeInTheDocument();
+    expect(screen.getAllByText("143 MB")).toHaveLength(2); // stat card + table cell
     expect(screen.getByText("3")).toBeInTheDocument();
     expect(screen.getAllByText("2 hours ago")).toHaveLength(2);
 
@@ -170,6 +170,8 @@ describe("Administration Component", () => {
     expect(screen.getByText("com.example.some-label=some-value")).toBeInTheDocument();
     // Volume without created_at or labels renders the em dash twice.
     expect(screen.getAllByText("—")).toHaveLength(2);
+    // Stat cards are Images-tab only.
+    expect(screen.queryByText("Total Space Used")).not.toBeInTheDocument();
   });
 
   it("renders the networks tab with system badge and internal flags", async () => {
@@ -202,6 +204,10 @@ describe("Administration Component", () => {
     render(<Administration />);
 
     expect(await screen.findByText("No Images Found")).toBeInTheDocument();
+
+    // Stat cards render zeros for an empty inventory.
+    expect(screen.getAllByText("0 B")).toHaveLength(2);
+    expect(screen.getByText("0")).toBeInTheDocument();
   });
 
   it("shows an error banner when the backend is unreachable", async () => {
@@ -212,6 +218,9 @@ describe("Administration Component", () => {
     expect(
       await screen.findByText("Unable to connect to the Docker monitor backend."),
     ).toBeInTheDocument();
+
+    // Stat cards fall back to -- placeholders on error.
+    expect(screen.getAllByText("--")).toHaveLength(3);
   });
 
   it("re-fetches resources when the Refresh button is clicked", async () => {
@@ -236,23 +245,90 @@ describe("Administration Component", () => {
       expect(screen.getByText("nginx")).toBeInTheDocument();
     });
 
-    // Default sort: repository ascending — "<none>" sorts before "nginx".
+    // Default sort: size descending — the 143 MB image opens first.
     const rows = document.querySelectorAll(".container-table-row");
-    expect(rows[0].textContent).toContain("<none>");
+    expect(rows[0].textContent).toContain("nginx");
 
-    // First click on Size sorts ascending: the 4.1 KB dangling image stays first.
+    // First click on Size toggles ascending: the 4.1 KB dangling image first.
     fireEvent.click(screen.getByText("Size"));
     await waitFor(() => {
       expect(document.querySelectorAll(".container-table-row")[0].textContent).toContain("<none>");
     });
 
-    // Second click toggles descending: the 143 MB image moves first.
+    // Second click toggles back to descending.
     fireEvent.click(screen.getByText("Size"));
-
     await waitFor(() => {
       const sortedRows = document.querySelectorAll(".container-table-row");
       expect(sortedRows[0].textContent).toContain("nginx");
     });
+  });
+  it("shows summary stat cards derived from the images list", async () => {
+    render(<Administration />);
+    expect(screen.getByText("Total Space Used")).toBeInTheDocument();
+    expect(screen.getByText("Freeable Space")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByText("nginx")).toBeInTheDocument();
+    });
+
+    // Total: 142606336 + 4096 bytes (card + nginx table cell).
+    expect(screen.getAllByText("143 MB")).toHaveLength(2);
+    // Freeable: both fixture images are in use or unknown (-1) — nothing freeable.
+    expect(screen.getByText("0 B")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
+  });
+
+  it("treats unknown container counts (-1) as in use when deriving freeable space", async () => {
+    vi.mocked(adminClient.listImages).mockResolvedValue({
+      images: [
+        {
+          id: "sha256:aaa111222333444555666777888999000111222333444555666777888999000",
+          repoTags: ["scratch:latest"],
+          createdUnix: twoHoursAgoUnix,
+          sizeBytes: 52428800n,
+          containersCount: -1n,
+        } as unknown as Image,
+        ...mockImages,
+      ],
+      $typeName: "dmanager.v1.ListImagesResponse",
+    } as unknown as ListImagesResponse);
+
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("scratch")).toBeInTheDocument();
+    });
+
+    // Total: 52428800 + 142606336 + 4096 bytes.
+    expect(screen.getByText("195 MB")).toBeInTheDocument();
+    // Freeable: nothing — nginx is in use, scratch is unknown, dangling is -1.
+    expect(screen.getByText("0 B")).toBeInTheDocument();
+    // Image count (card) and the nginx in-use cell both render 3.
+    expect(screen.getAllByText("3")).toHaveLength(2);
+  });
+
+  it("shows -- stat placeholders while the images list is loading", async () => {
+    let resolveList!: (value: ListImagesResponse) => void;
+    vi.mocked(adminClient.listImages).mockImplementation(
+      () =>
+        new Promise<ListImagesResponse>((resolve) => {
+          resolveList = resolve;
+        }),
+    );
+
+    render(<Administration />);
+
+    expect(screen.getAllByText("--")).toHaveLength(3);
+
+    resolveList({
+      images: mockImages,
+      $typeName: "dmanager.v1.ListImagesResponse",
+    } as unknown as ListImagesResponse);
+
+    await waitFor(() => {
+      expect(screen.getByText("nginx")).toBeInTheDocument();
+    });
+    expect(screen.getAllByText("143 MB")).toHaveLength(2);
   });
 
   it("renders tab links pointing at the routed tab paths", () => {
@@ -261,6 +337,6 @@ describe("Administration Component", () => {
     const volumesTab = screen.getByText("Volumes").closest("button");
     expect(volumesTab).toHaveClass("settings-nav-tab");
     expect(volumesTab).not.toHaveClass("active");
-    expect(screen.getByText("Images").closest("button")).toHaveClass("active");
+    expect(screen.getAllByText("Images")[0].closest("button")).toHaveClass("active");
   });
 });

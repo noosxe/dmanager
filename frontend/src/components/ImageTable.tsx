@@ -93,7 +93,8 @@ const columns: ColumnDef<Image>[] = [
 
 // Read-only image inventory table. No actions column by design.
 export function ImageTable({ images }: ImageTableProps) {
-  const [sorting, setSorting] = useState<SortingState>([{ id: "repository", desc: false }]);
+  // Largest images first — disk-usage triage is the primary workflow.
+  const [sorting, setSorting] = useState<SortingState>([{ id: "size", desc: true }]);
 
   const table = useReactTable({
     data: images,
