@@ -44,6 +44,9 @@ const (
 	// AdminServiceDeleteImageProcedure is the fully-qualified name of the AdminService's DeleteImage
 	// RPC.
 	AdminServiceDeleteImageProcedure = "/dmanager.v1.AdminService/DeleteImage"
+	// AdminServiceCheckEngineProcedure is the fully-qualified name of the AdminService's CheckEngine
+	// RPC.
+	AdminServiceCheckEngineProcedure = "/dmanager.v1.AdminService/CheckEngine"
 )
 
 // AdminServiceClient is a client for the dmanager.v1.AdminService service.
@@ -57,6 +60,10 @@ type AdminServiceClient interface {
 	// Delete an image from the host (Authenticated, admin role). The
 	// daemon refuses images referenced by any container regardless of force.
 	DeleteImage(context.Context, *connect.Request[v1.DeleteImageRequest]) (*connect.Response[v1.DeleteImageResponse], error)
+	// Report whether the Docker Engine is reachable (Authenticated, any role).
+	// Daemon unreachability is a successful response with connected=false —
+	// the outage is the answer, not an RPC failure (design.md §10.2).
+	CheckEngine(context.Context, *connect.Request[v1.CheckEngineRequest]) (*connect.Response[v1.CheckEngineResponse], error)
 }
 
 // NewAdminServiceClient constructs a client for the dmanager.v1.AdminService service. By default,
@@ -94,6 +101,12 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("DeleteImage")),
 			connect.WithClientOptions(opts...),
 		),
+		checkEngine: connect.NewClient[v1.CheckEngineRequest, v1.CheckEngineResponse](
+			httpClient,
+			baseURL+AdminServiceCheckEngineProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("CheckEngine")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -103,6 +116,7 @@ type adminServiceClient struct {
 	listVolumes  *connect.Client[v1.ListVolumesRequest, v1.ListVolumesResponse]
 	listNetworks *connect.Client[v1.ListNetworksRequest, v1.ListNetworksResponse]
 	deleteImage  *connect.Client[v1.DeleteImageRequest, v1.DeleteImageResponse]
+	checkEngine  *connect.Client[v1.CheckEngineRequest, v1.CheckEngineResponse]
 }
 
 // ListImages calls dmanager.v1.AdminService.ListImages.
@@ -125,6 +139,11 @@ func (c *adminServiceClient) DeleteImage(ctx context.Context, req *connect.Reque
 	return c.deleteImage.CallUnary(ctx, req)
 }
 
+// CheckEngine calls dmanager.v1.AdminService.CheckEngine.
+func (c *adminServiceClient) CheckEngine(ctx context.Context, req *connect.Request[v1.CheckEngineRequest]) (*connect.Response[v1.CheckEngineResponse], error) {
+	return c.checkEngine.CallUnary(ctx, req)
+}
+
 // AdminServiceHandler is an implementation of the dmanager.v1.AdminService service.
 type AdminServiceHandler interface {
 	// List images present on the host (Authenticated, any role).
@@ -136,6 +155,10 @@ type AdminServiceHandler interface {
 	// Delete an image from the host (Authenticated, admin role). The
 	// daemon refuses images referenced by any container regardless of force.
 	DeleteImage(context.Context, *connect.Request[v1.DeleteImageRequest]) (*connect.Response[v1.DeleteImageResponse], error)
+	// Report whether the Docker Engine is reachable (Authenticated, any role).
+	// Daemon unreachability is a successful response with connected=false —
+	// the outage is the answer, not an RPC failure (design.md §10.2).
+	CheckEngine(context.Context, *connect.Request[v1.CheckEngineRequest]) (*connect.Response[v1.CheckEngineResponse], error)
 }
 
 // NewAdminServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -169,6 +192,12 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("DeleteImage")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceCheckEngineHandler := connect.NewUnaryHandler(
+		AdminServiceCheckEngineProcedure,
+		svc.CheckEngine,
+		connect.WithSchema(adminServiceMethods.ByName("CheckEngine")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/dmanager.v1.AdminService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AdminServiceListImagesProcedure:
@@ -179,6 +208,8 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceListNetworksHandler.ServeHTTP(w, r)
 		case AdminServiceDeleteImageProcedure:
 			adminServiceDeleteImageHandler.ServeHTTP(w, r)
+		case AdminServiceCheckEngineProcedure:
+			adminServiceCheckEngineHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -202,4 +233,8 @@ func (UnimplementedAdminServiceHandler) ListNetworks(context.Context, *connect.R
 
 func (UnimplementedAdminServiceHandler) DeleteImage(context.Context, *connect.Request[v1.DeleteImageRequest]) (*connect.Response[v1.DeleteImageResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AdminService.DeleteImage is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) CheckEngine(context.Context, *connect.Request[v1.CheckEngineRequest]) (*connect.Response[v1.CheckEngineResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AdminService.CheckEngine is not implemented"))
 }
