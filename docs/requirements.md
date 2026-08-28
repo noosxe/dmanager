@@ -58,7 +58,8 @@ The system is intended for administrators and developers who need to manage Dock
 * **Administration Page:** The system must provide an Administration page in the web interface, placed between System Logs and Settings in the navigation, with three tabs: Images, Volumes, and Networks.
 * **Read-Only Resource Inventory:** Each tab must present a table of the corresponding Docker resources (images, volumes, networks) fetched live from the Docker Engine via its socket, including relevant metadata per resource type (e.g. repository/tag, size, and usage count for images; driver and mountpoint for volumes; driver, scope, and internal flag for networks).
 * **No Actions:** This phase is strictly read-only; the Administration page must not offer create, modify, or delete operations on any resource. Actionable operations may be introduced in a future phase.
-* **Sorting:** All resource tables must support sorting by column, consistent with the existing container table behavior.
+* **Sorting:** All resource tables must support sorting by column, consistent with the existing container table behavior. The images table must default to size descending.
+* **Images Summary Stats:** The images tab must display summary stat cards above the table showing total space used by images, freeable space (the sum of sizes of images not used by any container), and the total image count. Usage counts not calculated by the daemon must be treated as in use so freeable space never overstates what could be reclaimed.
 
 ---
 
