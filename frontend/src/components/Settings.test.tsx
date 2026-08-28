@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { authClient, settingsClient } from "../client";
@@ -237,6 +237,14 @@ describe("Settings Component", () => {
     const revokeBtn = screen.getByRole("button", { name: /^Revoke$/i });
     fireEvent.click(revokeBtn);
 
+    // The destructive action requires confirmation (#178).
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveAccessibleName("Revoke session?");
+    expect(dialog).toHaveAccessibleDescription(
+      "The session on Safari · iOS will be signed out. It can sign in again with your credentials.",
+    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "Revoke" }));
+
     await waitFor(() => {
       expect(authClient.revokeSession).toHaveBeenCalledWith({ sessionId: "sess-2" });
       expect(screen.queryByText("Safari · iOS")).not.toBeInTheDocument();
@@ -266,6 +274,11 @@ describe("Settings Component", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: /revoke all others/i }));
+
+    // Bulk revocation is destructive too — confirm through the dialog (#178).
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveAccessibleName("Revoke other sessions?");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Revoke all" }));
 
     await waitFor(() => {
       expect(authClient.revokeAllOtherSessions).toHaveBeenCalled();
@@ -316,9 +329,46 @@ describe("Settings Component", () => {
     const deleteBtn = screen.getByRole("button", { name: /^Delete$/i });
     fireEvent.click(deleteBtn);
 
+    // Passkey deletion requires confirmation (#178) — danger focuses Cancel.
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveAccessibleName("Delete passkey?");
+    expect(dialog).toHaveAccessibleDescription(
+      'Passkey "Work MacBook" will be removed from your account. If it is your only remaining credential, you will be locked out.',
+    );
+    expect(document.activeElement).toBe(within(dialog).getByRole("button", { name: "Cancel" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+
     await waitFor(() => {
       expect(authClient.deletePasskey).toHaveBeenCalledWith({ id: "cred-1" });
       expect(screen.queryByText("Work MacBook")).not.toBeInTheDocument();
     });
+  });
+
+  it("does not delete a passkey when the confirmation is cancelled", async () => {
+    render(
+      <ToastProvider>
+        <Settings />
+      </ToastProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /security & sessions/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /security & sessions/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Work MacBook")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /^Delete$/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    // Dialog dismissed, nothing dispatched, passkey still listed.
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    expect(authClient.deletePasskey).not.toHaveBeenCalled();
+    expect(screen.getByText("Work MacBook")).toBeInTheDocument();
   });
 });

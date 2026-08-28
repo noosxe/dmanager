@@ -65,7 +65,7 @@ graph TD
     A57 --> A58["STORY-058: Engine Status Pill — Real Connectivity (issue #180) (DONE)"]
     A58 --> A59["STORY-059: Reusable Dialog System + ConfirmDialog (issue #176) (DONE)"]
     A59 --> A60["STORY-060: Image Delete via ConfirmDialog (#177) (DONE)"]
-    A59 --> A61["STORY-061: Passkey & Destructive Confirmations (#178)"]
+    A59 --> A61["STORY-061: Passkey & Destructive Confirmations (#178) (DONE)"]
 ```
 
 
@@ -1304,3 +1304,19 @@ graph TD
 - **Validation Check:**
   - `pnpm check`, `pnpm test` (87/87), `pnpm build` pass.
   - Behavior preserved: admin gating, unused-only deletion, serialized deletions, `force: true`, toast wording, refresh on success.
+
+### STORY-061: Passkey & Destructive Confirmations (issue #178) [DONE]
+- **Scope:** Frontend only — gate the Settings destructive actions behind the §11.4 `ConfirmDialog`
+- **Estimated Size:** Small (~120 LOC)
+- **Dependencies:** STORY-059 merged (`Dialog` + `ConfirmDialog` primitive)
+- **Goal:** Per #178: destructive actions that previously fired on first click now require a blocking confirmation — passkey deletion (deleting the only remaining credential locks the user out), single-session revocation, and revoke-all-others. Non-destructive mutations (container start/stop, passkey rename, settings save) stay unconfirmed to avoid prompt fatigue. Closes #178.
+- **Tasks:**
+  1. `Settings.tsx`: `PendingDestructive` discriminated union (`passkey` / `session` / `allSessions`) + `pendingDestructive` state; the three buttons set it instead of dispatching; `confirmDestructive` awaits the existing handlers (toasts/in-flight flags/optimistic rollback already live there) and closes the dialog once the outcome settles; `destructiveBusy` maps the union to `deletingPasskeyId` / `revokingSessionId` / `isRevokingOther`.
+  2. Copy per §11.4 (module-level `destructiveDialogCopy`): *Delete passkey?* (lock-out warning), *Revoke session?* (names the device, re-sign-in possible), *Revoke other sessions?* — all danger variant, verbs Delete / Revoke / Revoke all.
+  3. `Settings.test.tsx`: the three direct-dispatch tests gain the dialog step (title/description asserted, confirm inside the dialog); new cancel-path test proves no RPC fires when dismissed.
+- **Files Affected:**
+  - `frontend/src/components/Settings.tsx`
+  - `frontend/src/components/Settings.test.tsx`
+- **Validation Check:**
+  - `pnpm check`, `pnpm test` (88/88), `pnpm build` pass.
+  - Behavior preserved: per-action in-flight spinners, optimistic session rollback, toast wording, auth-events refetch.
