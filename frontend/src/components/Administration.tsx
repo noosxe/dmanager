@@ -32,8 +32,7 @@ export function Administration() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
 
-  const { result, isLoading, error, refresh, deleteImage, deletingId, deleteError } =
-    useAdminResources(tab);
+  const { result, isLoading, error, refresh, deleteImage, deletingId } = useAdminResources(tab);
 
   // Derived Images-tab summary (design.md §9.6); null on other tabs or
   // while no successful images result exists yet (-- placeholders).
@@ -141,13 +140,6 @@ export function Administration() {
         <div className="auth-error-banner" style={{ marginBottom: "16px" }}>
           <ShieldAlert size={18} className="auth-error-icon" />
           <span>{error}</span>
-        </div>
-      )}
-
-      {deleteError && (
-        <div className="auth-error-banner" style={{ marginBottom: "16px" }}>
-          <ShieldAlert size={18} className="auth-error-icon" />
-          <span>{deleteError}</span>
         </div>
       )}
 
