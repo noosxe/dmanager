@@ -59,7 +59,7 @@ graph TD
     S51 --> S52["STORY-052: Passkey Registration Ceremony, Credential Management & Settings UI (DONE)"]
     S52 --> S53["STORY-053: Passkey Usernameless Login Ceremony & Login UI (DONE)"]
     S53 --> A54["STORY-054: Administration Backend, AdminService Read-Only List RPCs (DONE)"]
-    A54 --> A55["STORY-055: Administration Frontend, Tabs, Tables & Navigation"]
+    A54 --> A55["STORY-055: Administration Frontend, Tabs, Tables & Navigation (DONE)"]
 ```
 
 
@@ -1169,7 +1169,7 @@ graph TD
   - `go test ./internal/admin/...` passes; `go vet ./...` and `golangci-lint run` clean.
   - Interceptor reflection test confirms 100% procedure classification coverage.
 
-### STORY-055: Administration Frontend — Tabs, Tables & Navigation
+### STORY-055: Administration Frontend — Tabs, Tables & Navigation [DONE]
 - **Scope:** Frontend Administration Page UI
 - **Estimated Size:** Medium (~400 LOC)
 - **Dependencies:** `STORY-054`

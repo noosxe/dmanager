@@ -1,0 +1,72 @@
+import { useCallback, useEffect, useState } from "react";
+
+import { adminClient } from "../client";
+import type { Image, Network, Volume } from "../gen/proto/dmanager/v1/admin_pb";
+
+export type AdminResourceKind = "images" | "volumes" | "networks";
+
+// The fetch result is a discriminated union keyed by resource kind so the
+// page can narrow to a concrete resource type without casts.
+export type AdminResourcesResult =
+  | { kind: "images"; data: Image[] }
+  | { kind: "volumes"; data: Volume[] }
+  | { kind: "networks"; data: Network[] };
+
+/**
+ * Fetches one kind of Docker host resource (images, volumes, networks) from
+ * the AdminService. Read-only by design: no polling or streaming — data is
+ * fetched on mount, on tab change, and on manual refresh only.
+ */
+export function useAdminResources(kind: AdminResourceKind) {
+  const [result, setResult] = useState<AdminResourcesResult | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshNonce, setRefreshNonce] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchResources = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        let next: AdminResourcesResult;
+        if (kind === "images") {
+          const resp = await adminClient.listImages({});
+          next = { kind, data: resp.images };
+        } else if (kind === "volumes") {
+          const resp = await adminClient.listVolumes({});
+          next = { kind, data: resp.volumes };
+        } else {
+          const resp = await adminClient.listNetworks({});
+          next = { kind, data: resp.networks };
+        }
+        if (!cancelled) {
+          setResult(next);
+        }
+      } catch (err: unknown) {
+        console.error(`Failed to load ${kind}:`, err);
+        if (!cancelled) {
+          setError("Unable to connect to the Docker monitor backend.");
+          setResult(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchResources();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [kind, refreshNonce]);
+
+  const refresh = useCallback(() => {
+    setRefreshNonce((n) => n + 1);
+  }, []);
+
+  return { result, isLoading, error, refresh };
+}

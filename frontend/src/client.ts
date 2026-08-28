@@ -1,6 +1,7 @@
 import { createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 
+import { AdminService } from "./gen/proto/dmanager/v1/admin_pb";
 import { AuthService } from "./gen/proto/dmanager/v1/auth_pb";
 import { ContainerService } from "./gen/proto/dmanager/v1/container_pb";
 import { LogService } from "./gen/proto/dmanager/v1/log_pb";
@@ -27,6 +28,7 @@ export const transport = createConnectTransport({
   },
 });
 
+export const adminClient = createClient(AdminService, transport);
 export const authClient = createClient(AuthService, transport);
 export const containerClient = createClient(ContainerService, transport);
 export const logClient = createClient(LogService, transport);
