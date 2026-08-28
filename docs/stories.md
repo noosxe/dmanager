@@ -60,7 +60,7 @@ graph TD
     S52 --> S53["STORY-053: Passkey Usernameless Login Ceremony & Login UI (DONE)"]
     S53 --> A54["STORY-054: Administration Backend, AdminService Read-Only List RPCs (DONE)"]
     A54 --> A55["STORY-055: Administration Frontend, Tabs, Tables & Navigation (DONE)"]
-    A55 --> A56["STORY-056: Administration Images Stat Cards & Size-First Sorting"]
+    A55 --> A56["STORY-056: Administration Images Stat Cards & Size-First Sorting (DONE)"]
 ```
 
 
@@ -1196,7 +1196,7 @@ graph TD
   - Deep links `/administration/volumes` and invalid tabs redirect correctly.
   - Tables render mock data with working column sort; no action buttons anywhere.
 
-### STORY-056: Administration Images Stat Cards & Size-First Sorting
+### STORY-056: Administration Images Stat Cards & Size-First Sorting [DONE]
 - **Scope:** Frontend Administration Images tab
 - **Estimated Size:** Small (~150 LOC)
 - **Dependencies:** `STORY-055`

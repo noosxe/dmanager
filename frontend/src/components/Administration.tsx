@@ -3,14 +3,17 @@ import {
   Boxes,
   HardDrive,
   Image as ImageIcon,
+  Layers,
   Loader2,
   Network as NetworkIcon,
+  Recycle,
   RefreshCw,
   ShieldAlert,
 } from "lucide-react";
 
 import type { AdminResourceKind } from "../hooks/useAdminResources";
 import { useAdminResources } from "../hooks/useAdminResources";
+import { deriveImageStats, formatBytes } from "./adminFormat";
 import { ImageTable } from "./ImageTable";
 import { NetworkTable } from "./NetworkTable";
 import { VolumeTable } from "./VolumeTable";
@@ -25,6 +28,10 @@ export function Administration() {
     routeTab === "volumes" || routeTab === "networks" ? routeTab : "images";
 
   const { result, isLoading, error, refresh } = useAdminResources(tab);
+
+  // Derived Images-tab summary (design.md §9.6); null on other tabs or
+  // while no successful images result exists yet (-- placeholders).
+  const imageStats = result?.kind === "images" ? deriveImageStats(result.data) : null;
 
   return (
     <div style={{ padding: "24px", maxWidth: "1100px", margin: "0 auto" }}>
@@ -87,6 +94,42 @@ export function Administration() {
           <span>Networks</span>
         </Link>
       </div>
+
+      {tab === "images" && (
+        <div className="stats-grid" style={{ marginTop: "16px" }}>
+          <div className="stat-card">
+            <div className="stat-icon-wrapper total">
+              <HardDrive size={20} />
+            </div>
+            <div className="stat-info">
+              <span className="stat-value">
+                {imageStats ? formatBytes(imageStats.totalBytes) : "--"}
+              </span>
+              <span className="stat-label">Total Space Used</span>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon-wrapper updates">
+              <Recycle size={20} />
+            </div>
+            <div className="stat-info">
+              <span className="stat-value">
+                {imageStats ? formatBytes(imageStats.freeableBytes) : "--"}
+              </span>
+              <span className="stat-label">Freeable Space</span>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon-wrapper stopped">
+              <Layers size={20} />
+            </div>
+            <div className="stat-info">
+              <span className="stat-value">{imageStats ? imageStats.imageCount : "--"}</span>
+              <span className="stat-label">Images</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="auth-error-banner" style={{ marginBottom: "16px" }}>

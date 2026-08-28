@@ -1,5 +1,7 @@
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
 
+import type { Image } from "../gen/proto/dmanager/v1/admin_pb";
+
 // Formatting helpers shared by the Administration resource tables. The
 // AdminService proto maps Docker int64 values to bigint and timestamps to
 // google.protobuf.Timestamp; these helpers convert them for display.
@@ -73,4 +75,26 @@ export function splitRepoTag(repoTag: string | undefined): { repository: string;
 /** Default Docker networks recognized as system infrastructure. */
 export function isDefaultNetwork(name: string): boolean {
   return name === "bridge" || name === "host" || name === "none";
+}
+
+/**
+ * Summary stats for the Images tab, derived client-side from ListImages.
+ * Sizes are per-image sums as reported by the daemon (shared layers counted
+ * per referencing image); images whose usage count the daemon did not
+ * calculate (-1) are treated as in use so freeable never overstates.
+ */
+export function deriveImageStats(images: Image[]): {
+  totalBytes: bigint;
+  freeableBytes: bigint;
+  imageCount: number;
+} {
+  let totalBytes = 0n;
+  let freeableBytes = 0n;
+  for (const image of images) {
+    totalBytes += image.sizeBytes;
+    if (image.containersCount === 0n) {
+      freeableBytes += image.sizeBytes;
+    }
+  }
+  return { totalBytes, freeableBytes, imageCount: images.length };
 }
