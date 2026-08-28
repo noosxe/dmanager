@@ -6,14 +6,21 @@ import type { Image } from "../gen/proto/dmanager/v1/admin_pb";
 // AdminService proto maps Docker int64 values to bigint and timestamps to
 // google.protobuf.Timestamp; these helpers convert them for display.
 
-/** Formats a byte count using SI units, matching Docker CLI output (e.g. "142 MB"). */
-export function formatBytes(bytes: bigint): string {
+/**
+ * Formats a byte count using SI units. Defaults match Docker CLI output
+ * (e.g. "142 MB", one decimal under 10); `oneDecimal` keeps one decimal at
+ * every magnitude (e.g. "142.6 MB") for the summary stat cards.
+ */
+export function formatBytes(bytes: bigint, oneDecimal = false): string {
   const units = ["B", "KB", "MB", "GB", "TB"];
   let value = Number(bytes);
   let unit = 0;
   while (value >= 1000 && unit < units.length - 1) {
     value /= 1000;
     unit++;
+  }
+  if (oneDecimal && value !== 0) {
+    return `${value.toFixed(1)} ${units[unit]}`;
   }
   const rounded = unit === 0 || value >= 10 ? Math.round(value) : Number(value.toFixed(1));
   return `${rounded} ${units[unit]}`;

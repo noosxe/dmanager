@@ -144,7 +144,8 @@ describe("Administration Component", () => {
     expect(screen.getByText("nginx")).toBeInTheDocument();
     expect(screen.getByText("latest")).toBeInTheDocument();
     expect(screen.getByText("abc123def456")).toBeInTheDocument();
-    expect(screen.getAllByText("143 MB")).toHaveLength(2); // stat card + table cell
+    expect(screen.getByText("143 MB")).toBeInTheDocument(); // table cell
+    expect(screen.getByText("142.6 MB")).toBeInTheDocument(); // stat card (one decimal)
     expect(screen.getByText("3")).toBeInTheDocument();
     expect(screen.getAllByText("2 hours ago")).toHaveLength(2);
 
@@ -272,7 +273,7 @@ describe("Administration Component", () => {
     });
 
     // Total: 142606336 + 4096 bytes (card + nginx table cell).
-    expect(screen.getAllByText("143 MB")).toHaveLength(2);
+    expect(screen.getByText("142.6 MB")).toBeInTheDocument();
     // Freeable: both fixture images are in use or unknown (-1) — nothing freeable.
     expect(screen.getByText("0 B")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument();
@@ -300,7 +301,7 @@ describe("Administration Component", () => {
     });
 
     // Total: 52428800 + 142606336 + 4096 bytes.
-    expect(screen.getByText("195 MB")).toBeInTheDocument();
+    expect(screen.getByText("195.0 MB")).toBeInTheDocument();
     // Freeable: nothing — nginx is in use, scratch is unknown, dangling is -1.
     expect(screen.getByText("0 B")).toBeInTheDocument();
     // Image count (card) and the nginx in-use cell both render 3.
@@ -328,7 +329,7 @@ describe("Administration Component", () => {
     await waitFor(() => {
       expect(screen.getByText("nginx")).toBeInTheDocument();
     });
-    expect(screen.getAllByText("143 MB")).toHaveLength(2);
+    expect(screen.getByText("142.6 MB")).toBeInTheDocument();
   });
 
   it("renders tab links pointing at the routed tab paths", () => {

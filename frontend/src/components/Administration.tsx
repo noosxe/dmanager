@@ -103,7 +103,7 @@ export function Administration() {
             </div>
             <div className="stat-info">
               <span className="stat-value">
-                {imageStats ? formatBytes(imageStats.totalBytes) : "--"}
+                {imageStats ? formatBytes(imageStats.totalBytes, true) : "--"}
               </span>
               <span className="stat-label">Total Space Used</span>
             </div>
@@ -114,7 +114,7 @@ export function Administration() {
             </div>
             <div className="stat-info">
               <span className="stat-value">
-                {imageStats ? formatBytes(imageStats.freeableBytes) : "--"}
+                {imageStats ? formatBytes(imageStats.freeableBytes, true) : "--"}
               </span>
               <span className="stat-label">Freeable Space</span>
             </div>
