@@ -55,6 +55,11 @@ graph TD
     S45 --> S48["STORY-048: Require Authentication for LogService/SyncLogs (DONE)"]
     S45 --> S49["STORY-049: Auth Audit Trail Schema, Event Writes, and ListAuthEvents RPC"]
     S49 --> S50["STORY-050: Session Management RPCs, Device Identification & Settings Security Tab"]
+    S50 --> S51["STORY-051: WebAuthn Foundation, Config, Dependencies, Schema & Lifecycle (DONE)"]
+    S51 --> S52["STORY-052: Passkey Registration Ceremony, Credential Management & Settings UI (DONE)"]
+    S52 --> S53["STORY-053: Passkey Usernameless Login Ceremony & Login UI (DONE)"]
+    S53 --> A54["STORY-054: Administration Backend, AdminService Read-Only List RPCs"]
+    A54 --> A55["STORY-055: Administration Frontend, Tabs, Tables & Navigation"]
 ```
 
 
@@ -1138,6 +1143,57 @@ graph TD
   - Verification checks: consumed challenge, expired challenge, wrong origin, bad signature, clone detection (`clone_warning = 1`), user verification rules.
   - 6 rapid failed passkey attempts trigger `ResourceExhausted` rate limiter.
   - Login UI tests for passkey button and password fallback.
+
+---
+
+### STORY-054: Administration Backend — AdminService Read-Only List RPCs
+- **Scope:** Backend Administration Service (Images, Volumes, Networks)
+- **Estimated Size:** Medium (~250 LOC)
+- **Dependencies:** None (independent of frontend story)
+- **Goal:** Expose read-only Docker resource inventories (images, volumes, networks) over ConnectRPC so the Administration page can render them.
+- **Tasks:**
+  1. Create `proto/dmanager/v1/admin.proto` defining `AdminService` with `ListImages`, `ListVolumes`, and `ListNetworks` RPCs and their request/response messages (see [protocol.md](protocol.md) §3.5).
+  2. Regenerate Go/TS stubs via `buf generate`.
+  3. Implement `internal/admin/service.go` following the `internal/container/service.go` pattern: call moby SDK `ImageList` (with container count), `VolumeList`, and `NetworkList`; map to proto messages.
+  4. Register `AdminService` handler in `cmd/serve.go` and classify the three procedures in the Connect auth interceptor as authenticated (any role, same policy as `ListContainers`).
+  5. Unit tests with a mocked Docker client covering empty lists, mapping correctness, and Docker daemon error propagation.
+- **Files Affected:**
+  - `proto/dmanager/v1/admin.proto` (new)
+  - `internal/gen/proto/dmanager/v1/adminpb/` (generated)
+  - `internal/admin/service.go` (new)
+  - `internal/admin/service_test.go` (new)
+  - `cmd/serve.go` (modified)
+  - `internal/auth/interceptor.go` (modified)
+- **Validation Check:**
+  - `buf generate` produces stubs without diff noise.
+  - `go test ./internal/admin/...` passes; `go vet ./...` and `golangci-lint run` clean.
+  - Interceptor reflection test confirms 100% procedure classification coverage.
+
+### STORY-055: Administration Frontend — Tabs, Tables & Navigation
+- **Scope:** Frontend Administration Page UI
+- **Estimated Size:** Medium (~400 LOC)
+- **Dependencies:** `STORY-054`
+- **Goal:** Deliver the Administration page with Images, Volumes, and Networks tabs showing read-only TanStack tables fed by `AdminService`.
+- **Tasks:**
+  1. Add `/administration` and `/administration/$tab` routes in `src/routes/router.tsx` mirroring the Settings route pair (index redirect to `images`, tab validation for `images|volumes|networks`).
+  2. Add the sidebar navigation item between System Logs and Settings in `DashboardLayout.tsx` (lucide `Boxes` icon).
+  3. Create `src/components/Administration.tsx` with tab navigation reusing the `settings-nav-tabs` / `settings-nav-tab` styles and the `useParams` tab-sync pattern from `Settings.tsx`.
+  4. Create `ImageTable.tsx`, `VolumeTable.tsx`, and `NetworkTable.tsx` following `ContainerTable.tsx`: `ColumnDef<T>[]`, `useReactTable` with `getCoreRowModel` + `getSortedRowModel`, sortable headers, no action columns.
+  5. Create `src/hooks/useAdminResources.ts` fetching on mount and tab activation with manual refresh, loading/empty/error states; add `adminClient` to `src/client.ts`.
+  6. Component tests for tab routing, table rendering, sorting, and empty/error states.
+- **Files Affected:**
+  - `src/routes/router.tsx` (modified)
+  - `src/components/DashboardLayout.tsx` (modified)
+  - `src/components/Administration.tsx` (new)
+  - `src/components/ImageTable.tsx`, `src/components/VolumeTable.tsx`, `src/components/NetworkTable.tsx` (new)
+  - `src/components/Administration.test.tsx` (new)
+  - `src/hooks/useAdminResources.ts` (new)
+  - `src/client.ts` (modified)
+- **Validation Check:**
+  - `pnpm check`, `pnpm test`, and `pnpm build` pass.
+  - Sidebar order: Containers, System Logs, Administration, Settings.
+  - Deep links `/administration/volumes` and invalid tabs redirect correctly.
+  - Tables render mock data with working column sort; no action buttons anywhere.
 
 
 

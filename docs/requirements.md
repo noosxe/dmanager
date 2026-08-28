@@ -54,6 +54,12 @@ The system is intended for administrators and developers who need to manage Dock
 * **Authentication and Connectivity Health Check:** The system must verify if credentials are configured correctly and perform active checks to ensure it is able to query updates from each private registry without errors.
 * **Registry Status Section:** The settings page must display a registry status section displaying the results of these verification checks, including error details if any registry check fails.
 
+### 3.8. Docker Resource Administration (Read-Only)
+* **Administration Page:** The system must provide an Administration page in the web interface, placed between System Logs and Settings in the navigation, with three tabs: Images, Volumes, and Networks.
+* **Read-Only Resource Inventory:** Each tab must present a table of the corresponding Docker resources (images, volumes, networks) fetched live from the Docker Engine via its socket, including relevant metadata per resource type (e.g. repository/tag, size, and usage count for images; driver and mountpoint for volumes; driver, scope, and internal flag for networks).
+* **No Actions:** This phase is strictly read-only; the Administration page must not offer create, modify, or delete operations on any resource. Actionable operations may be introduced in a future phase.
+* **Sorting:** All resource tables must support sorting by column, consistent with the existing container table behavior.
+
 ---
 
 

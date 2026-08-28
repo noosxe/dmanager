@@ -413,3 +413,42 @@ The build is optimized using a three-stage Dockerfile that separates dependencie
 * **Settings Panel actions (`Settings.tsx`):**
   * Save Settings: Toasts success on save, error on failure.
   * Test Gotify Connection: Toasts info when starting test, success if connection succeeds, and error if it fails.
+
+## 9. Administration Page Design (Images, Volumes, Networks)
+
+A read-only Administration page exposing Docker host resource inventories. This section is the design source of truth for STORY-054 (backend) and STORY-055 (frontend).
+
+### 9.1. Scope & Explicit Non-Goals
+* **In scope:** Three tabs (Images, Volumes, Networks), each rendering a sortable, read-only TanStack table populated from the Docker Engine via the host socket.
+* **Out of scope (this phase):** Any mutation — no image pull/remove/prune, no volume create/delete, no network create/disconnect, no per-row action buttons, and no streaming/live updates. Resources are fetched on demand. Actionable operations may be designed in a future phase.
+
+### 9.2. Protocol & Backend Service
+* **Proto:** New `proto/dmanager/v1/admin.proto` defining `AdminService` with three unary RPCs — `ListImages`, `ListVolumes`, `ListNetworks` — and their message shapes (full schema in [protocol.md](protocol.md) §3.5).
+* **Service implementation:** New `internal/admin/service.go` following the `internal/container/service.go` constructor/DI pattern. The service wraps the shared moby SDK client (from `internal/docker.NewClient`) and performs:
+  * `ImageList` with container-count enabled, mapping `image.Summary` → `Image` (id, repo_tags, created_unix, size_bytes, containers_count).
+  * `VolumeList` mapping `volume.Volume` → `Volume` (name, driver, mountpoint, created_at, labels).
+  * `NetworkList` mapping `network.Summary`/`network.Inspect` → `Network` (id, name, driver, scope, internal, created_at).
+* **Registration & auth:** Handler registered in `cmd/serve.go` alongside the other services. All three procedures are classified in the Connect auth interceptor (`internal/auth/interceptor.go`) as **authenticated, any role** — identical policy to `ListContainers`. The interceptor's reflection test must keep 100% procedure coverage.
+* **Error mapping:** Docker daemon failures surface as Connect `Unavailable`/`Internal` per the standard error mapping in [protocol.md](protocol.md) §4; no partial results are returned.
+* **No persistence:** Results are never written to SQLite; every request queries the live Docker socket.
+
+### 9.3. Frontend Routing & Navigation
+* **Routes (`src/routes/router.tsx`):** Mirror the Settings route pair — an index route `/administration` whose `beforeLoad` redirects to `/administration/images`, and a `/administration/$tab` route that validates `tab ∈ {images, volumes, networks}` (invalid values redirect to `images`) with the standard auth/setup guards.
+* **Sidebar (`DashboardLayout.tsx`):** New `menu-item` Link placed **between System Logs and Settings**, using the lucide `Boxes` icon, `to="/administration/$tab"` with `params={{ tab: "images" }}`, and `activeOptions={{ exact: false }}` so any tab highlights it. Resulting order: Containers, System Logs, Administration, Settings.
+
+### 9.4. Page Component & Tabs
+* **`src/components/Administration.tsx`:** Page shell with a page header and a tab bar built exactly like `Settings.tsx` — `settings-nav-tabs` / `settings-nav-tab` CSS classes (shared tab styles), `active` class driven by the resolved tab, and tab state synced from `useParams({ strict: false })` so browser back/forward and deep links work.
+* **Data hook:** `src/hooks/useAdminResources.ts` — one hook parameterized by resource kind; fetches on mount and tab activation, exposes `{ data, isLoading, error, refresh }`; a header Refresh button triggers manual re-fetch. No polling/streaming.
+* **Client:** `adminClient` added to `src/client.ts` via `createClient(AdminService, transport)`.
+
+### 9.5. Resource Tables
+Three table components follow the `ContainerTable.tsx` pattern: `ColumnDef<T>[]` defined outside the component, `useReactTable` with `getCoreRowModel` + `getSortedRowModel`, `SortingState` via `useState`, sortable headers using the `table-sort-btn` class with `ArrowUp`/`ArrowDown`/`ArrowUpDown` lucide icons, and cells rendered through `flexRender`. Consistent loading, empty, and error states across all three tables.
+
+| Table | Columns | Notes |
+| --- | --- | --- |
+| `ImageTable.tsx` | Repository, Tag, Image ID, Size, Created, In Use | Repository/Tag split from the first `repo_tags` entry (`<none>` for dangling images); ID truncated to 12 chars with `title` tooltip; Size formatted human-readable (e.g. `142 MB`); Created rendered relative; In Use renders `containers_count` |
+| `VolumeTable.tsx` | Volume, Driver, Mountpoint, Created, Labels | Mountpoint truncated with `title` tooltip; Labels rendered as compact `key=value` chips, omitted when empty |
+| `NetworkTable.tsx` | Network, ID, Driver, Scope, Internal, Created | ID truncated to 12 chars with `title` tooltip; Internal rendered as Yes/No; default Docker networks (`bridge`, `host`, `none`) styled like other recognized system rows |
+
+* **No actions:** none of the tables define an actions column or per-row buttons — the read-only constraint is enforced at the component level, not just by omitting RPCs.
+* **Testing:** `Administration.test.tsx` covers tab routing/validation, table rendering with mocked `adminClient` responses, column sorting, and empty/error states.
