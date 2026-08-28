@@ -63,7 +63,7 @@ graph TD
     A55 --> A56["STORY-056: Administration Images Stat Cards & Size-First Sorting (DONE)"]
     A56 --> A57["STORY-057: Administration Image Deletion (Actions Column) (DONE)"]
     A57 --> A58["STORY-058: Engine Status Pill — Real Connectivity (issue #180) (DONE)"]
-    A58 --> A59["STORY-059: Reusable Dialog System + ConfirmDialog (issue #176)"]
+    A58 --> A59["STORY-059: Reusable Dialog System + ConfirmDialog (issue #176) (DONE)"]
     A59 --> A60["STORY-060: Image Delete via ConfirmDialog (#177)"]
     A59 --> A61["STORY-061: Passkey & Destructive Confirmations (#178)"]
 ```
@@ -1271,7 +1271,7 @@ graph TD
 
 ---
 
-### STORY-059: Reusable Dialog System + ConfirmDialog (issue #176)
+### STORY-059: Reusable Dialog System + ConfirmDialog (issue #176) [DONE]
 - **Scope:** Frontend only — modal primitive + confirmation specialization; no consumer migrations
 - **Estimated Size:** Medium (~300 LOC incl. tests)
 - **Dependencies:** none (consumers migrate in STORY-060/#177 and STORY-061/#178)
