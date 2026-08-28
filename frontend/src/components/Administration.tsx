@@ -96,7 +96,7 @@ export function Administration() {
       </div>
 
       {tab === "images" && (
-        <div className="stats-grid" style={{ marginTop: "16px" }}>
+        <div className="stats-grid" style={{ margin: "16px 0" }}>
           <div className="stat-card">
             <div className="stat-icon-wrapper total">
               <HardDrive size={20} />
