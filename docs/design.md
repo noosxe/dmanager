@@ -416,7 +416,7 @@ The build is optimized using a three-stage Dockerfile that separates dependencie
 
 ## 9. Administration Page Design (Images, Volumes, Networks)
 
-A read-only Administration page exposing Docker host resource inventories. This section is the design source of truth for STORY-054 (backend) and STORY-055 (frontend).
+A read-only Administration page exposing Docker host resource inventories. This section is the design source of truth for STORY-054 (backend), STORY-055 (frontend), and STORY-056 (images stat cards & default sorting).
 
 ### 9.1. Scope & Explicit Non-Goals
 * **In scope:** Three tabs (Images, Volumes, Networks), each rendering a sortable, read-only TanStack table populated from the Docker Engine via the host socket.
@@ -446,9 +446,27 @@ Three table components follow the `ContainerTable.tsx` pattern: `ColumnDef<T>[]`
 
 | Table | Columns | Notes |
 | --- | --- | --- |
-| `ImageTable.tsx` | Repository, Tag, Image ID, Size, Created, In Use | Repository/Tag split from the first `repo_tags` entry (`<none>` for dangling images); ID truncated to 12 chars with `title` tooltip; Size formatted human-readable (e.g. `142 MB`); Created rendered relative; In Use renders `containers_count` |
+| `ImageTable.tsx` | Repository, Tag, Image ID, Size, Created, In Use | Repository/Tag split from the first `repo_tags` entry (`<none>` for dangling images); ID truncated to 12 chars with `title` tooltip; Size formatted human-readable (e.g. `142 MB`); Created rendered relative; In Use renders `containers_count`; **default sort: Size descending** |
 | `VolumeTable.tsx` | Volume, Driver, Mountpoint, Created, Labels | Mountpoint truncated with `title` tooltip; Labels rendered as compact `key=value` chips, omitted when empty |
 | `NetworkTable.tsx` | Network, ID, Driver, Scope, Internal, Created | ID truncated to 12 chars with `title` tooltip; Internal rendered as Yes/No; default Docker networks (`bridge`, `host`, `none`) styled like other recognized system rows |
 
 * **No actions:** none of the tables define an actions column or per-row buttons — the read-only constraint is enforced at the component level, not just by omitting RPCs.
 * **Testing:** `Administration.test.tsx` covers tab routing/validation, table rendering with mocked `adminClient` responses, column sorting, and empty/error states.
+* **Default sort:** `ImageTable` opens sorted by Size **descending** (largest images first — disk-usage triage is the primary images workflow); `VolumeTable` and `NetworkTable` keep name ascending.
+
+### 9.6. Images Summary Stat Cards
+
+The Images tab shows a three-card summary strip between the tab bar and the table, following the `ContainerGrid.tsx` metrics pattern (derived client-side from the same `ListImages` response — **no protocol, backend, or RPC changes**).
+
+| Card | Value | Derivation |
+| --- | --- | --- |
+| Total Space Used | `Σ size_bytes` (all images) | Sum of every image's size as reported by the daemon |
+| Freeable Space | `Σ size_bytes` where `containers_count = 0` | Images not used by any container — the theoretical reclaim footprint |
+| Images | image count | `images.length` |
+
+* **Unknown usage counts:** images with `containers_count = -1` (daemon did not calculate) are conservatively treated as **in use**, so Freeable Space never overstates what could be reclaimed.
+* **Shared-layer approximation:** `size_bytes` includes layers shared between images, so both sums match summing the SIZE column of `docker image ls` and overstate uniquely-owned disk; the space actually freed by a future prune will be equal or lower. Sourcing unique sizes from `/system/df` may be designed in a later phase.
+* **Styling:** reuses the existing dashboard CSS — `stats-grid` / `stat-card` / `stat-icon-wrapper` / `stat-value` / `stat-label` — with the existing `total` (blue), `updates` (amber), `stopped` (gray) color modifiers and lucide icons `HardDrive`, `Recycle`, `Layers`. Zero new CSS.
+* **States:** byte values formatted with the shared `formatBytes` helper; `stat-value` placeholders render `--` while the first fetch is in flight or on error; an empty inventory renders `0 B` / `0 B` / `0`.
+* **Scope:** Images tab only — the Volumes and Networks tables stay unchanged.
+* **Testing:** unit tests cover the derived values (tagged + dangling mix), the `containers_count = -1` conservative rule, formatting of large sums, and the loading placeholder.

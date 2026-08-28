@@ -60,6 +60,7 @@ graph TD
     S52 --> S53["STORY-053: Passkey Usernameless Login Ceremony & Login UI (DONE)"]
     S53 --> A54["STORY-054: Administration Backend, AdminService Read-Only List RPCs (DONE)"]
     A54 --> A55["STORY-055: Administration Frontend, Tabs, Tables & Navigation (DONE)"]
+    A55 --> A56["STORY-056: Administration Images Stat Cards & Size-First Sorting"]
 ```
 
 
@@ -1194,6 +1195,25 @@ graph TD
   - Sidebar order: Containers, System Logs, Administration, Settings.
   - Deep links `/administration/volumes` and invalid tabs redirect correctly.
   - Tables render mock data with working column sort; no action buttons anywhere.
+
+### STORY-056: Administration Images Stat Cards & Size-First Sorting
+- **Scope:** Frontend Administration Images tab
+- **Estimated Size:** Small (~150 LOC)
+- **Dependencies:** `STORY-055`
+- **Goal:** Add a three-card summary strip (Total Space Used, Freeable Space, Images) to the Images tab and make size descending the default sort for the images table. Design: [design.md](design.md) §9.5–9.6.
+- **Tasks:**
+  1. In `Administration.tsx`, render the cards between the tab bar and the table on the `images` tab, reusing `stats-grid` / `stat-card` / `stat-icon-wrapper` / `stat-value` / `stat-label` with existing `total` / `updates` / `stopped` color modifiers (lucide `HardDrive`, `Recycle`, `Layers`; no new CSS).
+  2. Derive values client-side from the `ListImages` response: Total Space Used = `Σ size_bytes`; Freeable Space = `Σ size_bytes` where `containers_count = 0` (counts of `-1` treated as in use); Images = count. Format bytes with `adminFormat.formatBytes`.
+  3. Change `ImageTable` initial `SortingState` to `[{ id: "size", desc: true }]`.
+  4. Extend `Administration.test.tsx`: stat card values for a tagged + dangling fixture, the `-1 → in use` rule, `--` loading placeholders, empty-inventory `0 B`, and size-descending default row order.
+- **Files Affected:**
+  - `src/components/Administration.tsx` (modified)
+  - `src/components/ImageTable.tsx` (modified)
+  - `src/components/Administration.test.tsx` (modified)
+- **Validation Check:**
+  - `pnpm check`, `pnpm test`, and `pnpm build` pass.
+  - Images tab shows the cards; Volumes and Networks tabs are unchanged.
+  - Images table opens sorted by size descending.
 
 
 
