@@ -6,6 +6,7 @@ import {
   redirect,
 } from "@tanstack/react-router";
 
+import { Administration } from "../components/Administration";
 import { ContainerGrid } from "../components/ContainerGrid";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { Login } from "../components/Login";
@@ -96,7 +97,43 @@ const logsRoute = createRoute({
   ),
 });
 
-// 7. Settings route
+// 7. Administration routes (read-only Docker resource inventories)
+const administrationIndexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/administration",
+  beforeLoad: ({ context }) => {
+    if (context.auth.needsSetup) {
+      throw redirect({ to: "/setup" });
+    }
+    if (!context.auth.isAuthenticated) {
+      throw redirect({ to: "/login" });
+    }
+    throw redirect({ to: "/administration/$tab", params: { tab: "images" } });
+  },
+});
+
+const administrationTabRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/administration/$tab",
+  beforeLoad: ({ context, params }) => {
+    if (context.auth.needsSetup) {
+      throw redirect({ to: "/setup" });
+    }
+    if (!context.auth.isAuthenticated) {
+      throw redirect({ to: "/login" });
+    }
+    if (params.tab !== "images" && params.tab !== "volumes" && params.tab !== "networks") {
+      throw redirect({ to: "/administration/$tab", params: { tab: "images" } });
+    }
+  },
+  component: () => (
+    <DashboardLayout>
+      <Administration />
+    </DashboardLayout>
+  ),
+});
+
+// 8. Settings route
 const settingsIndexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/settings",
@@ -132,17 +169,19 @@ const settingsTabRoute = createRoute({
   ),
 });
 
-// 8. Assemble the route tree
+// 9. Assemble the route tree
 const routeTree = rootRoute.addChildren([
   dashboardRoute,
   loginRoute,
   setupRoute,
   logsRoute,
+  administrationIndexRoute,
+  administrationTabRoute,
   settingsIndexRoute,
   settingsTabRoute,
 ]);
 
-// 7. Define the router instance
+// 10. Define the router instance
 export const router = createRouter({
   routeTree,
   context: {
@@ -155,7 +194,7 @@ export const router = createRouter({
   },
 });
 
-// 8. Register the router for TypeScript type safety
+// 11. Register the router for TypeScript type safety
 declare module "@tanstack/react-router" {
   interface Register {
     router: typeof router;
