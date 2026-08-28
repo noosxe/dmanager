@@ -1,6 +1,5 @@
 import { Link, useParams } from "@tanstack/react-router";
 import {
-  Boxes,
   HardDrive,
   Image as ImageIcon,
   Layers,
@@ -39,37 +38,21 @@ export function Administration() {
   const imageStats = result?.kind === "images" ? deriveImageStats(result.data) : null;
 
   return (
-    <div style={{ padding: "24px", maxWidth: "1100px", margin: "0 auto" }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
-          marginBottom: "20px",
-          flexWrap: "wrap",
-        }}
-      >
-        <Boxes size={28} style={{ color: "var(--accent)" }} />
-        <h1
-          style={{
-            fontSize: "24px",
-            fontWeight: "700",
-            color: "var(--text-h)",
-            margin: 0,
-            flex: 1,
-          }}
-        >
-          Administration
-        </h1>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px", width: "100%" }}>
+      <div className="dashboard-header">
+        <div className="header-title-section">
+          <h2>Administration</h2>
+          <p>Browse host images, volumes, and networks — manage what the daemon stores.</p>
+        </div>
         <button
           type="button"
+          className="auth-submit-btn"
+          style={{ padding: "10px 16px", fontSize: "13px" }}
           onClick={refresh}
           disabled={isLoading}
-          className="settings-btn-secondary"
-          style={{ padding: "8px 16px" }}
         >
-          {isLoading ? <Loader2 className="animate-spin" size={16} /> : <RefreshCw size={16} />}
-          <span>Refresh</span>
+          <RefreshCw size={14} className={isLoading ? "spinner" : ""} />
+          <span>Sync Now</span>
         </button>
       </div>
 
@@ -101,7 +84,7 @@ export function Administration() {
       </div>
 
       {tab === "images" && (
-        <div className="stats-grid" style={{ margin: "16px 0" }}>
+        <div className="stats-grid">
           <div className="stat-card">
             <div className="stat-icon-wrapper total">
               <HardDrive size={20} />
@@ -137,7 +120,7 @@ export function Administration() {
       )}
 
       {error && (
-        <div className="auth-error-banner" style={{ marginBottom: "16px" }}>
+        <div className="auth-error-banner">
           <ShieldAlert size={18} className="auth-error-icon" />
           <span>{error}</span>
         </div>

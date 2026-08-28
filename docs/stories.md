@@ -66,7 +66,7 @@ graph TD
     A58 --> A59["STORY-059: Reusable Dialog System + ConfirmDialog (issue #176) (DONE)"]
     A59 --> A60["STORY-060: Image Delete via ConfirmDialog (#177) (DONE)"]
     A59 --> A61["STORY-061: Passkey & Destructive Confirmations (#178) (DONE)"]
-    A61 --> A62["STORY-062: Administration Containers-Style Layout (#189)"]
+    A61 --> A62["STORY-062: Administration Containers-Style Layout (#189) (DONE)"]
 ```
 
 
@@ -1322,7 +1322,7 @@ graph TD
   - `pnpm check`, `pnpm test` (88/88), `pnpm build` pass.
   - Behavior preserved: per-action in-flight spinners, optimistic session rollback, toast wording, auth-events refetch.
 
-### STORY-062: Administration Containers-Style Layout (issue #189)
+### STORY-062: Administration Containers-Style Layout (issue #189) [DONE]
 - **Scope:** Frontend only — Administration page shell restyle; no behavior changes
 - **Estimated Size:** Small (~60 LOC)
 - **Dependencies:** none

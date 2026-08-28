@@ -282,7 +282,7 @@ describe("Administration Component", () => {
     });
     expect(adminClient.listImages).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(screen.getByRole("button", { name: /refresh/i }));
+    fireEvent.click(screen.getByRole("button", { name: /sync now/i }));
 
     await waitFor(() => {
       expect(adminClient.listImages).toHaveBeenCalledTimes(2);
