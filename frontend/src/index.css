@@ -627,9 +627,24 @@ body {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background-color: #10b981; /* Green */
+  background-color: #10b981; /* Green — engine online */
   box-shadow: 0 0 8px #10b981;
   animation: pulseStatus 2s infinite;
+  flex-shrink: 0;
+}
+
+/* First check has not resolved yet (design.md §10.3). */
+.status-dot.checking {
+  background-color: #94a3b8; /* Gray */
+  box-shadow: none;
+  animation: none;
+}
+
+/* Dead indicator: red, static — no pulse (design.md §10.3). */
+.status-dot.offline {
+  background-color: #ef4444; /* Red */
+  box-shadow: 0 0 8px #ef4444;
+  animation: none;
 }
 
 @keyframes pulseStatus {

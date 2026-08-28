@@ -4,6 +4,7 @@ import type React from "react";
 import { useState } from "react";
 
 import { useAuth } from "../hooks/useAuth";
+import { useEngineStatus } from "../hooks/useEngineStatus";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -12,6 +13,7 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, logout, serverInfo } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const engine = useEngineStatus();
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -113,9 +115,20 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </div>
 
         <div className="sidebar-footer">
-          <div className="server-status-pill">
-            <span className="status-dot" />
-            <span>Engine online</span>
+          <div
+            className="server-status-pill"
+            role="status"
+            aria-live="polite"
+            title={engine.detail}
+          >
+            <span className={`status-dot ${engine.status}`} />
+            <span>
+              {engine.status === "online"
+                ? "Engine online"
+                : engine.status === "offline"
+                  ? "No connection"
+                  : "Checking…"}
+            </span>
           </div>
 
           <div className="user-profile-card">

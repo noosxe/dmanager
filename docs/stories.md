@@ -62,7 +62,7 @@ graph TD
     A54 --> A55["STORY-055: Administration Frontend, Tabs, Tables & Navigation (DONE)"]
     A55 --> A56["STORY-056: Administration Images Stat Cards & Size-First Sorting (DONE)"]
     A56 --> A57["STORY-057: Administration Image Deletion (Actions Column) (DONE)"]
-    A57 --> A58["STORY-058: Engine Status Pill — Real Connectivity (issue #180)"]
+    A57 --> A58["STORY-058: Engine Status Pill — Real Connectivity (issue #180) (DONE)"]
 ```
 
 
@@ -1243,7 +1243,7 @@ graph TD
 
 ---
 
-### STORY-058: Engine Status Pill — Real Connectivity (issue #180)
+### STORY-058: Engine Status Pill — Real Connectivity (issue #180) [DONE]
 - **Scope:** Backend (`AdminService.CheckEngine`) + global sidebar indicator
 - **Estimated Size:** Medium (~350 LOC incl. tests)
 - **Dependencies:** `STORY-057` (AdminService established)

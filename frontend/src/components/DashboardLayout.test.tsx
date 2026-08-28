@@ -34,12 +34,24 @@ vi.mock("../hooks/useAuth", () => ({
   useAuth: () => mockUseAuth(),
 }));
 
-function renderLayout(serverInfo: { version: string; commit: string; buildDate: string } | null) {
+const mockUseEngineStatus = vi.fn();
+
+vi.mock("../hooks/useEngineStatus", () => ({
+  useEngineStatus: () => mockUseEngineStatus(),
+}));
+
+const onlineEngine = { status: "online" as const, detail: "Docker Engine API v1.51" };
+
+function renderLayout(
+  serverInfo: { version: string; commit: string; buildDate: string } | null,
+  engine: { status: "checking" | "online" | "offline"; detail: string } = onlineEngine,
+) {
   mockUseAuth.mockReturnValue({
     user: { username: "admin", role: "admin" },
     logout: vi.fn(),
     serverInfo,
   });
+  mockUseEngineStatus.mockReturnValue(engine);
   return render(
     <DashboardLayout>
       <div>main content</div>
@@ -73,5 +85,34 @@ describe("DashboardLayout sidebar version", () => {
   it("hides the version until server status has loaded", () => {
     renderLayout(null);
     expect(document.querySelector(".sidebar-version")).toBeNull();
+  });
+});
+
+describe("DashboardLayout engine status pill", () => {
+  it("renders the online state with the API version tooltip", () => {
+    renderLayout(null, onlineEngine);
+
+    const pill = screen.getByText("Engine online").closest(".server-status-pill");
+    expect(pill).not.toBeNull();
+    expect(pill).toHaveAttribute("role", "status");
+    expect(pill).toHaveAttribute("aria-live", "polite");
+    expect(pill).toHaveAttribute("title", "Docker Engine API v1.51");
+    expect(pill?.querySelector(".status-dot")).toHaveClass("online");
+  });
+
+  it("renders the offline state with the failure reason", () => {
+    renderLayout(null, { status: "offline", detail: "Cannot connect to the Docker daemon" });
+
+    expect(screen.getByText("No connection")).toBeInTheDocument();
+    const pill = screen.getByText("No connection").closest(".server-status-pill");
+    expect(pill).toHaveAttribute("title", "Cannot connect to the Docker daemon");
+    expect(pill?.querySelector(".status-dot")).toHaveClass("offline");
+  });
+
+  it("renders the checking state before the first check resolves", () => {
+    renderLayout(null, { status: "checking", detail: "" });
+
+    expect(screen.getByText("Checking…")).toBeInTheDocument();
+    expect(document.querySelector(".status-dot")).toHaveClass("checking");
   });
 });

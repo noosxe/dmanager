@@ -445,3 +445,78 @@ func TestDeleteImageErrors(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckEngine(t *testing.T) {
+	tests := []struct {
+		name        string
+		handler     http.HandlerFunc
+		wantConnect bool
+		wantVersion string
+		wantError   string
+	}{
+		{
+			name: "healthy daemon",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("API-Version", "1.51")
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte("OK"))
+			},
+			wantConnect: true,
+			wantVersion: "1.51",
+		},
+		{
+			name: "daemon error is a status not an RPC error",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				http.Error(w, "docker daemon is down", http.StatusInternalServerError)
+			},
+			wantConnect: false,
+			wantError:   "docker daemon is down",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := newTestService(t, tt.handler)
+
+			resp, err := svc.CheckEngine(context.Background(), connect.NewRequest(&v1.CheckEngineRequest{}))
+			if err != nil {
+				t.Fatalf("CheckEngine returned an error: %v", err)
+			}
+
+			if got := resp.Msg.Connected; got != tt.wantConnect {
+				t.Errorf("Connected = %v, want %v", got, tt.wantConnect)
+			}
+			if got := resp.Msg.ApiVersion; got != tt.wantVersion {
+				t.Errorf("ApiVersion = %q, want %q", got, tt.wantVersion)
+			}
+			if tt.wantError != "" && resp.Msg.Error == "" {
+				t.Error("Error is empty, want the daemon failure reason")
+			}
+		})
+	}
+}
+
+func TestCheckEngineDaemonDown(t *testing.T) {
+	// Point the client at a closed port: the transport itself fails, which is
+	// the closest a unit test gets to "engine down". Still a status, not an error.
+	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	url := server.URL
+	server.Close()
+
+	dockerClient, err := client.New(client.WithHost(url))
+	if err != nil {
+		t.Fatalf("failed to create docker client: %v", err)
+	}
+	svc := NewService(dockerClient, slog.New(slog.NewTextHandler(io.Discard, nil)))
+
+	resp, err := svc.CheckEngine(context.Background(), connect.NewRequest(&v1.CheckEngineRequest{}))
+	if err != nil {
+		t.Fatalf("CheckEngine returned an error, want a successful disconnected response: %v", err)
+	}
+	if resp.Msg.Connected {
+		t.Error("Connected = true, want false with the transport error as the reason")
+	}
+	if resp.Msg.Error == "" {
+		t.Error("Error is empty, want the transport failure reason")
+	}
+}

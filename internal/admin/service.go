@@ -130,3 +130,28 @@ func (s *Service) DeleteImage(ctx context.Context, req *connect.Request[dmanager
 
 	return connect.NewResponse(&dmanagerv1.DeleteImageResponse{}), nil
 }
+
+// CheckEngine reports whether the Docker Engine is reachable (design.md
+// §10.2). Unlike every other procedure, daemon unreachability is NOT a
+// Connect error here: the outage is the answer, so the RPC succeeds with
+// connected=false and a short reason. Only request/auth/transport problems
+// fail the call — that distinction is what the sidebar pill relies on.
+func (s *Service) CheckEngine(ctx context.Context, req *connect.Request[dmanagerv1.CheckEngineRequest]) (*connect.Response[dmanagerv1.CheckEngineResponse], error) {
+	// A hung socket must not pile up goroutines under 30s client polling.
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	ping, err := s.dockerClient.Ping(ctx, client.PingOptions{})
+	if err != nil {
+		s.logger.Warn("Docker Engine unreachable", "error", err)
+		return connect.NewResponse(&dmanagerv1.CheckEngineResponse{
+			Connected: false,
+			Error:     err.Error(),
+		}), nil
+	}
+
+	return connect.NewResponse(&dmanagerv1.CheckEngineResponse{
+		Connected:  true,
+		ApiVersion: ping.APIVersion,
+	}), nil
+}

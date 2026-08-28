@@ -23,6 +23,11 @@ service AdminService {
   // Delete an image from the host (Authenticated, admin role). The
   // daemon refuses images referenced by any container regardless of force.
   rpc DeleteImage(DeleteImageRequest) returns (DeleteImageResponse);
+
+  // Report whether the Docker Engine is reachable (Authenticated, any role).
+  // Daemon unreachability is a successful response with connected=false —
+  // the outage is the answer, not an RPC failure (design.md §10.2).
+  rpc CheckEngine(CheckEngineRequest) returns (CheckEngineResponse);
 }
 
 message ListImagesRequest {}
@@ -105,3 +110,11 @@ message DeleteImageRequest {
 }
 
 message DeleteImageResponse {}
+
+message CheckEngineRequest {}
+
+message CheckEngineResponse {
+  bool connected = 1;    // true when the daemon answered the ping
+  string api_version = 2; // daemon API version, e.g. "1.51"
+  string error = 3;       // short reason when connected is false, empty otherwise
+}
