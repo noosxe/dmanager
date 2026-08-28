@@ -1,5 +1,5 @@
 import { create as webauthnCreate } from "@github/webauthn-json";
-import { Link, useParams } from "@tanstack/react-router";
+import { useParams } from "@tanstack/react-router";
 import {
   Activity,
   Check,
@@ -32,6 +32,7 @@ import { useToast } from "../context/ToastContext";
 import type { AuthEvent, Passkey, Session } from "../gen/proto/dmanager/v1/auth_pb";
 import type { RegistryStatus } from "../gen/proto/dmanager/v1/settings_pb";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { PageTabs, type PageTabItem } from "./PageTabs";
 
 interface SettingsProps {
   initialTab?: "general" | "security";
@@ -488,14 +489,43 @@ export function Settings({ initialTab }: SettingsProps = {}) {
     );
   }
 
+  // Tab bar items (§7.5): optimistic local state via onClick; the route
+  // remains the source of truth.
+  const settingsTabs: PageTabItem[] = [
+    {
+      to: "/settings/$tab",
+      params: { tab: "general" },
+      icon: SettingsIcon,
+      label: "General",
+      active: activeTab === "general",
+      onClick: () => setLocalTab("general"),
+    },
+    {
+      to: "/settings/$tab",
+      params: { tab: "security" },
+      icon: Shield,
+      label: "Security & Sessions",
+      active: activeTab === "security",
+      onClick: () => setLocalTab("security"),
+    },
+  ];
+
   return (
-    <div style={{ padding: "24px", maxWidth: "800px", margin: "0 auto" }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "24px",
+        padding: "24px",
+        maxWidth: "800px",
+        margin: "0 auto",
+      }}
+    >
       <div
         style={{
           display: "flex",
           alignItems: "center",
           gap: "12px",
-          marginBottom: "20px",
         }}
       >
         <SettingsIcon size={28} style={{ color: "var(--accent)" }} />
@@ -511,26 +541,7 @@ export function Settings({ initialTab }: SettingsProps = {}) {
         </h1>
       </div>
 
-      <div className="settings-nav-tabs">
-        <Link
-          to="/settings/$tab"
-          params={{ tab: "general" }}
-          className={`settings-nav-tab ${activeTab === "general" ? "active" : ""}`}
-          onClick={() => setLocalTab("general")}
-        >
-          <SettingsIcon size={16} />
-          <span>General</span>
-        </Link>
-        <Link
-          to="/settings/$tab"
-          params={{ tab: "security" }}
-          className={`settings-nav-tab ${activeTab === "security" ? "active" : ""}`}
-          onClick={() => setLocalTab("security")}
-        >
-          <Shield size={16} />
-          <span>Security & Sessions</span>
-        </Link>
-      </div>
+      <PageTabs tabs={settingsTabs} />
 
       {activeTab === "general" && (
         <>
@@ -687,7 +698,7 @@ export function Settings({ initialTab }: SettingsProps = {}) {
             </form>
           </div>
 
-          <div className="logs-viewer-card" style={{ marginTop: "24px" }}>
+          <div className="logs-viewer-card">
             <div
               style={{
                 display: "flex",

@@ -1,4 +1,4 @@
-import { Link, useParams } from "@tanstack/react-router";
+import { useParams } from "@tanstack/react-router";
 import {
   HardDrive,
   Image as ImageIcon,
@@ -16,6 +16,7 @@ import { useAuth } from "../hooks/useAuth";
 import { deriveImageStats, formatBytes } from "./adminFormat";
 import { ImageTable } from "./ImageTable";
 import { NetworkTable } from "./NetworkTable";
+import { PageTabs, type PageTabItem } from "./PageTabs";
 import { VolumeTable } from "./VolumeTable";
 
 // Administration page: Docker host resource inventories (images,
@@ -37,6 +38,31 @@ export function Administration() {
   // while no successful images result exists yet (-- placeholders).
   const imageStats = result?.kind === "images" ? deriveImageStats(result.data) : null;
 
+  // Tab bar items (§9.4): active state follows the resolved route tab.
+  const adminTabs: PageTabItem[] = [
+    {
+      to: "/administration/$tab",
+      params: { tab: "images" },
+      icon: ImageIcon,
+      label: "Images",
+      active: tab === "images",
+    },
+    {
+      to: "/administration/$tab",
+      params: { tab: "volumes" },
+      icon: HardDrive,
+      label: "Volumes",
+      active: tab === "volumes",
+    },
+    {
+      to: "/administration/$tab",
+      params: { tab: "networks" },
+      icon: NetworkIcon,
+      label: "Networks",
+      active: tab === "networks",
+    },
+  ];
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px", width: "100%" }}>
       <div className="dashboard-header">
@@ -56,32 +82,7 @@ export function Administration() {
         </button>
       </div>
 
-      <div className="settings-nav-tabs">
-        <Link
-          to="/administration/$tab"
-          params={{ tab: "images" }}
-          className={`settings-nav-tab ${tab === "images" ? "active" : ""}`}
-        >
-          <ImageIcon size={16} />
-          <span>Images</span>
-        </Link>
-        <Link
-          to="/administration/$tab"
-          params={{ tab: "volumes" }}
-          className={`settings-nav-tab ${tab === "volumes" ? "active" : ""}`}
-        >
-          <HardDrive size={16} />
-          <span>Volumes</span>
-        </Link>
-        <Link
-          to="/administration/$tab"
-          params={{ tab: "networks" }}
-          className={`settings-nav-tab ${tab === "networks" ? "active" : ""}`}
-        >
-          <NetworkIcon size={16} />
-          <span>Networks</span>
-        </Link>
-      </div>
+      <PageTabs tabs={adminTabs} />
 
       {tab === "images" && (
         <div className="stats-grid">
