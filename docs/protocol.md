@@ -285,6 +285,8 @@ service AdminService {
   rpc ListNetworks(ListNetworksRequest) returns (ListNetworksResponse);
   // Delete an unused image from the host (Authenticated, admin role).
   rpc DeleteImage(DeleteImageRequest) returns (DeleteImageResponse);
+  // Report whether the Docker Engine is reachable (Authenticated, read-only).
+  rpc CheckEngine(CheckEngineRequest) returns (CheckEngineResponse);
 }
 
 message ListImagesRequest {}
@@ -332,6 +334,13 @@ message DeleteImageRequest {
 }
 message DeleteImageResponse {}
 
+message CheckEngineRequest {}
+message CheckEngineResponse {
+  bool connected = 1;    // true when the daemon answered the ping
+  string api_version = 2; // e.g. "1.51" — daemon API version from ping headers
+  string error = 3;       // short reason when connected is false, empty otherwise
+}
+
 ```
 
 The three list procedures are unary, take empty requests, and are classified as **authenticated, any role** in the Connect interceptor (same policy as `ContainerService.ListContainers`).
@@ -339,6 +348,8 @@ The three list procedures are unary, take empty requests, and are classified as 
 `DeleteImage` is the service's first mutating procedure and is classified as **authenticated, admin role** (same policy as `ContainerService.StartContainer`). It proxies the Docker Engine `DELETE /images/{id}` API (`ImageRemove`): `id` is opaque (a full `sha256:...` ID as returned by `ListImages`), `force` bypasses tag-conflict errors for multi-tag images while the daemon still refuses images referenced by any container (running or stopped), and the empty response relies on the client re-fetching `ListImages` afterwards — the daemon remains the source of truth. Error mapping follows the existing daemon-error conventions plus: image not found → `CodeNotFound`; image in use or tag conflict → `CodeFailedPrecondition` with the daemon's message surfaced.
 
 Volumes and networks remain read-only: no create, mutate, or prune procedures are defined for them in this phase.
+
+`CheckEngine` is classified as **authenticated, any role** (same policy as the list procedures) and proxies the daemon `GET /_ping` (moby `client.Ping`). Its semantics intentionally deviate from the daemon-error convention: when the daemon is unreachable the procedure **succeeds** with `connected: false` and a short `error` reason — the daemon outage *is* the answer, not an RPC failure. It only fails with a Connect error for request/auth/transport problems (backend itself down), which is exactly the distinction the sidebar status pill needs (issue #180). The handler wraps the ping in a short (~5 s) context timeout so a hung socket cannot accumulate goroutines under polling.
 
 ---
 

@@ -63,6 +63,12 @@ The system is intended for administrators and developers who need to manage Dock
 
 ---
 
+### 3.9. Engine Status Indicator
+* **Real Connectivity, Not Static:** The sidebar engine status indicator must reflect actual Docker Engine reachability instead of hardcoded markup: it must show an online state when the Engine answers a health ping and a clear disconnected state (e.g. "No connection") when the Engine — or the backend server itself — cannot be reached, within one polling interval.
+* **Automatic Recovery:** State transitions in both directions must happen automatically via periodic lightweight polling (a ping-level check, not resource listing) without requiring a page reload, and polling must pause while the browser tab is hidden.
+* **Non-Intrusive:** Status changes must not produce toast notifications; the pill itself (including an accessible live region) is the feedback surface.
+
+---
 
 ## 4. Non-Functional Requirements
 

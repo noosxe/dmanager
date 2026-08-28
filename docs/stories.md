@@ -62,6 +62,7 @@ graph TD
     A54 --> A55["STORY-055: Administration Frontend, Tabs, Tables & Navigation (DONE)"]
     A55 --> A56["STORY-056: Administration Images Stat Cards & Size-First Sorting (DONE)"]
     A56 --> A57["STORY-057: Administration Image Deletion (Actions Column) (DONE)"]
+    A57 --> A58["STORY-058: Engine Status Pill — Real Connectivity (issue #180)"]
 ```
 
 
@@ -1238,3 +1239,29 @@ graph TD
   - `buf generate --path proto`, `go test ./...`, `go vet`, `golangci-lint run` pass.
   - `pnpm check`, `pnpm test`, `pnpm build` pass.
   - In-use and `-1` rows show no delete control; unused image delete refreshes table + stat cards; daemon conflict shows an error toast.
+
+
+---
+
+### STORY-058: Engine Status Pill — Real Connectivity (issue #180)
+- **Scope:** Backend (`AdminService.CheckEngine`) + global sidebar indicator
+- **Estimated Size:** Medium (~350 LOC incl. tests)
+- **Dependencies:** `STORY-057` (AdminService established)
+- **Goal:** Replace the hardcoded "Engine online" sidebar pill with a real connectivity indicator backed by a ping-level health RPC: online / checking / no-connection states, automatic recovery in both directions, and an honest tooltip that distinguishes a daemon outage from a backend outage. Design: [design.md](design.md) §10, [protocol.md](protocol.md) §3.5, [requirements.md](requirements.md) §3.9.
+- **Tasks:**
+  1. `proto/dmanager/v1/admin.proto`: add `CheckEngine(CheckEngineRequest) → CheckEngineResponse` (`connected`, `api_version`, `error`); run `buf generate --path proto`.
+  2. `internal/admin/service.go`: implement `CheckEngine` via moby `client.Ping` with a ~5s context timeout; **status-not-error semantics** — daemon unreachable still succeeds with `connected: false` + short message (documented deviation from the `CodeUnavailable` convention).
+  3. `internal/auth/interceptor.go`: classify `AdminServiceCheckEngineProcedure` as `RoleViewer`; keep the reflection coverage test green.
+  4. `frontend/src/hooks/useEngineStatus.ts`: `{ status: "checking" | "online" | "offline", detail }`; 30s poll skipped while `document.hidden`, immediate re-check on focus/visibilitychange, transport errors → `offline` + "Backend unreachable", full cleanup on unmount.
+  5. `frontend/src/components/DashboardLayout.tsx` + `frontend/src/index.css`: drive the pill from the hook — checking (gray, "Checking…"), online (green, current look, API-version tooltip), offline (red, "No connection", error tooltip); `.status-dot.checking` / `.status-dot.offline` modifiers; `role="status"` + `aria-live="polite"`. No toasts.
+  6. Tests: backend httptest `/_ping` fake (healthy, daemon error → `connected: false` **without** a Connect error, reflection coverage); frontend hook tests with fake timers (state transitions, poll cadence, hidden-tab skip, focus re-check, unmount cleanup) and `DashboardLayout` three-state rendering.
+- **Files Affected:**
+  - `proto/dmanager/v1/admin.proto`, `internal/gen` + `frontend/src/gen` (regenerated)
+  - `internal/admin/service.go`, `internal/admin/service_test.go`, `internal/auth/interceptor.go`
+  - `frontend/src/hooks/useEngineStatus.ts` (new), `frontend/src/hooks/useEngineStatus.test.ts` (new)
+  - `frontend/src/components/DashboardLayout.tsx`, `frontend/src/components/DashboardLayout.test.tsx`, `frontend/src/index.css`
+- **Validation Check:**
+  - `buf generate --path proto`, `go test ./...`, `go vet`, `golangci-lint run` pass.
+  - `pnpm check`, `pnpm test`, `pnpm build` pass.
+  - Daemon stopped → pill shows "No connection" within one poll interval; restored → back to "Engine online" without a reload; backend stopped → "No connection" with "Backend unreachable" tooltip.
+  - No toasts fire on status transitions.

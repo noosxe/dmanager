@@ -497,3 +497,64 @@ The inline confirm is an **interim** decision approved in design review: when a 
 **Force flag.** The frontend sends `force: true`: multi-tag unused images otherwise fail with tag-conflict errors for no user-legitimate reason, and the in-use protection the UI actually cares about is enforced by the daemon regardless of `force`.
 
 **Testing.** Backend: httptest fake exercises removal (happy path, not-found, in-use conflict, daemon down) and the reflection test asserts `RoleAdmin` coverage for the new procedure. Frontend: button presence rules (0 / >0 / -1 / viewer), arm-then-confirm flow, arming reset timeout, per-row spinner, error-toast content, success-toast emission, and post-success `refresh()` re-render including stat-card recomputation.
+
+---
+
+## 10. Engine Status Indicator (Sidebar, issue #180)
+
+### 10.1. Scope & Problem
+
+The sidebar footer renders a `server-status-pill` that is hardcoded markup: a `status-dot` span and the literal text "Engine online" (`DashboardLayout.tsx`). It never reflects reality. This design replaces it with a real connectivity indicator driven by a new lightweight health RPC.
+
+**Non-goals:** no retry/health logic beyond the poll, no per-page banners (the Administration list banner already covers page-level errors), no toasts on transitions (background noise), no WebSocket/streaming push — a 30 s poll is plenty for a status dot.
+
+### 10.2. Protocol & Backend
+
+New procedure in `AdminService` (the established home for daemon-adjacent read procedures; a separate health service is not warranted for one RPC):
+
+```protobuf
+rpc CheckEngine(CheckEngineRequest) returns (CheckEngineResponse);
+
+message CheckEngineRequest {}
+message CheckEngineResponse {
+  bool connected = 1;    // true when the daemon answered the ping
+  string api_version = 2; // e.g. "1.51" — daemon API version from ping headers
+  string error = 3;       // short reason when connected is false, empty otherwise
+}
+```
+
+**Status, not error.** The handler calls moby `client.Ping` (`GET /_ping`) with a ~5 s context timeout. On success it returns `connected: true` plus the API version the daemon advertised. On **any** daemon failure it still succeeds — `connected: false` with the daemon error's short message — because the outage is the answer, not an RPC failure. This is a deliberate deviation from the daemon-error → `CodeUnavailable` convention used by every other procedure, and it is what lets the frontend distinguish the two offline causes:
+
+| Observation | Pill | Tooltip |
+| --- | --- | --- |
+| `connected: true` | online (green, current look) | "Docker Engine API v{api_version}" |
+| `connected: false` | no connection (red) | daemon error message |
+| Connect transport error | no connection (red) | "Backend unreachable" |
+
+**Role:** `RoleViewer` (authenticated, any role) — same tier as the list procedures. The pill only exists inside the authenticated layout, so nothing polls pre-auth; extending the unauthenticated `GetServerStatus` was rejected because it would leak daemon connectivity to anonymous callers with no benefit.
+
+### 10.3. Frontend — Hook & Pill
+
+**`useEngineStatus` hook** (`frontend/src/hooks/useEngineStatus.ts`): exposes `{ status, detail }` where `status" is `"checking" | "online" | "offline"`.
+
+* Initial fetch on mount (status starts `"checking"`).
+* `setInterval` poll every **30 s**; skipped while `document.hidden`.
+* Immediate re-check on `visibilitychange` → visible and on `window` `focus` (covers a laptop sleep/wake cycle far better than a fixed cadence).
+* Connect errors (backend down) map to `offline` with detail "Backend unreachable" — same visual, honest tooltip.
+* Timers and listeners cleaned up on unmount; in-flight responses from a previous mount are ignored.
+
+**`DashboardLayout` pill** — same DOM shape, now driven:
+
+| Status | Dot | Text | Notes |
+| --- | --- | --- | --- |
+| `checking` | gray, no glow | "Checking…" | first load only; resolves within seconds |
+| `online` | green + glow (existing `.status-dot`) | "Engine online" | `title` shows API version |
+| `offline` | red + red glow | "No connection" | `title` shows daemon error or "Backend unreachable" |
+
+CSS delta is three modifiers on the existing class: `.status-dot` keeps its green pulse for online, `.status-dot.checking` is static gray, `.status-dot.offline` is red (soft glow, no animation — a dead indicator should not pulse). The pill gets `role="status"` + `aria-live="polite"` so screen readers announce transitions without stealing focus.
+
+### 10.4. Testing
+
+* **Backend:** httptest fake for `/_ping` — healthy response (assert `connected` + `api_version` propagation), daemon error (assert `connected: false` + message, **and that no Connect error is returned**), and the interceptor reflection test picks up the new `RoleViewer` classification automatically.
+* **Frontend:** hook tests with fake timers — initial `checking` → `online`, daemon-down → `offline` with message, transport error → "Backend unreachable", poll fires at 30 s and is skipped while hidden, focus/visibility triggers an immediate re-check, unmount stops the interval. `DashboardLayout` tests render the three states and assert the aria-live region and titles.
+
