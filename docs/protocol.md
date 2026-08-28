@@ -15,10 +15,12 @@ The application communicates exclusively via **ConnectRPC**, a lightweight, type
 
 ## 2. Service Definitions
 
-Three primary ConnectRPC services are defined for dmanager:
+Five ConnectRPC services are defined for dmanager:
 1. `AuthService`: Handles onboarding, authentication, profile inspection, and session termination.
 2. `ContainerService`: Handles container discovery lists, starting/stopping container lifecycles, and auto-update setups.
 3. `LogService`: Receives batch client-side log uploads for centralized ingestion.
+4. `SettingsService`: Handles persisted application settings, Gotify notification testing, and private registry status checks.
+5. `AdminService`: Provides read-only inventories of Docker images, volumes, and networks for the Administration page.
 
 ---
 
@@ -245,6 +247,86 @@ message SyncLogsResponse {
   int32 processed_count = 1;
 }
 ```
+
+### 3.4. `proto/dmanager/v1/settings.proto`
+```protobuf
+syntax = "proto3";
+
+package dmanager.v1;
+
+option go_package = "dmanager/internal/gen/proto/dmanager/v1;dmanagerv1";
+
+service SettingsService {
+  rpc GetSettings(GetSettingsRequest) returns (GetSettingsResponse);
+  rpc UpdateSettings(UpdateSettingsRequest) returns (UpdateSettingsResponse);
+  rpc TestGotifyNotification(TestGotifyNotificationRequest) returns (TestGotifyNotificationResponse);
+  rpc GetRegistryStatus(GetRegistryStatusRequest) returns (GetRegistryStatusResponse);
+}
+```
+
+Persists application settings in SQLite, sends Gotify test notifications, and reports private registry credential/connectivity status. Full field definitions live in the proto source.
+
+### 3.5. `proto/dmanager/v1/admin.proto` (planned)
+```protobuf
+syntax = "proto3";
+
+package dmanager.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "dmanager/internal/gen/proto/dmanager/v1;dmanagerv1";
+
+service AdminService {
+  // List images present on the host (Authenticated, read-only).
+  rpc ListImages(ListImagesRequest) returns (ListImagesResponse);
+  // List volumes present on the host (Authenticated, read-only).
+  rpc ListVolumes(ListVolumesRequest) returns (ListVolumesResponse);
+  // List networks present on the host (Authenticated, read-only).
+  rpc ListNetworks(ListNetworksRequest) returns (ListNetworksResponse);
+}
+
+message ListImagesRequest {}
+message ListImagesResponse {
+  repeated Image images = 1;
+}
+
+message Image {
+  string id = 1;               // image ID (sha256:...), rendered short-form client-side
+  repeated string repo_tags = 2; // e.g. ["nginx:latest"]; empty for dangling images
+  int64 created_unix = 3;       // image creation time as Unix seconds
+  int64 size_bytes = 4;         // on-disk size
+  int64 containers_count = 5;   // number of containers referencing this image
+}
+
+message ListVolumesRequest {}
+message ListVolumesResponse {
+  repeated Volume volumes = 1;
+}
+
+message Volume {
+  string name = 1;
+  string driver = 2;            // e.g. "local"
+  string mountpoint = 3;        // host path, rendered truncated client-side
+  google.protobuf.Timestamp created_at = 4;
+  map<string, string> labels = 5;
+}
+
+message ListNetworksRequest {}
+message ListNetworksResponse {
+  repeated Network networks = 1;
+}
+
+message Network {
+  string id = 1;                // network ID (sha256:...), rendered short-form client-side
+  string name = 2;              // e.g. "bridge"
+  string driver = 3;            // e.g. "bridge", "host", "overlay"
+  string scope = 4;             // "local", "swarm", or "global"
+  bool internal = 5;            // isolated from external routing
+  google.protobuf.Timestamp created_at = 6;
+}
+```
+
+All three procedures are unary, take empty requests, and are classified as **authenticated, any role** in the Connect interceptor (same policy as `ContainerService.ListContainers`). The service is intentionally read-only: no create, mutate, or prune procedures are defined in this phase.
 
 ---
 
