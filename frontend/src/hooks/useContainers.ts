@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+
 import { containerClient } from "../client";
 import { useToast } from "../context/ToastContext";
 
@@ -86,110 +87,125 @@ export function useContainers() {
   }, [mapProtoContainer]);
 
   // Hook actions
-  const startContainer = useCallback(async (id: string) => {
-    const name = getContainerName(id);
-    toast.info(`Starting container "${name}"...`);
-    setActionLoading((prev) => ({ ...prev, [id]: "starting" }));
-    try {
-      await containerClient.startContainer({ id });
-      toast.success(`Container "${name}" started successfully.`);
-    } catch (err: unknown) {
-      console.error("Start container failed:", err);
-      const msg = err instanceof Error ? err.message : "Failed to start container";
-      toast.error(`Failed to start container "${name}": ${msg}`);
-    } finally {
-      setActionLoading((prev) => {
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
-    }
-  }, [getContainerName, toast]);
-
-  const stopContainer = useCallback(async (id: string) => {
-    const name = getContainerName(id);
-    toast.info(`Stopping container "${name}"...`);
-    setActionLoading((prev) => ({ ...prev, [id]: "stopping" }));
-    try {
-      await containerClient.stopContainer({ id });
-      toast.success(`Container "${name}" stopped successfully.`);
-    } catch (err: unknown) {
-      console.error("Stop container failed:", err);
-      const msg = err instanceof Error ? err.message : "Failed to stop container";
-      toast.error(`Failed to stop container "${name}": ${msg}`);
-    } finally {
-      setActionLoading((prev) => {
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
-    }
-  }, [getContainerName, toast]);
-
-  const upgradeContainer = useCallback(async (id: string) => {
-    const name = getContainerName(id);
-    toast.info(`Upgrading container "${name}" (pulling image & re-creating)...`, 15000);
-    setActionLoading((prev) => ({ ...prev, [id]: "upgrading" }));
-    try {
-      await containerClient.upgradeContainer({ id });
-      toast.success(`Container "${name}" upgraded successfully.`);
-    } catch (err: unknown) {
-      console.error("Upgrade container failed:", err);
-      const msg = err instanceof Error ? err.message : "Failed to upgrade container";
-      toast.error(`Failed to upgrade container "${name}": ${msg}`);
-    } finally {
-      setActionLoading((prev) => {
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
-    }
-  }, [getContainerName, toast]);
-
-  const setContainerAutoUpdate = useCallback(async (id: string, autoUpdate: boolean) => {
-    const name = getContainerName(id);
-    setActionLoading((prev) => ({ ...prev, [id]: "toggling" }));
-    try {
-      await containerClient.setContainerAutoUpdate({ id, autoUpdate });
-      toast.success(
-        `Automatic updates ${autoUpdate ? "enabled" : "disabled"} for container "${name}".`
-      );
-    } catch (err: unknown) {
-      console.error("Set auto-update failed:", err);
-      const msg = err instanceof Error ? err.message : "Failed to update auto-update setting";
-      toast.error(`Failed to update auto-update for container "${name}": ${msg}`);
-    } finally {
-      setActionLoading((prev) => {
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
-    }
-  }, [getContainerName, toast]);
-
-  const checkContainerUpdates = useCallback(async (id: string) => {
-    const name = getContainerName(id);
-    toast.info(`Checking updates for container "${name}"...`);
-    setActionLoading((prev) => ({ ...prev, [id]: "checking" }));
-    try {
-      const resp = await containerClient.checkContainerUpdates({ id });
-      if (resp.updateAvailable) {
-        toast.success(`Check complete for "${name}": A new update is available!`);
-      } else {
-        toast.info(`Check complete for "${name}": Image is already up to date.`);
+  const startContainer = useCallback(
+    async (id: string) => {
+      const name = getContainerName(id);
+      toast.info(`Starting container "${name}"...`);
+      setActionLoading((prev) => ({ ...prev, [id]: "starting" }));
+      try {
+        await containerClient.startContainer({ id });
+        toast.success(`Container "${name}" started successfully.`);
+      } catch (err: unknown) {
+        console.error("Start container failed:", err);
+        const msg = err instanceof Error ? err.message : "Failed to start container";
+        toast.error(`Failed to start container "${name}": ${msg}`);
+      } finally {
+        setActionLoading((prev) => {
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
       }
-    } catch (err: unknown) {
-      console.error("Check updates failed:", err);
-      const msg = err instanceof Error ? err.message : "Failed to check updates";
-      toast.error(`Failed to check updates for container "${name}": ${msg}`);
-    } finally {
-      setActionLoading((prev) => {
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
-    }
-  }, [getContainerName, toast]);
+    },
+    [getContainerName, toast],
+  );
+
+  const stopContainer = useCallback(
+    async (id: string) => {
+      const name = getContainerName(id);
+      toast.info(`Stopping container "${name}"...`);
+      setActionLoading((prev) => ({ ...prev, [id]: "stopping" }));
+      try {
+        await containerClient.stopContainer({ id });
+        toast.success(`Container "${name}" stopped successfully.`);
+      } catch (err: unknown) {
+        console.error("Stop container failed:", err);
+        const msg = err instanceof Error ? err.message : "Failed to stop container";
+        toast.error(`Failed to stop container "${name}": ${msg}`);
+      } finally {
+        setActionLoading((prev) => {
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+      }
+    },
+    [getContainerName, toast],
+  );
+
+  const upgradeContainer = useCallback(
+    async (id: string) => {
+      const name = getContainerName(id);
+      toast.info(`Upgrading container "${name}" (pulling image & re-creating)...`, 15000);
+      setActionLoading((prev) => ({ ...prev, [id]: "upgrading" }));
+      try {
+        await containerClient.upgradeContainer({ id });
+        toast.success(`Container "${name}" upgraded successfully.`);
+      } catch (err: unknown) {
+        console.error("Upgrade container failed:", err);
+        const msg = err instanceof Error ? err.message : "Failed to upgrade container";
+        toast.error(`Failed to upgrade container "${name}": ${msg}`);
+      } finally {
+        setActionLoading((prev) => {
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+      }
+    },
+    [getContainerName, toast],
+  );
+
+  const setContainerAutoUpdate = useCallback(
+    async (id: string, autoUpdate: boolean) => {
+      const name = getContainerName(id);
+      setActionLoading((prev) => ({ ...prev, [id]: "toggling" }));
+      try {
+        await containerClient.setContainerAutoUpdate({ id, autoUpdate });
+        toast.success(
+          `Automatic updates ${autoUpdate ? "enabled" : "disabled"} for container "${name}".`,
+        );
+      } catch (err: unknown) {
+        console.error("Set auto-update failed:", err);
+        const msg = err instanceof Error ? err.message : "Failed to update auto-update setting";
+        toast.error(`Failed to update auto-update for container "${name}": ${msg}`);
+      } finally {
+        setActionLoading((prev) => {
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+      }
+    },
+    [getContainerName, toast],
+  );
+
+  const checkContainerUpdates = useCallback(
+    async (id: string) => {
+      const name = getContainerName(id);
+      toast.info(`Checking updates for container "${name}"...`);
+      setActionLoading((prev) => ({ ...prev, [id]: "checking" }));
+      try {
+        const resp = await containerClient.checkContainerUpdates({ id });
+        if (resp.updateAvailable) {
+          toast.success(`Check complete for "${name}": A new update is available!`);
+        } else {
+          toast.info(`Check complete for "${name}": Image is already up to date.`);
+        }
+      } catch (err: unknown) {
+        console.error("Check updates failed:", err);
+        const msg = err instanceof Error ? err.message : "Failed to check updates";
+        toast.error(`Failed to check updates for container "${name}": ${msg}`);
+      } finally {
+        setActionLoading((prev) => {
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+      }
+    },
+    [getContainerName, toast],
+  );
 
   // Set up real-time stream subscription with automatic reconnection
   useEffect(() => {
@@ -205,7 +221,7 @@ export function useContainers() {
           // Initialize stream
           const stream = await containerClient.streamContainers(
             {},
-            { signal: abortController.signal }
+            { signal: abortController.signal },
           );
 
           for await (const response of stream) {

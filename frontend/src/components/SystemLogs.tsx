@@ -12,6 +12,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+
 import { logClient } from "../client";
 import type { LogEntry } from "../gen/proto/dmanager/v1/log_pb";
 
@@ -310,7 +311,7 @@ export function SystemLogs() {
                   const isExpanded = !!expandedLogIds[index];
                   const levelLower = log.level.toLowerCase();
                   return (
-                    // biome-ignore lint/suspicious/noArrayIndexKey: using index combined with timestamp is safe since logs are read-only and order does not change dynamically
+                    // NOTE: using index combined with timestamp as key is safe since logs are read-only and order does not change dynamically
                     <tr key={`${log.timestamp}-${index}`}>
                       <td>
                         <span className={`logs-row-level ${levelLower}`}>{log.level}</span>

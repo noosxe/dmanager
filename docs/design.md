@@ -172,9 +172,9 @@ The frontend is a modern React SPA optimized for speed, developer efficiency, an
 * **Vite Engine:** Fast bundling using ESBuild.
 * **Package Manager:** `pnpm` is utilized for workspace dependency resolution and fast builds.
 
-### 3.2. Code Quality & Standards (Biome)
-* **Linter & Formatter:** Biome is configured as the sole formatter, linter, and import organizer.
-* **No ESLint/Prettier:** ESLint and Prettier are excluded entirely from the toolchain in favor of Biome's unified, highly performant tool.
+### 3.2. Code Quality & Standards (Oxlint & Oxfmt)
+* **Linter & Formatter:** Oxlint is the linter and Oxfmt the formatter and import sorter, providing a fast, Rust-based toolchain.
+* **No ESLint/Prettier:** ESLint and Prettier are excluded entirely from the toolchain in favor of the oxc tools' unified, highly performant workflow.
 
 ### 3.3. Styling (TailwindCSS)
 * **Utility-First Styling:** TailwindCSS handles styling.
@@ -279,7 +279,7 @@ The build is optimized using a three-stage Dockerfile that separates dependencie
   * Copies `package.json`, `pnpm-lock.yaml`, and other workspace dependency definitions.
   * Runs `pnpm install --frozen-lockfile` (utilizing Docker mount caches for the pnpm store to accelerate builds).
   * Copies source files, executes `pnpm build` to compile the optimized production React bundles into the `dist/` directory.
-  * Integrates `biome ci` verification to ensure all linting and formatting standards are met before compilation.
+  * Integrates `pnpm check` (Oxlint + Oxfmt) verification to ensure all linting and formatting standards are met before compilation.
 
 * **Stage 2: Backend Builder (`golang:alpine`)**
   * Configures CGO-free build parameters: `CGO_ENABLED=0`.

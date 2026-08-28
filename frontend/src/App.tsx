@@ -1,5 +1,6 @@
 import { RouterProvider } from "@tanstack/react-router";
 import { Loader2, Terminal } from "lucide-react";
+
 import { ToastContainer } from "./components/ToastContainer";
 import { ToastProvider } from "./context/ToastContext";
 import { AuthProvider, useAuth } from "./hooks/useAuth";

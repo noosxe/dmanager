@@ -140,4 +140,4 @@ Before committing any feature branch, verify the following checks:
 - [ ] Cookies are managed entirely via backend `HttpOnly` flags (no manual token reads in client javascript).
 - [ ] Input fields enforce maximum lengths to prevent buffer or DOS anomalies.
 - [ ] Dynamic markup avoids `dangerouslySetInnerHTML` unless explicitly sanitized.
-- [ ] All biome security checks pass successfully: `pnpm biome check`.
+- [ ] All oxlint security checks pass successfully: `pnpm lint`.

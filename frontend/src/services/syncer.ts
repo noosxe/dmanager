@@ -1,4 +1,5 @@
 import { Code, ConnectError } from "@connectrpc/connect";
+
 import { logClient } from "../client";
 import { logDb } from "./logger";
 
@@ -37,9 +38,7 @@ export async function syncPendingLogs() {
       const response = await logClient.syncLogs({ entries: protoEntries });
 
       if (response && response.processedCount > 0) {
-        const idsToDelete = entries
-          .map((e) => e.id)
-          .filter((id): id is number => id !== undefined);
+        const idsToDelete = entries.map((e) => e.id).filter((id): id is number => id !== undefined);
 
         if (idsToDelete.length > 0) {
           await logDb.logs.bulkDelete(idsToDelete);

@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Activity, LayoutDashboard, LogOut, Menu, Settings } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
+
 import { useAuth } from "../hooks/useAuth";
 
 interface DashboardLayoutProps {

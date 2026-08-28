@@ -2,6 +2,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import { Terminal as TerminalIcon, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Terminal } from "xterm";
+
 import { containerClient } from "../client";
 
 import "xterm/css/xterm.css";

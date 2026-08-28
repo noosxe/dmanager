@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { ConnectError, Code } from "@connectrpc/connect";
 import { get as webauthnGet } from "@github/webauthn-json";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+
 import { authClient } from "../client";
 
 export interface User {
@@ -49,7 +50,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const status = await authClient.getServerStatus({});
         setNeedsSetup(status.needsSetup);
         setPasskeyLoginEnabled(status.passkeyLoginEnabled);
-        setServerInfo({ version: status.version, commit: status.commit, buildDate: status.buildDate });
+        setServerInfo({
+          version: status.version,
+          commit: status.commit,
+          buildDate: status.buildDate,
+        });
       } catch (statusErr) {
         console.error("Failed to check server setup status:", statusErr);
       }
@@ -175,7 +180,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const status = await authClient.getServerStatus({});
         setNeedsSetup(status.needsSetup);
         setPasskeyLoginEnabled(status.passkeyLoginEnabled);
-        setServerInfo({ version: status.version, commit: status.commit, buildDate: status.buildDate });
+        setServerInfo({
+          version: status.version,
+          commit: status.commit,
+          buildDate: status.buildDate,
+        });
       } catch (statusErr) {
         console.error("Failed to check server setup status on logout:", statusErr);
       }

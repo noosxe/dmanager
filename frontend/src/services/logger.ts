@@ -94,7 +94,12 @@ export function initLogger() {
       const metadata = {
         stack: event.reason?.stack,
       };
-      addLogEntry("ERROR", `Unhandled Rejection: ${message}`, "WindowOnUnhandledRejection", metadata);
+      addLogEntry(
+        "ERROR",
+        `Unhandled Rejection: ${message}`,
+        "WindowOnUnhandledRejection",
+        metadata,
+      );
     } finally {
       isIntercepting = false;
     }
@@ -106,7 +111,9 @@ export function initLogger() {
     if (isIntercepting) return;
     isIntercepting = true;
     try {
-      const message = args.map((arg) => (typeof arg === "object" ? JSON.stringify(arg) : String(arg))).join(" ");
+      const message = args
+        .map((arg) => (typeof arg === "object" ? JSON.stringify(arg) : String(arg)))
+        .join(" ");
       addLogEntry("WARN", message, "Console");
     } finally {
       isIntercepting = false;
@@ -119,7 +126,9 @@ export function initLogger() {
     if (isIntercepting) return;
     isIntercepting = true;
     try {
-      const message = args.map((arg) => (typeof arg === "object" ? JSON.stringify(arg) : String(arg))).join(" ");
+      const message = args
+        .map((arg) => (typeof arg === "object" ? JSON.stringify(arg) : String(arg)))
+        .join(" ");
       const metadata = {
         stack: new Error().stack,
       };
@@ -160,6 +169,10 @@ export function initLogger() {
   );
 }
 
-export function logUserAction(action: string, component: string, metadata: Record<string, unknown> = {}) {
+export function logUserAction(
+  action: string,
+  component: string,
+  metadata: Record<string, unknown> = {},
+) {
   addLogEntry("INFO", action, component, metadata);
 }

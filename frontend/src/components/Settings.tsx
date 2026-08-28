@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
+
 import { authClient, settingsClient } from "../client";
 import { useToast } from "../context/ToastContext";
 import type { AuthEvent, Passkey, Session } from "../gen/proto/dmanager/v1/auth_pb";
