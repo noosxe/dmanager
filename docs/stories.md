@@ -67,6 +67,7 @@ graph TD
     A59 --> A60["STORY-060: Image Delete via ConfirmDialog (#177) (DONE)"]
     A59 --> A61["STORY-061: Passkey & Destructive Confirmations (#178) (DONE)"]
     A61 --> A62["STORY-062: Administration Containers-Style Layout (#189) (DONE)"]
+    A62 --> A63["STORY-063: Generic PageTabs & Settings Shell Refinement (#192)"]
 ```
 
 
@@ -1336,3 +1337,21 @@ graph TD
 - **Validation Check:**
   - `pnpm check`, `pnpm test`, `pnpm build` pass.
   - Visual: Administration header/stat/table spacing matches the containers dashboard rhythm; tabs unchanged.
+
+### STORY-063: Generic PageTabs Component & Settings Shell Refinement (issue #192)
+- **Scope:** Frontend only — shared tab-bar extraction; Settings spacing made gap-based; no behavior changes
+- **Estimated Size:** Small (~120 LOC)
+- **Dependencies:** STORY-062 (Administration's gap-based root is where the doubled spacing shows)
+- **Goal:** Per #192 / design.md §9.4 + new §7.5: `.settings-nav-tabs` is a shared component in disguise — extract `PageTabs` (item-array API, `page-tabs`/`page-tab` classes, no own margin) and make both consumers own their spacing.
+- **Tasks:**
+  1. `frontend/src/components/PageTabs.tsx`: new component — `{ to, params, icon, label, active, onClick? }[]` → TanStack `Link`s; `.page-tabs`/`.page-tab` classes; minimal `PageTabs.test.tsx` (items render, active class, onClick fires).
+  2. `index.css`: rename `.settings-nav-tabs`/`.settings-nav-tab` (incl. `:hover`/`.active`) → `.page-tabs`/`.page-tab`; **drop `margin-bottom: 24px`**.
+  3. `Administration.tsx`: replace the three inline tab `Link`s with `<PageTabs tabs={…} />`.
+  4. `Settings.tsx`: root → `flex` column `gap: 24px` (keep 800px column); drop header `marginBottom: 20px` and General panel's second-card `marginTop: 24px`; tabs via `PageTabs` (keep optimistic `onClick`); Security panel untouched.
+  5. `Administration.test.tsx`: `settings-nav-tab` assertions → `page-tab`.
+- **Files Affected:**
+  - `frontend/src/components/PageTabs.tsx` (new) + `PageTabs.test.tsx` (new)
+  - `frontend/src/index.css`, `Administration.tsx`, `Administration.test.tsx`, `Settings.tsx`
+- **Validation Check:**
+  - `pnpm check`, `pnpm test`, `pnpm build` pass.
+  - Visual: 24px rhythm below tabs on Administration (no doubled 48px); Settings header/tabs/panel spacing unchanged in effect.

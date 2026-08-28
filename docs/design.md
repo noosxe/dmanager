@@ -389,6 +389,10 @@ The build is optimized using a three-stage Dockerfile that separates dependencie
   * Displays a colored visual badge for status (`Healthy` / `Configured / OK` in green, `Error / Unhealthy` in red with the descriptive connection error).
   * Includes a "Refresh Status" button to force-reload status.
 
+#### 7.5. Settings Page Shell & Tabs (#192)
+* **Root:** `flex` column with `gap: 24px` inside the intentional 800px form column (`padding: 24px; maxWidth: 800px; margin: 0 auto`) — the same gap-based rhythm as the Containers and Administration pages. The page header (icon + title) is a direct child with **no own bottom margin**; the root gap carries header → tabs → panel spacing.
+* **Tabs:** rendered by the shared **`PageTabs`** component (§9.4) — `General` and `Security & Sessions` items against `/settings/$tab`. Optimistic local tab state via the item `onClick`; the route remains the source of truth (`useParams({ strict: false })`).
+* **Panels:** the Security panel is a self-contained `flex` column `gap: 24px`; the General panel's cards are direct root children whose separation is the root gap (no inline `marginTop`).
 ### 8. Frontend Toast Notification System Design
 
 #### 8.1. Toast Core Architecture
@@ -437,10 +441,10 @@ A read-only Administration page exposing Docker host resource inventories. This 
 * **Sidebar (`DashboardLayout.tsx`):** New `menu-item` Link placed **between System Logs and Settings**, using the lucide `Boxes` icon, `to="/administration/$tab"` with `params={{ tab: "images" }}`, and `activeOptions={{ exact: false }}` so any tab highlights it. Resulting order: Containers, System Logs, Administration, Settings.
 
 ### 9.4. Page Component & Tabs
-* **`src/components/Administration.tsx`:** Page shell mirrors the **Containers page** (`ContainerGrid.tsx`) layout vocabulary; the tab bar is the *only* Settings-derived element (#189):
+* **`src/components/Administration.tsx`:** Page shell mirrors the **Containers page** (`ContainerGrid.tsx`) layout vocabulary (#189); the tab bar is the shared `PageTabs` component (#192):
   - **Root:** `flex` column with `gap: 24px`, full width. No outer padding (DashboardLayout's `main-container` already pads — the previous shell double-padded) and no `maxWidth` cap: inventories use the same full-bleed width as the containers dashboard.
   - **Header:** `.dashboard-header` + `.header-title-section` — `h2` "Administration" plus a one-line subtitle describing the page — with the manual re-fetch as an accent `auth-submit-btn` labeled **Sync Now** (same vocabulary and in-flight spinner as the containers page; replaces the former secondary-style Refresh button).
-  - **Tab bar:** `settings-nav-tabs` / `settings-nav-tab` CSS classes exactly as shipped — the deliberate single Settings similarity — `active` class driven by the resolved tab, and tab state synced from `useParams({ strict: false })` so browser back/forward and deep links work.
+  - **Tab bar:** the shared **`PageTabs`** component (`src/components/PageTabs.tsx`, #192) — an item-array API (`{ to, params, icon, label, active, onClick? }`) rendering TanStack `Link`s with the `page-tabs` / `page-tab` CSS classes (renamed from the Settings-named classes; the bar owns **no margin** — the root gap carries spacing). `active` is driven by the resolved tab, and tab state is synced from `useParams({ strict: false })` so browser back/forward and deep links work. Consumed by both Administration (§9.4) and Settings (§7.5).
   - **Stat cards & banner:** §9.6 cards and the error banner use the shared `stats-grid` / `auth-error-banner` classes with no inline margins; the root gap carries the vertical rhythm, matching the containers page.
 * **Data hook:** `src/hooks/useAdminResources.ts` — one hook parameterized by resource kind; fetches on mount and tab activation, exposes `{ data, isLoading, error, refresh }`; the header **Sync Now** button triggers manual re-fetch. No polling/streaming.
 * **Client:** `adminClient` added to `src/client.ts` via `createClient(AdminService, transport)`.
