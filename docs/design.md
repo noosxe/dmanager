@@ -558,3 +558,92 @@ CSS delta is three modifiers on the existing class: `.status-dot` keeps its gree
 * **Backend:** httptest fake for `/_ping` — healthy response (assert `connected` + `api_version` propagation), daemon error (assert `connected: false` + message, **and that no Connect error is returned**), and the interceptor reflection test picks up the new `RoleViewer` classification automatically.
 * **Frontend:** hook tests with fake timers — initial `checking` → `online`, daemon-down → `offline` with message, transport error → "Backend unreachable", poll fires at 30 s and is skipped while hidden, focus/visibility triggers an immediate re-check, unmount stops the interval. `DashboardLayout` tests render the three states and assert the aria-live region and titles.
 
+
+---
+
+## 11. Dialog System (issue #176)
+
+### 11.1. Scope & Problem
+
+The app has **zero modal/dialog infrastructure**: every interaction is inline (Settings forms, the STORY-057 two-step inline confirm). Destructive actions lack a proper blocking confirmation surface — passkey deletion today fires on a single click with no confirmation at all — and there is no component to host future flows (resource details, forms, wizards).
+
+This story ships the **primitive only**:
+
+1. `frontend/src/components/Dialog.tsx` — a reusable modal: overlay, focus trap, Esc-to-close, click-outside-to-close, `role="dialog"` + `aria-modal`, focus restore, body scroll lock, hand-rolled styling consistent with the design system.
+2. `frontend/src/components/ConfirmDialog.tsx` — a specialization: title, message, confirm/cancel buttons, `danger` variant, `busy` lockout.
+
+**Non-goals (out of scope here):** migrating the image-delete inline confirm (#177, STORY-060), gating passkey deletion and other destructive operations (#178, STORY-061), nested/stacked dialogs (a single modal at a time is the contract; nothing in the backlog needs stacking), a toast/notification system (already exists, §8), and any new dependency — the primitive is hand-rolled like every other component, styled in `frontend/src/index.css`.
+
+### 11.2. State Model — Declarative Component, Not an Imperative Hook
+
+Two viable shapes were considered:
+
+- **Imperative context** (`useDialogs()` returning `confirm({...}): Promise<boolean>`, mirroring `useToast`): rejected. The identified consumers confirm an action **tied to component state** — a specific row ID plus its in-flight spinner (`useAdminResources`' `deletingId` pattern). A promise-based API has to park that promise while the mutation runs, cannot express "confirm button shows a spinner" without extra plumbing, and implies a global queue/stacking model we deliberately do not need.
+- **Declarative component** (`<ConfirmDialog open={target !== null} busy={deletingId === target?.id} …>`) — **chosen**. The caller owns what is being confirmed; open/close is plain state; in-flight and disabled states compose with existing `useState` patterns; tests render the two states directly.
+
+The contrast with toasts (§8) is intentional and documented here so it is not "fixed" later: toasts are fire-and-forget *global ephemera* (imperative fits), dialogs are *modal and owned by one screen's state* (declarative fits).
+
+Rendering: each `Dialog` portals itself to `document.body` when open (`createPortal`) and renders `null` when closed — no always-mounted provider, no open-dialogs registry. The overlay sits at `z-index: 1000`, **below** the toast container (9999): a success toast confirming a dialog-initiated action must stay visible while the dialog closes.
+
+### 11.3. `Dialog` Primitive — Contract
+
+```tsx
+interface DialogProps {
+  open: boolean;
+  onClose: () => void;              // every dismiss path (Esc, backdrop) funnels here
+  title: string;                    // aria-labelledby (id via useId)
+  description?: string;             // aria-describedby
+  children?: React.ReactNode;       // body content
+  footer?: React.ReactNode;         // action buttons row
+  initialFocus?: "confirm" | "cancel"; // which footer button gets focus on open (default "cancel")
+}
+```
+
+Behavior, all implemented in the component (no library):
+
+- **On open:** save `document.activeElement` (the opener button — e.g. a table's delete icon) for restore; add a scroll-lock class to `<html>` (`overflow: hidden`); render the portal; focus the `initialFocus` element.
+- **Focus trap:** a `keydown` handler wraps Tab/Shift+Tab through the card's focusable descendants (`a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])`), first ↔ last.
+- **Dismiss:** Escape key and a `mousedown` whose target is the overlay itself (not the card — clicking inside never dismisses) call `onClose`.
+- **On close or unmount:** restore focus to the saved opener, remove the scroll lock, detach listeners.
+
+DOM and CSS (new block in `index.css`, using existing tokens):
+
+```html
+<div class="dialog-overlay">          <!-- fixed inset 0, rgba(0,0,0,0.5) backdrop, centered flex -->
+  <div class="dialog-card" role="dialog" aria-modal="true"
+       aria-labelledby="<useId>" aria-describedby="<useId, when description>">
+    <h2 class="dialog-title">…</h2>
+    <p class="dialog-message">…</p>   <!-- optional -->
+    …children…                        <!-- footer slot rendered last -->
+    <div class="dialog-footer">…</div>
+  </div>
+</div>
+```
+
+`.dialog-card` reuses `--card-bg`, `--border`, `--shadow`, ~420px `max-width`; footer buttons reuse the existing button styling (`Cancel` secondary, confirm variant per 11.4). A short `dialogIn` keyframe (fade + slight scale) animates the card in; `@media (prefers-reduced-motion: reduce)` disables it.
+
+### 11.4. `ConfirmDialog` Specialization
+
+```tsx
+interface ConfirmDialogProps {
+  open: boolean;
+  onClose: () => void;               // cancel / dismiss
+  onConfirm: () => void;             // confirm button only
+  title: string;
+  message: string;                   // required here: state the consequence, not the request
+  confirmLabel?: string;             // default "Confirm" — always a verb ("Delete", "Revoke")
+  cancelLabel?: string;              // default "Cancel"
+  variant?: "default" | "danger";    // danger → confirm button uses --error tokens
+  busy?: boolean;                    // in-flight mutation
+}
+```
+
+- **`busy` locks the dialog:** confirm button shows the `Loader2` spinner (same pattern as the ImageTable inline confirm) and is disabled; Cancel is disabled; Esc/backdrop dismissal is suppressed (the RPC is already running — closing mid-flight would desync the spinner; the result arrives via toasts and the caller's `onClose`).
+- **Initial focus:** Cancel for `variant="danger"` (the safe action gets focus — pressing Enter immediately would confirm; we never pre-arm destruction), Confirm for `variant="default"`.
+- Consumers own their state: `open={target !== null}`, close handlers null the target. This is exactly the shape #177 and #178 need.
+
+### 11.5. Testing
+
+- **`Dialog.test.tsx`** (jsdom): renders nothing when closed; renders `role="dialog"` with `aria-modal`, `aria-labelledby`/`aria-describedby` pointing at real nodes; Esc and backdrop `mousedown` dismiss while a click inside the card does not; Tab focus wraps first ↔ last and never escapes the card; focus is restored to the opener element on close; the scroll-lock class is applied while open and removed on close/unmount.
+- **`ConfirmDialog.test.tsx`**: renders title/message/labels; `danger` marks the confirm button with the danger class; confirm and cancel fire their callbacks (cancel via `onClose`, button and Esc both); `busy` disables both buttons, blocks Esc/backdrop dismissal, and shows the spinner.
+- No consumer is migrated in this story — #177/#178 carry their own behavior-preserving migrations with tests updated from the inline confirm to the dialog.
