@@ -2142,3 +2142,139 @@ body {
 
 
 
+
+/* ===== Dialog system (design.md §11.3) ===== */
+
+/* Applied to <html> while any dialog is open: modals block background scroll. */
+html.dialog-scroll-lock {
+  overflow: hidden;
+}
+
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  /* Below the toast container (9999): a toast confirming a dialog-initiated
+     action must stay visible while the dialog closes. */
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.dialog-card {
+  /* Opaque on purpose — unlike translucent cards, a modal must fully occlude. */
+  background-color: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  width: 100%;
+  max-width: 420px;
+  padding: 24px;
+  animation: dialogIn 0.2s ease-out;
+}
+
+.dialog-title {
+  margin: 0 0 8px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-h);
+}
+
+.dialog-message {
+  margin: 0 0 20px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.dialog-cancel-btn {
+  padding: 9px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.dialog-cancel-btn:hover:not(:disabled) {
+  color: var(--text-h);
+  border-color: var(--border-focus);
+}
+
+.dialog-confirm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent) 0%, #3b82f6 100%);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  box-shadow: 0 4px 12px var(--accent-glow);
+  transition: var(--transition-fast);
+}
+
+.dialog-confirm-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px var(--accent-glow);
+}
+
+.dialog-confirm-btn.danger {
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+  box-shadow: 0 4px 12px var(--error-border);
+}
+
+.dialog-confirm-btn.danger:hover:not(:disabled) {
+  box-shadow: 0 6px 16px var(--error-border);
+}
+
+.dialog-cancel-btn:disabled,
+.dialog-confirm-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+@keyframes dialogIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog-card {
+    animation: none;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .dialog-card {
+    background-color: #141419;
+  }
+
+  .dialog-overlay {
+    background-color: rgba(0, 0, 0, 0.65);
+  }
+}
