@@ -68,6 +68,12 @@ The system is intended for administrators and developers who need to manage Dock
 * **Automatic Recovery:** State transitions in both directions must happen automatically via periodic lightweight polling (a ping-level check, not resource listing) without requiring a page reload, and polling must pause while the browser tab is hidden.
 * **Non-Intrusive:** Status changes must not produce toast notifications; the pill itself (including an accessible live region) is the feedback surface.
 
+### 3.10. Dialog System & Destructive Confirmations
+* **Reusable Modal Primitive:** A hand-rolled dialog component (no new dependencies) providing an overlay, a focus trap, Escape-key and click-outside dismissal, `aria-modal` semantics with labelled title/description, body scroll lock, and focus restoration to the opener on close.
+* **Confirmation Specialization:** A `ConfirmDialog` on top of the primitive — title, consequence-focused message, explicit verb confirm button, cancel button — with a danger variant for destructive actions and a busy state that locks dismissal while the confirmed mutation is in flight.
+* **Safe by Default:** Danger confirmations must not pre-arm the destructive action: initial focus lands on the safe (cancel) action, and in-flight deletions cannot be aborted or double-triggered from the dialog.
+* **Layering:** Toasts remain visible above open dialogs; dialogs are owned by the screen that opened them (declarative state, no global queue).
+
 ---
 
 ## 4. Non-Functional Requirements

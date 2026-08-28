@@ -63,6 +63,9 @@ graph TD
     A55 --> A56["STORY-056: Administration Images Stat Cards & Size-First Sorting (DONE)"]
     A56 --> A57["STORY-057: Administration Image Deletion (Actions Column) (DONE)"]
     A57 --> A58["STORY-058: Engine Status Pill — Real Connectivity (issue #180) (DONE)"]
+    A58 --> A59["STORY-059: Reusable Dialog System + ConfirmDialog (issue #176)"]
+    A59 --> A60["STORY-060: Image Delete via ConfirmDialog (#177)"]
+    A59 --> A61["STORY-061: Passkey & Destructive Confirmations (#178)"]
 ```
 
 
@@ -1265,3 +1268,24 @@ graph TD
   - `pnpm check`, `pnpm test`, `pnpm build` pass.
   - Daemon stopped → pill shows "No connection" within one poll interval; restored → back to "Engine online" without a reload; backend stopped → "No connection" with "Backend unreachable" tooltip.
   - No toasts fire on status transitions.
+
+---
+
+### STORY-059: Reusable Dialog System + ConfirmDialog (issue #176)
+- **Scope:** Frontend only — modal primitive + confirmation specialization; no consumer migrations
+- **Estimated Size:** Medium (~300 LOC incl. tests)
+- **Dependencies:** none (consumers migrate in STORY-060/#177 and STORY-061/#178)
+- **Goal:** Give the app its first modal infrastructure: a hand-rolled `Dialog` (overlay, focus trap, Esc/backdrop dismissal, `aria-modal`, scroll lock, focus restore) and a `ConfirmDialog` on top of it (danger variant, busy lockout, safe-by-default focus). Declarative `open` state — deliberately not an imperative hook; the rationale and full contracts are in design.md §11, requirements.md §3.10.
+- **Tasks:**
+  1. `frontend/src/components/Dialog.tsx`: portal to `document.body` when open (else `null`); save `document.activeElement` on open, restore on close/unmount; `<html>` scroll lock; Tab/Shift+Tab focus trap over focusable descendants; Esc + overlay-target mousedown dismiss; `role="dialog"`, `aria-modal`, `aria-labelledby`/`aria-describedby` via `useId`; `initialFocus` prop.
+  2. `frontend/src/components/ConfirmDialog.tsx`: `title`, `message` (consequence-focused), `confirmLabel`/"Cancel", `variant: "default" | "danger"`, `busy`; busy disables both buttons, shows the `Loader2` spinner, and suppresses Esc/backdrop dismissal; danger focuses Cancel, default focuses Confirm.
+  3. `frontend/src/index.css`: `.dialog-overlay` (`z-index: 1000`, below toasts' 9999), `.dialog-card` (~420px, existing tokens), `.dialog-title`, `.dialog-message`, `.dialog-footer`, `.dialog-confirm-btn.danger`; `dialogIn` fade/scale keyframe disabled under `prefers-reduced-motion`.
+  4. Tests per design.md §11.5: `Dialog.test.tsx` (closed renders nothing, aria wiring, dismiss paths, focus trap wrap, focus restore, scroll lock) and `ConfirmDialog.test.tsx` (labels, danger class, callbacks, busy lockout + spinner, initial focus per variant).
+- **Files Affected:**
+  - `frontend/src/components/Dialog.tsx` (new), `frontend/src/components/Dialog.test.tsx` (new)
+  - `frontend/src/components/ConfirmDialog.tsx` (new), `frontend/src/components/ConfirmDialog.test.tsx` (new)
+  - `frontend/src/index.css`
+- **Validation Check:**
+  - `pnpm check`, `pnpm test`, `pnpm build` pass.
+  - Manual: keyboard-only operation opens, traps, and closes the dialog with focus returning to the opener; background does not scroll while open; a toast stays visible above an open dialog.
+  - No image-delete or passkey behavior changes in this story (that is STORY-060/061).
