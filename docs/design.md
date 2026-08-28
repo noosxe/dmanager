@@ -640,6 +640,8 @@ interface ConfirmDialogProps {
 - **Initial focus:** Cancel for `variant="danger"` (the safe action gets focus — pressing Enter immediately would confirm; we never pre-arm destruction), Confirm for `variant="default"`.
 - Consumers own their state: `open={target !== null}`, close handlers null the target. This is exactly the shape #177 and #178 need.
 
+**Consumers (as shipped).** Image deletion (§9.7, #177) plus the three Settings destructive actions (#178): passkey deletion (*Delete passkey?* — warns that a lone remaining credential locks the user out), single-session revocation (*Revoke session?* — names the device, notes it can sign in again), and revoke-all-others (*Revoke other sessions?*). Each is a danger dialog driven by one `pendingDestructive` state, `busy` bound to the existing per-action in-flight flag; non-destructive mutations (container start/stop, passkey rename, settings save) stay unconfirmed to avoid prompt fatigue.
+
 ### 11.5. Testing
 
 - **`Dialog.test.tsx`** (jsdom): renders nothing when closed; renders `role="dialog"` with `aria-modal`, `aria-labelledby`/`aria-describedby` pointing at real nodes; Esc and backdrop `mousedown` dismiss while a click inside the card does not; Tab focus wraps first ↔ last and never escapes the card; focus is restored to the opener element on close; the scroll-lock class is applied while open and removed on close/unmount.

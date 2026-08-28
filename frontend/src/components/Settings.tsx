@@ -31,10 +31,43 @@ import { authClient, settingsClient } from "../client";
 import { useToast } from "../context/ToastContext";
 import type { AuthEvent, Passkey, Session } from "../gen/proto/dmanager/v1/auth_pb";
 import type { RegistryStatus } from "../gen/proto/dmanager/v1/settings_pb";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 interface SettingsProps {
   initialTab?: "general" | "security";
 }
+
+// The destructive action awaiting ConfirmDialog confirmation (#178): one
+// modal at a time; the kind picks the title/message/verb.
+type PendingDestructive =
+  | { kind: "passkey"; passkey: Passkey }
+  | { kind: "session"; session: Session }
+  | { kind: "allSessions" };
+
+// Consequence-focused copy per design.md §11.4.
+const destructiveDialogCopy = (pending: PendingDestructive) => {
+  switch (pending.kind) {
+    case "passkey":
+      return {
+        title: "Delete passkey?",
+        message: `Passkey "${pending.passkey.name}" will be removed from your account. If it is your only remaining credential, you will be locked out.`,
+        confirmLabel: "Delete",
+      };
+    case "session":
+      return {
+        title: "Revoke session?",
+        message: `The session on ${pending.session.deviceLabel} will be signed out. It can sign in again with your credentials.`,
+        confirmLabel: "Revoke",
+      };
+    default:
+      return {
+        title: "Revoke other sessions?",
+        message:
+          "All sessions except this one will be signed out. You stay signed in on this device.",
+        confirmLabel: "Revoke all",
+      };
+  }
+};
 
 export function Settings({ initialTab }: SettingsProps = {}) {
   const params = useParams({ strict: false }) as { tab?: string } | undefined;
@@ -93,6 +126,17 @@ export function Settings({ initialTab }: SettingsProps = {}) {
   const [sessionsError, setSessionsError] = useState<string | null>(null);
   const [isRevokingOther, setIsRevokingOther] = useState(false);
   const [revokingSessionId, setRevokingSessionId] = useState<string | null>(null);
+
+  // Destructive confirmations (design.md §11.4): one modal at a time — the
+  // pending target decides title/message/verb; #178 gates passkey deletion,
+  // session revocation, and revoke-all-others behind the danger dialog.
+  const [pendingDestructive, setPendingDestructive] = useState<PendingDestructive | null>(null);
+  const destructiveBusy =
+    (pendingDestructive?.kind === "passkey" &&
+      deletingPasskeyId === pendingDestructive.passkey.id) ||
+    (pendingDestructive?.kind === "session" &&
+      revokingSessionId === pendingDestructive.session.sessionId) ||
+    (pendingDestructive?.kind === "allSessions" && isRevokingOther);
 
   const [authEvents, setAuthEvents] = useState<AuthEvent[]>([]);
   const [authEventsLoading, setAuthEventsLoading] = useState(false);
@@ -305,6 +349,23 @@ export function Settings({ initialTab }: SettingsProps = {}) {
     } finally {
       setIsRevokingOther(false);
     }
+  };
+
+  // Dispatches the confirmed destructive action. The handlers catch their
+  // own errors (toasts are the failure feedback), so the dialog closes once
+  // the outcome settles — same contract as the image-delete dialog.
+  const confirmDestructive = async () => {
+    if (pendingDestructive === null) {
+      return;
+    }
+    if (pendingDestructive.kind === "passkey") {
+      await handleDeletePasskey(pendingDestructive.passkey.id);
+    } else if (pendingDestructive.kind === "session") {
+      await handleRevokeSession(pendingDestructive.session.sessionId);
+    } else {
+      await handleRevokeAllOtherSessions();
+    }
+    setPendingDestructive(null);
   };
 
   const handleAddPasskey = async (e: React.FormEvent) => {
@@ -1143,7 +1204,7 @@ export function Settings({ initialTab }: SettingsProps = {}) {
                       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                         <button
                           type="button"
-                          onClick={() => handleDeletePasskey(pk.id)}
+                          onClick={() => setPendingDestructive({ kind: "passkey", passkey: pk })}
                           disabled={deletingPasskeyId === pk.id}
                           className="settings-btn-secondary"
                           style={{
@@ -1215,7 +1276,7 @@ export function Settings({ initialTab }: SettingsProps = {}) {
                 {sessions.length > 1 && (
                   <button
                     type="button"
-                    onClick={handleRevokeAllOtherSessions}
+                    onClick={() => setPendingDestructive({ kind: "allSessions" })}
                     disabled={isRevokingOther || sessionsLoading}
                     className="settings-btn-secondary"
                     style={{
@@ -1323,7 +1384,9 @@ export function Settings({ initialTab }: SettingsProps = {}) {
                         {!sess.isCurrent && (
                           <button
                             type="button"
-                            onClick={() => handleRevokeSession(sess.sessionId)}
+                            onClick={() =>
+                              setPendingDestructive({ kind: "session", session: sess })
+                            }
                             disabled={revokingSessionId === sess.sessionId}
                             className="settings-btn-secondary"
                             style={{
@@ -1499,6 +1562,17 @@ export function Settings({ initialTab }: SettingsProps = {}) {
             )}
           </div>
         </div>
+      )}
+
+      {pendingDestructive !== null && (
+        <ConfirmDialog
+          open
+          onClose={() => setPendingDestructive(null)}
+          onConfirm={confirmDestructive}
+          variant="danger"
+          busy={destructiveBusy}
+          {...destructiveDialogCopy(pendingDestructive)}
+        />
       )}
     </div>
   );
