@@ -6,18 +6,19 @@ import {
   type SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { Image as ImageIcon, Loader2, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Image as ImageIcon, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
 
 import type { Image } from "../gen/proto/dmanager/v1/admin_pb";
 import { formatBytes, formatRelativeUnix, formatShortId, splitRepoTag } from "./adminFormat";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { SortButton } from "./SortButton";
 
 interface ImageTableProps {
   images: Image[];
   isAdmin: boolean;
   deletingId: string | null;
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => void | Promise<void>;
 }
 // bigint columns are exposed to the sorter as numbers; double precision is
 // ample for image sizes and Unix seconds.
@@ -94,35 +95,29 @@ const staticColumns: ColumnDef<Image>[] = [
 ];
 
 // Image inventory table with a size-first default sort and an admin-gated
-// Actions column (design.md §9.7): unused images can be deleted via a
-// two-step inline confirm; in-use and unknown-usage rows are inert.
+// Actions column (design.md §9.7): unused images can be deleted after a
+// ConfirmDialog (danger variant); in-use and unknown-usage rows are inert.
+// Human-readable repo:tag for the confirm dialog's consequence message.
+const repoTagLabel = (image: Image): string => {
+  const { repository, tag } = splitRepoTag(image.repoTags[0]);
+  return `${repository}:${tag}`;
+};
+
 export function ImageTable({ images, isAdmin, deletingId, onDelete }: ImageTableProps) {
-  // Arming state for the two-step inline confirm; resets after 5 seconds.
-  const [armedId, setArmedId] = useState<string | null>(null);
-  const armTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The image awaiting confirmation in the dialog; null while closed.
+  const [pendingDelete, setPendingDelete] = useState<Image | null>(null);
 
-  const clearArmTimer = () => {
-    if (armTimerRef.current !== null) {
-      clearTimeout(armTimerRef.current);
-      armTimerRef.current = null;
+  // Dispatches through the deleting hook (toasts + refresh) and closes the
+  // dialog once the outcome settles — the error toast is the failure path's
+  // feedback, so the dialog does not linger.
+  const handleConfirm = async () => {
+    if (pendingDelete === null) {
+      return;
     }
+    const id = pendingDelete.id;
+    await onDelete(id);
+    setPendingDelete(null);
   };
-
-  const armRow = (id: string) => {
-    setArmedId(id);
-    clearArmTimer();
-    armTimerRef.current = setTimeout(() => setArmedId(null), 5000);
-  };
-
-  // Second click dispatches. The row stays armed while the deletion is in
-  // flight so the confirm button can show its spinner; the 5-second timer
-  // from armRow still disarms it afterwards (and a successful delete makes
-  // the row disappear entirely via refresh).
-  const confirmDelete = (id: string) => {
-    onDelete(id);
-  };
-
-  useEffect(() => clearArmTimer, []);
 
   const columns = useMemo<ColumnDef<Image>[]>(() => {
     const actionsColumn: ColumnDef<Image> = {
@@ -137,35 +132,21 @@ export function ImageTable({ images, isAdmin, deletingId, onDelete }: ImageTable
           return <span className="table-cell-date">—</span>;
         }
         const deleting = deletingId === image.id;
-        if (armedId === image.id) {
-          return (
-            <button
-              type="button"
-              className="card-action-btn stop"
-              disabled={!isAdmin || deleting}
-              onClick={() => confirmDelete(image.id)}
-              title="Confirm delete"
-            >
-              {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-              <span style={{ marginLeft: "6px" }}>Confirm delete</span>
-            </button>
-          );
-        }
         return (
           <button
             type="button"
             className="card-action-btn"
             disabled={!isAdmin || deletingId !== null}
-            onClick={() => armRow(image.id)}
+            onClick={() => setPendingDelete(image)}
             title={isAdmin ? "Delete image" : "Admin required"}
           >
-            <Trash2 size={16} />
+            <Trash2 size={16} className={deleting ? "spinner" : undefined} />
           </button>
         );
       },
     };
     return [...staticColumns, actionsColumn];
-  }, [isAdmin, deletingId, armedId]);
+  }, [isAdmin, deletingId]);
 
   // Largest images first — disk-usage triage is the primary workflow.
   const [sorting, setSorting] = useState<SortingState>([{ id: "size", desc: true }]);
@@ -217,6 +198,19 @@ export function ImageTable({ images, isAdmin, deletingId, onDelete }: ImageTable
           <h3>No Images Found</h3>
           <p>No Docker images present on the host system.</p>
         </div>
+      )}
+
+      {pendingDelete !== null && (
+        <ConfirmDialog
+          open
+          onClose={() => setPendingDelete(null)}
+          onConfirm={handleConfirm}
+          title="Delete image?"
+          message={`Image ${repoTagLabel(pendingDelete)} (${formatShortId(pendingDelete.id)}) will be permanently removed from the host. This cannot be undone.`}
+          confirmLabel="Delete"
+          variant="danger"
+          busy={deletingId === pendingDelete.id}
+        />
       )}
     </div>
   );

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { adminClient } from "../client";
@@ -387,7 +387,7 @@ describe("Administration Component", () => {
     expect(screen.getByTitle("Admin required")).toBeDisabled();
   });
 
-  it("requires a second click to confirm deletion, then refreshes", async () => {
+  it("confirms deletion through the dialog, then refreshes", async () => {
     stubDeletableImages();
     render(<Administration />);
 
@@ -395,13 +395,17 @@ describe("Administration Component", () => {
       expect(screen.getByText("busybox")).toBeInTheDocument();
     });
 
-    // First click arms the inline confirm; the trash button is gone.
+    // Clicking the trash opens a danger dialog naming the image.
     fireEvent.click(screen.getByTitle("Delete image"));
-    expect(screen.getByTitle("Confirm delete")).toBeInTheDocument();
-    expect(screen.queryByTitle("Delete image")).not.toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toHaveAccessibleName("Delete image?");
+    expect(screen.getByRole("dialog")).toHaveAccessibleDescription(
+      "Image busybox:1.36 (bbb222333444) will be permanently removed from the host. This cannot be undone.",
+    );
+    // Danger variant focuses Cancel — Enter never pre-arms the destructive action.
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Cancel" }));
 
-    // Second click dispatches with force and triggers a list re-fetch.
-    fireEvent.click(screen.getByTitle("Confirm delete"));
+    // Confirming dispatches with force and triggers a list re-fetch.
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
     await waitFor(() => {
       expect(adminClient.deleteImage).toHaveBeenCalledTimes(1);
     });
@@ -413,9 +417,13 @@ describe("Administration Component", () => {
       expect(adminClient.listImages).toHaveBeenCalledTimes(2);
     });
     expect(mockToast.success).toHaveBeenCalledWith("Image deleted successfully.");
+    // The dialog closes once the outcome settles.
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
   });
 
-  it("resets the armed confirm after five seconds", async () => {
+  it("dismisses the dialog without deleting", async () => {
     stubDeletableImages();
     render(<Administration />);
 
@@ -423,16 +431,18 @@ describe("Administration Component", () => {
       expect(screen.getByText("busybox")).toBeInTheDocument();
     });
 
-    vi.useFakeTimers();
+    // Cancel closes without dispatching.
     fireEvent.click(screen.getByTitle("Delete image"));
-    expect(screen.getByTitle("Confirm delete")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
-    act(() => {
-      vi.advanceTimersByTime(5000);
-    });
-    expect(screen.queryByTitle("Confirm delete")).not.toBeInTheDocument();
-    expect(screen.getByTitle("Delete image")).toBeInTheDocument();
-    vi.useRealTimers();
+    // Escape also closes.
+    fireEvent.click(screen.getByTitle("Delete image"));
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    expect(adminClient.deleteImage).not.toHaveBeenCalled();
+    expect(adminClient.listImages).toHaveBeenCalledTimes(1);
   });
 
   it("shows a spinner while deleting and an error toast on failure", async () => {
@@ -451,10 +461,10 @@ describe("Administration Component", () => {
     });
 
     fireEvent.click(screen.getByTitle("Delete image"));
-    fireEvent.click(screen.getByTitle("Confirm delete"));
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
-    // Spinner while the deletion is in flight.
-    expect(document.querySelector(".animate-spin")).not.toBeNull();
+    // Spinner on the confirm button while the deletion is in flight.
+    expect(document.querySelector(".dialog-confirm-btn .spinner")).not.toBeNull();
 
     rejectDelete(new Error("[failed_precondition] conflict"));
 

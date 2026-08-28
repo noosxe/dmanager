@@ -64,7 +64,7 @@ graph TD
     A56 --> A57["STORY-057: Administration Image Deletion (Actions Column) (DONE)"]
     A57 --> A58["STORY-058: Engine Status Pill — Real Connectivity (issue #180) (DONE)"]
     A58 --> A59["STORY-059: Reusable Dialog System + ConfirmDialog (issue #176) (DONE)"]
-    A59 --> A60["STORY-060: Image Delete via ConfirmDialog (#177)"]
+    A59 --> A60["STORY-060: Image Delete via ConfirmDialog (#177) (DONE)"]
     A59 --> A61["STORY-061: Passkey & Destructive Confirmations (#178)"]
 ```
 
@@ -1289,3 +1289,18 @@ graph TD
   - `pnpm check`, `pnpm test`, `pnpm build` pass.
   - Manual: keyboard-only operation opens, traps, and closes the dialog with focus returning to the opener; background does not scroll while open; a toast stays visible above an open dialog.
   - No image-delete or passkey behavior changes in this story (that is STORY-060/061).
+
+### STORY-060: Image Delete via ConfirmDialog (issue #177) [DONE]
+- **Scope:** Frontend only — migrate the image-delete confirmation from the interim two-step inline confirm (design.md §9.7) to the §11.4 `ConfirmDialog`
+- **Estimated Size:** Small (~120 LOC net, mostly simplification)
+- **Dependencies:** STORY-059 merged (`Dialog` + `ConfirmDialog` primitive)
+- **Goal:** Replace the armed-row/5-second-timeout machinery with the standard danger `ConfirmDialog`: one consistent destructive-action pattern, less local state, and the primitive's a11y for free (focus management, Esc, `aria-modal`). Closes #177.
+- **Tasks:**
+  1. `ImageTable.tsx`: drop `armedId`/arm timer/`armRow`/`confirmDelete` and the `useEffect`/`useRef` cleanup; add `pendingDelete: Image | null`; the trash click sets it; render `ConfirmDialog` (title "Delete image?", message naming `repo:tag` + short ID + permanence, confirmLabel "Delete", `variant="danger"`, `busy={deletingId === pendingDelete.id}`). `onConfirm` awaits `onDelete` — toasts, `deletingId`, and `refresh()` already live in `useAdminResources` — then closes the dialog once the outcome settles.
+  2. `Administration.test.tsx`: replace the two-step/timer tests with dialog tests — danger title/description/initial-focus-Cancel, confirm dispatches with `force: true` + refresh + success toast + dialog closes, Cancel/Esc dismiss without an RPC, spinner on the confirm button during flight with the error toast on failure.
+- **Files Affected:**
+  - `frontend/src/components/ImageTable.tsx`
+  - `frontend/src/components/Administration.test.tsx`
+- **Validation Check:**
+  - `pnpm check`, `pnpm test` (87/87), `pnpm build` pass.
+  - Behavior preserved: admin gating, unused-only deletion, serialized deletions, `force: true`, toast wording, refresh on success.
