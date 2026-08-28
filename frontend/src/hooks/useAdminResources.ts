@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { adminClient } from "../client";
+import { useToast } from "../context/ToastContext";
 import type { Image, Network, Volume } from "../gen/proto/dmanager/v1/admin_pb";
 
 export type AdminResourceKind = "images" | "volumes" | "networks";
@@ -16,15 +17,16 @@ export type AdminResourcesResult =
  * Fetches one kind of Docker host resource (images, volumes, networks) from
  * the AdminService, plus the images-tab deletion mutation. Lists have no
  * polling or streaming — data is fetched on mount, on tab change, and on
- * manual refresh only; deletion re-fetches via refresh().
+ * manual refresh only; deletion reports via the toast system and
+ * re-fetches via refresh().
  */
 export function useAdminResources(kind: AdminResourceKind) {
+  const toast = useToast();
   const [result, setResult] = useState<AdminResourcesResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -32,7 +34,6 @@ export function useAdminResources(kind: AdminResourceKind) {
     const fetchResources = async () => {
       setIsLoading(true);
       setError(null);
-      setDeleteError(null);
       try {
         let next: AdminResourcesResult;
         if (kind === "images") {
@@ -80,7 +81,6 @@ export function useAdminResources(kind: AdminResourceKind) {
         return;
       }
       setDeletingId(id);
-      setDeleteError(null);
       try {
         // force=true avoids spurious tag-conflict failures for multi-tag
         // images; the daemon still refuses images in use (design.md §9.7).
@@ -88,15 +88,16 @@ export function useAdminResources(kind: AdminResourceKind) {
       } catch (err: unknown) {
         console.error("Failed to delete image:", err);
         const msg = err instanceof Error ? err.message : String(err);
-        setDeleteError(`Failed to delete image: ${msg}`);
+        toast.error(`Failed to delete image: ${msg}`);
         return;
       } finally {
         setDeletingId(null);
       }
+      toast.success("Image deleted successfully.");
       refresh();
     },
-    [deletingId, refresh],
+    [deletingId, refresh, toast],
   );
 
-  return { result, isLoading, error, refresh, deleteImage, deletingId, deleteError };
+  return { result, isLoading, error, refresh, deleteImage, deletingId };
 }

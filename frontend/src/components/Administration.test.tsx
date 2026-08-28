@@ -18,6 +18,18 @@ const { mockUseAuth, useParamsMock } = vi.hoisted(() => ({
   useParamsMock: vi.fn(),
 }));
 
+const mockToast = {
+  success: vi.fn(),
+  error: vi.fn(),
+  info: vi.fn(),
+  warning: vi.fn(),
+};
+
+// Mock the toast context — the delete mutation reports via toasts.
+vi.mock("../context/ToastContext", () => ({
+  useToast: () => mockToast,
+}));
+
 // Mock useAuth — Administration gates the delete action on the admin role.
 vi.mock("../hooks/useAuth", () => ({
   useAuth: () => mockUseAuth(),
@@ -400,6 +412,7 @@ describe("Administration Component", () => {
     await waitFor(() => {
       expect(adminClient.listImages).toHaveBeenCalledTimes(2);
     });
+    expect(mockToast.success).toHaveBeenCalledWith("Image deleted successfully.");
   });
 
   it("resets the armed confirm after five seconds", async () => {
@@ -422,7 +435,7 @@ describe("Administration Component", () => {
     vi.useRealTimers();
   });
 
-  it("shows a spinner while deleting and an error banner on failure", async () => {
+  it("shows a spinner while deleting and an error toast on failure", async () => {
     stubDeletableImages();
     let rejectDelete!: (err: Error) => void;
     vi.mocked(adminClient.deleteImage).mockImplementation(
@@ -446,9 +459,12 @@ describe("Administration Component", () => {
     rejectDelete(new Error("[failed_precondition] conflict"));
 
     await waitFor(() => {
-      expect(screen.getByText(/Failed to delete image/)).toBeInTheDocument();
+      expect(mockToast.error).toHaveBeenCalledWith(
+        "Failed to delete image: [failed_precondition] conflict",
+      );
     });
-    expect(screen.getByText(/failed_precondition/)).toBeInTheDocument();
+    // Failure means no refresh and no success toast.
+    expect(mockToast.success).not.toHaveBeenCalled();
     expect(adminClient.listImages).toHaveBeenCalledTimes(1);
   });
 

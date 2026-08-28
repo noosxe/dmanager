@@ -1225,10 +1225,10 @@ graph TD
   1. `proto/dmanager/v1/admin.proto`: add `DeleteImage(DeleteImageRequest) → DeleteImageResponse` (`id`, `force`); run `buf generate --path proto`.
   2. `internal/admin/service.go`: implement `DeleteImage` via moby `ImageRemove` with error mapping (daemon down → `Unavailable`, not found → `NotFound`, in use / tag conflict → `FailedPrecondition` with the daemon message).
   3. `internal/auth/interceptor.go`: classify `AdminServiceDeleteImageProcedure` as `RoleAdmin`; keep the reflection coverage test green.
-  4. `frontend/src/hooks/useAdminResources.ts`: add `deleteImage(id)` with `deletingId` / `deleteError` state, `force: true`, and post-success `refresh()`.
+  4. `frontend/src/hooks/useAdminResources.ts`: add `deleteImage(id)` with `deletingId` state, `force: true`, success/error toasts via `useToast`, and post-success `refresh()`.
   5. `frontend/src/components/ImageTable.tsx`: Actions column — `Trash2` button only when `containers_count === 0` (`-1` and in-use rows render `—`), disabled for viewers with `title="Admin required"` (ContainerGrid pattern), two-step arm → confirm with 5s arming reset.
-  6. `frontend/src/components/Administration.tsx`: wire `deleteImage`, `deletingId` spinner (`Loader2`), and the `deleteError` banner above the table.
-  7. Tests: backend httptest fake for remove paths; frontend coverage for gating rules, arm/confirm flow, spinner, error banner, and post-delete refresh recomputing the stat cards.
+  6. `frontend/src/components/Administration.tsx`: wire `deleteImage` and the `deletingId` spinner (`Loader2`).
+  7. Tests: backend httptest fake for remove paths; frontend coverage for gating rules, arm/confirm flow, spinner, error toast, and post-delete refresh recomputing the stat cards.
 - **Files Affected:**
   - `proto/dmanager/v1/admin.proto`, `internal/gen` (regenerated)
   - `internal/admin/service.go`, `internal/admin/service_test.go`, `internal/auth/interceptor.go`
@@ -1237,4 +1237,4 @@ graph TD
 - **Validation Check:**
   - `buf generate --path proto`, `go test ./...`, `go vet`, `golangci-lint run` pass.
   - `pnpm check`, `pnpm test`, `pnpm build` pass.
-  - In-use and `-1` rows show no delete control; unused image delete refreshes table + stat cards; daemon conflict shows the error banner.
+  - In-use and `-1` rows show no delete control; unused image delete refreshes table + stat cards; daemon conflict shows an error toast.
