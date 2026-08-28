@@ -61,6 +61,7 @@ graph TD
     S53 --> A54["STORY-054: Administration Backend, AdminService Read-Only List RPCs (DONE)"]
     A54 --> A55["STORY-055: Administration Frontend, Tabs, Tables & Navigation (DONE)"]
     A55 --> A56["STORY-056: Administration Images Stat Cards & Size-First Sorting (DONE)"]
+    A56 --> A57["STORY-057: Administration Image Deletion (Actions Column)"]
 ```
 
 
@@ -1215,10 +1216,25 @@ graph TD
   - Images tab shows the cards; Volumes and Networks tabs are unchanged.
   - Images table opens sorted by size descending.
 
-
-
-
-
-
-
-
+### STORY-057: Administration Image Deletion — Actions Column
+- **Scope:** Backend (`AdminService.DeleteImage`) + frontend Images tab actions column
+- **Estimated Size:** Medium (~250 LOC)
+- **Dependencies:** `STORY-056`
+- **Goal:** Add an Actions column to the images table with a delete control for images not used by any container, gated to admin users, with a two-step inline confirmation, per-row progress, error surfacing, and inventory/stat refresh. Design: [design.md](design.md) §9.7, [protocol.md](protocol.md) §3.5.
+- **Tasks:**
+  1. `proto/dmanager/v1/admin.proto`: add `DeleteImage(DeleteImageRequest) → DeleteImageResponse` (`id`, `force`); run `buf generate --path proto`.
+  2. `internal/admin/service.go`: implement `DeleteImage` via moby `ImageRemove` with error mapping (daemon down → `Unavailable`, not found → `NotFound`, in use / tag conflict → `FailedPrecondition` with the daemon message).
+  3. `internal/auth/interceptor.go`: classify `AdminServiceDeleteImageProcedure` as `RoleAdmin`; keep the reflection coverage test green.
+  4. `frontend/src/hooks/useAdminResources.ts`: add `deleteImage(id)` with `deletingId` / `deleteError` state, `force: true`, and post-success `refresh()`.
+  5. `frontend/src/components/ImageTable.tsx`: Actions column — `Trash2` button only when `containers_count === 0` (`-1` and in-use rows render `—`), disabled for viewers with `title="Admin required"` (ContainerGrid pattern), two-step arm → confirm with 5s arming reset.
+  6. `frontend/src/components/Administration.tsx`: wire `deleteImage`, `deletingId` spinner (`Loader2`), and the `deleteError` banner above the table.
+  7. Tests: backend httptest fake for remove paths; frontend coverage for gating rules, arm/confirm flow, spinner, error banner, and post-delete refresh recomputing the stat cards.
+- **Files Affected:**
+  - `proto/dmanager/v1/admin.proto`, `internal/gen` (regenerated)
+  - `internal/admin/service.go`, `internal/admin/service_test.go`, `internal/auth/interceptor.go`
+  - `frontend/src/gen` (regenerated), `frontend/src/hooks/useAdminResources.ts`
+  - `frontend/src/components/ImageTable.tsx`, `frontend/src/components/Administration.tsx`, `frontend/src/components/Administration.test.tsx`
+- **Validation Check:**
+  - `buf generate --path proto`, `go test ./...`, `go vet`, `golangci-lint run` pass.
+  - `pnpm check`, `pnpm test`, `pnpm build` pass.
+  - In-use and `-1` rows show no delete control; unused image delete refreshes table + stat cards; daemon conflict shows the error banner.

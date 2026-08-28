@@ -266,7 +266,7 @@ service SettingsService {
 
 Persists application settings in SQLite, sends Gotify test notifications, and reports private registry credential/connectivity status. Full field definitions live in the proto source.
 
-### 3.5. `proto/dmanager/v1/admin.proto` (planned)
+### 3.5. `proto/dmanager/v1/admin.proto`
 ```protobuf
 syntax = "proto3";
 
@@ -283,6 +283,8 @@ service AdminService {
   rpc ListVolumes(ListVolumesRequest) returns (ListVolumesResponse);
   // List networks present on the host (Authenticated, read-only).
   rpc ListNetworks(ListNetworksRequest) returns (ListNetworksResponse);
+  // Delete an unused image from the host (Authenticated, admin role).
+  rpc DeleteImage(DeleteImageRequest) returns (DeleteImageResponse);
 }
 
 message ListImagesRequest {}
@@ -324,9 +326,19 @@ message Network {
   bool internal = 5;            // isolated from external routing
   google.protobuf.Timestamp created_at = 6;
 }
+message DeleteImageRequest {
+  string id = 1;    // image ID (sha256:...) exactly as returned by ListImages
+  bool force = 2;   // bypass tag-conflict errors; the daemon still refuses in-use images
+}
+message DeleteImageResponse {}
+
 ```
 
-All three procedures are unary, take empty requests, and are classified as **authenticated, any role** in the Connect interceptor (same policy as `ContainerService.ListContainers`). The service is intentionally read-only: no create, mutate, or prune procedures are defined in this phase.
+The three list procedures are unary, take empty requests, and are classified as **authenticated, any role** in the Connect interceptor (same policy as `ContainerService.ListContainers`).
+
+`DeleteImage` is the service's first mutating procedure and is classified as **authenticated, admin role** (same policy as `ContainerService.StartContainer`). It proxies the Docker Engine `DELETE /images/{id}` API (`ImageRemove`): `id` is opaque (a full `sha256:...` ID as returned by `ListImages`), `force` bypasses tag-conflict errors for multi-tag images while the daemon still refuses images referenced by any container (running or stopped), and the empty response relies on the client re-fetching `ListImages` afterwards — the daemon remains the source of truth. Error mapping follows the existing daemon-error conventions plus: image not found → `CodeNotFound`; image in use or tag conflict → `CodeFailedPrecondition` with the daemon's message surfaced.
+
+Volumes and networks remain read-only: no create, mutate, or prune procedures are defined for them in this phase.
 
 ---
 

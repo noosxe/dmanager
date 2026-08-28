@@ -470,3 +470,28 @@ The Images tab shows a three-card summary strip between the tab bar and the tabl
 * **States:** card byte values use `formatBytes` with one decimal at every magnitude (e.g. `142.6 MB`; `0 B` when empty); `stat-value` placeholders render `--` while the first fetch is in flight or on error; an empty inventory renders `0 B` / `0 B` / `0`. Table cells keep Docker CLI-style integer sizes.
 * **Scope:** Images tab only — the Volumes and Networks tables stay unchanged.
 * **Testing:** unit tests cover the derived values (tagged + dangling mix), the `containers_count = -1` conservative rule, formatting of large sums, and the loading placeholder.
+
+### 9.7. Image Deletion — Actions Column
+
+The images table gains a trailing **Actions** column with a delete control. This is the Administration surface's first mutating feature and the first admin-gated control on it; Volumes and Networks tables stay action-free.
+
+**Backend.** `AdminService` gains `DeleteImage(DeleteImageRequest) → DeleteImageResponse` (§3.5 of [protocol.md](protocol.md)). The handler calls the moby SDK `ImageRemove(ctx, id, image.RemoveOptions{Force: force})`; the interceptor classifies the procedure as `RoleAdmin` like the other mutating RPCs. Daemon errors map per the existing conventions: unreachable daemon → `CodeUnavailable`, unknown image → `CodeNotFound`, in-use/tag conflict → `CodeFailedPrecondition` with the daemon's message surfaced; a 200 response is an empty payload — the client re-fetches `ListImages` for the authoritative state.
+
+**Frontend gating (who can delete what).**
+
+| Row state | Renders |
+| --- | --- |
+| `containers_count = 0` | Delete button (lucide `Trash2`, danger styling) |
+| `containers_count > 0` | `—` (no control) |
+| `containers_count = -1` (daemon did not calculate) | `—` (no control — conservative, consistent with §9.6) |
+| viewer-role user | column still visible but buttons disabled with `title="Admin role required"` |
+
+Client-side gating is a UX affordance only; the daemon re-checks at delete time and a conflict (e.g. a container started between list and click) surfaces as a `CodeFailedPrecondition` error.
+
+**Confirmation — two-step inline, no dialog.** The app has no modal infrastructure and passkey deletion (the closest precedent) fires without confirmation, but deleting an image is destructive at the daemon level (re-download required to undo). Design: the first click arms the button in place — the trash icon swaps to a filled danger button labeled **Confirm delete** (lucide `Trash2` + text) — and only the second click dispatches. Arming resets when the row scrolls out of focus via a 5-second timeout, when any other row is armed, or on successful delete. Rationale: no new CSS/dialog components, keeps the gesture local to the row, and requires deliberate intent without a modal.
+
+**In-flight & result UX.** `useAdminResources` grows `deleteImage(id)`: it tracks `deletingId` (one deletion at a time), shows the `Loader2` spinner in the armed button, and on success calls the existing `refresh()` — the table, empty state, and §9.6 stat cards all recompute from the fresh `ListImages` response (no optimistic removal; the daemon is the source of truth). On failure it sets a `deleteError` string rendered as an error banner above the table (same styling as the list-error banner) with the daemon message; the banner clears on the next successful delete or tab switch. Other rows' buttons stay enabled but dispatching while a deletion is in flight is ignored.
+
+**Force flag.** The frontend sends `force: true`: multi-tag unused images otherwise fail with tag-conflict errors for no user-legitimate reason, and the in-use protection the UI actually cares about is enforced by the daemon regardless of `force`.
+
+**Testing.** Backend: httptest fake exercises removal (happy path, not-found, in-use conflict, daemon down) and the reflection test asserts `RoleAdmin` coverage for the new procedure. Frontend: button presence rules (0 / >0 / -1 / viewer), arm-then-confirm flow, arming reset timeout, per-row spinner, `deleteError` banner content, and post-success `refresh()` re-render including stat-card recomputation.
