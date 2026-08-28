@@ -2,6 +2,8 @@ package admin
 
 import (
 	"context"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -17,6 +19,8 @@ import (
 
 // newTestService starts a fake Docker API server backed by handler and
 // returns an admin Service wired to it via the moby client.
+const testImageID = "sha256:abc123def456"
+
 func newTestService(t *testing.T, handler http.HandlerFunc) *Service {
 	t.Helper()
 	server := httptest.NewServer(handler)
@@ -29,7 +33,7 @@ func newTestService(t *testing.T, handler http.HandlerFunc) *Service {
 	if err != nil {
 		t.Fatalf("failed to create docker client: %v", err)
 	}
-	return NewService(dockerClient, nil)
+	return NewService(dockerClient, slog.New(slog.NewTextHandler(io.Discard, nil)))
 }
 
 // pingHandler responds to the client's API version negotiation probe.
@@ -82,7 +86,7 @@ func TestListImages(t *testing.T) {
 	}
 
 	first := images[0]
-	if first.Id != "sha256:abc123def456" {
+	if first.Id != testImageID {
 		t.Errorf("expected id sha256:abc123def456, got %q", first.Id)
 	}
 	if len(first.RepoTags) != 2 || first.RepoTags[0] != "nginx:latest" {
@@ -323,6 +327,120 @@ func TestDockerDaemonErrors(t *testing.T) {
 			}
 			if connErr.Code() != connect.CodeUnavailable {
 				t.Errorf("expected code %v, got %v", connect.CodeUnavailable, connErr.Code())
+			}
+		})
+	}
+}
+
+func TestDeleteImage(t *testing.T) {
+	var gotMethod, gotForce string
+	svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) {
+		if pingHandler(w, r) {
+			return
+		}
+		if !strings.HasSuffix(r.URL.Path, "/images/sha256:abc123def456") {
+			http.NotFound(w, r)
+			return
+		}
+		gotMethod = r.Method
+		gotForce = r.URL.Query().Get("force")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`[{"Deleted": "sha256:abc123def456"}]`))
+	})
+
+	resp, err := svc.DeleteImage(context.Background(), connect.NewRequest(&v1.DeleteImageRequest{
+		Id:    testImageID,
+		Force: true,
+	}))
+	if err != nil {
+		t.Fatalf("DeleteImage failed: %v", err)
+	}
+	if resp == nil || resp.Msg == nil {
+		t.Fatal("expected non-nil response")
+	}
+	if gotMethod != http.MethodDelete {
+		t.Errorf("expected DELETE request, got %s", gotMethod)
+	}
+	if gotForce != "1" {
+		t.Errorf("expected force=1 query parameter, got %q", gotForce)
+	}
+}
+
+func TestDeleteImageRequiresID(t *testing.T) {
+	svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Error("daemon should not be called with an empty image ID")
+	})
+
+	_, err := svc.DeleteImage(context.Background(), connect.NewRequest(&v1.DeleteImageRequest{}))
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	connErr, ok := err.(*connect.Error)
+	if !ok {
+		t.Fatalf("expected *connect.Error, got %T", err)
+	}
+	if connErr.Code() != connect.CodeInvalidArgument {
+		t.Errorf("expected code %v, got %v", connect.CodeInvalidArgument, connErr.Code())
+	}
+}
+
+func TestDeleteImageErrors(t *testing.T) {
+	cases := []struct {
+		name       string
+		status     int
+		body       string
+		wantCode   connect.Code
+		wantSubstr string
+	}{
+		{
+			name:       "not found",
+			status:     http.StatusNotFound,
+			body:       `{"message": "no such image: sha256:missing"}`,
+			wantCode:   connect.CodeNotFound,
+			wantSubstr: "image not found on Docker host",
+		},
+		{
+			name:       "in use conflict",
+			status:     http.StatusConflict,
+			body:       `{"message": "conflict: unable to remove repository reference"}`,
+			wantCode:   connect.CodeFailedPrecondition,
+			wantSubstr: "tag conflict",
+		},
+		{
+			name:       "daemon error",
+			status:     http.StatusInternalServerError,
+			body:       `{"message": "daemon unavailable"}`,
+			wantCode:   connect.CodeUnavailable,
+			wantSubstr: "failed to delete image",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) {
+				if pingHandler(w, r) {
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tc.status)
+				_, _ = w.Write([]byte(tc.body))
+			})
+
+			_, err := svc.DeleteImage(context.Background(), connect.NewRequest(&v1.DeleteImageRequest{
+				Id: testImageID,
+			}))
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			connErr, ok := err.(*connect.Error)
+			if !ok {
+				t.Fatalf("expected *connect.Error, got %T", err)
+			}
+			if connErr.Code() != tc.wantCode {
+				t.Errorf("expected code %v, got %v", tc.wantCode, connErr.Code())
+			}
+			if !strings.Contains(connErr.Error(), tc.wantSubstr) {
+				t.Errorf("expected error containing %q, got %q", tc.wantSubstr, connErr.Error())
 			}
 		})
 	}

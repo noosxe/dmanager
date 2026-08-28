@@ -41,6 +41,9 @@ const (
 	// AdminServiceListNetworksProcedure is the fully-qualified name of the AdminService's ListNetworks
 	// RPC.
 	AdminServiceListNetworksProcedure = "/dmanager.v1.AdminService/ListNetworks"
+	// AdminServiceDeleteImageProcedure is the fully-qualified name of the AdminService's DeleteImage
+	// RPC.
+	AdminServiceDeleteImageProcedure = "/dmanager.v1.AdminService/DeleteImage"
 )
 
 // AdminServiceClient is a client for the dmanager.v1.AdminService service.
@@ -51,6 +54,9 @@ type AdminServiceClient interface {
 	ListVolumes(context.Context, *connect.Request[v1.ListVolumesRequest]) (*connect.Response[v1.ListVolumesResponse], error)
 	// List networks present on the host (Authenticated, any role).
 	ListNetworks(context.Context, *connect.Request[v1.ListNetworksRequest]) (*connect.Response[v1.ListNetworksResponse], error)
+	// Delete an image from the host (Authenticated, admin role). The
+	// daemon refuses images referenced by any container regardless of force.
+	DeleteImage(context.Context, *connect.Request[v1.DeleteImageRequest]) (*connect.Response[v1.DeleteImageResponse], error)
 }
 
 // NewAdminServiceClient constructs a client for the dmanager.v1.AdminService service. By default,
@@ -82,6 +88,12 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("ListNetworks")),
 			connect.WithClientOptions(opts...),
 		),
+		deleteImage: connect.NewClient[v1.DeleteImageRequest, v1.DeleteImageResponse](
+			httpClient,
+			baseURL+AdminServiceDeleteImageProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("DeleteImage")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -90,6 +102,7 @@ type adminServiceClient struct {
 	listImages   *connect.Client[v1.ListImagesRequest, v1.ListImagesResponse]
 	listVolumes  *connect.Client[v1.ListVolumesRequest, v1.ListVolumesResponse]
 	listNetworks *connect.Client[v1.ListNetworksRequest, v1.ListNetworksResponse]
+	deleteImage  *connect.Client[v1.DeleteImageRequest, v1.DeleteImageResponse]
 }
 
 // ListImages calls dmanager.v1.AdminService.ListImages.
@@ -107,6 +120,11 @@ func (c *adminServiceClient) ListNetworks(ctx context.Context, req *connect.Requ
 	return c.listNetworks.CallUnary(ctx, req)
 }
 
+// DeleteImage calls dmanager.v1.AdminService.DeleteImage.
+func (c *adminServiceClient) DeleteImage(ctx context.Context, req *connect.Request[v1.DeleteImageRequest]) (*connect.Response[v1.DeleteImageResponse], error) {
+	return c.deleteImage.CallUnary(ctx, req)
+}
+
 // AdminServiceHandler is an implementation of the dmanager.v1.AdminService service.
 type AdminServiceHandler interface {
 	// List images present on the host (Authenticated, any role).
@@ -115,6 +133,9 @@ type AdminServiceHandler interface {
 	ListVolumes(context.Context, *connect.Request[v1.ListVolumesRequest]) (*connect.Response[v1.ListVolumesResponse], error)
 	// List networks present on the host (Authenticated, any role).
 	ListNetworks(context.Context, *connect.Request[v1.ListNetworksRequest]) (*connect.Response[v1.ListNetworksResponse], error)
+	// Delete an image from the host (Authenticated, admin role). The
+	// daemon refuses images referenced by any container regardless of force.
+	DeleteImage(context.Context, *connect.Request[v1.DeleteImageRequest]) (*connect.Response[v1.DeleteImageResponse], error)
 }
 
 // NewAdminServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -142,6 +163,12 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("ListNetworks")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceDeleteImageHandler := connect.NewUnaryHandler(
+		AdminServiceDeleteImageProcedure,
+		svc.DeleteImage,
+		connect.WithSchema(adminServiceMethods.ByName("DeleteImage")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/dmanager.v1.AdminService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AdminServiceListImagesProcedure:
@@ -150,6 +177,8 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceListVolumesHandler.ServeHTTP(w, r)
 		case AdminServiceListNetworksProcedure:
 			adminServiceListNetworksHandler.ServeHTTP(w, r)
+		case AdminServiceDeleteImageProcedure:
+			adminServiceDeleteImageHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -169,4 +198,8 @@ func (UnimplementedAdminServiceHandler) ListVolumes(context.Context, *connect.Re
 
 func (UnimplementedAdminServiceHandler) ListNetworks(context.Context, *connect.Request[v1.ListNetworksRequest]) (*connect.Response[v1.ListNetworksResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AdminService.ListNetworks is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) DeleteImage(context.Context, *connect.Request[v1.DeleteImageRequest]) (*connect.Response[v1.DeleteImageResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AdminService.DeleteImage is not implemented"))
 }

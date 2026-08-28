@@ -14,14 +14,17 @@ export type AdminResourcesResult =
 
 /**
  * Fetches one kind of Docker host resource (images, volumes, networks) from
- * the AdminService. Read-only by design: no polling or streaming — data is
- * fetched on mount, on tab change, and on manual refresh only.
+ * the AdminService, plus the images-tab deletion mutation. Lists have no
+ * polling or streaming — data is fetched on mount, on tab change, and on
+ * manual refresh only; deletion re-fetches via refresh().
  */
 export function useAdminResources(kind: AdminResourceKind) {
   const [result, setResult] = useState<AdminResourcesResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -29,6 +32,7 @@ export function useAdminResources(kind: AdminResourceKind) {
     const fetchResources = async () => {
       setIsLoading(true);
       setError(null);
+      setDeleteError(null);
       try {
         let next: AdminResourcesResult;
         if (kind === "images") {
@@ -68,5 +72,31 @@ export function useAdminResources(kind: AdminResourceKind) {
     setRefreshNonce((n) => n + 1);
   }, []);
 
-  return { result, isLoading, error, refresh };
+  // Deletes one image at a time; the daemon is the source of truth so a
+  // successful delete simply triggers a re-fetch rather than patching state.
+  const deleteImage = useCallback(
+    async (id: string) => {
+      if (deletingId !== null) {
+        return;
+      }
+      setDeletingId(id);
+      setDeleteError(null);
+      try {
+        // force=true avoids spurious tag-conflict failures for multi-tag
+        // images; the daemon still refuses images in use (design.md §9.7).
+        await adminClient.deleteImage({ id, force: true });
+      } catch (err: unknown) {
+        console.error("Failed to delete image:", err);
+        const msg = err instanceof Error ? err.message : String(err);
+        setDeleteError(`Failed to delete image: ${msg}`);
+        return;
+      } finally {
+        setDeletingId(null);
+      }
+      refresh();
+    },
+    [deletingId, refresh],
+  );
+
+  return { result, isLoading, error, refresh, deleteImage, deletingId, deleteError };
 }

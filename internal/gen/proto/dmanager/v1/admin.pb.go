@@ -512,6 +512,97 @@ func (x *Network) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+type DeleteImageRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Image ID (sha256:...) exactly as returned by ListImages.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Bypass tag-conflict errors for multi-tag images; the daemon still
+	// refuses images referenced by any container.
+	Force         bool `protobuf:"varint,2,opt,name=force,proto3" json:"force,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteImageRequest) Reset() {
+	*x = DeleteImageRequest{}
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteImageRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteImageRequest) ProtoMessage() {}
+
+func (x *DeleteImageRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteImageRequest.ProtoReflect.Descriptor instead.
+func (*DeleteImageRequest) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *DeleteImageRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *DeleteImageRequest) GetForce() bool {
+	if x != nil {
+		return x.Force
+	}
+	return false
+}
+
+type DeleteImageResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteImageResponse) Reset() {
+	*x = DeleteImageResponse{}
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteImageResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteImageResponse) ProtoMessage() {}
+
+func (x *DeleteImageResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteImageResponse.ProtoReflect.Descriptor instead.
+func (*DeleteImageResponse) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{10}
+}
+
 var File_proto_dmanager_v1_admin_proto protoreflect.FileDescriptor
 
 const file_proto_dmanager_v1_admin_proto_rawDesc = "" +
@@ -552,12 +643,17 @@ const file_proto_dmanager_v1_admin_proto_rawDesc = "" +
 	"\x05scope\x18\x04 \x01(\tR\x05scope\x12\x1a\n" +
 	"\binternal\x18\x05 \x01(\bR\binternal\x129\n" +
 	"\n" +
-	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt2\x84\x02\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\":\n" +
+	"\x12DeleteImageRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
+	"\x05force\x18\x02 \x01(\bR\x05force\"\x15\n" +
+	"\x13DeleteImageResponse2\xd6\x02\n" +
 	"\fAdminService\x12M\n" +
 	"\n" +
 	"ListImages\x12\x1e.dmanager.v1.ListImagesRequest\x1a\x1f.dmanager.v1.ListImagesResponse\x12P\n" +
 	"\vListVolumes\x12\x1f.dmanager.v1.ListVolumesRequest\x1a .dmanager.v1.ListVolumesResponse\x12S\n" +
-	"\fListNetworks\x12 .dmanager.v1.ListNetworksRequest\x1a!.dmanager.v1.ListNetworksResponseB4Z2dmanager/internal/gen/proto/dmanager/v1;dmanagerv1b\x06proto3"
+	"\fListNetworks\x12 .dmanager.v1.ListNetworksRequest\x1a!.dmanager.v1.ListNetworksResponse\x12P\n" +
+	"\vDeleteImage\x12\x1f.dmanager.v1.DeleteImageRequest\x1a .dmanager.v1.DeleteImageResponseB4Z2dmanager/internal/gen/proto/dmanager/v1;dmanagerv1b\x06proto3"
 
 var (
 	file_proto_dmanager_v1_admin_proto_rawDescOnce sync.Once
@@ -571,7 +667,7 @@ func file_proto_dmanager_v1_admin_proto_rawDescGZIP() []byte {
 	return file_proto_dmanager_v1_admin_proto_rawDescData
 }
 
-var file_proto_dmanager_v1_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_proto_dmanager_v1_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_proto_dmanager_v1_admin_proto_goTypes = []any{
 	(*ListImagesRequest)(nil),     // 0: dmanager.v1.ListImagesRequest
 	(*ListImagesResponse)(nil),    // 1: dmanager.v1.ListImagesResponse
@@ -582,24 +678,28 @@ var file_proto_dmanager_v1_admin_proto_goTypes = []any{
 	(*ListNetworksRequest)(nil),   // 6: dmanager.v1.ListNetworksRequest
 	(*ListNetworksResponse)(nil),  // 7: dmanager.v1.ListNetworksResponse
 	(*Network)(nil),               // 8: dmanager.v1.Network
-	nil,                           // 9: dmanager.v1.Volume.LabelsEntry
-	(*timestamppb.Timestamp)(nil), // 10: google.protobuf.Timestamp
+	(*DeleteImageRequest)(nil),    // 9: dmanager.v1.DeleteImageRequest
+	(*DeleteImageResponse)(nil),   // 10: dmanager.v1.DeleteImageResponse
+	nil,                           // 11: dmanager.v1.Volume.LabelsEntry
+	(*timestamppb.Timestamp)(nil), // 12: google.protobuf.Timestamp
 }
 var file_proto_dmanager_v1_admin_proto_depIdxs = []int32{
 	2,  // 0: dmanager.v1.ListImagesResponse.images:type_name -> dmanager.v1.Image
 	5,  // 1: dmanager.v1.ListVolumesResponse.volumes:type_name -> dmanager.v1.Volume
-	10, // 2: dmanager.v1.Volume.created_at:type_name -> google.protobuf.Timestamp
-	9,  // 3: dmanager.v1.Volume.labels:type_name -> dmanager.v1.Volume.LabelsEntry
+	12, // 2: dmanager.v1.Volume.created_at:type_name -> google.protobuf.Timestamp
+	11, // 3: dmanager.v1.Volume.labels:type_name -> dmanager.v1.Volume.LabelsEntry
 	8,  // 4: dmanager.v1.ListNetworksResponse.networks:type_name -> dmanager.v1.Network
-	10, // 5: dmanager.v1.Network.created_at:type_name -> google.protobuf.Timestamp
+	12, // 5: dmanager.v1.Network.created_at:type_name -> google.protobuf.Timestamp
 	0,  // 6: dmanager.v1.AdminService.ListImages:input_type -> dmanager.v1.ListImagesRequest
 	3,  // 7: dmanager.v1.AdminService.ListVolumes:input_type -> dmanager.v1.ListVolumesRequest
 	6,  // 8: dmanager.v1.AdminService.ListNetworks:input_type -> dmanager.v1.ListNetworksRequest
-	1,  // 9: dmanager.v1.AdminService.ListImages:output_type -> dmanager.v1.ListImagesResponse
-	4,  // 10: dmanager.v1.AdminService.ListVolumes:output_type -> dmanager.v1.ListVolumesResponse
-	7,  // 11: dmanager.v1.AdminService.ListNetworks:output_type -> dmanager.v1.ListNetworksResponse
-	9,  // [9:12] is the sub-list for method output_type
-	6,  // [6:9] is the sub-list for method input_type
+	9,  // 9: dmanager.v1.AdminService.DeleteImage:input_type -> dmanager.v1.DeleteImageRequest
+	1,  // 10: dmanager.v1.AdminService.ListImages:output_type -> dmanager.v1.ListImagesResponse
+	4,  // 11: dmanager.v1.AdminService.ListVolumes:output_type -> dmanager.v1.ListVolumesResponse
+	7,  // 12: dmanager.v1.AdminService.ListNetworks:output_type -> dmanager.v1.ListNetworksResponse
+	10, // 13: dmanager.v1.AdminService.DeleteImage:output_type -> dmanager.v1.DeleteImageResponse
+	10, // [10:14] is the sub-list for method output_type
+	6,  // [6:10] is the sub-list for method input_type
 	6,  // [6:6] is the sub-list for extension type_name
 	6,  // [6:6] is the sub-list for extension extendee
 	0,  // [0:6] is the sub-list for field type_name
@@ -616,7 +716,7 @@ func file_proto_dmanager_v1_admin_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_dmanager_v1_admin_proto_rawDesc), len(file_proto_dmanager_v1_admin_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

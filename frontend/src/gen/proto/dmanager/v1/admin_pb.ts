@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file proto/dmanager/v1/admin.proto.
  */
 export const file_proto_dmanager_v1_admin: GenFile = /*@__PURE__*/
-  fileDesc("Ch1wcm90by9kbWFuYWdlci92MS9hZG1pbi5wcm90bxILZG1hbmFnZXIudjEiEwoRTGlzdEltYWdlc1JlcXVlc3QiOAoSTGlzdEltYWdlc1Jlc3BvbnNlEiIKBmltYWdlcxgBIAMoCzISLmRtYW5hZ2VyLnYxLkltYWdlImoKBUltYWdlEgoKAmlkGAEgASgJEhEKCXJlcG9fdGFncxgCIAMoCRIUCgxjcmVhdGVkX3VuaXgYAyABKAMSEgoKc2l6ZV9ieXRlcxgEIAEoAxIYChBjb250YWluZXJzX2NvdW50GAUgASgDIhQKEkxpc3RWb2x1bWVzUmVxdWVzdCI7ChNMaXN0Vm9sdW1lc1Jlc3BvbnNlEiQKB3ZvbHVtZXMYASADKAsyEy5kbWFuYWdlci52MS5Wb2x1bWUiygEKBlZvbHVtZRIMCgRuYW1lGAEgASgJEg4KBmRyaXZlchgCIAEoCRISCgptb3VudHBvaW50GAMgASgJEi4KCmNyZWF0ZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi8KBmxhYmVscxgFIAMoCzIfLmRtYW5hZ2VyLnYxLlZvbHVtZS5MYWJlbHNFbnRyeRotCgtMYWJlbHNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIhUKE0xpc3ROZXR3b3Jrc1JlcXVlc3QiPgoUTGlzdE5ldHdvcmtzUmVzcG9uc2USJgoIbmV0d29ya3MYASADKAsyFC5kbWFuYWdlci52MS5OZXR3b3JrIoQBCgdOZXR3b3JrEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSDgoGZHJpdmVyGAMgASgJEg0KBXNjb3BlGAQgASgJEhAKCGludGVybmFsGAUgASgIEi4KCmNyZWF0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wMoQCCgxBZG1pblNlcnZpY2USTQoKTGlzdEltYWdlcxIeLmRtYW5hZ2VyLnYxLkxpc3RJbWFnZXNSZXF1ZXN0Gh8uZG1hbmFnZXIudjEuTGlzdEltYWdlc1Jlc3BvbnNlElAKC0xpc3RWb2x1bWVzEh8uZG1hbmFnZXIudjEuTGlzdFZvbHVtZXNSZXF1ZXN0GiAuZG1hbmFnZXIudjEuTGlzdFZvbHVtZXNSZXNwb25zZRJTCgxMaXN0TmV0d29ya3MSIC5kbWFuYWdlci52MS5MaXN0TmV0d29ya3NSZXF1ZXN0GiEuZG1hbmFnZXIudjEuTGlzdE5ldHdvcmtzUmVzcG9uc2VCNFoyZG1hbmFnZXIvaW50ZXJuYWwvZ2VuL3Byb3RvL2RtYW5hZ2VyL3YxO2RtYW5hZ2VydjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
+  fileDesc("Ch1wcm90by9kbWFuYWdlci92MS9hZG1pbi5wcm90bxILZG1hbmFnZXIudjEiEwoRTGlzdEltYWdlc1JlcXVlc3QiOAoSTGlzdEltYWdlc1Jlc3BvbnNlEiIKBmltYWdlcxgBIAMoCzISLmRtYW5hZ2VyLnYxLkltYWdlImoKBUltYWdlEgoKAmlkGAEgASgJEhEKCXJlcG9fdGFncxgCIAMoCRIUCgxjcmVhdGVkX3VuaXgYAyABKAMSEgoKc2l6ZV9ieXRlcxgEIAEoAxIYChBjb250YWluZXJzX2NvdW50GAUgASgDIhQKEkxpc3RWb2x1bWVzUmVxdWVzdCI7ChNMaXN0Vm9sdW1lc1Jlc3BvbnNlEiQKB3ZvbHVtZXMYASADKAsyEy5kbWFuYWdlci52MS5Wb2x1bWUiygEKBlZvbHVtZRIMCgRuYW1lGAEgASgJEg4KBmRyaXZlchgCIAEoCRISCgptb3VudHBvaW50GAMgASgJEi4KCmNyZWF0ZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi8KBmxhYmVscxgFIAMoCzIfLmRtYW5hZ2VyLnYxLlZvbHVtZS5MYWJlbHNFbnRyeRotCgtMYWJlbHNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIhUKE0xpc3ROZXR3b3Jrc1JlcXVlc3QiPgoUTGlzdE5ldHdvcmtzUmVzcG9uc2USJgoIbmV0d29ya3MYASADKAsyFC5kbWFuYWdlci52MS5OZXR3b3JrIoQBCgdOZXR3b3JrEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSDgoGZHJpdmVyGAMgASgJEg0KBXNjb3BlGAQgASgJEhAKCGludGVybmFsGAUgASgIEi4KCmNyZWF0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIi8KEkRlbGV0ZUltYWdlUmVxdWVzdBIKCgJpZBgBIAEoCRINCgVmb3JjZRgCIAEoCCIVChNEZWxldGVJbWFnZVJlc3BvbnNlMtYCCgxBZG1pblNlcnZpY2USTQoKTGlzdEltYWdlcxIeLmRtYW5hZ2VyLnYxLkxpc3RJbWFnZXNSZXF1ZXN0Gh8uZG1hbmFnZXIudjEuTGlzdEltYWdlc1Jlc3BvbnNlElAKC0xpc3RWb2x1bWVzEh8uZG1hbmFnZXIudjEuTGlzdFZvbHVtZXNSZXF1ZXN0GiAuZG1hbmFnZXIudjEuTGlzdFZvbHVtZXNSZXNwb25zZRJTCgxMaXN0TmV0d29ya3MSIC5kbWFuYWdlci52MS5MaXN0TmV0d29ya3NSZXF1ZXN0GiEuZG1hbmFnZXIudjEuTGlzdE5ldHdvcmtzUmVzcG9uc2USUAoLRGVsZXRlSW1hZ2USHy5kbWFuYWdlci52MS5EZWxldGVJbWFnZVJlcXVlc3QaIC5kbWFuYWdlci52MS5EZWxldGVJbWFnZVJlc3BvbnNlQjRaMmRtYW5hZ2VyL2ludGVybmFsL2dlbi9wcm90by9kbWFuYWdlci92MTtkbWFuYWdlcnYxYgZwcm90bzM", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message dmanager.v1.ListImagesRequest
@@ -248,10 +248,50 @@ export const NetworkSchema: GenMessage<Network> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_admin, 8);
 
 /**
- * AdminService exposes read-only inventories of Docker host resources
- * (images, volumes, networks) for the Administration page. It is
- * intentionally read-only: no create, mutate, or prune procedures are
- * defined.
+ * @generated from message dmanager.v1.DeleteImageRequest
+ */
+export type DeleteImageRequest = Message<"dmanager.v1.DeleteImageRequest"> & {
+  /**
+   * Image ID (sha256:...) exactly as returned by ListImages.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * Bypass tag-conflict errors for multi-tag images; the daemon still
+   * refuses images referenced by any container.
+   *
+   * @generated from field: bool force = 2;
+   */
+  force: boolean;
+};
+
+/**
+ * Describes the message dmanager.v1.DeleteImageRequest.
+ * Use `create(DeleteImageRequestSchema)` to create a new message.
+ */
+export const DeleteImageRequestSchema: GenMessage<DeleteImageRequest> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_admin, 9);
+
+/**
+ * @generated from message dmanager.v1.DeleteImageResponse
+ */
+export type DeleteImageResponse = Message<"dmanager.v1.DeleteImageResponse"> & {
+};
+
+/**
+ * Describes the message dmanager.v1.DeleteImageResponse.
+ * Use `create(DeleteImageResponseSchema)` to create a new message.
+ */
+export const DeleteImageResponseSchema: GenMessage<DeleteImageResponse> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_admin, 10);
+
+/**
+ * AdminService exposes Docker host resources (images, volumes, networks)
+ * for the Administration page. Lists are read-only for every role;
+ * image deletion is admin-gated. Volumes and networks have no mutating
+ * procedures.
  *
  * @generated from service dmanager.v1.AdminService
  */
@@ -285,6 +325,17 @@ export const AdminService: GenService<{
     methodKind: "unary";
     input: typeof ListNetworksRequestSchema;
     output: typeof ListNetworksResponseSchema;
+  },
+  /**
+   * Delete an image from the host (Authenticated, admin role). The
+   * daemon refuses images referenced by any container regardless of force.
+   *
+   * @generated from rpc dmanager.v1.AdminService.DeleteImage
+   */
+  deleteImage: {
+    methodKind: "unary";
+    input: typeof DeleteImageRequestSchema;
+    output: typeof DeleteImageResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_proto_dmanager_v1_admin, 0);
