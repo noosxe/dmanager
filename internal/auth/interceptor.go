@@ -117,6 +117,9 @@ var procedureRoles = map[string]ProcedureRole{
 	dmanagerv1connect.SettingsServiceGetRegistryStatusProcedure:     RoleViewer,
 	dmanagerv1connect.LogServiceGetSystemLogsProcedure:              RoleViewer,
 	dmanagerv1connect.LogServiceSyncLogsProcedure:                   RoleViewer,
+	dmanagerv1connect.AdminServiceListImagesProcedure:               RoleViewer,
+	dmanagerv1connect.AdminServiceListVolumesProcedure:              RoleViewer,
+	dmanagerv1connect.AdminServiceListNetworksProcedure:             RoleViewer,
 
 	// Admin procedures (requires User.Role == "admin")
 	dmanagerv1connect.ContainerServiceStartContainerProcedure:         RoleAdmin,

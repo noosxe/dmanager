@@ -231,6 +231,7 @@ func TestProcedureClassificationCoverage(t *testing.T) {
 		v1.File_proto_dmanager_v1_container_proto,
 		v1.File_proto_dmanager_v1_log_proto,
 		v1.File_proto_dmanager_v1_settings_proto,
+		v1.File_proto_dmanager_v1_admin_proto,
 	}
 
 	var totalProcedures int
