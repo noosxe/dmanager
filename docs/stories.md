@@ -66,6 +66,7 @@ graph TD
     A58 --> A59["STORY-059: Reusable Dialog System + ConfirmDialog (issue #176) (DONE)"]
     A59 --> A60["STORY-060: Image Delete via ConfirmDialog (#177) (DONE)"]
     A59 --> A61["STORY-061: Passkey & Destructive Confirmations (#178) (DONE)"]
+    A61 --> A62["STORY-062: Administration Containers-Style Layout (#189)"]
 ```
 
 
@@ -1320,3 +1321,18 @@ graph TD
 - **Validation Check:**
   - `pnpm check`, `pnpm test` (88/88), `pnpm build` pass.
   - Behavior preserved: per-action in-flight spinners, optimistic session rollback, toast wording, auth-events refetch.
+
+### STORY-062: Administration Containers-Style Layout (issue #189)
+- **Scope:** Frontend only — Administration page shell restyle; no behavior changes
+- **Estimated Size:** Small (~60 LOC)
+- **Dependencies:** none
+- **Goal:** Per #189 / design.md §9.4 (amended): the Administration shell adopts the Containers page layout vocabulary — full-bleed flex column (no double padding, no 1100px cap), `.dashboard-header` + `h2` + subtitle, accent **Sync Now** refresh; the tab bar remains the only Settings-derived element; shared-class stats/banner without inline margins.
+- **Tasks:**
+  1. `Administration.tsx`: root wrapper → `flex` column `gap: 24px` full width (drop inline padding/maxWidth/margin); header → `.dashboard-header`/`.header-title-section` with h2 + subtitle; Refresh button → `auth-submit-btn` "Sync Now" with `spinner` class while loading; drop inline `margin: 16px 0` from `stats-grid` and `marginBottom` from the error banner.
+  2. `Administration.test.tsx`: update the `/refresh/i` selector to the new label; keep all layout-agnostic assertions (tabs, stats, tables, deletion) untouched.
+- **Files Affected:**
+  - `frontend/src/components/Administration.tsx`
+  - `frontend/src/components/Administration.test.tsx`
+- **Validation Check:**
+  - `pnpm check`, `pnpm test`, `pnpm build` pass.
+  - Visual: Administration header/stat/table spacing matches the containers dashboard rhythm; tabs unchanged.

@@ -437,8 +437,12 @@ A read-only Administration page exposing Docker host resource inventories. This 
 * **Sidebar (`DashboardLayout.tsx`):** New `menu-item` Link placed **between System Logs and Settings**, using the lucide `Boxes` icon, `to="/administration/$tab"` with `params={{ tab: "images" }}`, and `activeOptions={{ exact: false }}` so any tab highlights it. Resulting order: Containers, System Logs, Administration, Settings.
 
 ### 9.4. Page Component & Tabs
-* **`src/components/Administration.tsx`:** Page shell with a page header and a tab bar built exactly like `Settings.tsx` — `settings-nav-tabs` / `settings-nav-tab` CSS classes (shared tab styles), `active` class driven by the resolved tab, and tab state synced from `useParams({ strict: false })` so browser back/forward and deep links work.
-* **Data hook:** `src/hooks/useAdminResources.ts` — one hook parameterized by resource kind; fetches on mount and tab activation, exposes `{ data, isLoading, error, refresh }`; a header Refresh button triggers manual re-fetch. No polling/streaming.
+* **`src/components/Administration.tsx`:** Page shell mirrors the **Containers page** (`ContainerGrid.tsx`) layout vocabulary; the tab bar is the *only* Settings-derived element (#189):
+  - **Root:** `flex` column with `gap: 24px`, full width. No outer padding (DashboardLayout's `main-container` already pads — the previous shell double-padded) and no `maxWidth` cap: inventories use the same full-bleed width as the containers dashboard.
+  - **Header:** `.dashboard-header` + `.header-title-section` — `h2` "Administration" plus a one-line subtitle describing the page — with the manual re-fetch as an accent `auth-submit-btn` labeled **Sync Now** (same vocabulary and in-flight spinner as the containers page; replaces the former secondary-style Refresh button).
+  - **Tab bar:** `settings-nav-tabs` / `settings-nav-tab` CSS classes exactly as shipped — the deliberate single Settings similarity — `active` class driven by the resolved tab, and tab state synced from `useParams({ strict: false })` so browser back/forward and deep links work.
+  - **Stat cards & banner:** §9.6 cards and the error banner use the shared `stats-grid` / `auth-error-banner` classes with no inline margins; the root gap carries the vertical rhythm, matching the containers page.
+* **Data hook:** `src/hooks/useAdminResources.ts` — one hook parameterized by resource kind; fetches on mount and tab activation, exposes `{ data, isLoading, error, refresh }`; the header **Sync Now** button triggers manual re-fetch. No polling/streaming.
 * **Client:** `adminClient` added to `src/client.ts` via `createClient(AdminService, transport)`.
 
 ### 9.5. Resource Tables
