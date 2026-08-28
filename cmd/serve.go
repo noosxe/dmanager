@@ -17,6 +17,7 @@ import (
 	connect "connectrpc.com/connect"
 	"github.com/spf13/cobra"
 
+	"dmanager/internal/admin"
 	"dmanager/internal/auth"
 	"dmanager/internal/config"
 	"dmanager/internal/container"
@@ -168,6 +169,14 @@ var serveCmd = &cobra.Command{
 			connect.WithInterceptors(authInterceptor),
 		)
 		mux.Handle(settingsPath, settingsHandler)
+
+		// Register AdminService (read-only Docker resource inventories)
+		adminSvc := admin.NewService(dockerClient, logger.With("module", "admin"))
+		adminPath, adminHandler := dmanagerv1connect.NewAdminServiceHandler(
+			adminSvc,
+			connect.WithInterceptors(authInterceptor),
+		)
+		mux.Handle(adminPath, adminHandler)
 
 		// Start background registry update checker scheduler
 		container.StartScheduler(srvCtx, containerSvc, cfg.Scheduler.IntervalMinutes)

@@ -1,0 +1,92 @@
+syntax = "proto3";
+
+package dmanager.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "dmanager/internal/gen/proto/dmanager/v1;dmanagerv1";
+
+// AdminService exposes read-only inventories of Docker host resources
+// (images, volumes, networks) for the Administration page. It is
+// intentionally read-only: no create, mutate, or prune procedures are
+// defined.
+service AdminService {
+  // List images present on the host (Authenticated, any role).
+  rpc ListImages(ListImagesRequest) returns (ListImagesResponse);
+
+  // List volumes present on the host (Authenticated, any role).
+  rpc ListVolumes(ListVolumesRequest) returns (ListVolumesResponse);
+
+  // List networks present on the host (Authenticated, any role).
+  rpc ListNetworks(ListNetworksRequest) returns (ListNetworksResponse);
+}
+
+message ListImagesRequest {}
+
+message ListImagesResponse {
+  repeated Image images = 1;
+}
+
+message Image {
+  // Image ID (sha256:...), rendered short-form client-side.
+  string id = 1;
+
+  // Repository tags (e.g. ["nginx:latest"]); empty for dangling images.
+  repeated string repo_tags = 2;
+
+  // Image creation time as Unix seconds.
+  int64 created_unix = 3;
+
+  // On-disk size in bytes.
+  int64 size_bytes = 4;
+
+  // Number of containers referencing this image; -1 when the daemon
+  // did not calculate the value.
+  int64 containers_count = 5;
+}
+
+message ListVolumesRequest {}
+
+message ListVolumesResponse {
+  repeated Volume volumes = 1;
+}
+
+message Volume {
+  string name = 1;
+
+  // Volume driver (e.g. "local").
+  string driver = 2;
+
+  // Host mount path, rendered truncated client-side.
+  string mountpoint = 3;
+
+  google.protobuf.Timestamp created_at = 4;
+
+  // User-defined key/value metadata.
+  map<string, string> labels = 5;
+}
+
+message ListNetworksRequest {}
+
+message ListNetworksResponse {
+  repeated Network networks = 1;
+}
+
+message Network {
+  // Network ID (sha256:...), rendered short-form client-side.
+  string id = 1;
+
+  // Network name (e.g. "bridge").
+  string name = 2;
+
+  // Network driver (e.g. "bridge", "host", "overlay").
+  string driver = 3;
+
+  // Network scope ("local", "swarm", or "global").
+  string scope = 4;
+
+  // Whether the network is isolated from external routing.
+  bool internal = 5;
+
+  google.protobuf.Timestamp created_at = 6;
+}
