@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { adminClient } from "../client";
 import type {
+  DeleteImageResponse,
   Image,
   ListImagesResponse,
   ListNetworksResponse,
@@ -12,7 +13,15 @@ import type {
 } from "../gen/proto/dmanager/v1/admin_pb";
 import { Administration } from "./Administration";
 
-const { useParamsMock } = vi.hoisted(() => ({ useParamsMock: vi.fn() }));
+const { mockUseAuth, useParamsMock } = vi.hoisted(() => ({
+  mockUseAuth: vi.fn(),
+  useParamsMock: vi.fn(),
+}));
+
+// Mock useAuth — Administration gates the delete action on the admin role.
+vi.mock("../hooks/useAuth", () => ({
+  useAuth: () => mockUseAuth(),
+}));
 
 // Mock @tanstack/react-router
 vi.mock("@tanstack/react-router", () => ({
@@ -45,6 +54,7 @@ vi.mock("../client", () => ({
     listImages: vi.fn(),
     listVolumes: vi.fn(),
     listNetworks: vi.fn(),
+    deleteImage: vi.fn(),
   },
 }));
 
@@ -67,6 +77,24 @@ const mockImages: Image[] = [
     containersCount: -1n,
   } as unknown as Image,
 ];
+
+// Fixture variant where the first image is unused (count 0) and deletable.
+const deletableImages: Image[] = [
+  {
+    id: "sha256:bbb222333444555666777888999000111222333444555666777888999000111",
+    repoTags: ["busybox:1.36"],
+    createdUnix: twoHoursAgoUnix,
+    sizeBytes: 4194304n,
+    containersCount: 0n,
+  } as unknown as Image,
+  ...mockImages,
+];
+
+const stubDeletableImages = () =>
+  vi.mocked(adminClient.listImages).mockResolvedValue({
+    images: deletableImages,
+    $typeName: "dmanager.v1.ListImagesResponse",
+  } as unknown as ListImagesResponse);
 
 const mockVolumes: Volume[] = [
   {
@@ -105,8 +133,17 @@ const mockNetworks: Network[] = [
 ];
 
 describe("Administration Component", () => {
+  // Never let fake timers leak between tests (waitFor would hang forever).
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseAuth.mockReturnValue({ user: { username: "admin", role: "admin" } });
+    vi.mocked(adminClient.deleteImage).mockResolvedValue({
+      $typeName: "dmanager.v1.DeleteImageResponse",
+    } as unknown as DeleteImageResponse);
     useParamsMock.mockReturnValue({ tab: "images" });
     vi.mocked(adminClient.listImages).mockResolvedValue({
       images: mockImages,
@@ -150,8 +187,9 @@ describe("Administration Component", () => {
     expect(screen.getAllByText("2 hours ago")).toHaveLength(2);
 
     // Dangling image: <none> repository and tag, unknown container count.
+    // Em dashes: dangling in-use cell + both inert Actions cells.
     expect(screen.getAllByText("<none>")).toHaveLength(2);
-    expect(screen.getByText("—")).toBeInTheDocument();
+    expect(screen.getAllByText("—")).toHaveLength(3);
   });
 
   it("renders the volumes tab with columns, labels and missing dates", async () => {
@@ -306,6 +344,112 @@ describe("Administration Component", () => {
     expect(screen.getByText("0 B")).toBeInTheDocument();
     // Image count (card) and the nginx in-use cell both render 3.
     expect(screen.getAllByText("3")).toHaveLength(2);
+  });
+
+  it("gates the delete action to unused images", async () => {
+    stubDeletableImages();
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("busybox")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Actions")).toBeInTheDocument();
+    // Unused image: enabled delete button for an admin.
+    const deleteBtn = screen.getByTitle("Delete image");
+    expect(deleteBtn).toBeEnabled();
+    // In-use (>0) and unknown (-1) rows render em dashes in the Actions cell,
+    // and the dangling row's in-use cell adds a third (design: -1 shows —).
+    expect(screen.getAllByText("—")).toHaveLength(3);
+  });
+
+  it("disables the delete action for viewer-role users", async () => {
+    mockUseAuth.mockReturnValue({ user: { username: "viewer", role: "viewer" } });
+    stubDeletableImages();
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("busybox")).toBeInTheDocument();
+    });
+
+    expect(screen.getByTitle("Admin required")).toBeDisabled();
+  });
+
+  it("requires a second click to confirm deletion, then refreshes", async () => {
+    stubDeletableImages();
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("busybox")).toBeInTheDocument();
+    });
+
+    // First click arms the inline confirm; the trash button is gone.
+    fireEvent.click(screen.getByTitle("Delete image"));
+    expect(screen.getByTitle("Confirm delete")).toBeInTheDocument();
+    expect(screen.queryByTitle("Delete image")).not.toBeInTheDocument();
+
+    // Second click dispatches with force and triggers a list re-fetch.
+    fireEvent.click(screen.getByTitle("Confirm delete"));
+    await waitFor(() => {
+      expect(adminClient.deleteImage).toHaveBeenCalledTimes(1);
+    });
+    expect(vi.mocked(adminClient.deleteImage).mock.calls[0][0]).toEqual({
+      id: "sha256:bbb222333444555666777888999000111222333444555666777888999000111",
+      force: true,
+    });
+    await waitFor(() => {
+      expect(adminClient.listImages).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it("resets the armed confirm after five seconds", async () => {
+    stubDeletableImages();
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("busybox")).toBeInTheDocument();
+    });
+
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByTitle("Delete image"));
+    expect(screen.getByTitle("Confirm delete")).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(screen.queryByTitle("Confirm delete")).not.toBeInTheDocument();
+    expect(screen.getByTitle("Delete image")).toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
+  it("shows a spinner while deleting and an error banner on failure", async () => {
+    stubDeletableImages();
+    let rejectDelete!: (err: Error) => void;
+    vi.mocked(adminClient.deleteImage).mockImplementation(
+      () =>
+        new Promise<DeleteImageResponse>((_resolve, reject) => {
+          rejectDelete = reject;
+        }),
+    );
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("busybox")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTitle("Delete image"));
+    fireEvent.click(screen.getByTitle("Confirm delete"));
+
+    // Spinner while the deletion is in flight.
+    expect(document.querySelector(".animate-spin")).not.toBeNull();
+
+    rejectDelete(new Error("[failed_precondition] conflict"));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Failed to delete image/)).toBeInTheDocument();
+    });
+    expect(screen.getByText(/failed_precondition/)).toBeInTheDocument();
+    expect(adminClient.listImages).toHaveBeenCalledTimes(1);
   });
 
   it("shows -- stat placeholders while the images list is loading", async () => {

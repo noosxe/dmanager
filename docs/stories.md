@@ -61,7 +61,7 @@ graph TD
     S53 --> A54["STORY-054: Administration Backend, AdminService Read-Only List RPCs (DONE)"]
     A54 --> A55["STORY-055: Administration Frontend, Tabs, Tables & Navigation (DONE)"]
     A55 --> A56["STORY-056: Administration Images Stat Cards & Size-First Sorting (DONE)"]
-    A56 --> A57["STORY-057: Administration Image Deletion (Actions Column)"]
+    A56 --> A57["STORY-057: Administration Image Deletion (Actions Column) (DONE)"]
 ```
 
 
@@ -1216,7 +1216,7 @@ graph TD
   - Images tab shows the cards; Volumes and Networks tabs are unchanged.
   - Images table opens sorted by size descending.
 
-### STORY-057: Administration Image Deletion — Actions Column
+### STORY-057: Administration Image Deletion — Actions Column [DONE]
 - **Scope:** Backend (`AdminService.DeleteImage`) + frontend Images tab actions column
 - **Estimated Size:** Medium (~250 LOC)
 - **Dependencies:** `STORY-056`

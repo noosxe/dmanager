@@ -6,8 +6,8 @@ import {
   type SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { Image as ImageIcon } from "lucide-react";
-import { useState } from "react";
+import { Image as ImageIcon, Loader2, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { Image } from "../gen/proto/dmanager/v1/admin_pb";
 import { formatBytes, formatRelativeUnix, formatShortId, splitRepoTag } from "./adminFormat";
@@ -15,11 +15,13 @@ import { SortButton } from "./SortButton";
 
 interface ImageTableProps {
   images: Image[];
+  isAdmin: boolean;
+  deletingId: string | null;
+  onDelete: (id: string) => void;
 }
-
 // bigint columns are exposed to the sorter as numbers; double precision is
 // ample for image sizes and Unix seconds.
-const columns: ColumnDef<Image>[] = [
+const staticColumns: ColumnDef<Image>[] = [
   {
     id: "repository",
     accessorFn: (row) => splitRepoTag(row.repoTags[0]).repository,
@@ -91,8 +93,80 @@ const columns: ColumnDef<Image>[] = [
   },
 ];
 
-// Read-only image inventory table. No actions column by design.
-export function ImageTable({ images }: ImageTableProps) {
+// Image inventory table with a size-first default sort and an admin-gated
+// Actions column (design.md §9.7): unused images can be deleted via a
+// two-step inline confirm; in-use and unknown-usage rows are inert.
+export function ImageTable({ images, isAdmin, deletingId, onDelete }: ImageTableProps) {
+  // Arming state for the two-step inline confirm; resets after 5 seconds.
+  const [armedId, setArmedId] = useState<string | null>(null);
+  const armTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearArmTimer = () => {
+    if (armTimerRef.current !== null) {
+      clearTimeout(armTimerRef.current);
+      armTimerRef.current = null;
+    }
+  };
+
+  const armRow = (id: string) => {
+    setArmedId(id);
+    clearArmTimer();
+    armTimerRef.current = setTimeout(() => setArmedId(null), 5000);
+  };
+
+  // Second click dispatches. The row stays armed while the deletion is in
+  // flight so the confirm button can show its spinner; the 5-second timer
+  // from armRow still disarms it afterwards (and a successful delete makes
+  // the row disappear entirely via refresh).
+  const confirmDelete = (id: string) => {
+    onDelete(id);
+  };
+
+  useEffect(() => clearArmTimer, []);
+
+  const columns = useMemo<ColumnDef<Image>[]>(() => {
+    const actionsColumn: ColumnDef<Image> = {
+      id: "actions",
+      header: "Actions",
+      enableSorting: false,
+      cell: ({ row }) => {
+        const image = row.original;
+        // Only images with a calculated usage count of zero are deletable;
+        // in-use (>0) and unknown (-1) rows render an em dash.
+        if (image.containersCount !== 0n) {
+          return <span className="table-cell-date">—</span>;
+        }
+        const deleting = deletingId === image.id;
+        if (armedId === image.id) {
+          return (
+            <button
+              type="button"
+              className="card-action-btn stop"
+              disabled={!isAdmin || deleting}
+              onClick={() => confirmDelete(image.id)}
+              title="Confirm delete"
+            >
+              {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+              <span style={{ marginLeft: "6px" }}>Confirm delete</span>
+            </button>
+          );
+        }
+        return (
+          <button
+            type="button"
+            className="card-action-btn"
+            disabled={!isAdmin || deletingId !== null}
+            onClick={() => armRow(image.id)}
+            title={isAdmin ? "Delete image" : "Admin required"}
+          >
+            <Trash2 size={16} />
+          </button>
+        );
+      },
+    };
+    return [...staticColumns, actionsColumn];
+  }, [isAdmin, deletingId, armedId]);
+
   // Largest images first — disk-usage triage is the primary workflow.
   const [sorting, setSorting] = useState<SortingState>([{ id: "size", desc: true }]);
 

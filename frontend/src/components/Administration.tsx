@@ -13,21 +13,27 @@ import {
 
 import type { AdminResourceKind } from "../hooks/useAdminResources";
 import { useAdminResources } from "../hooks/useAdminResources";
+import { useAuth } from "../hooks/useAuth";
 import { deriveImageStats, formatBytes } from "./adminFormat";
 import { ImageTable } from "./ImageTable";
 import { NetworkTable } from "./NetworkTable";
 import { VolumeTable } from "./VolumeTable";
 
-// Read-only Administration page: Docker host resource inventories
-// (images, volumes, networks) behind three tabs. The tab comes from the
-// route param (validated by the router's beforeLoad guard).
+// Administration page: Docker host resource inventories (images,
+// volumes, networks) behind three tabs, plus admin-gated image deletion.
+// The tab comes from the route param (validated by the router's beforeLoad
+// guard).
 export function Administration() {
   const params = useParams({ strict: false }) as { tab?: string } | undefined;
   const routeTab = params?.tab;
   const tab: AdminResourceKind =
     routeTab === "volumes" || routeTab === "networks" ? routeTab : "images";
 
-  const { result, isLoading, error, refresh } = useAdminResources(tab);
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+
+  const { result, isLoading, error, refresh, deleteImage, deletingId, deleteError } =
+    useAdminResources(tab);
 
   // Derived Images-tab summary (design.md §9.6); null on other tabs or
   // while no successful images result exists yet (-- placeholders).
@@ -138,6 +144,13 @@ export function Administration() {
         </div>
       )}
 
+      {deleteError && (
+        <div className="auth-error-banner" style={{ marginBottom: "16px" }}>
+          <ShieldAlert size={18} className="auth-error-icon" />
+          <span>{deleteError}</span>
+        </div>
+      )}
+
       {isLoading && !result ? (
         <div
           style={{
@@ -152,7 +165,14 @@ export function Administration() {
         </div>
       ) : (
         <>
-          {result?.kind === "images" && <ImageTable images={result.data} />}
+          {result?.kind === "images" && (
+            <ImageTable
+              images={result.data}
+              isAdmin={isAdmin}
+              deletingId={deletingId}
+              onDelete={deleteImage}
+            />
+          )}
           {result?.kind === "volumes" && <VolumeTable volumes={result.data} />}
           {result?.kind === "networks" && <NetworkTable networks={result.data} />}
         </>

@@ -1,14 +1,17 @@
-// Package admin implements the AdminService, a read-only view over Docker
-// host resources (images, volumes, networks) for the Administration page.
+// Package admin implements the AdminService, a view over Docker host
+// resources (images, volumes, networks) for the Administration page,
+// plus admin-gated image deletion.
 package admin
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
 
 	connect "connectrpc.com/connect"
+	cerrdefs "github.com/containerd/errdefs"
 	"github.com/moby/moby/client"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -102,4 +105,28 @@ func (s *Service) ListNetworks(ctx context.Context, req *connect.Request[dmanage
 	}
 
 	return connect.NewResponse(&dmanagerv1.ListNetworksResponse{Networks: networks}), nil
+}
+
+// DeleteImage removes an image from the Docker host. The empty response is
+// deliberate: clients re-fetch ListImages for the authoritative inventory.
+func (s *Service) DeleteImage(ctx context.Context, req *connect.Request[dmanagerv1.DeleteImageRequest]) (*connect.Response[dmanagerv1.DeleteImageResponse], error) {
+	if req.Msg.Id == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("image ID is required"))
+	}
+
+	if _, err := s.dockerClient.ImageRemove(ctx, req.Msg.Id, client.ImageRemoveOptions{Force: req.Msg.Force}); err != nil {
+		switch {
+		case cerrdefs.IsNotFound(err):
+			s.logger.Error("Failed to delete image: not found on Docker host", "image_id", req.Msg.Id, "error", err)
+			return nil, connect.NewError(connect.CodeNotFound, errors.New("image not found on Docker host"))
+		case cerrdefs.IsConflict(err):
+			s.logger.Error("Failed to delete image: in use or tag conflict", "image_id", req.Msg.Id, "error", err)
+			return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("image is in use or has a tag conflict: %w", err))
+		default:
+			s.logger.Error("Failed to delete image", "image_id", req.Msg.Id, "error", err)
+			return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("failed to delete image: %w", err))
+		}
+	}
+
+	return connect.NewResponse(&dmanagerv1.DeleteImageResponse{}), nil
 }

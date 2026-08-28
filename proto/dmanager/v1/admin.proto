@@ -6,10 +6,10 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "dmanager/internal/gen/proto/dmanager/v1;dmanagerv1";
 
-// AdminService exposes read-only inventories of Docker host resources
-// (images, volumes, networks) for the Administration page. It is
-// intentionally read-only: no create, mutate, or prune procedures are
-// defined.
+// AdminService exposes Docker host resources (images, volumes, networks)
+// for the Administration page. Lists are read-only for every role;
+// image deletion is admin-gated. Volumes and networks have no mutating
+// procedures.
 service AdminService {
   // List images present on the host (Authenticated, any role).
   rpc ListImages(ListImagesRequest) returns (ListImagesResponse);
@@ -19,6 +19,10 @@ service AdminService {
 
   // List networks present on the host (Authenticated, any role).
   rpc ListNetworks(ListNetworksRequest) returns (ListNetworksResponse);
+
+  // Delete an image from the host (Authenticated, admin role). The
+  // daemon refuses images referenced by any container regardless of force.
+  rpc DeleteImage(DeleteImageRequest) returns (DeleteImageResponse);
 }
 
 message ListImagesRequest {}
@@ -90,3 +94,14 @@ message Network {
 
   google.protobuf.Timestamp created_at = 6;
 }
+
+message DeleteImageRequest {
+  // Image ID (sha256:...) exactly as returned by ListImages.
+  string id = 1;
+
+  // Bypass tag-conflict errors for multi-tag images; the daemon still
+  // refuses images referenced by any container.
+  bool force = 2;
+}
+
+message DeleteImageResponse {}
