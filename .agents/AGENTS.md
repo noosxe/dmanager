@@ -31,7 +31,7 @@ Before staging or committing any code, agents must verify local code standards:
   * Run Go formatter (`gofmt` or `goimports`).
   * Run Go compiler checking/vetting (`go vet ./...` or `golangci-lint run`).
 - **Frontend Changes**:
-  * Run Biome formatting and lint verification (`pnpm biome check` or `pnpm biome format`).
+  * Run Oxlint and Oxfmt verification (`pnpm check` or `pnpm format`).
 - **Build Checks**:
   * Ensure the Go binary successfully compiles (`go build -o /dev/null` or similar build command).
   * Ensure the React application successfully builds (`pnpm build`).

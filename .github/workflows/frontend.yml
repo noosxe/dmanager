@@ -46,8 +46,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run Biome Checks (Lint, Format, Imports)
-        run: pnpm biome ci
+      - name: Run Oxlint & Oxfmt Checks (Lint, Format, Imports)
+        run: pnpm check
 
       - name: Build Vite application
         run: pnpm build

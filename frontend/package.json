@@ -7,7 +7,10 @@
     "dev": "vite",
     "generate-assets": "pwa-assets-generator --preset minimal public/logo.svg",
     "build": "pnpm generate-assets && tsc -b && vite build && touch dist/.gitkeep",
-    "lint": "biome check .",
+    "lint": "oxlint",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "check": "oxlint && oxfmt --check",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -29,7 +32,6 @@
     "xterm": "^5.3.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.10",
     "@bufbuild/protoc-gen-es": "^2.14.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -41,6 +43,8 @@
     "@vitejs/plugin-react": "^6.1.0",
     "jsdom": "^29.1.1",
     "msw": "^2.15.0",
+    "oxfmt": "^0.65.0",
+    "oxlint": "^1.80.0",
     "typescript": "~7.0.2",
     "vite": "^8.2.2",
     "vitest": "^4.1.11"

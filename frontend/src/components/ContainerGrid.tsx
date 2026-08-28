@@ -13,6 +13,7 @@ import {
   Terminal,
 } from "lucide-react";
 import { useState } from "react";
+
 import { useAuth } from "../hooks/useAuth";
 import { useContainers } from "../hooks/useContainers";
 import { ContainerTable } from "./ContainerTable";
@@ -81,7 +82,7 @@ export function ContainerGrid() {
       if (filter === "stopped") return matchesSearch && c.state !== "running";
       return matchesSearch;
     })
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .toSorted((a, b) => a.name.localeCompare(b.name));
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px", width: "100%" }}>

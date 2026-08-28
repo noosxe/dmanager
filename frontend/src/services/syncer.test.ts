@@ -1,5 +1,6 @@
 import { Code, ConnectError } from "@connectrpc/connect";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
 import { logClient } from "../client";
 import { logDb } from "./logger";
 import { syncPendingLogs } from "./syncer";
@@ -43,8 +44,22 @@ describe("Browser Idle-Time Syncer", () => {
 
   it("should batch logs and send them to the backend, then prune them", async () => {
     const mockLogs = [
-      { id: 1, level: "INFO", message: "msg 1", timestamp: "2026-01-01T00:00:00Z", component: "Comp", metadata: "{}" },
-      { id: 2, level: "ERROR", message: "msg 2", timestamp: "2026-01-01T00:01:00Z", component: "Comp", metadata: "{}" },
+      {
+        id: 1,
+        level: "INFO",
+        message: "msg 1",
+        timestamp: "2026-01-01T00:00:00Z",
+        component: "Comp",
+        metadata: "{}",
+      },
+      {
+        id: 2,
+        level: "ERROR",
+        message: "msg 2",
+        timestamp: "2026-01-01T00:01:00Z",
+        component: "Comp",
+        metadata: "{}",
+      },
     ];
     vi.mocked(logDb.logs.toArray).mockResolvedValueOnce(mockLogs);
     vi.mocked(logDb.logs.toArray).mockResolvedValueOnce([]);
@@ -56,8 +71,20 @@ describe("Browser Idle-Time Syncer", () => {
     expect(logClient.syncLogs).toHaveBeenCalledTimes(1);
     expect(logClient.syncLogs).toHaveBeenCalledWith({
       entries: [
-        { level: "INFO", message: "msg 1", timestamp: "2026-01-01T00:00:00Z", component: "Comp", metadata: "{}" },
-        { level: "ERROR", message: "msg 2", timestamp: "2026-01-01T00:01:00Z", component: "Comp", metadata: "{}" },
+        {
+          level: "INFO",
+          message: "msg 1",
+          timestamp: "2026-01-01T00:00:00Z",
+          component: "Comp",
+          metadata: "{}",
+        },
+        {
+          level: "ERROR",
+          message: "msg 2",
+          timestamp: "2026-01-01T00:01:00Z",
+          component: "Comp",
+          metadata: "{}",
+        },
       ],
     });
 
@@ -67,7 +94,14 @@ describe("Browser Idle-Time Syncer", () => {
 
   it("should not delete logs if backend sync returns processedCount = 0", async () => {
     const mockLogs = [
-      { id: 1, level: "INFO", message: "msg 1", timestamp: "2026-01-01T00:00:00Z", component: "Comp", metadata: "{}" },
+      {
+        id: 1,
+        level: "INFO",
+        message: "msg 1",
+        timestamp: "2026-01-01T00:00:00Z",
+        component: "Comp",
+        metadata: "{}",
+      },
     ];
     vi.mocked(logDb.logs.toArray).mockResolvedValueOnce(mockLogs);
 
@@ -81,7 +115,14 @@ describe("Browser Idle-Time Syncer", () => {
 
   it("should clear local logs queue on Code.Unauthenticated to prevent retry storm", async () => {
     const mockLogs = [
-      { id: 1, level: "INFO", message: "msg 1", timestamp: "2026-01-01T00:00:00Z", component: "Comp", metadata: "{}" },
+      {
+        id: 1,
+        level: "INFO",
+        message: "msg 1",
+        timestamp: "2026-01-01T00:00:00Z",
+        component: "Comp",
+        metadata: "{}",
+      },
     ];
     vi.mocked(logDb.logs.toArray).mockResolvedValueOnce(mockLogs);
 

@@ -41,7 +41,7 @@ The React SPA utilizes modern web testing utilities optimized for the Vite/TS ec
 
 ### 2.1. Testing Framework (Vitest)
 * **Vitest Runner:** We use **Vitest** as the primary test runner because it reuses Vite's configuration and module resolution, providing extremely fast execution speeds.
-* **Linting Validation:** Biome runs checks via `pnpm biome ci` to verify formatting and lint standards before tests run.
+* **Linting Validation:** Oxlint and Oxfmt run checks via `pnpm check` to verify formatting and lint standards before tests run.
 
 ### 2.2. Component & DOM Testing (React Testing Library)
 * **React Testing Library (RTL):** Used to mount and test React components. Testing focuses on user interactions (clicks, text input, keyboard navigation) rather than implementation details.
@@ -83,6 +83,6 @@ Developers run tests within the local Nix environment to ensure library compatib
 
 * CI runners run tests natively (without Nix).
 * **Pipeline Checks:**
-  1. Formatter / Linter validation (`pnpm biome ci` and `golangci-lint run`).
+  1. Formatter / Linter validation (`pnpm check` and `golangci-lint run`).
   2. Frontend unit tests execution (`pnpm test`).
   3. Backend unit tests execution with race detection (`go test -v -race ./...`).
