@@ -167,6 +167,46 @@ func (s *Service) PruneImages(ctx context.Context, req *connect.Request[dmanager
 	return connect.NewResponse(resp), nil
 }
 
+// GetBuildCacheStats reports builder-owned disk space (design.md §9.9, #206):
+// the BuildKit build cache aggregates as supplied by the daemon —
+// GET /system/df?type=build-cache (the hyphen matters; type=buildcache is
+// rejected). No client-side summation: TotalSize, Reclaimable, TotalCount
+// and ActiveCount arrive pre-aggregated.
+func (s *Service) GetBuildCacheStats(ctx context.Context, req *connect.Request[dmanagerv1.GetBuildCacheStatsRequest]) (*connect.Response[dmanagerv1.GetBuildCacheStatsResponse], error) {
+	usage, err := s.dockerClient.DiskUsage(ctx, client.DiskUsageOptions{BuildCache: true})
+	if err != nil {
+		s.logger.Error("Failed to read build cache stats", "error", err)
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("failed to read build cache stats: %w", err))
+	}
+
+	bc := usage.BuildCache
+	return connect.NewResponse(&dmanagerv1.GetBuildCacheStatsResponse{
+		TotalBytes:       uint64(bc.TotalSize),
+		ReclaimableBytes: uint64(bc.Reclaimable),
+		RecordCount:      uint32(bc.TotalCount),
+		ActiveCount:      uint32(bc.ActiveCount),
+	}), nil
+}
+
+// PruneBuildCache deletes build cache records in one daemon call (design.md
+// §9.9, #206) — POST /build/prune via BuildCachePrune. With all=false
+// buildkit-internal cache types are preserved; records in active use are
+// never removed, enforced daemon-side. The response carries the deleted-
+// record count and the bytes the daemon actually freed — per-record IDs
+// are opaque hashes and are not shipped.
+func (s *Service) PruneBuildCache(ctx context.Context, req *connect.Request[dmanagerv1.PruneBuildCacheRequest]) (*connect.Response[dmanagerv1.PruneBuildCacheResponse], error) {
+	result, err := s.dockerClient.BuildCachePrune(ctx, client.BuildCachePruneOptions{All: req.Msg.All})
+	if err != nil {
+		s.logger.Error("Failed to prune build cache", "all", req.Msg.All, "error", err)
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("failed to prune build cache: %w", err))
+	}
+
+	return connect.NewResponse(&dmanagerv1.PruneBuildCacheResponse{
+		CachesDeleted:  uint32(len(result.Report.CachesDeleted)),
+		SpaceReclaimed: result.Report.SpaceReclaimed,
+	}), nil
+}
+
 // CheckEngine reports whether the Docker Engine is reachable (design.md
 // §10.2). Unlike every other procedure, daemon unreachability is NOT a
 // Connect error here: the outage is the answer, so the RPC succeeds with

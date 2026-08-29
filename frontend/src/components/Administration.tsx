@@ -1,6 +1,7 @@
 import { useParams } from "@tanstack/react-router";
 import {
   HardDrive,
+  Hammer,
   Image as ImageIcon,
   Layers,
   Loader2,
@@ -18,6 +19,7 @@ import type { AdminResourceKind } from "../hooks/useAdminResources";
 import { useAdminResources } from "../hooks/useAdminResources";
 import { useAuth } from "../hooks/useAuth";
 import { deriveImageStats, formatBytes } from "./adminFormat";
+import { Builder } from "./Builder";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { ImageTable } from "./ImageTable";
 import { NetworkTable } from "./NetworkTable";
@@ -32,7 +34,9 @@ export function Administration() {
   const params = useParams({ strict: false }) as { tab?: string } | undefined;
   const routeTab = params?.tab;
   const tab: AdminResourceKind =
-    routeTab === "volumes" || routeTab === "networks" ? routeTab : "images";
+    routeTab === "volumes" || routeTab === "networks" || routeTab === "builder"
+      ? routeTab
+      : "images";
 
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
@@ -45,6 +49,7 @@ export function Administration() {
     deleteImage,
     deletingId,
     pruneImages,
+    pruneBuildCache,
     pruning,
     pruningScope,
   } = useAdminResources(tab);
@@ -54,9 +59,10 @@ export function Administration() {
   // The prune confirmation is armed by the actions-row buttons (#196/#203); the
   // dialog owns the busy lockout while the RPC is in flight. One scope-driven
   // dialog serves both buttons.
-  const [pendingPrune, setPendingPrune] = useState<"unused" | "dangling" | null>(null);
+  const [pendingPrune, setPendingPrune] = useState<"unused" | "dangling" | "builder" | null>(null);
   // while no successful images result exists yet (-- placeholders).
   const imageStats = result?.kind === "images" ? deriveImageStats(result.data) : null;
+  const buildStats = result?.kind === "builder" ? result.data : null;
 
   // Tab bar items (§9.4): active state follows the resolved route tab.
   const adminTabs: PageTabItem[] = [
@@ -66,6 +72,13 @@ export function Administration() {
       icon: ImageIcon,
       label: "Images",
       active: tab === "images",
+    },
+    {
+      to: "/administration/$tab",
+      params: { tab: "builder" },
+      icon: Hammer,
+      label: "Builder",
+      active: tab === "builder",
     },
     {
       to: "/administration/$tab",
@@ -88,7 +101,10 @@ export function Administration() {
       <div className="dashboard-header">
         <div className="header-title-section">
           <h2>Administration</h2>
-          <p>Browse host images, volumes, and networks — manage what the daemon stores.</p>
+          <p>
+            Browse host images, builder cache, volumes, and networks — manage what the daemon
+            stores.
+          </p>
         </div>
         <button
           type="button"
@@ -225,6 +241,15 @@ export function Administration() {
           )}
           {result?.kind === "volumes" && <VolumeTable volumes={result.data} />}
           {result?.kind === "networks" && <NetworkTable networks={result.data} />}
+          {tab === "builder" && (
+            <Builder
+              stats={result?.kind === "builder" ? result.data : null}
+              isAdmin={isAdmin}
+              pruning={pruning}
+              builderPruning={pruningScope === "builder"}
+              onPrune={() => setPendingPrune("builder")}
+            />
+          )}
         </>
       )}
       <ConfirmDialog
@@ -233,13 +258,25 @@ export function Administration() {
         onConfirm={() => {
           const scope = pendingPrune;
           setPendingPrune(null);
-          void pruneImages(scope === "dangling");
+          if (scope === "builder") {
+            void pruneBuildCache();
+          } else {
+            void pruneImages(scope === "dangling");
+          }
         }}
-        title={pendingPrune === "dangling" ? "Prune dangling images?" : "Prune unused images?"}
+        title={
+          pendingPrune === "dangling"
+            ? "Prune dangling images?"
+            : pendingPrune === "builder"
+              ? "Prune build cache?"
+              : "Prune unused images?"
+        }
         message={
           pendingPrune === "dangling"
             ? `Deletes all ${imageStats?.danglingCount ?? 0} dangling images, reclaiming up to ${imageStats ? formatBytes(imageStats.danglingFreeableBytes, true) : "0 B"}. Tagged images are never touched.`
-            : `Deletes all ${imageStats?.unusedCount ?? 0} unused images, reclaiming up to ${imageStats ? formatBytes(imageStats.freeableBytes, true) : "0 B"}. Images in use are never touched.`
+            : pendingPrune === "builder"
+              ? `Deletes ${buildStats?.recordCount ?? 0} build cache records, reclaiming up to ${buildStats ? formatBytes(buildStats.reclaimableBytes, true) : "0 B"}. Future image builds will be slower until the cache is rebuilt.`
+              : `Deletes all ${imageStats?.unusedCount ?? 0} unused images, reclaiming up to ${imageStats ? formatBytes(imageStats.freeableBytes, true) : "0 B"}. Images in use are never touched.`
         }
         confirmLabel="Prune"
         variant="danger"

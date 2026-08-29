@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file proto/dmanager/v1/admin.proto.
  */
 export const file_proto_dmanager_v1_admin: GenFile = /*@__PURE__*/
-  fileDesc("Ch1wcm90by9kbWFuYWdlci92MS9hZG1pbi5wcm90bxILZG1hbmFnZXIudjEiEwoRTGlzdEltYWdlc1JlcXVlc3QiOAoSTGlzdEltYWdlc1Jlc3BvbnNlEiIKBmltYWdlcxgBIAMoCzISLmRtYW5hZ2VyLnYxLkltYWdlImoKBUltYWdlEgoKAmlkGAEgASgJEhEKCXJlcG9fdGFncxgCIAMoCRIUCgxjcmVhdGVkX3VuaXgYAyABKAMSEgoKc2l6ZV9ieXRlcxgEIAEoAxIYChBjb250YWluZXJzX2NvdW50GAUgASgDIhQKEkxpc3RWb2x1bWVzUmVxdWVzdCI7ChNMaXN0Vm9sdW1lc1Jlc3BvbnNlEiQKB3ZvbHVtZXMYASADKAsyEy5kbWFuYWdlci52MS5Wb2x1bWUiygEKBlZvbHVtZRIMCgRuYW1lGAEgASgJEg4KBmRyaXZlchgCIAEoCRISCgptb3VudHBvaW50GAMgASgJEi4KCmNyZWF0ZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi8KBmxhYmVscxgFIAMoCzIfLmRtYW5hZ2VyLnYxLlZvbHVtZS5MYWJlbHNFbnRyeRotCgtMYWJlbHNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIhUKE0xpc3ROZXR3b3Jrc1JlcXVlc3QiPgoUTGlzdE5ldHdvcmtzUmVzcG9uc2USJgoIbmV0d29ya3MYASADKAsyFC5kbWFuYWdlci52MS5OZXR3b3JrIoQBCgdOZXR3b3JrEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSDgoGZHJpdmVyGAMgASgJEg0KBXNjb3BlGAQgASgJEhAKCGludGVybmFsGAUgASgIEi4KCmNyZWF0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIi8KEkRlbGV0ZUltYWdlUmVxdWVzdBIKCgJpZBgBIAEoCRINCgVmb3JjZRgCIAEoCCIVChNEZWxldGVJbWFnZVJlc3BvbnNlIisKElBydW5lSW1hZ2VzUmVxdWVzdBIVCg1kYW5nbGluZ19vbmx5GAEgASgIIjAKC1BydW5lZEltYWdlEg8KB2RlbGV0ZWQYASABKAkSEAoIdW50YWdnZWQYAiABKAkiYAoTUHJ1bmVJbWFnZXNSZXNwb25zZRIwCg5pbWFnZXNfZGVsZXRlZBgBIAMoCzIYLmRtYW5hZ2VyLnYxLlBydW5lZEltYWdlEhcKD3NwYWNlX3JlY2xhaW1lZBgCIAEoBCIUChJDaGVja0VuZ2luZVJlcXVlc3QiTAoTQ2hlY2tFbmdpbmVSZXNwb25zZRIRCgljb25uZWN0ZWQYASABKAgSEwoLYXBpX3ZlcnNpb24YAiABKAkSDQoFZXJyb3IYAyABKAky+gMKDEFkbWluU2VydmljZRJNCgpMaXN0SW1hZ2VzEh4uZG1hbmFnZXIudjEuTGlzdEltYWdlc1JlcXVlc3QaHy5kbWFuYWdlci52MS5MaXN0SW1hZ2VzUmVzcG9uc2USUAoLTGlzdFZvbHVtZXMSHy5kbWFuYWdlci52MS5MaXN0Vm9sdW1lc1JlcXVlc3QaIC5kbWFuYWdlci52MS5MaXN0Vm9sdW1lc1Jlc3BvbnNlElMKDExpc3ROZXR3b3JrcxIgLmRtYW5hZ2VyLnYxLkxpc3ROZXR3b3Jrc1JlcXVlc3QaIS5kbWFuYWdlci52MS5MaXN0TmV0d29ya3NSZXNwb25zZRJQCgtEZWxldGVJbWFnZRIfLmRtYW5hZ2VyLnYxLkRlbGV0ZUltYWdlUmVxdWVzdBogLmRtYW5hZ2VyLnYxLkRlbGV0ZUltYWdlUmVzcG9uc2USUAoLUHJ1bmVJbWFnZXMSHy5kbWFuYWdlci52MS5QcnVuZUltYWdlc1JlcXVlc3QaIC5kbWFuYWdlci52MS5QcnVuZUltYWdlc1Jlc3BvbnNlElAKC0NoZWNrRW5naW5lEh8uZG1hbmFnZXIudjEuQ2hlY2tFbmdpbmVSZXF1ZXN0GiAuZG1hbmFnZXIudjEuQ2hlY2tFbmdpbmVSZXNwb25zZUI0WjJkbWFuYWdlci9pbnRlcm5hbC9nZW4vcHJvdG8vZG1hbmFnZXIvdjE7ZG1hbmFnZXJ2MWIGcHJvdG8z", [file_google_protobuf_timestamp]);
+  fileDesc("Ch1wcm90by9kbWFuYWdlci92MS9hZG1pbi5wcm90bxILZG1hbmFnZXIudjEiEwoRTGlzdEltYWdlc1JlcXVlc3QiOAoSTGlzdEltYWdlc1Jlc3BvbnNlEiIKBmltYWdlcxgBIAMoCzISLmRtYW5hZ2VyLnYxLkltYWdlImoKBUltYWdlEgoKAmlkGAEgASgJEhEKCXJlcG9fdGFncxgCIAMoCRIUCgxjcmVhdGVkX3VuaXgYAyABKAMSEgoKc2l6ZV9ieXRlcxgEIAEoAxIYChBjb250YWluZXJzX2NvdW50GAUgASgDIhQKEkxpc3RWb2x1bWVzUmVxdWVzdCI7ChNMaXN0Vm9sdW1lc1Jlc3BvbnNlEiQKB3ZvbHVtZXMYASADKAsyEy5kbWFuYWdlci52MS5Wb2x1bWUiygEKBlZvbHVtZRIMCgRuYW1lGAEgASgJEg4KBmRyaXZlchgCIAEoCRISCgptb3VudHBvaW50GAMgASgJEi4KCmNyZWF0ZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi8KBmxhYmVscxgFIAMoCzIfLmRtYW5hZ2VyLnYxLlZvbHVtZS5MYWJlbHNFbnRyeRotCgtMYWJlbHNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIhUKE0xpc3ROZXR3b3Jrc1JlcXVlc3QiPgoUTGlzdE5ldHdvcmtzUmVzcG9uc2USJgoIbmV0d29ya3MYASADKAsyFC5kbWFuYWdlci52MS5OZXR3b3JrIoQBCgdOZXR3b3JrEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSDgoGZHJpdmVyGAMgASgJEg0KBXNjb3BlGAQgASgJEhAKCGludGVybmFsGAUgASgIEi4KCmNyZWF0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIi8KEkRlbGV0ZUltYWdlUmVxdWVzdBIKCgJpZBgBIAEoCRINCgVmb3JjZRgCIAEoCCIVChNEZWxldGVJbWFnZVJlc3BvbnNlIisKElBydW5lSW1hZ2VzUmVxdWVzdBIVCg1kYW5nbGluZ19vbmx5GAEgASgIIjAKC1BydW5lZEltYWdlEg8KB2RlbGV0ZWQYASABKAkSEAoIdW50YWdnZWQYAiABKAkiYAoTUHJ1bmVJbWFnZXNSZXNwb25zZRIwCg5pbWFnZXNfZGVsZXRlZBgBIAMoCzIYLmRtYW5hZ2VyLnYxLlBydW5lZEltYWdlEhcKD3NwYWNlX3JlY2xhaW1lZBgCIAEoBCIbChlHZXRCdWlsZENhY2hlU3RhdHNSZXF1ZXN0IngKGkdldEJ1aWxkQ2FjaGVTdGF0c1Jlc3BvbnNlEhMKC3RvdGFsX2J5dGVzGAEgASgEEhkKEXJlY2xhaW1hYmxlX2J5dGVzGAIgASgEEhQKDHJlY29yZF9jb3VudBgDIAEoDRIUCgxhY3RpdmVfY291bnQYBCABKA0iJQoWUHJ1bmVCdWlsZENhY2hlUmVxdWVzdBILCgNhbGwYASABKAgiSgoXUHJ1bmVCdWlsZENhY2hlUmVzcG9uc2USFgoOY2FjaGVzX2RlbGV0ZWQYASABKA0SFwoPc3BhY2VfcmVjbGFpbWVkGAIgASgEIhQKEkNoZWNrRW5naW5lUmVxdWVzdCJMChNDaGVja0VuZ2luZVJlc3BvbnNlEhEKCWNvbm5lY3RlZBgBIAEoCBITCgthcGlfdmVyc2lvbhgCIAEoCRINCgVlcnJvchgDIAEoCTK/BQoMQWRtaW5TZXJ2aWNlEk0KCkxpc3RJbWFnZXMSHi5kbWFuYWdlci52MS5MaXN0SW1hZ2VzUmVxdWVzdBofLmRtYW5hZ2VyLnYxLkxpc3RJbWFnZXNSZXNwb25zZRJQCgtMaXN0Vm9sdW1lcxIfLmRtYW5hZ2VyLnYxLkxpc3RWb2x1bWVzUmVxdWVzdBogLmRtYW5hZ2VyLnYxLkxpc3RWb2x1bWVzUmVzcG9uc2USUwoMTGlzdE5ldHdvcmtzEiAuZG1hbmFnZXIudjEuTGlzdE5ldHdvcmtzUmVxdWVzdBohLmRtYW5hZ2VyLnYxLkxpc3ROZXR3b3Jrc1Jlc3BvbnNlElAKC0RlbGV0ZUltYWdlEh8uZG1hbmFnZXIudjEuRGVsZXRlSW1hZ2VSZXF1ZXN0GiAuZG1hbmFnZXIudjEuRGVsZXRlSW1hZ2VSZXNwb25zZRJQCgtQcnVuZUltYWdlcxIfLmRtYW5hZ2VyLnYxLlBydW5lSW1hZ2VzUmVxdWVzdBogLmRtYW5hZ2VyLnYxLlBydW5lSW1hZ2VzUmVzcG9uc2USZQoSR2V0QnVpbGRDYWNoZVN0YXRzEiYuZG1hbmFnZXIudjEuR2V0QnVpbGRDYWNoZVN0YXRzUmVxdWVzdBonLmRtYW5hZ2VyLnYxLkdldEJ1aWxkQ2FjaGVTdGF0c1Jlc3BvbnNlElwKD1BydW5lQnVpbGRDYWNoZRIjLmRtYW5hZ2VyLnYxLlBydW5lQnVpbGRDYWNoZVJlcXVlc3QaJC5kbWFuYWdlci52MS5QcnVuZUJ1aWxkQ2FjaGVSZXNwb25zZRJQCgtDaGVja0VuZ2luZRIfLmRtYW5hZ2VyLnYxLkNoZWNrRW5naW5lUmVxdWVzdBogLmRtYW5hZ2VyLnYxLkNoZWNrRW5naW5lUmVzcG9uc2VCNFoyZG1hbmFnZXIvaW50ZXJuYWwvZ2VuL3Byb3RvL2RtYW5hZ2VyL3YxO2RtYW5hZ2VydjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message dmanager.v1.ListImagesRequest
@@ -360,6 +360,106 @@ export const PruneImagesResponseSchema: GenMessage<PruneImagesResponse> = /*@__P
   messageDesc(file_proto_dmanager_v1_admin, 13);
 
 /**
+ * @generated from message dmanager.v1.GetBuildCacheStatsRequest
+ */
+export type GetBuildCacheStatsRequest = Message<"dmanager.v1.GetBuildCacheStatsRequest"> & {
+};
+
+/**
+ * Describes the message dmanager.v1.GetBuildCacheStatsRequest.
+ * Use `create(GetBuildCacheStatsRequestSchema)` to create a new message.
+ */
+export const GetBuildCacheStatsRequestSchema: GenMessage<GetBuildCacheStatsRequest> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_admin, 14);
+
+/**
+ * @generated from message dmanager.v1.GetBuildCacheStatsResponse
+ */
+export type GetBuildCacheStatsResponse = Message<"dmanager.v1.GetBuildCacheStatsResponse"> & {
+  /**
+   * Total on-disk size of all build cache records.
+   *
+   * @generated from field: uint64 total_bytes = 1;
+   */
+  totalBytes: bigint;
+
+  /**
+   * Size excluding records whose blobs are shared with other records —
+   * the daemon's conservative reclaim estimate.
+   *
+   * @generated from field: uint64 reclaimable_bytes = 2;
+   */
+  reclaimableBytes: bigint;
+
+  /**
+   * Number of build cache records.
+   *
+   * @generated from field: uint32 record_count = 3;
+   */
+  recordCount: number;
+
+  /**
+   * Number of records in active use by a running build.
+   *
+   * @generated from field: uint32 active_count = 4;
+   */
+  activeCount: number;
+};
+
+/**
+ * Describes the message dmanager.v1.GetBuildCacheStatsResponse.
+ * Use `create(GetBuildCacheStatsResponseSchema)` to create a new message.
+ */
+export const GetBuildCacheStatsResponseSchema: GenMessage<GetBuildCacheStatsResponse> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_admin, 15);
+
+/**
+ * @generated from message dmanager.v1.PruneBuildCacheRequest
+ */
+export type PruneBuildCacheRequest = Message<"dmanager.v1.PruneBuildCacheRequest"> & {
+  /**
+   * false (default): preserve buildkit-internal cache types; true: remove
+   * them as well. Records in active use are never removed either way.
+   *
+   * @generated from field: bool all = 1;
+   */
+  all: boolean;
+};
+
+/**
+ * Describes the message dmanager.v1.PruneBuildCacheRequest.
+ * Use `create(PruneBuildCacheRequestSchema)` to create a new message.
+ */
+export const PruneBuildCacheRequestSchema: GenMessage<PruneBuildCacheRequest> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_admin, 16);
+
+/**
+ * @generated from message dmanager.v1.PruneBuildCacheResponse
+ */
+export type PruneBuildCacheResponse = Message<"dmanager.v1.PruneBuildCacheResponse"> & {
+  /**
+   * Number of removed cache records.
+   *
+   * @generated from field: uint32 caches_deleted = 1;
+   */
+  cachesDeleted: number;
+
+  /**
+   * Bytes actually reclaimed on disk.
+   *
+   * @generated from field: uint64 space_reclaimed = 2;
+   */
+  spaceReclaimed: bigint;
+};
+
+/**
+ * Describes the message dmanager.v1.PruneBuildCacheResponse.
+ * Use `create(PruneBuildCacheResponseSchema)` to create a new message.
+ */
+export const PruneBuildCacheResponseSchema: GenMessage<PruneBuildCacheResponse> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_admin, 17);
+
+/**
  * @generated from message dmanager.v1.CheckEngineRequest
  */
 export type CheckEngineRequest = Message<"dmanager.v1.CheckEngineRequest"> & {
@@ -370,7 +470,7 @@ export type CheckEngineRequest = Message<"dmanager.v1.CheckEngineRequest"> & {
  * Use `create(CheckEngineRequestSchema)` to create a new message.
  */
 export const CheckEngineRequestSchema: GenMessage<CheckEngineRequest> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 14);
+  messageDesc(file_proto_dmanager_v1_admin, 18);
 
 /**
  * @generated from message dmanager.v1.CheckEngineResponse
@@ -403,7 +503,7 @@ export type CheckEngineResponse = Message<"dmanager.v1.CheckEngineResponse"> & {
  * Use `create(CheckEngineResponseSchema)` to create a new message.
  */
 export const CheckEngineResponseSchema: GenMessage<CheckEngineResponse> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 15);
+  messageDesc(file_proto_dmanager_v1_admin, 19);
 
 /**
  * AdminService exposes Docker host resources (images, volumes, networks)
@@ -466,6 +566,29 @@ export const AdminService: GenService<{
     methodKind: "unary";
     input: typeof PruneImagesRequestSchema;
     output: typeof PruneImagesResponseSchema;
+  },
+  /**
+   * Report builder-owned disk space: the BuildKit build cache aggregates
+   * as supplied by the daemon (Authenticated, any role).
+   *
+   * @generated from rpc dmanager.v1.AdminService.GetBuildCacheStats
+   */
+  getBuildCacheStats: {
+    methodKind: "unary";
+    input: typeof GetBuildCacheStatsRequestSchema;
+    output: typeof GetBuildCacheStatsResponseSchema;
+  },
+  /**
+   * Prune build cache records in one daemon call (Authenticated, admin role).
+   * With all=false buildkit-internal cache types are preserved; records in
+   * active use are never removed (enforced daemon-side).
+   *
+   * @generated from rpc dmanager.v1.AdminService.PruneBuildCache
+   */
+  pruneBuildCache: {
+    methodKind: "unary";
+    input: typeof PruneBuildCacheRequestSchema;
+    output: typeof PruneBuildCacheResponseSchema;
   },
   /**
    * Report whether the Docker Engine is reachable (Authenticated, any role).

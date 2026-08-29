@@ -3,16 +3,22 @@ import { useCallback, useEffect, useState } from "react";
 import { adminClient } from "../client";
 import { formatBytes } from "../components/adminFormat";
 import { useToast } from "../context/ToastContext";
-import type { Image, Network, Volume } from "../gen/proto/dmanager/v1/admin_pb";
+import type {
+  GetBuildCacheStatsResponse,
+  Image,
+  Network,
+  Volume,
+} from "../gen/proto/dmanager/v1/admin_pb";
 
-export type AdminResourceKind = "images" | "volumes" | "networks";
+export type AdminResourceKind = "images" | "volumes" | "networks" | "builder";
 
 // The fetch result is a discriminated union keyed by resource kind so the
 // page can narrow to a concrete resource type without casts.
 export type AdminResourcesResult =
   | { kind: "images"; data: Image[] }
   | { kind: "volumes"; data: Volume[] }
-  | { kind: "networks"; data: Network[] };
+  | { kind: "networks"; data: Network[] }
+  | { kind: "builder"; data: GetBuildCacheStatsResponse };
 
 /**
  * Fetches one kind of Docker host resource (images, volumes, networks) from
@@ -29,7 +35,7 @@ export function useAdminResources(kind: AdminResourceKind) {
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [pruning, setPruning] = useState(false);
-  const [pruningScope, setPruningScope] = useState<"unused" | "dangling" | null>(null);
+  const [pruningScope, setPruningScope] = useState<"unused" | "dangling" | "builder" | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,9 +51,12 @@ export function useAdminResources(kind: AdminResourceKind) {
         } else if (kind === "volumes") {
           const resp = await adminClient.listVolumes({});
           next = { kind, data: resp.volumes };
-        } else {
+        } else if (kind === "networks") {
           const resp = await adminClient.listNetworks({});
           next = { kind, data: resp.networks };
+        } else {
+          const resp = await adminClient.getBuildCacheStats({});
+          next = { kind, data: resp };
         }
         if (!cancelled) {
           setResult(next);
@@ -137,6 +146,36 @@ export function useAdminResources(kind: AdminResourceKind) {
     [pruning, refresh, toast],
   );
 
+  // Prunes build cache records in one daemon call (design.md §9.9, #206) —
+  // the builder-owned space image prunes cannot free. `all=false` preserves
+  // buildkit-internal cache types; InUse records are daemon-protected.
+  // Shares the single-flight `pruning` flag with the image prunes; the
+  // toast reports the daemon-returned reclaimed bytes.
+  const pruneBuildCache = useCallback(async () => {
+    if (pruning) {
+      return;
+    }
+    setPruning(true);
+    setPruningScope("builder");
+    try {
+      const resp = await adminClient.pruneBuildCache({ all: false });
+      const count = resp.cachesDeleted;
+      const noun = count === 1 ? "record" : "records";
+      toast.success(
+        `Reclaimed ${formatBytes(resp.spaceReclaimed, true)} from ${count} cache ${noun}.`,
+      );
+    } catch (err: unknown) {
+      console.error("Failed to prune build cache:", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Failed to prune build cache: ${msg}`);
+      return;
+    } finally {
+      setPruning(false);
+      setPruningScope(null);
+    }
+    refresh();
+  }, [pruning, refresh, toast]);
+
   return {
     result,
     isLoading,
@@ -145,6 +184,7 @@ export function useAdminResources(kind: AdminResourceKind) {
     deleteImage,
     deletingId,
     pruneImages,
+    pruneBuildCache,
     pruning,
     pruningScope,
   };

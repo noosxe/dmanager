@@ -628,3 +628,184 @@ func TestPruneImagesErrors(t *testing.T) {
 		t.Errorf("expected message to contain %q, got %q", "failed to prune images", connErr.Message())
 	}
 }
+
+func TestGetBuildCacheStats(t *testing.T) {
+	// Modern daemons (API >= 1.52) supply the aggregates in BuildCacheUsage;
+	// serve a matching ping so the client takes the modern decode path
+	// (the shared pingHandler advertises 1.45, which forces the legacy one).
+	var gotMethod, gotType string
+	svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/_ping") {
+			w.Header().Set("API-Version", "1.53")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("OK"))
+			return
+		}
+		if !strings.HasSuffix(r.URL.Path, "/system/df") {
+			http.NotFound(w, r)
+			return
+		}
+		gotMethod = r.Method
+		gotType = r.URL.Query().Get("type")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"BuildCache": [], "BuildCacheUsage": {"TotalSize": 33541322317, "Reclaimable": 27653977878, "TotalCount": 634, "ActiveCount": 2}}`))
+	})
+
+	resp, err := svc.GetBuildCacheStats(context.Background(), connect.NewRequest(&v1.GetBuildCacheStatsRequest{}))
+	if err != nil {
+		t.Fatalf("GetBuildCacheStats failed: %v", err)
+	}
+	if gotMethod != http.MethodGet {
+		t.Errorf("expected GET request, got %s", gotMethod)
+	}
+	// The type filter is hyphenated — type=buildcache is rejected by the daemon.
+	if gotType != "build-cache" {
+		t.Errorf("expected type=build-cache query param, got %q", gotType)
+	}
+	// Daemon-supplied aggregates map 1:1 — no client-side summation.
+	if resp.Msg.TotalBytes != 33541322317 {
+		t.Errorf("expected total_bytes 33541322317, got %d", resp.Msg.TotalBytes)
+	}
+	if resp.Msg.ReclaimableBytes != 27653977878 {
+		t.Errorf("expected reclaimable_bytes 27653977878, got %d", resp.Msg.ReclaimableBytes)
+	}
+	if resp.Msg.RecordCount != 634 {
+		t.Errorf("expected record_count 634, got %d", resp.Msg.RecordCount)
+	}
+	if resp.Msg.ActiveCount != 2 {
+		t.Errorf("expected active_count 2, got %d", resp.Msg.ActiveCount)
+	}
+}
+
+func TestGetBuildCacheStatsLegacyAggregation(t *testing.T) {
+	// The shared fake ping advertises API 1.45, so the client falls back to the
+	// legacy records-based decode and aggregates client-side: TotalSize sums
+	// non-shared records, Reclaimable excludes in-use ones.
+	svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) {
+		if pingHandler(w, r) {
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"BuildCache": [
+			{"ID": "a", "Size": 100, "Shared": false, "InUse": false},
+			{"ID": "b", "Size": 200, "Shared": false, "InUse": true},
+			{"ID": "c", "Size": 50, "Shared": true, "InUse": false}
+		]}`))
+	})
+
+	resp, err := svc.GetBuildCacheStats(context.Background(), connect.NewRequest(&v1.GetBuildCacheStatsRequest{}))
+	if err != nil {
+		t.Fatalf("GetBuildCacheStats failed: %v", err)
+	}
+	if resp.Msg.TotalBytes != 300 {
+		t.Errorf("expected total_bytes 300, got %d", resp.Msg.TotalBytes)
+	}
+	if resp.Msg.ReclaimableBytes != 100 {
+		t.Errorf("expected reclaimable_bytes 100, got %d", resp.Msg.ReclaimableBytes)
+	}
+	if resp.Msg.RecordCount != 3 {
+		t.Errorf("expected record_count 3, got %d", resp.Msg.RecordCount)
+	}
+	if resp.Msg.ActiveCount != 1 {
+		t.Errorf("expected active_count 1, got %d", resp.Msg.ActiveCount)
+	}
+}
+
+func TestGetBuildCacheStatsZeroRecords(t *testing.T) {
+	svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) {
+		if pingHandler(w, r) {
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		// A daemon without build-cache data omits BuildCacheUsage entirely.
+		_, _ = w.Write([]byte(`{"BuildCache": null}`))
+	})
+
+	resp, err := svc.GetBuildCacheStats(context.Background(), connect.NewRequest(&v1.GetBuildCacheStatsRequest{}))
+	if err != nil {
+		t.Fatalf("GetBuildCacheStats failed: %v", err)
+	}
+	if resp.Msg.TotalBytes != 0 || resp.Msg.ReclaimableBytes != 0 || resp.Msg.RecordCount != 0 || resp.Msg.ActiveCount != 0 {
+		t.Errorf("expected zero-valued stats, got %+v", resp.Msg)
+	}
+}
+
+func TestPruneBuildCache(t *testing.T) {
+	var gotMethod, gotAll string
+	svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) {
+		if pingHandler(w, r) {
+			return
+		}
+		if !strings.HasSuffix(r.URL.Path, "/build/prune") {
+			http.NotFound(w, r)
+			return
+		}
+		gotMethod = r.Method
+		gotAll = r.URL.Query().Get("all")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"CachesDeleted": ["aaa", "bbb", "ccc"], "SpaceReclaimed": 27653977878}`))
+	})
+
+	resp, err := svc.PruneBuildCache(context.Background(), connect.NewRequest(&v1.PruneBuildCacheRequest{All: false}))
+	if err != nil {
+		t.Fatalf("PruneBuildCache failed: %v", err)
+	}
+	if gotMethod != http.MethodPost {
+		t.Errorf("expected POST request, got %s", gotMethod)
+	}
+	// Default scope preserves buildkit-internal types: the client omits all.
+	if gotAll != "" {
+		t.Errorf("expected no all query param for scoped prune, got %q", gotAll)
+	}
+	if resp.Msg.CachesDeleted != 3 {
+		t.Errorf("expected caches_deleted 3, got %d", resp.Msg.CachesDeleted)
+	}
+	if resp.Msg.SpaceReclaimed != 27653977878 {
+		t.Errorf("expected space_reclaimed 27653977878, got %d", resp.Msg.SpaceReclaimed)
+	}
+}
+
+func TestPruneBuildCacheAllFlag(t *testing.T) {
+	var gotAll string
+	svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) {
+		if pingHandler(w, r) {
+			return
+		}
+		gotAll = r.URL.Query().Get("all")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"CachesDeleted": [], "SpaceReclaimed": 0}`))
+	})
+
+	if _, err := svc.PruneBuildCache(context.Background(), connect.NewRequest(&v1.PruneBuildCacheRequest{All: true})); err != nil {
+		t.Fatalf("PruneBuildCache failed: %v", err)
+	}
+	if gotAll != "1" {
+		t.Errorf("expected all=1 query param for full prune, got %q", gotAll)
+	}
+}
+
+func TestPruneBuildCacheErrors(t *testing.T) {
+	svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) {
+		if pingHandler(w, r) {
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`{"message": "daemon unavailable"}`))
+	})
+
+	_, err := svc.PruneBuildCache(context.Background(), connect.NewRequest(&v1.PruneBuildCacheRequest{}))
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	connErr, ok := err.(*connect.Error)
+	if !ok {
+		t.Fatalf("expected *connect.Error, got %T", err)
+	}
+	if connErr.Code() != connect.CodeUnavailable {
+		t.Errorf("expected code %v, got %v", connect.CodeUnavailable, connErr.Code())
+	}
+	if !strings.Contains(connErr.Message(), "failed to prune build cache") {
+		t.Errorf("expected message to contain %q, got %q", "failed to prune build cache", connErr.Message())
+	}
+}

@@ -71,7 +71,7 @@ graph TD
     A63 --> A64["STORY-064: Image Prune — Bulk Reclaim (#196) (DONE)"]
     A64 --> A65["STORY-065: Images Unused & Dangling Stat Cards (#200) (DONE)"]
     A65 --> A66["STORY-066: Scoped Prune Buttons — Unused & Dangling (#203) (DONE)"]
-    A66 --> A67["STORY-067: Builder Tab — Cache Stats & Prune (#206)"]
+    A66 --> A67["STORY-067: Builder Tab — Cache Stats & Prune (#206) (DONE)"]
 ```
 
 
@@ -1414,7 +1414,7 @@ graph TD
   - `pnpm check`, `pnpm test`, `pnpm build` pass.
   - Manual: Prune Unused behaves as before (renamed); Prune Dangling deletes only untagged images and its dialog count matches the Dangling card exactly.
 
-### STORY-067: Builder Tab — Cache Stats & Prune (issue #206) [PLANNED]
+### STORY-067: Builder Tab — Cache Stats & Prune (issue #206) [DONE]
 - **Scope:** Backend + frontend — two new RPCs + a dedicated Builder Administration tab
 - **Estimated Size:** Medium (~400 LOC incl. tests)
 - **Dependencies:** STORY-055 (Administration shell/tabs), STORY-064 (mutating-RPC/ConfirmDialog/toast patterns), STORY-066 (whose field verification proved builder-owned space is the real lever)

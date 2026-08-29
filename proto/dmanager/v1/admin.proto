@@ -29,6 +29,15 @@ service AdminService {
   // unconditionally; with dangling_only it restricts to untagged images.
   rpc PruneImages(PruneImagesRequest) returns (PruneImagesResponse);
 
+  // Report builder-owned disk space: the BuildKit build cache aggregates
+  // as supplied by the daemon (Authenticated, any role).
+  rpc GetBuildCacheStats(GetBuildCacheStatsRequest) returns (GetBuildCacheStatsResponse);
+
+  // Prune build cache records in one daemon call (Authenticated, admin role).
+  // With all=false buildkit-internal cache types are preserved; records in
+  // active use are never removed (enforced daemon-side).
+  rpc PruneBuildCache(PruneBuildCacheRequest) returns (PruneBuildCacheResponse);
+
   // Report whether the Docker Engine is reachable (Authenticated, any role).
   // Daemon unreachability is a successful response with connected=false —
   // the outage is the answer, not an RPC failure (design.md §10.2).
@@ -133,6 +142,37 @@ message PrunedImage {
 message PruneImagesResponse {
   // Per-image report as returned by the daemon.
   repeated PrunedImage images_deleted = 1;
+
+  // Bytes actually reclaimed on disk.
+  uint64 space_reclaimed = 2;
+}
+
+message GetBuildCacheStatsRequest {}
+
+message GetBuildCacheStatsResponse {
+  // Total on-disk size of all build cache records.
+  uint64 total_bytes = 1;
+
+  // Size excluding records whose blobs are shared with other records —
+  // the daemon's conservative reclaim estimate.
+  uint64 reclaimable_bytes = 2;
+
+  // Number of build cache records.
+  uint32 record_count = 3;
+
+  // Number of records in active use by a running build.
+  uint32 active_count = 4;
+}
+
+message PruneBuildCacheRequest {
+  // false (default): preserve buildkit-internal cache types; true: remove
+  // them as well. Records in active use are never removed either way.
+  bool all = 1;
+}
+
+message PruneBuildCacheResponse {
+  // Number of removed cache records.
+  uint32 caches_deleted = 1;
 
   // Bytes actually reclaimed on disk.
   uint64 space_reclaimed = 2;
