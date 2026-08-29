@@ -464,20 +464,22 @@ Three table components follow the `ContainerTable.tsx` pattern: `ColumnDef<T>[]`
 
 ### 9.6. Images Summary Stat Cards
 
-The Images tab shows a three-card summary strip between the tab bar and the table, following the `ContainerGrid.tsx` metrics pattern (derived client-side from the same `ListImages` response — **no protocol, backend, or RPC changes**).
+The Images tab shows a five-card summary strip between the tab bar and the table (STORY-065 added the last two, issue #200), following the `ContainerGrid.tsx` metrics pattern (derived client-side from the same `ListImages` response — **no protocol, backend, or RPC changes**).
 
 | Card | Value | Derivation |
 | --- | --- | --- |
 | Total Space Used | `Σ size_bytes` (all images) | Sum of every image's size as reported by the daemon |
 | Freeable Space | `Σ size_bytes` where `containers_count = 0` | Images not used by any container — the theoretical reclaim footprint |
 | Images | image count | `images.length` |
+| Unused | image count where `containers_count = 0` | Images not used by any container, tagged **and** untagged alike — the exact prune/delete scope (§9.7/§9.8), counted rather than byte-measured |
+| Dangling | image count where `repo_tags` is empty | Untagged images only, regardless of container count — dangling is a tag property, not a usage property |
 
-* **Unknown usage counts:** images with `containers_count = -1` (daemon did not calculate) are conservatively treated as **in use**, so Freeable Space never overstates what could be reclaimed.
+* **Unknown usage counts:** images with `containers_count = -1` (daemon did not calculate) are conservatively treated as **in use**, so Freeable Space and the Unused count never overstate what could be reclaimed; the Dangling count is unaffected (tag-based, no usage dependency).
 * **Shared-layer approximation:** `size_bytes` includes layers shared between images, so both sums match summing the SIZE column of `docker image ls` and overstate uniquely-owned disk; the space actually freed by a future prune will be equal or lower. Sourcing unique sizes from `/system/df` may be designed in a later phase.
-* **Styling:** reuses the existing dashboard CSS — `stats-grid` / `stat-card` / `stat-icon-wrapper` / `stat-value` / `stat-label` — with the existing `total` (blue), `updates` (amber), `stopped` (gray) color modifiers and lucide icons `HardDrive`, `Recycle`, `Layers`. Zero new CSS.
-* **States:** card byte values use `formatBytes` with one decimal at every magnitude (e.g. `142.6 MB`; `0 B` when empty); `stat-value` placeholders render `--` while the first fetch is in flight or on error; an empty inventory renders `0 B` / `0 B` / `0`. Table cells keep Docker CLI-style integer sizes.
+* **Styling:** reuses the existing dashboard CSS — `stats-grid` / `stat-card` / `stat-icon-wrapper` / `stat-value` / `stat-label` — with color modifiers `total` (blue), `updates` (amber), `stopped` (gray) and lucide icons `HardDrive`, `Recycle`, `Layers`, plus two one-line variants added in STORY-065: `unused` (amber — pairs with Freeable Space, the same scope counted vs. byte-measured, icon `PackageOpen`) and `dangling` (gray — untagged/inert, icon `TagOff`). The grid is `repeat(auto-fit, minmax(180px, 1fr))`, so five cards reflow natively — single row on wide viewports, wrapping below; the containers/logs strips are per-instance and unaffected.
+* **States:** card byte values use `formatBytes` with one decimal at every magnitude (e.g. `142.6 MB`; `0 B` when empty); `stat-value` placeholders render `--` while the first fetch is in flight or on error; an empty inventory renders `0 B` / `0 B` / `0` / `0` / `0`. Table cells keep Docker CLI-style integer sizes.
 * **Scope:** Images tab only — the Volumes and Networks tables stay unchanged.
-* **Testing:** unit tests cover the derived values (tagged + dangling mix), the `containers_count = -1` conservative rule, formatting of large sums, and the loading placeholder.
+* **Testing:** unit tests cover the derived values (tagged + dangling mix), the `containers_count = -1` conservative rule (including that a tagless `-1` image counts as Dangling but not Unused), formatting of large sums, and the loading placeholder.
 
 ### 9.7. Image Deletion — Actions Column
 

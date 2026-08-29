@@ -68,7 +68,8 @@ graph TD
     A59 --> A61["STORY-061: Passkey & Destructive Confirmations (#178) (DONE)"]
     A61 --> A62["STORY-062: Administration Containers-Style Layout (#189) (DONE)"]
     A62 --> A63["STORY-063: Generic PageTabs & Settings Shell Refinement (#192) (DONE)"]
-    A63 --> A64["STORY-064: Image Prune — Bulk Reclaim (#196)"]
+    A63 --> A64["STORY-064: Image Prune — Bulk Reclaim (#196) (DONE)"]
+    A64 --> A65["STORY-065: Images Unused & Dangling Stat Cards (#200)"]
 ```
 
 
@@ -1377,3 +1378,19 @@ graph TD
   - `go test ./...`, `go vet ./...` pass; interceptor reflection test green.
   - `pnpm check`, `pnpm test`, `pnpm build` pass.
   - Manual: with unused images present → confirm shows count/size, prune reclaims, toast shows daemon-reported bytes, stats/cards refresh; with none → button disabled.
+
+### STORY-065: Images Unused & Dangling Stat Cards (issue #200) [PLANNED]
+- **Scope:** Frontend only — two new summary cards on the Images tab
+- **Estimated Size:** Small (~60 LOC incl. tests)
+- **Dependencies:** STORY-056 (established the stat-card strip), STORY-064 (defined "unused" as the prune/delete scope)
+- **Goal:** Per issue #200 / design.md §9.6: surface what the existing cards quantify — a count of **Unused** images (tagged + untagged, `containers_count = 0`; the exact prune/delete scope, counted rather than byte-measured) and **Dangling** images (no `repo_tags`, regardless of container count) to the right of the "Images" card. Derived client-side from the same `ListImages` response — no protocol or backend changes.
+- **Tasks:**
+  1. `frontend/src/components/adminFormat.ts`: `deriveImageStats` grows `danglingCount` (images with `repo_tags` empty); `unusedCount` reused as-is (`containers_count === 0`, `-1` excluded — conservative).
+  2. `frontend/src/components/Administration.tsx`: two cards after "Images" — `PackageOpen` + `.unused` (amber) "Unused", `TagOff` + `.dangling` (gray) "Dangling"; `--` placeholders while loading.
+  3. `frontend/src/index.css`: one-line `.stat-icon-wrapper.unused` and `.stat-icon-wrapper.dangling` variants mirroring the existing amber/gray palettes. Grid needs no change (`auto-fit minmax(180px, 1fr)` reflows five cards).
+  4. `Administration.test.tsx`: default fixture asserts Dangling `1` / Unused `0` (the tagless `-1` image discriminates the two semantics); fixture with a zero-usage image asserts Unused `1`; card labels present.
+- **Files Affected:**
+  - `frontend/src/components/adminFormat.ts`, `frontend/src/components/Administration.tsx`, `frontend/src/index.css`, `frontend/src/components/Administration.test.tsx`
+- **Validation Check:**
+  - `pnpm check`, `pnpm test`, `pnpm build` pass.
+  - Visual: five cards reflow on the Images tab (single row on wide viewports, wrap below); containers/logs strips unaffected.
