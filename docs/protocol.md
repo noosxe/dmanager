@@ -285,6 +285,8 @@ service AdminService {
   rpc ListNetworks(ListNetworksRequest) returns (ListNetworksResponse);
   // Delete an unused image from the host (Authenticated, admin role).
   rpc DeleteImage(DeleteImageRequest) returns (DeleteImageResponse);
+  // Prune all unused images from the host in one call (Authenticated, admin role).
+  rpc PruneImages(PruneImagesRequest) returns (PruneImagesResponse);
   // Report whether the Docker Engine is reachable (Authenticated, read-only).
   rpc CheckEngine(CheckEngineRequest) returns (CheckEngineResponse);
 }
@@ -333,6 +335,17 @@ message DeleteImageRequest {
   bool force = 2;   // bypass tag-conflict errors; the daemon still refuses in-use images
 }
 message DeleteImageResponse {}
+message PruneImagesRequest {
+  bool dangling_only = 1; // false (default): every image not used by a container; true: untagged (dangling) images only
+}
+message PrunedImage {
+  string deleted = 1;  // image ID removed from disk
+  string untagged = 2; // tag reference removed (image may still exist under other tags)
+}
+message PruneImagesResponse {
+  repeated PrunedImage images_deleted = 1; // per-image report as returned by the daemon
+  uint64 space_reclaimed = 2;              // bytes actually reclaimed on disk
+}
 
 message CheckEngineRequest {}
 message CheckEngineResponse {
@@ -347,7 +360,9 @@ The three list procedures are unary, take empty requests, and are classified as 
 
 `DeleteImage` is the service's first mutating procedure and is classified as **authenticated, admin role** (same policy as `ContainerService.StartContainer`). It proxies the Docker Engine `DELETE /images/{id}` API (`ImageRemove`): `id` is opaque (a full `sha256:...` ID as returned by `ListImages`), `force` bypasses tag-conflict errors for multi-tag images while the daemon still refuses images referenced by any container (running or stopped), and the empty response relies on the client re-fetching `ListImages` afterwards — the daemon remains the source of truth. Error mapping follows the existing daemon-error conventions plus: image not found → `CodeNotFound`; image in use or tag conflict → `CodeFailedPrecondition` with the daemon's message surfaced.
 
-Volumes and networks remain read-only: no create, mutate, or prune procedures are defined for them in this phase.
+`PruneImages` (issue #196) is the bulk companion to `DeleteImage` and is likewise **authenticated, admin role**. It proxies the Docker Engine `POST /images/prune` API (`ImagePrune`): with `dangling_only` false (the default) the daemon deletes **every image not referenced by any container** (`docker image prune -a` semantics); with it true, only untagged (dangling) images — the in-use protection is enforced server-side regardless. Unlike `DeleteImage` the response carries data: the per-image report (`images_deleted`, each entry `deleted` or `untagged` exactly as the daemon reports) and `space_reclaimed`, the bytes actually freed — the client renders the daemon's number rather than an estimate and still re-fetches `ListImages` afterwards. Prune has no not-found/conflict failure modes, so the only daemon-error mapping is `CodeUnavailable`.
+
+Volumes and networks remain read-only: no create, mutate, or prune procedures are defined for them in this phase. Images carry the mutation surface: per-image `DeleteImage` and bulk `PruneImages` (#196).
 
 `CheckEngine` is classified as **authenticated, any role** (same policy as the list procedures) and proxies the daemon `GET /_ping` (moby `client.Ping`). Its semantics intentionally deviate from the daemon-error convention: when the daemon is unreachable the procedure **succeeds** with `connected: false` and a short `error` reason — the daemon outage *is* the answer, not an RPC failure. It only fails with a Connect error for request/auth/transport problems (backend itself down), which is exactly the distinction the sidebar status pill needs (issue #180). The handler wraps the ping in a short (~5 s) context timeout so a hung socket cannot accumulate goroutines under polling.
 

@@ -504,6 +504,27 @@ Client-side gating is a UX affordance only; the daemon re-checks at delete time 
 
 **Testing.** Backend: httptest fake exercises removal (happy path, not-found, in-use conflict, daemon down) and the reflection test asserts `RoleAdmin` coverage for the new procedure. Frontend: button presence rules (0 / >0 / -1 / viewer), arm-then-confirm flow, arming reset timeout, per-row spinner, error-toast content, success-toast emission, and post-success `refresh()` re-render including stat-card recomputation.
 
+
+### 9.8. Image Prune — Bulk Reclaim (issue #196)
+
+§9.7 made individual unused images deletable; §9.8 makes the §9.6 **Freeable Space** stat actionable: one daemon call reclaims every image no container references (the daemon's in-use protection applies regardless of what the client sends). Research (#196): the moby SDK supports this natively — `client.ImagePrune(ctx, client.ImagePruneOptions{Filters}) → image.PruneReport{ImagesDeleted []DeleteResponse{Deleted, Untagged}, SpaceReclaimed uint64}` (Engine API `POST /images/prune`). Filter semantics: **no `dangling` filter = all unused images** (`docker image prune -a` semantics); `dangling=1` = untagged only (the CLI's default). This story ships the all-unused scope.
+
+**Backend.** `AdminService` gains `PruneImages(PruneImagesRequest) → PruneImagesResponse` (§3.5 of [protocol.md](protocol.md)). The handler calls `ImagePrune` with an empty filter set; `dangling_only` is accepted in the request for contract future-proofing and maps to the `dangling` filter when set. Unlike `DeleteImage`, the response **carries data**: the per-image report and the actual `SpaceReclaimed` — the toast reports the daemon's number, not a client-side estimate. Classified **RoleAdmin** (interceptor, same as `DeleteImage`). Error mapping degenerates: prune has no NotFound/Conflict cases, so daemon failure → `CodeUnavailable` only.
+
+**Frontend — placement & gating.** A slim actions row sits between the §9.6 stats grid and the table (flex, right-aligned) so the stats stay a clean 3-column grid: a danger-styled button (lucide `Trash2`, "Prune Unused Images"). Gating, evaluated per render from the §9.6 stats:
+
+| State | Renders |
+| --- | --- |
+| `freeableBytes > 0`, admin | Enabled danger button |
+| `freeableBytes = 0` | Disabled, `title="No unused images to prune"` |
+| viewer-role user | Disabled, `title="Admin role required"` (same affordance-only gating as §9.7) |
+| prune in flight | Disabled, `Loader2` spinner + "Pruning…" (one prune at a time) |
+
+**Confirmation — `ConfirmDialog` (danger).** Same system as §9.7's delete (§11.4): title **Prune unused images?**, message stating the scope from the current listing (`Deletes all {count} unused images, reclaiming {size}. Images in use are never touched.`), confirm verb **Prune**, `variant="danger"` → Cancel has initial focus; `busy` while in flight (Esc/backdrop suppressed, spinner on Prune); closes on settle.
+
+**Result UX.** `useAdminResources` grows `pruneImages()` tracking a `pruning` flag: success → `toast.success("Reclaimed {size} from {count} images.")` using the **daemon-reported** `space_reclaimed`; failure → `toast.error("Failed to prune images: <daemon message>")`. Both outcomes call `refresh()` — inventory, empty state, and stat cards recompute from the fresh `ListImages` response (the prune response reports what was deleted, the list remains the source of truth).
+
+**Testing.** Backend: httptest fake asserting the `POST /images/prune` request shape and the report→proto mapping (deleted/untagged entries, space_reclaimed), plus daemon-down → `CodeUnavailable`; interceptor reflection test keeps 100% `RoleAdmin` coverage. Frontend: gating matrix above, confirm flow, busy lockout, toast contents (daemon-reported bytes on success), and post-settle `refresh()` recomputation.
 ---
 
 ## 10. Engine Status Indicator (Sidebar, issue #180)

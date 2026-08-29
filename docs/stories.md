@@ -68,6 +68,7 @@ graph TD
     A59 --> A61["STORY-061: Passkey & Destructive Confirmations (#178) (DONE)"]
     A61 --> A62["STORY-062: Administration Containers-Style Layout (#189) (DONE)"]
     A62 --> A63["STORY-063: Generic PageTabs & Settings Shell Refinement (#192) (DONE)"]
+    A63 --> A64["STORY-064: Image Prune — Bulk Reclaim (#196)"]
 ```
 
 
@@ -1355,3 +1356,24 @@ graph TD
 - **Validation Check:**
   - `pnpm check`, `pnpm test`, `pnpm build` pass.
   - Visual: 24px rhythm below tabs on Administration (no doubled 48px); Settings header/tabs/panel spacing unchanged in effect.
+
+### STORY-064: Image Prune — Bulk Reclaim (issue #196) [PENDING]
+- **Scope:** Backend + frontend — new mutating RPC (`PruneImages`) + Images tab bulk action UI
+- **Estimated Size:** Medium (~350 LOC incl. tests)
+- **Dependencies:** STORY-057 (delete flow established the mutating-RPC/ConfirmDialog/toast patterns), STORY-062/063 (layout shell + shared tabs)
+- **Goal:** Per #196 / design.md §9.8 / protocol.md §3.5: make the §9.6 Freeable Space stat actionable — one daemon call (`ImagePrune`, `POST /images/prune`) reclaims every image no container references, with the daemon's in-use protection enforced server-side. Response carries the daemon-reported `space_reclaimed` + per-image report; the toast reports the daemon's number, and `ListImages` is re-fetched afterwards.
+- **Tasks:**
+  1. `proto/dmanager/v1/admin.proto`: `PruneImages(PruneImagesRequest{dangling_only}) → PruneImagesResponse{images_deleted, space_reclaimed}` + `PrunedImage{deleted, untagged}`; `buf generate`.
+  2. `internal/auth/interceptor.go`: `AdminServicePruneImagesProcedure` → `RoleAdmin` (reflection test keeps 100% coverage).
+  3. `internal/admin/service.go`: `PruneImages` handler — `ImagePrune` with empty filter set (all unused; `dangling_only` maps to the `dangling` filter); report→proto mapping; daemon error → `CodeUnavailable`. Tests: httptest fake (request shape, mapping incl. untagged/deleted entries, space_reclaimed, daemon down).
+  4. `frontend/src/hooks/useAdminResources.ts`: `pruneImages()` + `pruning` flag; success toast `Reclaimed {size} from {count} images.` (daemon-reported bytes), failure toast, `refresh()` on settle.
+  5. `frontend/src/components/Administration.tsx` + `index.css`: `.images-prune-row` between stats grid and table — danger `Trash2` "Prune Unused Images" button; disabled when `freeableBytes === 0` ("No unused images to prune") / viewer ("Admin role required") / in flight (spinner "Pruning…"); danger `ConfirmDialog` ("Prune unused images?", scope-stating message, verb "Prune", busy lockout, Cancel focus).
+  6. `Administration.test.tsx`: gating matrix, confirm flow, busy lockout, toast contents, post-settle refresh.
+- **Files Affected:**
+  - `proto/dmanager/v1/admin.proto`, `internal/gen/**`, `frontend/src/gen/**` (generated)
+  - `internal/auth/interceptor.go` (+ test), `internal/admin/service.go` (+ test)
+  - `frontend/src/hooks/useAdminResources.ts`, `frontend/src/components/Administration.tsx`, `frontend/src/index.css`, `frontend/src/components/Administration.test.tsx`
+- **Validation Check:**
+  - `go test ./...`, `go vet ./...` pass; interceptor reflection test green.
+  - `pnpm check`, `pnpm test`, `pnpm build` pass.
+  - Manual: with unused images present → confirm shows count/size, prune reclaims, toast shows daemon-reported bytes, stats/cards refresh; with none → button disabled.
