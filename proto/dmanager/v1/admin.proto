@@ -8,14 +8,22 @@ option go_package = "dmanager/internal/gen/proto/dmanager/v1;dmanagerv1";
 
 // AdminService exposes Docker host resources (images, volumes, networks)
 // for the Administration page. Lists are read-only for every role;
-// image deletion is admin-gated. Volumes and networks have no mutating
-// procedures.
+// destructive procedures (image deletion, prunes) are admin-gated.
+// Volumes gain on-demand usage measurement (any role) and an unused-volume
+// reclaim (admin); networks have no mutating procedures.
 service AdminService {
   // List images present on the host (Authenticated, any role).
   rpc ListImages(ListImagesRequest) returns (ListImagesResponse);
 
   // List volumes present on the host (Authenticated, any role).
   rpc ListVolumes(ListVolumesRequest) returns (ListVolumesResponse);
+
+  // Measure local volume disk usage (Authenticated, any role). Expensive on
+  // the daemon: each call recursively walks every local volume's directory
+  // tree, serially and uncached (singleflight only deduplicates concurrent
+  // calls) — so the web UI must trigger this only on explicit user action,
+  // never automatically.
+  rpc GetVolumeUsage(GetVolumeUsageRequest) returns (GetVolumeUsageResponse);
 
   // List networks present on the host (Authenticated, any role).
   rpc ListNetworks(ListNetworksRequest) returns (ListNetworksResponse);
@@ -28,6 +36,12 @@ service AdminService {
   // admin role). The daemon refuses images referenced by any container
   // unconditionally; with dangling_only it restricts to untagged images.
   rpc PruneImages(PruneImagesRequest) returns (PruneImagesResponse);
+
+  // Prune all unused volumes from the host in one call (Authenticated, admin
+  // role). Sends all=true so named volumes are included; the daemon removes
+  // only volumes not referenced by any container — running or stopped — at
+  // prune time, re-evaluating references itself.
+  rpc PruneVolumes(PruneVolumesRequest) returns (PruneVolumesResponse);
 
   // Report builder-owned disk space: the BuildKit build cache aggregates
   // as supplied by the daemon (Authenticated, any role).
@@ -244,4 +258,40 @@ message CheckEngineResponse {
   bool connected = 1;    // true when the daemon answered the ping
   string api_version = 2; // daemon API version, e.g. "1.51"
   string error = 3;       // short reason when connected is false, empty otherwise
+}
+
+message GetVolumeUsageRequest {}
+
+message VolumeUsage {
+  // Volume name (the join key against the ListVolumes response).
+  string name = 1;
+
+  // Size in bytes; -1 when the daemon's per-volume walk failed.
+  int64 size_bytes = 2;
+
+  // Container config references (running or stopped); -1 when unavailable.
+  int64 ref_count = 3;
+}
+
+message GetVolumeUsageResponse {
+  // Measured volumes, in daemon order.
+  repeated VolumeUsage volumes = 1;
+
+  // Daemon-computed sums; sizes of -1 are excluded from both.
+  int64 total_size_bytes = 2;
+  int64 reclaimable_bytes = 3; // sum of sizes where ref_count == 0
+
+  // Count of volumes with ref_count == 0.
+  uint32 unused_count = 4;
+}
+
+message PruneVolumesRequest {}
+
+message PruneVolumesResponse {
+  uint32 volumes_deleted = 1;
+
+  // Names of the removed volumes (for the success toast).
+  repeated string names = 2;
+
+  uint64 space_reclaimed = 3;
 }

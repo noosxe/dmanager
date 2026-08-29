@@ -9,12 +9,17 @@ import {
 import { HardDrive } from "lucide-react";
 import { useState } from "react";
 
-import type { Volume } from "../gen/proto/dmanager/v1/admin_pb";
-import { formatTimestamp } from "./adminFormat";
+import type { Volume, VolumeUsage } from "../gen/proto/dmanager/v1/admin_pb";
+import { formatBytes, formatTimestamp } from "./adminFormat";
 import { SortButton } from "./SortButton";
+
+/** Measured sizes by volume name — null until the user triggers a measurement. */
+export type VolumeUsageIndex = Map<string, VolumeUsage>;
 
 interface VolumeTableProps {
   volumes: Volume[];
+  /** Measured usage — the Size column renders placeholders when absent. */
+  usage?: VolumeUsageIndex | null;
 }
 
 const columns: ColumnDef<Volume>[] = [
@@ -55,6 +60,27 @@ const columns: ColumnDef<Volume>[] = [
     ),
   },
   {
+    // Size is measured on demand (design.md §9.11, #212): the daemon walks
+    // every volume's directory tree per call, so this column renders — until
+    // the user triggers a measurement, and — for size -1 (walk failure).
+    // Deliberately not sortable: sizes are a snapshot, not list metadata.
+    id: "size",
+    header: "Size",
+    enableSorting: false,
+    cell: ({ row, table }) => {
+      const usage = (table.options.meta as { usage?: VolumeUsageIndex | null } | undefined)?.usage;
+      const size = usage?.get(row.original.name)?.sizeBytes;
+      if (size === undefined || size < 0) {
+        return <span className="table-cell-date">—</span>;
+      }
+      return (
+        <span className="table-cell-date" title={`${size} bytes`}>
+          {formatBytes(size)}
+        </span>
+      );
+    },
+  },
+  {
     id: "labels",
     accessorFn: (row) => Object.keys(row.labels).join(","),
     header: "Labels",
@@ -90,8 +116,9 @@ const columns: ColumnDef<Volume>[] = [
   },
 ];
 
-// Read-only volume inventory table. No actions column by design.
-export function VolumeTable({ volumes }: VolumeTableProps) {
+// Read-only volume inventory table; sizes appear only after an explicit
+// measurement (design.md §9.11, #212). No actions column by design.
+export function VolumeTable({ volumes, usage }: VolumeTableProps) {
   const [sorting, setSorting] = useState<SortingState>([{ id: "name", desc: false }]);
 
   const table = useReactTable({
@@ -103,6 +130,7 @@ export function VolumeTable({ volumes }: VolumeTableProps) {
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    meta: { usage: usage ?? null },
   });
 
   return (

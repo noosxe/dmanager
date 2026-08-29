@@ -6,6 +6,7 @@ import { useToast } from "../context/ToastContext";
 import type {
   BuildCacheRecord,
   GetBuildCacheStatsResponse,
+  GetVolumeUsageResponse,
   Image,
   ListBuildCacheRecordsResponse,
   Network,
@@ -37,7 +38,9 @@ export function useAdminResources(kind: AdminResourceKind) {
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [pruning, setPruning] = useState(false);
-  const [pruningScope, setPruningScope] = useState<"unused" | "dangling" | "builder" | null>(null);
+  const [pruningScope, setPruningScope] = useState<
+    "unused" | "dangling" | "builder" | "volumes" | null
+  >(null);
   const [pruningRecordId, setPruningRecordId] = useState<string | null>(null);
   // Builder records are the Builder tab's drill-down slice (design.md §9.10):
   // they load and fail independently of the stats so a records problem never
@@ -45,6 +48,12 @@ export function useAdminResources(kind: AdminResourceKind) {
   const [builderRecords, setBuilderRecords] = useState<BuildCacheRecord[]>([]);
   const [recordsLoading, setRecordsLoading] = useState(false);
   const [recordsError, setRecordsError] = useState(false);
+  // Volume usage is measured strictly on demand (design.md §9.11, #212):
+  // the daemon walks every volume's directory tree per call, so nothing
+  // fetches it automatically — measureVolumeUsage() is button-triggered only,
+  // and the slice starts null ("never measured").
+  const [volumeUsage, setVolumeUsage] = useState<GetVolumeUsageResponse | null>(null);
+  const [measuring, setMeasuring] = useState(false);
   useEffect(() => {
     let cancelled = false;
 
@@ -253,6 +262,62 @@ export function useAdminResources(kind: AdminResourceKind) {
     [pruning, refresh, toast],
   );
 
+  // Measures volume disk usage on explicit user action only (design.md
+  // §9.11, #212) — seconds-scale on the daemon, so it never joins any
+  // auto-effect. Result replaces the previous measurement wholesale.
+  const measureVolumeUsage = useCallback(async () => {
+    if (measuring) {
+      return;
+    }
+    setMeasuring(true);
+    try {
+      const resp = await adminClient.getVolumeUsage({});
+      setVolumeUsage(resp);
+    } catch (err: unknown) {
+      console.error("Failed to measure volume usage:", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Failed to measure volume usage: ${msg}`);
+    } finally {
+      setMeasuring(false);
+    }
+  }, [measuring, toast]);
+
+  // Prunes all unused volumes in one daemon call (design.md §9.11, #212).
+  // The daemon re-evaluates container references at prune time — a stale
+  // measurement can never cause a protected volume to be deleted, and the
+  // toast reports the daemon's actual names and bytes. Joins the shared
+  // single-flight `pruning` guard; when sizes were previously calculated,
+  // the measurement re-runs automatically to validate the reclaim.
+  const pruneVolumes = useCallback(async () => {
+    if (pruning) {
+      return;
+    }
+    setPruning(true);
+    setPruningScope("volumes");
+    try {
+      const resp = await adminClient.pruneVolumes({});
+      const count = resp.volumesDeleted;
+      const noun = count === 1 ? "volume" : "volumes";
+      const namesSuffix =
+        count > 0 && count <= 3 && resp.names.length > 0 ? ` (${resp.names.join(", ")})` : "";
+      toast.success(
+        `Reclaimed ${formatBytes(resp.spaceReclaimed, true)} from ${count} unused ${noun}${namesSuffix}.`,
+      );
+    } catch (err: unknown) {
+      console.error("Failed to prune volumes:", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Failed to prune volumes: ${msg}`);
+      return;
+    } finally {
+      setPruning(false);
+      setPruningScope(null);
+    }
+    refresh();
+    if (volumeUsage !== null) {
+      void measureVolumeUsage();
+    }
+  }, [pruning, refresh, toast, volumeUsage, measureVolumeUsage]);
+
   return {
     result,
     isLoading,
@@ -269,5 +334,9 @@ export function useAdminResources(kind: AdminResourceKind) {
     builderRecords,
     recordsLoading,
     recordsError,
+    volumeUsage,
+    measuring,
+    measureVolumeUsage,
+    pruneVolumes,
   };
 }

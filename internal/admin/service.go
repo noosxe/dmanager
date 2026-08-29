@@ -85,6 +85,75 @@ func (s *Service) ListVolumes(ctx context.Context, req *connect.Request[dmanager
 	return connect.NewResponse(&dmanagerv1.ListVolumesResponse{Volumes: volumes}), nil
 }
 
+// GetVolumeUsage measures local volume disk usage on demand (design.md §9.11,
+// #212). One DiskUsage{Volumes: true} daemon call — expensive: the daemon
+// recursively walks every local volume's directory tree, serially and
+// uncached, so the frontend triggers this only via explicit user action.
+// Aggregates are computed server-side so clients never re-derive them; a
+// size of -1 (daemon walk failure) passes through verbatim and is excluded
+// from the sums, matching the daemon's own accounting.
+func (s *Service) GetVolumeUsage(ctx context.Context, req *connect.Request[dmanagerv1.GetVolumeUsageRequest]) (*connect.Response[dmanagerv1.GetVolumeUsageResponse], error) {
+	// Verbose=true is required on modern daemons (API >= 1.52): the
+	// non-verbose decode populates the aggregates but drops Items, leaving
+	// the per-volume sizes empty. Same trap as the build-cache records call.
+	usage, err := s.dockerClient.DiskUsage(ctx, client.DiskUsageOptions{Volumes: true, Verbose: true})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("failed to measure volume usage: %w", err))
+	}
+
+	volumes := make([]*dmanagerv1.VolumeUsage, len(usage.Volumes.Items))
+	var totalSize, reclaimable int64
+	unusedCount := uint32(0)
+	for i, v := range usage.Volumes.Items {
+		var size, refCount int64
+		if v.UsageData != nil {
+			size = v.UsageData.Size
+			refCount = v.UsageData.RefCount
+		}
+		volumes[i] = &dmanagerv1.VolumeUsage{
+			Name:      v.Name,
+			SizeBytes: size,
+			RefCount:  refCount,
+		}
+		if size >= 0 {
+			totalSize += size
+			if refCount == 0 {
+				reclaimable += size
+			}
+		}
+		// Unused means unreferenced, regardless of whether the size is known:
+		// a walk-failed volume is still reclaimable, its bytes are just unknown.
+		if refCount == 0 {
+			unusedCount++ //nolint:gosec // non-negative count
+		}
+	}
+
+	return connect.NewResponse(&dmanagerv1.GetVolumeUsageResponse{
+		Volumes:          volumes,
+		TotalSizeBytes:   totalSize,
+		ReclaimableBytes: reclaimable,
+		UnusedCount:      unusedCount,
+	}), nil
+}
+
+// PruneVolumes removes all unused volumes in one daemon call (design.md
+// §9.11, #212). All=true includes named volumes (the daemon's default prunes
+// anonymous only); the daemon re-evaluates container references at prune
+// time, so volumes referenced by any container — running or stopped — are
+// protected regardless of any stale client preview.
+func (s *Service) PruneVolumes(ctx context.Context, req *connect.Request[dmanagerv1.PruneVolumesRequest]) (*connect.Response[dmanagerv1.PruneVolumesResponse], error) {
+	result, err := s.dockerClient.VolumePrune(ctx, client.VolumePruneOptions{All: true})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("failed to prune volumes: %w", err))
+	}
+
+	return connect.NewResponse(&dmanagerv1.PruneVolumesResponse{
+		VolumesDeleted: uint32(len(result.Report.VolumesDeleted)), //nolint:gosec // non-negative daemon count
+		Names:          result.Report.VolumesDeleted,
+		SpaceReclaimed: result.Report.SpaceReclaimed,
+	}), nil
+}
+
 // ListNetworks returns all networks present on the Docker host.
 func (s *Service) ListNetworks(ctx context.Context, req *connect.Request[dmanagerv1.ListNetworksRequest]) (*connect.Response[dmanagerv1.ListNetworksResponse], error) {
 	result, err := s.dockerClient.NetworkList(ctx, client.NetworkListOptions{})
