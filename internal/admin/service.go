@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"time"
 
 	connect "connectrpc.com/connect"
@@ -139,9 +140,12 @@ func (s *Service) DeleteImage(ctx context.Context, req *connect.Request[dmanager
 // default prunes every image no container references — in-use protection is
 // enforced server-side regardless.
 func (s *Service) PruneImages(ctx context.Context, req *connect.Request[dmanagerv1.PruneImagesRequest]) (*connect.Response[dmanagerv1.PruneImagesResponse], error) {
-	filters := client.Filters{}
-	if req.Msg.DanglingOnly {
-		filters["dangling"] = map[string]bool{"true": true}
+	// The daemon's default when the dangling filter is absent is dangling-only
+	// (GetBoolOrDefault("dangling", true)), so the filter is always sent
+	// explicitly: false (the default scope) prunes every unused image, true
+	// prunes untagged (dangling) images only — #196 follow-up.
+	filters := client.Filters{
+		"dangling": map[string]bool{strconv.FormatBool(req.Msg.DanglingOnly): true},
 	}
 
 	result, err := s.dockerClient.ImagePrune(ctx, client.ImagePruneOptions{Filters: filters})
