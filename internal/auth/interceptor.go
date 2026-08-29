@@ -121,6 +121,7 @@ var procedureRoles = map[string]ProcedureRole{
 	dmanagerv1connect.AdminServiceListVolumesProcedure:              RoleViewer,
 	dmanagerv1connect.AdminServiceListNetworksProcedure:             RoleViewer,
 	dmanagerv1connect.AdminServiceGetBuildCacheStatsProcedure:       RoleViewer,
+	dmanagerv1connect.AdminServiceListBuildCacheRecordsProcedure:    RoleViewer,
 	dmanagerv1connect.AdminServiceCheckEngineProcedure:              RoleViewer,
 
 	// Admin procedures (requires User.Role == "admin")
@@ -128,6 +129,7 @@ var procedureRoles = map[string]ProcedureRole{
 	dmanagerv1connect.ContainerServiceStartContainerProcedure:         RoleAdmin,
 	dmanagerv1connect.AdminServicePruneImagesProcedure:                RoleAdmin,
 	dmanagerv1connect.AdminServicePruneBuildCacheProcedure:            RoleAdmin,
+	dmanagerv1connect.AdminServicePruneBuildCacheRecordProcedure:      RoleAdmin,
 	dmanagerv1connect.ContainerServiceStopContainerProcedure:          RoleAdmin,
 	dmanagerv1connect.ContainerServiceUpgradeContainerProcedure:       RoleAdmin,
 	dmanagerv1connect.ContainerServiceSetContainerAutoUpdateProcedure: RoleAdmin,

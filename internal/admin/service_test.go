@@ -809,3 +809,217 @@ func TestPruneBuildCacheErrors(t *testing.T) {
 		t.Errorf("expected message to contain %q, got %q", "failed to prune build cache", connErr.Message())
 	}
 }
+
+func TestListBuildCacheRecords(t *testing.T) {
+	// Modern daemon shape: BuildCacheUsage aggregates + Items. Items are only
+	// decoded when the request is verbose, so the fake asserts the query.
+	var gotVerbose, gotType string
+	svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/_ping") {
+			w.Header().Set("API-Version", "1.53")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("OK"))
+			return
+		}
+		if !strings.HasSuffix(r.URL.Path, "/system/df") {
+			http.NotFound(w, r)
+			return
+		}
+		gotVerbose = r.URL.Query().Get("verbose")
+		gotType = r.URL.Query().Get("type")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"BuildCacheUsage": {"TotalSize": 5000, "Reclaimable": 3000, "TotalCount": 3, "ActiveCount": 0, "Items": [` +
+			`{"ID": "big", "Type": "exec.cachemount", "Description": "exec mount /bin/sh", "Size": 4800, "Shared": false, "InUse": false, "CreatedAt": "2026-01-01T00:00:00Z", "LastUsedAt": "2026-08-01T12:00:00Z", "UsageCount": 7},` +
+			`{"ID": "small", "Type": "source.local", "Description": "local source", "Size": 100, "Shared": true, "InUse": true, "CreatedAt": "2026-01-02T00:00:00Z"},` +
+			`{"ID": "mid", "Type": "regular", "Description": "", "Size": 100, "Shared": false, "InUse": false, "CreatedAt": "2026-01-03T00:00:00Z", "LastUsedAt": "2026-08-02T00:00:00Z", "UsageCount": 2}]}}`))
+	})
+
+	resp, err := svc.ListBuildCacheRecords(context.Background(), connect.NewRequest(&v1.ListBuildCacheRecordsRequest{}))
+	if err != nil {
+		t.Fatalf("ListBuildCacheRecords failed: %v", err)
+	}
+	if gotVerbose != "1" {
+		t.Errorf("expected verbose=1 query param, got %q", gotVerbose)
+	}
+	if gotType != "build-cache" {
+		t.Errorf("expected type=build-cache query param, got %q", gotType)
+	}
+
+	records := resp.Msg.Records
+	if len(records) != 3 {
+		t.Fatalf("expected 3 records, got %d", len(records))
+	}
+	// Sorted by size desc; equal sizes break the tie by ID ascending.
+	orders := []string{records[0].GetId(), records[1].GetId(), records[2].GetId()}
+	if orders[0] != "big" || orders[1] != "mid" || orders[2] != "small" {
+		t.Errorf("expected [big mid small], got %v", orders)
+	}
+
+	big := records[0]
+	if big.GetType() != "exec.cachemount" || big.GetDescription() != "exec mount /bin/sh" {
+		t.Errorf("unexpected type/description: %q / %q", big.GetType(), big.GetDescription())
+	}
+	if big.GetSizeBytes() != 4800 || big.GetUsageCount() != 7 || big.GetShared() || big.GetInUse() {
+		t.Errorf("unexpected scalar fields on the top record: %+v", big)
+	}
+	if big.GetLastUsedAt() == nil || big.GetLastUsedAt().AsTime().Unix() != 1785585600 {
+		t.Errorf("expected last_used_at mapped, got %v", big.GetLastUsedAt())
+	}
+	if big.GetCreatedAt() == nil {
+		t.Error("expected created_at mapped")
+	}
+
+	// A never-used record ships no last_used_at ("small" has none).
+	if records[2].GetLastUsedAt() != nil {
+		t.Errorf("expected nil last_used_at on never-used record, got %v", records[2].GetLastUsedAt())
+	}
+
+	inUse := records[2]
+	if !inUse.GetInUse() || !inUse.GetShared() {
+		t.Error("expected in_use/shared mapped on the in-use record")
+	}
+}
+
+func TestListBuildCacheRecordsEmpty(t *testing.T) {
+	svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/_ping") {
+			w.Header().Set("API-Version", "1.53")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("OK"))
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"BuildCacheUsage": {"TotalSize": 0, "TotalCount": 0, "Items": []}}`))
+	})
+
+	resp, err := svc.ListBuildCacheRecords(context.Background(), connect.NewRequest(&v1.ListBuildCacheRecordsRequest{}))
+	if err != nil {
+		t.Fatalf("ListBuildCacheRecords failed: %v", err)
+	}
+	if len(resp.Msg.Records) != 0 {
+		t.Errorf("expected 0 records, got %d", len(resp.Msg.Records))
+	}
+}
+
+func TestListBuildCacheRecordsErrors(t *testing.T) {
+	svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) {
+		if pingHandler(w, r) {
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`{"message": "daemon unavailable"}`))
+	})
+
+	_, err := svc.ListBuildCacheRecords(context.Background(), connect.NewRequest(&v1.ListBuildCacheRecordsRequest{}))
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	connErr, ok := err.(*connect.Error)
+	if !ok {
+		t.Fatalf("expected *connect.Error, got %T", err)
+	}
+	if connErr.Code() != connect.CodeUnavailable {
+		t.Errorf("expected code %v, got %v", connect.CodeUnavailable, connErr.Code())
+	}
+}
+
+func TestPruneBuildCacheRecord(t *testing.T) {
+	var gotAll, gotFilters string
+	svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) {
+		if pingHandler(w, r) {
+			return
+		}
+		if !strings.HasSuffix(r.URL.Path, "/build/prune") {
+			http.NotFound(w, r)
+			return
+		}
+		gotAll = r.URL.Query().Get("all")
+		gotFilters = r.URL.Query().Get("filters")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"CachesDeleted": ["sha256:abc"], "SpaceReclaimed": 4800}`))
+	})
+
+	resp, err := svc.PruneBuildCacheRecord(context.Background(), connect.NewRequest(&v1.PruneBuildCacheRecordRequest{Id: "sha256:abc"}))
+	if err != nil {
+		t.Fatalf("PruneBuildCacheRecord failed: %v", err)
+	}
+	// all=1 with the id filter is deterministic: the filter already scopes
+	// candidates to the one record, all lifts internal-type protection for it.
+	if gotAll != "1" {
+		t.Errorf("expected all=1 query param, got %q", gotAll)
+	}
+	if !strings.Contains(gotFilters, "sha256:abc") || !strings.Contains(gotFilters, "\"id\"") {
+		t.Errorf("expected id filter carrying the record ID, got %q", gotFilters)
+	}
+	if resp.Msg.CachesDeleted != 1 {
+		t.Errorf("expected caches_deleted 1, got %d", resp.Msg.CachesDeleted)
+	}
+	if resp.Msg.SpaceReclaimed != 4800 {
+		t.Errorf("expected space_reclaimed 4800, got %d", resp.Msg.SpaceReclaimed)
+	}
+}
+
+func TestPruneBuildCacheRecordProtected(t *testing.T) {
+	// In-use records are daemon-protected: an empty report is honest 0/0.
+	svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) {
+		if pingHandler(w, r) {
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"CachesDeleted": [], "SpaceReclaimed": 0}`))
+	})
+
+	resp, err := svc.PruneBuildCacheRecord(context.Background(), connect.NewRequest(&v1.PruneBuildCacheRecordRequest{Id: "sha256:busy"}))
+	if err != nil {
+		t.Fatalf("PruneBuildCacheRecord failed: %v", err)
+	}
+	if resp.Msg.CachesDeleted != 0 || resp.Msg.SpaceReclaimed != 0 {
+		t.Errorf("expected 0/0 for a protected record, got %d/%d", resp.Msg.CachesDeleted, resp.Msg.SpaceReclaimed)
+	}
+}
+
+func TestPruneBuildCacheRecordValidation(t *testing.T) {
+	// Blank IDs are rejected before the daemon is touched — the fake fails
+	// the test if any request arrives.
+	svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Error("daemon should not be called for a blank id")
+	})
+
+	for _, id := range []string{"", "   "} {
+		_, err := svc.PruneBuildCacheRecord(context.Background(), connect.NewRequest(&v1.PruneBuildCacheRecordRequest{Id: id}))
+		if err == nil {
+			t.Fatalf("expected error for id %q, got nil", id)
+		}
+		connErr, ok := err.(*connect.Error)
+		if !ok {
+			t.Fatalf("expected *connect.Error, got %T", err)
+		}
+		if connErr.Code() != connect.CodeInvalidArgument {
+			t.Errorf("expected code %v, got %v", connect.CodeInvalidArgument, connErr.Code())
+		}
+	}
+}
+
+func TestPruneBuildCacheRecordErrors(t *testing.T) {
+	svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) {
+		if pingHandler(w, r) {
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`{"message": "daemon unavailable"}`))
+	})
+
+	_, err := svc.PruneBuildCacheRecord(context.Background(), connect.NewRequest(&v1.PruneBuildCacheRecordRequest{Id: "sha256:abc"}))
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	connErr, ok := err.(*connect.Error)
+	if !ok {
+		t.Fatalf("expected *connect.Error, got %T", err)
+	}
+	if connErr.Code() != connect.CodeUnavailable {
+		t.Errorf("expected code %v, got %v", connect.CodeUnavailable, connErr.Code())
+	}
+}
