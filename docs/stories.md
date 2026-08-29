@@ -74,6 +74,7 @@ graph TD
     A66 --> A67["STORY-067: Builder Tab — Cache Stats & Prune (#206) (DONE)"]
     A67 --> A68["STORY-068: Builder Records Drill-Down — Table & Per-Record Prune (#209) (DONE)"]
     A68 --> A69["STORY-069: Volume Usage On Demand — Sizes, Reclaim & Count (#212) (DONE)"]
+    A69 --> A70["STORY-070: Networks Tab — In-Use Visibility, Deletion & Reclaim (#215)"]
 ```
 
 
@@ -1488,3 +1489,24 @@ graph TD
   - `go test ./...`, `go vet ./...` pass; interceptor reflection test green.
   - `pnpm check`, `pnpm test`, `pnpm build` pass.
   - Manual: opening Volumes tab issues only `ListVolumes`; Calculate sizes fills sizes (seconds-scale on the live host — spinner visible); Reclaim space dialog states the measured upper bound; pruning unused volumes reports daemon truth and re-measures; viewer cannot see an enabled Reclaim button.
+
+### STORY-070: Networks Tab — In-Use Visibility, Deletion & Reclaim (issue #215) [PLANNED]
+
+**Goal:** Close the Networks tab's three read-only gaps in one story: in-use state is invisible, unused networks have no delete path, and `docker network prune` has no UI equivalent. Unlike volumes (§9.11), the economics are inverted — the list endpoint is blind (no `Containers` on API ≥ 1.28) but per-network inspection is an in-memory read with no walk, so everything ships in the read path with no opt-in gating.
+
+**Tasks:**
+  1. `proto/dmanager/v1/admin.proto`: `Network` gains `containers_count` (7; `-1` = per-network inspect failure) and `predefined` (8; daemon-owned `bridge`/`host`/`none`); new `DeleteNetwork` (admin) + `PruneNetworks` (admin) RPCs with `DeleteNetworkRequest{id}/Response` and `PruneNetworksRequest/Response{networks_deleted, names}` — no byte field, the daemon reports none; `buf generate`.
+  2. `internal/auth/interceptor.go`: `DeleteNetwork`/`PruneNetworks` → `RoleAdmin`.
+  3. `internal/admin/service.go`: `ListNetworks` enriches each row via one `NetworkInspect` per network (`containers_count = len(Containers)`, `-1` on inspect failure, `predefined` from the daemon's Linux rule); `DeleteNetwork` → `NetworkRemove(ctx, id, NetworkRemoveOptions{})` (in-use/pre-defined → `CodeFailedPrecondition`, not-found → `CodeNotFound`); `PruneNetworks` → `NetworkPrune(ctx, NetworkPruneOptions{})` mapping `NetworksDeleted`.
+  4. `frontend/src/hooks/useAdminResources.ts`: `deleteNetwork` (independent `deletingNetworkId` slice, toast + refresh) and `pruneNetworks` joining the shared single-flight guard with `"networks"` scope; success toast `Deleted {n} unused networks (names ≤ 3).` — no bytes, honesty over symmetry.
+  5. `frontend/src/components/NetworkTable.tsx`: In Use column (Yes/No badges, `—` on `-1`, sortable); Actions column mirroring ImageTable (button only for unused, non-predefined, admin rows); per-row ConfirmDialog "Delete network?" naming `{name} ({driver})`.
+  6. `frontend/src/components/Administration.tsx`: networks actions row with **Prune Unused** (admin-gated); `pendingPrune` gains `"networks"`; dialog "Prune unused networks?" with count/names derived from the loaded rows.
+  7. Tests: backend enrichment (counts, `-1` degradation, `predefined`), delete error mapping matrix, prune report mapping, daemon-down; frontend gating matrix (unused+admin → button; in-use / pre-defined / unknown / viewer → dash), per-row delete flow, prune flow with derived count, regression — tab open issues the list plus only the enrichment inspects.
+- **Files Affected:**
+  - `proto/dmanager/v1/admin.proto`, `internal/gen/**`, `frontend/src/gen/**` (generated)
+  - `internal/auth/interceptor.go` (+ test), `internal/admin/service.go` (+ test)
+  - `frontend/src/hooks/useAdminResources.ts`, `frontend/src/components/NetworkTable.tsx`, `frontend/src/components/Administration.tsx`, test files
+- **Validation Check:**
+  - `go test ./...`, `go vet ./...` pass; interceptor reflection test green.
+  - `pnpm check`, `pnpm test`, `pnpm build` pass.
+  - Manual: In Use column reflects live attachments (stop a container — its network still shows in use); viewer sees no enabled delete/prune controls; deleting an unused network asks once and refreshes; Prune Unused names what it removed and never touches `bridge`/`host`/`none`.
