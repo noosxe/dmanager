@@ -281,12 +281,21 @@ service AdminService {
   rpc ListImages(ListImagesRequest) returns (ListImagesResponse);
   // List volumes present on the host (Authenticated, read-only).
   rpc ListVolumes(ListVolumesRequest) returns (ListVolumesResponse);
+  // Measure local volume disk usage (Authenticated, any role). Expensive on
+  // the daemon (recursive directory walk per volume, no server-side cache:
+  // singleflight only deduplicates concurrent calls) — the web UI must
+  // trigger this only on explicit user action, never automatically.
+  rpc GetVolumeUsage(GetVolumeUsageRequest) returns (GetVolumeUsageResponse);
   // List networks present on the host (Authenticated, read-only).
   rpc ListNetworks(ListNetworksRequest) returns (ListNetworksResponse);
   // Delete an unused image from the host (Authenticated, admin role).
   rpc DeleteImage(DeleteImageRequest) returns (DeleteImageResponse);
   // Prune all unused images from the host in one call (Authenticated, admin role).
   rpc PruneImages(PruneImagesRequest) returns (PruneImagesResponse);
+  // Prune all unused volumes from the host in one call (Authenticated, admin
+  // role). The daemon removes only volumes not referenced by any container
+  // — running or stopped — at prune time.
+  rpc PruneVolumes(PruneVolumesRequest) returns (PruneVolumesResponse);
   // Report whether the Docker Engine is reachable (Authenticated, read-only).
   rpc CheckEngine(CheckEngineRequest) returns (CheckEngineResponse);
 }
@@ -375,6 +384,10 @@ Volumes and networks remain read-only: no create, mutate, or prune procedures ar
 `ListBuildCacheRecords` (issue #209) is **authenticated, any role** and reuses the stats daemon call (`GET /system/df?type=build-cache`), mapping the per-record `Items` into `BuildCacheRecord{id, type, description, size_bytes, in_use, shared, usage_count, created_at, last_used_at}` (`last_used_at` is optional — a never-used record has none). Records arrive **sorted by `size_bytes` descending** — the size-sorted view is the server's contract, so clients render top offenders first without sort state.
 
 `PruneBuildCacheRecord` (issue #209) is **authenticated, admin role** and proxies `POST /build/prune` with `all=1` and `filters={"id":["<full record id>"]}`. Verified daemon behavior: `id` is a validated cache-prune filter the daemon converts to buildkit `id~=<value>` (prefix match), so the full ID matches exactly one record; `all=1` only lifts the internal-type restriction for that explicitly targeted record (blast radius 1). Records with `in_use=true` are daemon-protected — the prune deletes nothing. A blank `id` is rejected client-side with `CodeInvalidArgument` without touching the daemon; daemon-down follows the `CodeUnavailable` convention. The response carries the same daemon-truth pair as `PruneBuildCache`: `caches_deleted` (count of removed records — 0 when the daemon protected the record) and `space_reclaimed`.
+
+`GetVolumeUsage` (issue #212) is **authenticated, any role** (read convention, `ListImages` precedent — a viewer may list volumes, so a viewer may measure them) and issues one `GET /system/df?type=volumes` daemon call. The daemon walks every local volume's directory tree **serially and uncached** (singleflight only deduplicates concurrent calls) to compute sizes — a seconds-scale operation on hosts with large volumes — so the response must only ever be requested by an explicit user action, never by an automatic fetch. It maps to `VolumeUsage{name, size_bytes, ref_count}` per volume, where `size_bytes: -1` is the daemon's per-volume walk-failure signal (passed through verbatim; the client renders it as unknown) and `ref_count` counts container config references including stopped containers. Aggregate fields (`total_size_bytes`, `reclaimable_bytes` = sizes where `ref_count == 0`, `unused_count` = that set's cardinality) are computed server-side so clients never re-derive them. Only `local`-driver volumes without mount options appear, matching the daemon's df and prune scopes.
+
+`PruneVolumes` (issue #212) is **authenticated, admin role** and issues one `POST /volumes/prune` with no filters — the daemon's unused scope is fixed: a volume is removable only when **no container, running or stopped, references it at prune time** (local driver, no mount options; references are re-evaluated by the daemon, so a stale client preview can never cause a wrong deletion — protected volumes are simply absent from the report). The response maps the daemon report honestly: `volumes_deleted` (count), `names` (the removed volumes' names, for the success toast), and `space_reclaimed`. Daemon-down follows the `CodeUnavailable` convention.
 
 `CheckEngine` is classified as **authenticated, any role** (same policy as the list procedures) and proxies the daemon `GET /_ping` (moby `client.Ping`). Its semantics intentionally deviate from the daemon-error convention: when the daemon is unreachable the procedure **succeeds** with `connected: false` and a short `error` reason — the daemon outage *is* the answer, not an RPC failure. It only fails with a Connect error for request/auth/transport problems (backend itself down), which is exactly the distinction the sidebar status pill needs (issue #180). The handler wraps the ping in a short (~5 s) context timeout so a hung socket cannot accumulate goroutines under polling.
 
