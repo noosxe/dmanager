@@ -70,6 +70,7 @@ graph TD
     A62 --> A63["STORY-063: Generic PageTabs & Settings Shell Refinement (#192) (DONE)"]
     A63 --> A64["STORY-064: Image Prune — Bulk Reclaim (#196) (DONE)"]
     A64 --> A65["STORY-065: Images Unused & Dangling Stat Cards (#200) (DONE)"]
+    A65 --> A66["STORY-066: Scoped Prune Buttons — Unused & Dangling (#203)"]
 ```
 
 
@@ -1394,3 +1395,20 @@ graph TD
 - **Validation Check:**
   - `pnpm check`, `pnpm test`, `pnpm build` pass.
   - Visual: five cards reflow on the Images tab (single row on wide viewports, wrap below); containers/logs strips unaffected.
+
+### STORY-066: Scoped Prune Buttons — Unused & Dangling (issue #203) [PLANNED]
+- **Scope:** Frontend only — two prune buttons matching the two stat cards; dangling semantics tightened
+- **Estimated Size:** Small-Medium (~120 LOC incl. tests)
+- **Dependencies:** STORY-064 (PruneImages RPC + both wire scopes already present), STORY-065 (Unused/Dangling cards)
+- **Goal:** Per #203 / design.md §9.6+§9.8: split the prune row into two buttons mapping left→right onto the cards — **Prune Unused** (renamed; `danglingOnly: false`, every image with zero referencing containers) and **Prune Dangling** (new; `danglingOnly: true`, untagged only). No protocol or backend changes. **Correction (#203): "dangling" means untagged AND unused everywhere** — the Dangling card's derivation tightens from tag-only (STORY-065) to `repoTags` empty AND `containersCount = 0`, so an untagged image in use by a container is never counted and the card always matches what the dangling prune deletes.
+- **Tasks:**
+  1. `frontend/src/components/adminFormat.ts`: `danglingCount` derivation → `repoTags.length === 0 && containersCount === 0n` (tightened, #203); new `danglingFreeableBytes` (Σ `sizeBytes` of that set) for the dangling dialog copy.
+  2. `frontend/src/hooks/useAdminResources.ts`: `pruneImages(danglingOnly: boolean)` passes the scope through; `pruningScope: "unused" | "dangling" | null` names the in-flight button (single-flight `pruning` unchanged); toast nouns — "Reclaimed {size} from {count} unused images." / "…from {count} dangling images." (daemon-reported bytes).
+  3. `frontend/src/components/Administration.tsx`: rename button → "Prune Unused"; add "Prune Dangling" (same danger `.prune-btn`) — gated on `pruning || !isAdmin || !imageStats || danglingFreeableBytes === 0n`, title "No dangling images to prune" / "Admin role required"; `pendingPrune` → `"unused" | "dangling" | null`; one scope-driven `ConfirmDialog` (danger, verb "Prune", Cancel focus, busy lockout) — dangling copy: `Deletes all {danglingCount} dangling images, reclaiming {danglingFreeableBytes}. Tagged images are never touched.`
+  4. `frontend/src/index.css`: `.images-prune-row` gains `gap: 12px`.
+  5. `Administration.test.tsx`: default-fixture Dangling card flips 1 → 0 (`fff000` is tagless with `-1` usage — now excluded); new tests: dangling gating matrix (disabled+title when nothing reclaimable, viewer role), dangling confirm flow (copy, Cancel focus, toast "from N dangling images.", refresh), unused-scope toast noun update, both-disabled-while-pruning.
+- **Files Affected:**
+  - `frontend/src/components/adminFormat.ts`, `frontend/src/hooks/useAdminResources.ts`, `frontend/src/components/Administration.tsx`, `frontend/src/index.css`, `frontend/src/components/Administration.test.tsx`
+- **Validation Check:**
+  - `pnpm check`, `pnpm test`, `pnpm build` pass.
+  - Manual: Prune Unused behaves as before (renamed); Prune Dangling deletes only untagged images and its dialog count matches the Dangling card exactly.

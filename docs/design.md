@@ -472,14 +472,14 @@ The Images tab shows a five-card summary strip between the tab bar and the table
 | Freeable Space | `Σ size_bytes` where `containers_count = 0` | Images not used by any container — the theoretical reclaim footprint |
 | Images | image count | `images.length` |
 | Unused | image count where `containers_count = 0` | Images not used by any container, tagged **and** untagged alike — the exact prune/delete scope (§9.7/§9.8), counted rather than byte-measured |
-| Dangling | image count where `repo_tags` is empty | Untagged images only, regardless of container count — dangling is a tag property, not a usage property |
+| Dangling | image count where `repo_tags` is empty **and** `containers_count = 0` | Untagged images **not referenced by any container** — exactly the set the §9.8 dangling-scope prune deletes (STORY-066 tightened this from STORY-065's tag-only derivation; #203) |
 
-* **Unknown usage counts:** images with `containers_count = -1` (daemon did not calculate) are conservatively treated as **in use**, so Freeable Space and the Unused count never overstate what could be reclaimed; the Dangling count is unaffected (tag-based, no usage dependency).
+* **Unknown usage counts:** images with `containers_count = -1` (daemon did not calculate) are conservatively treated as **in use**, so Freeable Space, the Unused count, and the Dangling count never overstate what could be reclaimed (STORY-066 extended the rule to Dangling; #203).
 * **Shared-layer approximation:** `size_bytes` includes layers shared between images, so both sums match summing the SIZE column of `docker image ls` and overstate uniquely-owned disk; the space actually freed by a future prune will be equal or lower. Sourcing unique sizes from `/system/df` may be designed in a later phase.
 * **Styling:** reuses the existing dashboard CSS — `stats-grid` / `stat-card` / `stat-icon-wrapper` / `stat-value` / `stat-label` — with color modifiers `total` (blue), `updates` (amber), `stopped` (gray) and lucide icons `HardDrive`, `Recycle`, `Layers`, plus two one-line variants added in STORY-065: `unused` (amber — pairs with Freeable Space, the same scope counted vs. byte-measured, icon `PackageOpen`) and `dangling` (gray — untagged/inert, icon `TagX`; `TagOff` turned out not to exist in the pinned lucide-react version). The grid is `repeat(auto-fit, minmax(180px, 1fr))`, so five cards reflow natively — single row on wide viewports, wrapping below; the containers/logs strips are per-instance and unaffected.
 * **States:** card byte values use `formatBytes` with one decimal at every magnitude (e.g. `142.6 MB`; `0 B` when empty); `stat-value` placeholders render `--` while the first fetch is in flight or on error; an empty inventory renders `0 B` / `0 B` / `0` / `0` / `0`. Table cells keep Docker CLI-style integer sizes.
 * **Scope:** Images tab only — the Volumes and Networks tables stay unchanged.
-* **Testing:** unit tests cover the derived values (tagged + dangling mix), the `containers_count = -1` conservative rule (including that a tagless `-1` image counts as Dangling but not Unused), formatting of large sums, and the loading placeholder.
+* **Testing:** unit tests cover the derived values (tagged + dangling mix), the `containers_count = -1` conservative rule (a tagless `-1` image counts as neither Unused nor Dangling since STORY-066), formatting of large sums, and the loading placeholder.
 
 ### 9.7. Image Deletion — Actions Column
 
@@ -513,18 +513,22 @@ Client-side gating is a UX affordance only; the daemon re-checks at delete time 
 
 **Backend.** `AdminService` gains `PruneImages(PruneImagesRequest) → PruneImagesResponse` (§3.5 of [protocol.md](protocol.md)). The handler always sends the `dangling` filter explicitly — `dangling=false` for the default scope (all unused), `dangling=true` when `dangling_only` is set — because the daemon's absent-filter default is dangling-only, which shipped in STORY-064 and silently narrowed the prune to untagged images. Unlike `DeleteImage`, the response **carries data**: the per-image report and the actual `SpaceReclaimed` — the toast reports the daemon's number, not a client-side estimate. Classified **RoleAdmin** (interceptor, same as `DeleteImage`). Error mapping degenerates: prune has no NotFound/Conflict cases, so daemon failure → `CodeUnavailable` only.
 
-**Frontend — placement & gating.** A slim actions row sits between the §9.6 stats grid and the table (flex, right-aligned) so the stats stay a clean 3-column grid: a danger-styled button (lucide `Trash2`, "Prune Unused Images"). Gating, evaluated per render from the §9.6 stats:
+**Frontend — placement & gating.** A slim actions row sits between the §9.6 stats grid and the table (flex, right-aligned, 12px gap) so the cards keep their grid: two danger-styled buttons (lucide `Trash2`) mapping left→right onto the STORY-065 cards. **Prune Unused** (renamed from "Prune Unused Images" in STORY-066) covers the Unused card — `danglingOnly: false`, every image with zero referencing containers, tagged and untagged alike; **Prune Dangling** covers the Dangling card — `danglingOnly: true`, untagged images only. Both wire scopes existed in the RPC since STORY-064 (the UI simply never sent `true` before STORY-066); there are **no protocol or backend changes**. Gating, evaluated per render from the §9.6 stats:
 
 | State | Renders |
 | --- | --- |
-| `freeableBytes > 0`, admin | Enabled danger button |
-| `freeableBytes = 0` | Disabled, `title="No unused images to prune"` |
-| viewer-role user | Disabled, `title="Admin role required"` (same affordance-only gating as §9.7) |
-| prune in flight | Disabled, `Loader2` spinner + "Pruning…" (one prune at a time) |
+| unused scope: `freeableBytes > 0`, admin | Enabled danger button |
+| unused scope: `freeableBytes = 0` | Disabled, `title="No unused images to prune"` |
+| dangling scope: `danglingCount > 0` and `danglingFreeableBytes > 0`, admin | Enabled danger button |
+| dangling scope: `danglingCount = 0` | Disabled, `title="No dangling images to prune"` |
+| viewer-role user | Both disabled, `title="Admin role required"` (same affordance-only gating as §9.7) |
+| prune in flight | Both disabled; the in-flight button shows the `Trash2` spinner + "Pruning…" (one prune at a time) |
 
-**Confirmation — `ConfirmDialog` (danger).** Same system as §9.7's delete (§11.4): title **Prune unused images?**, message stating the scope from the current listing (`Deletes all {count} unused images, reclaiming {size}. Images in use are never touched.`), confirm verb **Prune**, `variant="danger"` → Cancel has initial focus; `busy` while in flight (Esc/backdrop suppressed, spinner on Prune); closes on settle.
+* **One set, two views.** Per the STORY-066 correction (#203), "dangling" means **untagged AND unused** everywhere in the product: the Dangling card, the Prune Dangling button, and the daemon's dangling-scope prune all describe the same set — images with no `repo_tags` that no container references. STORY-065 originally derived the card tag-only; STORY-066 tightens it so the card never shows an image the corresponding prune wouldn't delete (an untagged image in use by a container stays out). Uncalculated (`-1`) usage counts are excluded, the same conservative rule as `freeableBytes` — the dialog therefore states exactly what the client can predict, and the daemon's in-use protection is the final authority regardless.
 
-**Result UX.** `useAdminResources` grows `pruneImages()` tracking a `pruning` flag: success → `toast.success("Reclaimed {size} from {count} images.")` using the **daemon-reported** `space_reclaimed`; failure → `toast.error("Failed to prune images: <daemon message>")`. Both outcomes call `refresh()` — inventory, empty state, and stat cards recompute from the fresh `ListImages` response (the prune response reports what was deleted, the list remains the source of truth).
+**Confirmation — `ConfirmDialog` (danger).** One scope-driven instance (§11.4 system): the pending scope selects the copy — title **Prune unused images?** with message `Deletes all {unusedCount} unused images, reclaiming {freeableBytes}. Images in use are never touched.` or title **Prune dangling images?** with message `Deletes all {danglingCount} dangling images, reclaiming {danglingFreeableBytes}. Tagged images are never touched.` Confirm verb **Prune**, `variant="danger"` → Cancel has initial focus; `busy` while in flight (Esc/backdrop suppressed, spinner on Prune); closes on settle.
+
+**Result UX.** `useAdminResources.pruneImages(danglingOnly: boolean)` tracks a `pruning` flag (single-flight — both buttons gate on it) plus a `pruningScope` (`"unused" | "dangling" | null`) naming which button spins: success → `toast.success("Reclaimed {size} from {count} unused images.")` / `…from {count} dangling images.` using the **daemon-reported** `space_reclaimed`; failure → `toast.error("Failed to prune images: <daemon message>")`. Both outcomes call `refresh()` — inventory, empty state, and stat cards recompute from the fresh `ListImages` response (the prune response reports what was deleted, the list remains the source of truth).
 
 **Testing.** Backend: httptest fake asserting the `POST /images/prune` request shape and the report→proto mapping (deleted/untagged entries, space_reclaimed), plus daemon-down → `CodeUnavailable`; interceptor reflection test keeps 100% `RoleAdmin` coverage. Frontend: gating matrix above, confirm flow, busy lockout, toast contents (daemon-reported bytes on success), and post-settle `refresh()` recomputation.
 ---
