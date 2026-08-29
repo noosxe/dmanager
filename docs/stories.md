@@ -72,7 +72,7 @@ graph TD
     A64 --> A65["STORY-065: Images Unused & Dangling Stat Cards (#200) (DONE)"]
     A65 --> A66["STORY-066: Scoped Prune Buttons — Unused & Dangling (#203) (DONE)"]
     A66 --> A67["STORY-067: Builder Tab — Cache Stats & Prune (#206) (DONE)"]
-    A67 --> A68["STORY-068: Builder Records Drill-Down — Table & Per-Record Prune (#209)"]
+    A67 --> A68["STORY-068: Builder Records Drill-Down — Table & Per-Record Prune (#209) (DONE)"]
 ```
 
 
@@ -1436,7 +1436,7 @@ graph TD
   - `pnpm check`, `pnpm test`, `pnpm build` pass.
   - Manual: Builder tab shows the live aggregates (host: ~33.5 GB / ~27.7 GB / 634); prune reclaims with daemon-reported toast; images tab unaffected by builder-stats failures.
 
-### STORY-068: Builder Records Drill-Down — Table & Per-Record Prune (issue #209) [PLANNED]
+### STORY-068: Builder Records Drill-Down — Table & Per-Record Prune (issue #209) [DONE]
 - **Scope:** Backend + frontend — two new RPCs + a records table on the Builder tab
 - **Estimated Size:** Medium (~450 LOC incl. tests)
 - **Dependencies:** STORY-067 (Builder tab, stats slice, single-flight prune state)

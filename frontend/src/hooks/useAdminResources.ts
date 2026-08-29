@@ -4,8 +4,10 @@ import { adminClient } from "../client";
 import { formatBytes } from "../components/adminFormat";
 import { useToast } from "../context/ToastContext";
 import type {
+  BuildCacheRecord,
   GetBuildCacheStatsResponse,
   Image,
+  ListBuildCacheRecordsResponse,
   Network,
   Volume,
 } from "../gen/proto/dmanager/v1/admin_pb";
@@ -36,7 +38,13 @@ export function useAdminResources(kind: AdminResourceKind) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [pruning, setPruning] = useState(false);
   const [pruningScope, setPruningScope] = useState<"unused" | "dangling" | "builder" | null>(null);
-
+  const [pruningRecordId, setPruningRecordId] = useState<string | null>(null);
+  // Builder records are the Builder tab's drill-down slice (design.md §9.10):
+  // they load and fail independently of the stats so a records problem never
+  // hides the cards.
+  const [builderRecords, setBuilderRecords] = useState<BuildCacheRecord[]>([]);
+  const [recordsLoading, setRecordsLoading] = useState(false);
+  const [recordsError, setRecordsError] = useState(false);
   useEffect(() => {
     let cancelled = false;
 
@@ -75,6 +83,42 @@ export function useAdminResources(kind: AdminResourceKind) {
     };
 
     fetchResources();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [kind, refreshNonce]);
+
+  // The drill-down list fetches on its own slice: a failure here renders the
+  // records section's error state while the stats cards stay usable.
+  useEffect(() => {
+    if (kind !== "builder") {
+      return;
+    }
+    let cancelled = false;
+
+    const fetchRecords = async () => {
+      setRecordsLoading(true);
+      setRecordsError(false);
+      try {
+        const resp: ListBuildCacheRecordsResponse = await adminClient.listBuildCacheRecords({});
+        if (!cancelled) {
+          setBuilderRecords(resp.records);
+        }
+      } catch (err: unknown) {
+        console.error("Failed to load build cache records:", err);
+        if (!cancelled) {
+          setRecordsError(true);
+          setBuilderRecords([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setRecordsLoading(false);
+        }
+      }
+    };
+
+    fetchRecords();
 
     return () => {
       cancelled = true;
@@ -176,6 +220,39 @@ export function useAdminResources(kind: AdminResourceKind) {
     refresh();
   }, [pruning, refresh, toast]);
 
+  // Deletes exactly one build cache record (design.md §9.10, #209) — the
+  // daemon's id filter scopes the prune to that record. Joins the same
+  // single-flight `pruning` guard as the other prunes: one destructive
+  // builder op at a time. The toast reports daemon truth — count can be 0
+  // when the daemon protected the record.
+  const pruneBuildCacheRecord = useCallback(
+    async (id: string) => {
+      if (pruning) {
+        return;
+      }
+      setPruning(true);
+      setPruningRecordId(id);
+      try {
+        const resp = await adminClient.pruneBuildCacheRecord({ id });
+        const count = resp.cachesDeleted;
+        const noun = count === 1 ? "record" : "records";
+        toast.success(
+          `Deleted ${count} cache ${noun}, reclaimed ${formatBytes(resp.spaceReclaimed, true)}.`,
+        );
+      } catch (err: unknown) {
+        console.error("Failed to delete cache record:", err);
+        const msg = err instanceof Error ? err.message : String(err);
+        toast.error(`Failed to delete cache record: ${msg}`);
+        return;
+      } finally {
+        setPruning(false);
+        setPruningRecordId(null);
+      }
+      refresh();
+    },
+    [pruning, refresh, toast],
+  );
+
   return {
     result,
     isLoading,
@@ -185,7 +262,12 @@ export function useAdminResources(kind: AdminResourceKind) {
     deletingId,
     pruneImages,
     pruneBuildCache,
+    pruneBuildCacheRecord,
     pruning,
     pruningScope,
+    pruningRecordId,
+    builderRecords,
+    recordsLoading,
+    recordsError,
   };
 }

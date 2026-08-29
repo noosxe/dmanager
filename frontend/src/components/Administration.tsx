@@ -15,11 +15,13 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
+import type { BuildCacheRecord } from "../gen/proto/dmanager/v1/admin_pb";
 import type { AdminResourceKind } from "../hooks/useAdminResources";
 import { useAdminResources } from "../hooks/useAdminResources";
 import { useAuth } from "../hooks/useAuth";
-import { deriveImageStats, formatBytes } from "./adminFormat";
+import { deriveImageStats, formatBytes, formatShortId } from "./adminFormat";
 import { Builder } from "./Builder";
+import { BuilderRecords } from "./BuilderRecords";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { ImageTable } from "./ImageTable";
 import { NetworkTable } from "./NetworkTable";
@@ -50,8 +52,13 @@ export function Administration() {
     deletingId,
     pruneImages,
     pruneBuildCache,
+    pruneBuildCacheRecord,
     pruning,
     pruningScope,
+    pruningRecordId,
+    builderRecords,
+    recordsLoading,
+    recordsError,
   } = useAdminResources(tab);
 
   // Derived Images-tab summary (design.md §9.6); null on other tabs or
@@ -60,6 +67,9 @@ export function Administration() {
   // dialog owns the busy lockout while the RPC is in flight. One scope-driven
   // dialog serves both buttons.
   const [pendingPrune, setPendingPrune] = useState<"unused" | "dangling" | "builder" | null>(null);
+  // The per-record delete dialog is a separate arm (design.md §9.10): it
+  // names the specific record instead of an aggregate scope.
+  const [pendingRecord, setPendingRecord] = useState<BuildCacheRecord | null>(null);
   // while no successful images result exists yet (-- placeholders).
   const imageStats = result?.kind === "images" ? deriveImageStats(result.data) : null;
   const buildStats = result?.kind === "builder" ? result.data : null;
@@ -242,13 +252,24 @@ export function Administration() {
           {result?.kind === "volumes" && <VolumeTable volumes={result.data} />}
           {result?.kind === "networks" && <NetworkTable networks={result.data} />}
           {tab === "builder" && (
-            <Builder
-              stats={result?.kind === "builder" ? result.data : null}
-              isAdmin={isAdmin}
-              pruning={pruning}
-              builderPruning={pruningScope === "builder"}
-              onPrune={() => setPendingPrune("builder")}
-            />
+            <>
+              <Builder
+                stats={result?.kind === "builder" ? result.data : null}
+                isAdmin={isAdmin}
+                pruning={pruning}
+                builderPruning={pruningScope === "builder"}
+                onPrune={() => setPendingPrune("builder")}
+              />
+              <BuilderRecords
+                records={builderRecords}
+                loading={recordsLoading}
+                error={recordsError}
+                isAdmin={isAdmin}
+                busy={pruning}
+                pruningRecordId={pruningRecordId}
+                onPrune={setPendingRecord}
+              />
+            </>
           )}
         </>
       )}
@@ -281,6 +302,26 @@ export function Administration() {
         confirmLabel="Prune"
         variant="danger"
         busy={pruning}
+      />
+      <ConfirmDialog
+        open={pendingRecord !== null}
+        onClose={() => setPendingRecord(null)}
+        onConfirm={() => {
+          const record = pendingRecord;
+          setPendingRecord(null);
+          if (record) {
+            void pruneBuildCacheRecord(record.id);
+          }
+        }}
+        title="Delete cache record?"
+        message={
+          pendingRecord
+            ? `Deletes build cache record ${formatShortId(pendingRecord.id)} (${formatBytes(pendingRecord.sizeBytes, true)}). Shared blob content may free less. Rebuilding this step will be slower until the cache is rebuilt.`
+            : ""
+        }
+        confirmLabel="Delete"
+        variant="danger"
+        busy={pruningRecordId !== null}
       />
     </div>
   );

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { adminClient } from "../client";
@@ -10,6 +10,7 @@ import type {
   ListVolumesResponse,
   Network,
   Volume,
+  BuildCacheRecord,
   GetBuildCacheStatsResponse,
 } from "../gen/proto/dmanager/v1/admin_pb";
 import { Administration } from "./Administration";
@@ -71,6 +72,8 @@ vi.mock("../client", () => ({
     pruneImages: vi.fn(),
     getBuildCacheStats: vi.fn(),
     pruneBuildCache: vi.fn(),
+    listBuildCacheRecords: vi.fn(),
+    pruneBuildCacheRecord: vi.fn(),
   },
 }));
 
@@ -837,5 +840,183 @@ describe("Administration Component", () => {
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
+  });
+
+  it("renders builder records size-sorted with in-use and shared chips", async () => {
+    useParamsMock.mockReturnValue({ tab: "builder" });
+    vi.mocked(adminClient.getBuildCacheStats).mockResolvedValue({
+      totalBytes: 4831838308n,
+      reclaimableBytes: 4831838208n,
+      recordCount: 2,
+      activeCount: 0,
+      $typeName: "dmanager.v1.GetBuildCacheStatsResponse",
+    } as unknown as GetBuildCacheStatsResponse);
+    vi.mocked(adminClient.listBuildCacheRecords).mockResolvedValue({
+      records: [
+        {
+          id: "sha256:4f8a2b1c9d0e1234",
+          type: "exec.cachemount",
+          description: "exec mount /bin/sh in container build",
+          sizeBytes: 4831838208n,
+          inUse: false,
+          shared: true,
+          usageCount: 7n,
+          createdAt: { seconds: 1767225600n },
+          lastUsedAt: { seconds: 1785585600n },
+          $typeName: "dmanager.v1.BuildCacheRecord",
+        } as unknown as BuildCacheRecord,
+        {
+          id: "sha256:busy00000000",
+          type: "regular",
+          description: "",
+          sizeBytes: 100n,
+          inUse: true,
+          shared: false,
+          usageCount: 3n,
+          createdAt: { seconds: 1767225600n },
+          $typeName: "dmanager.v1.BuildCacheRecord",
+        } as unknown as BuildCacheRecord,
+      ],
+      $typeName: "dmanager.v1.ListBuildCacheRecordsResponse",
+    } as never);
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("exec.cachemount")).toBeInTheDocument();
+    });
+
+    // The table renders the daemon's size-descending order verbatim.
+    const rows = screen.getAllByRole("row");
+    expect(rows).toHaveLength(3); // header + 2 records
+    expect(rows[1].textContent).toContain("4.8 GB");
+    expect(rows[1].textContent).toContain("exec mount /bin/sh in container build");
+    expect(rows[1].textContent).toContain("Shared");
+    expect(rows[1].textContent).not.toContain("In use");
+
+    // The in-use row carries its chip and a disabled delete action.
+    expect(rows[2].textContent).toContain("In use");
+    const inUseDelete = within(rows[2]).getByRole("button");
+    expect(inUseDelete).toBeDisabled();
+    expect(inUseDelete).toHaveAttribute("title", "Record is in use");
+
+    // The reclaimable row's delete action is armed for admins.
+    const armedDelete = within(rows[1]).getByRole("button");
+    expect(armedDelete).toBeEnabled();
+    expect(armedDelete).toHaveAttribute("title", "Delete cache record");
+  });
+
+  it("gates record deletion for viewer-role users", async () => {
+    useParamsMock.mockReturnValue({ tab: "builder" });
+    mockUseAuth.mockReturnValue({ user: { username: "viewer", role: "viewer" } });
+    vi.mocked(adminClient.listBuildCacheRecords).mockResolvedValue({
+      records: [
+        {
+          id: "sha256:4f8a2b1c9d0e1234",
+          type: "regular",
+          description: "step",
+          sizeBytes: 42n,
+          inUse: false,
+          shared: false,
+          usageCount: 1n,
+          createdAt: { seconds: 1767225600n },
+          $typeName: "dmanager.v1.BuildCacheRecord",
+        } as unknown as BuildCacheRecord,
+      ],
+      $typeName: "dmanager.v1.ListBuildCacheRecordsResponse",
+    } as never);
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("regular")).toBeInTheDocument();
+    });
+    const row = screen.getByText("regular").closest("tr") as HTMLTableRowElement;
+    const button = within(row).getByRole("button");
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute("title", "Admin role required");
+  });
+
+  it("confirms per-record deletion, reports daemon truth, and refreshes", async () => {
+    useParamsMock.mockReturnValue({ tab: "builder" });
+    vi.mocked(adminClient.getBuildCacheStats).mockResolvedValue({
+      totalBytes: 4831838308n,
+      reclaimableBytes: 4831838208n,
+      recordCount: 2,
+      activeCount: 0,
+      $typeName: "dmanager.v1.GetBuildCacheStatsResponse",
+    } as unknown as GetBuildCacheStatsResponse);
+    const record = {
+      id: "sha256:4f8a2b1c9d0e1234",
+      type: "exec.cachemount",
+      description: "exec mount /bin/sh in container build",
+      sizeBytes: 4831838208n,
+      inUse: false,
+      shared: true,
+      usageCount: 7n,
+      createdAt: { seconds: 1767225600n },
+      lastUsedAt: { seconds: 1785585600n },
+      $typeName: "dmanager.v1.BuildCacheRecord",
+    } as unknown as BuildCacheRecord;
+    vi.mocked(adminClient.listBuildCacheRecords).mockResolvedValue({
+      records: [record],
+      $typeName: "dmanager.v1.ListBuildCacheRecordsResponse",
+    } as never);
+    vi.mocked(adminClient.pruneBuildCacheRecord).mockResolvedValue({
+      cachesDeleted: 1,
+      spaceReclaimed: 4831838208n,
+      $typeName: "dmanager.v1.PruneBuildCacheRecordResponse",
+    } as never);
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("exec.cachemount")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete cache record" }));
+    expect(screen.getByRole("dialog")).toHaveAccessibleName("Delete cache record?");
+    expect(screen.getByRole("dialog")).toHaveAccessibleDescription(
+      "Deletes build cache record 4f8a2b1c9d0e (4.8 GB). Shared blob content may free less. Rebuilding this step will be slower until the cache is rebuilt.",
+    );
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Cancel" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await waitFor(() => {
+      expect(adminClient.pruneBuildCacheRecord).toHaveBeenCalledTimes(1);
+    });
+    expect(vi.mocked(adminClient.pruneBuildCacheRecord).mock.calls[0][0]).toEqual({
+      id: "sha256:4f8a2b1c9d0e1234",
+    });
+    await waitFor(() => {
+      expect(mockToast.success).toHaveBeenCalledWith("Deleted 1 cache record, reclaimed 4.8 GB.");
+    });
+    // Both the record list and the stats re-fetch on settle.
+    await waitFor(() => {
+      expect(adminClient.listBuildCacheRecords).toHaveBeenCalledTimes(2);
+      expect(adminClient.getBuildCacheStats).toHaveBeenCalledTimes(2);
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+  });
+
+  it("keeps builder stats usable when the records fetch fails", async () => {
+    useParamsMock.mockReturnValue({ tab: "builder" });
+    vi.mocked(adminClient.getBuildCacheStats).mockResolvedValue({
+      totalBytes: 33541322317n,
+      reclaimableBytes: 27653977878n,
+      recordCount: 634,
+      activeCount: 0,
+      $typeName: "dmanager.v1.GetBuildCacheStatsResponse",
+    } as unknown as GetBuildCacheStatsResponse);
+    vi.mocked(adminClient.listBuildCacheRecords).mockRejectedValue(new Error("daemon down"));
+    render(<Administration />);
+
+    // Stats cards still render their live values...
+    await waitFor(() => {
+      const totalCard = screen.getByText("Build Cache").closest(".stat-card");
+      expect(totalCard?.querySelector(".stat-value")?.textContent).toBe("33.5 GB");
+    });
+    // ...while the records section alone reports the failure.
+    expect(screen.getByText("Unable to Load Records")).toBeInTheDocument();
+    expect(screen.queryByText("exec.cachemount")).not.toBeInTheDocument();
   });
 });

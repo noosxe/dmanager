@@ -38,6 +38,15 @@ service AdminService {
   // active use are never removed (enforced daemon-side).
   rpc PruneBuildCache(PruneBuildCacheRequest) returns (PruneBuildCacheResponse);
 
+  // List the daemon's build cache records, sorted by size descending — the
+  // size-sorted top-offenders view (Authenticated, any role).
+  rpc ListBuildCacheRecords(ListBuildCacheRecordsRequest) returns (ListBuildCacheRecordsResponse);
+
+  // Prune exactly one build cache record by its full ID (Authenticated,
+  // admin role). The daemon matches the ID via its id filter; records in
+  // active use are never removed (enforced daemon-side).
+  rpc PruneBuildCacheRecord(PruneBuildCacheRecordRequest) returns (PruneBuildCacheRecordResponse);
+
   // Report whether the Docker Engine is reachable (Authenticated, any role).
   // Daemon unreachability is a successful response with connected=false —
   // the outage is the answer, not an RPC failure (design.md §10.2).
@@ -172,6 +181,57 @@ message PruneBuildCacheRequest {
 
 message PruneBuildCacheResponse {
   // Number of removed cache records.
+  uint32 caches_deleted = 1;
+
+  // Bytes actually reclaimed on disk.
+  uint64 space_reclaimed = 2;
+}
+
+// A single BuildKit build cache record. Records are opaque content hashes
+// with a build-step description; identity for prune is the full id.
+message BuildCacheRecord {
+  // Full content hash — the prune target.
+  string id = 1;
+
+  // Buildkit record type: regular, source.local, exec.cachemount, …
+  string type = 2;
+
+  // Human-readable build step, e.g. "exec mount /bin/sh …"; may be empty.
+  string description = 3;
+
+  // On-disk size of the record's blobs.
+  uint64 size_bytes = 4;
+
+  // True while a build references this record — daemon-protected.
+  bool in_use = 5;
+
+  // True when blobs are shared with other records — deletion may free
+  // less than size_bytes.
+  bool shared = 6;
+
+  // How many builds have used this record.
+  uint64 usage_count = 7;
+
+  google.protobuf.Timestamp created_at = 8;
+
+  // Absent for records never used by a build.
+  optional google.protobuf.Timestamp last_used_at = 9;
+}
+
+message ListBuildCacheRecordsRequest {}
+
+message ListBuildCacheRecordsResponse {
+  // All records, sorted by size_bytes descending.
+  repeated BuildCacheRecord records = 1;
+}
+
+message PruneBuildCacheRecordRequest {
+  // Full record ID (required).
+  string id = 1;
+}
+
+message PruneBuildCacheRecordResponse {
+  // Number of removed records — 0 when the daemon protected the record.
   uint32 caches_deleted = 1;
 
   // Bytes actually reclaimed on disk.

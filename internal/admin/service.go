@@ -4,15 +4,19 @@
 package admin
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	connect "connectrpc.com/connect"
 	cerrdefs "github.com/containerd/errdefs"
+	build "github.com/moby/moby/api/types/build"
 	"github.com/moby/moby/client"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -202,6 +206,77 @@ func (s *Service) PruneBuildCache(ctx context.Context, req *connect.Request[dman
 
 	count := len(result.Report.CachesDeleted)
 	return connect.NewResponse(&dmanagerv1.PruneBuildCacheResponse{
+		CachesDeleted:  uint32(count), //nolint:gosec // non-negative daemon value
+		SpaceReclaimed: result.Report.SpaceReclaimed,
+	}), nil
+}
+
+// ListBuildCacheRecords returns the daemon's build cache records sorted by
+// size descending (design.md §9.10, #209) — the top-offenders view. It
+// reuses the stats daemon call (GET /system/df?type=build-cache): the
+// per-record Items already ship with the aggregates. Sorting is the
+// server's contract so clients render largest-first without sort state.
+func (s *Service) ListBuildCacheRecords(ctx context.Context, req *connect.Request[dmanagerv1.ListBuildCacheRecordsRequest]) (*connect.Response[dmanagerv1.ListBuildCacheRecordsResponse], error) {
+	// Verbose is required on modern daemons (API >= 1.52): the non-verbose
+	// decode drops Items, so the records view would silently render empty.
+	usage, err := s.dockerClient.DiskUsage(ctx, client.DiskUsageOptions{BuildCache: true, Verbose: true})
+	if err != nil {
+		s.logger.Error("Failed to list build cache records", "error", err)
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("failed to list build cache records: %w", err))
+	}
+
+	items := usage.BuildCache.Items
+	slices.SortFunc(items, func(a, b build.CacheRecord) int {
+		if a.Size != b.Size {
+			return cmp.Compare(b.Size, a.Size)
+		}
+		return strings.Compare(a.ID, b.ID)
+	})
+
+	records := make([]*dmanagerv1.BuildCacheRecord, 0, len(items))
+	for _, item := range items {
+		record := &dmanagerv1.BuildCacheRecord{
+			Id:          item.ID,
+			Type:        item.Type,
+			Description: item.Description,
+			SizeBytes:   uint64(item.Size), //nolint:gosec // non-negative daemon value
+			InUse:       item.InUse,
+			Shared:      item.Shared,
+			UsageCount:  uint64(item.UsageCount), //nolint:gosec // non-negative daemon value
+			CreatedAt:   timestamppb.New(item.CreatedAt),
+		}
+		if item.LastUsedAt != nil {
+			record.LastUsedAt = timestamppb.New(*item.LastUsedAt)
+		}
+		records = append(records, record)
+	}
+	return connect.NewResponse(&dmanagerv1.ListBuildCacheRecordsResponse{Records: records}), nil
+}
+
+// PruneBuildCacheRecord deletes exactly one build cache record by its full
+// ID (design.md §9.10, #209) — POST /build/prune with the id filter. The
+// filter restricts candidates to that one record, so all=true only lifts
+// the internal-type restriction for the explicitly targeted record
+// (buildkit-internal types like exec.cachemount are otherwise undeletable
+// under all=false); blast radius stays 1. Records in active use are never
+// removed, enforced daemon-side. The response carries the daemon's actual
+// deleted count and freed bytes — 0/0 when the daemon protected the record.
+func (s *Service) PruneBuildCacheRecord(ctx context.Context, req *connect.Request[dmanagerv1.PruneBuildCacheRecordRequest]) (*connect.Response[dmanagerv1.PruneBuildCacheRecordResponse], error) {
+	if strings.TrimSpace(req.Msg.Id) == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("record id is required"))
+	}
+
+	result, err := s.dockerClient.BuildCachePrune(ctx, client.BuildCachePruneOptions{
+		All:     true,
+		Filters: client.Filters{"id": {req.Msg.Id: true}},
+	})
+	if err != nil {
+		s.logger.Error("Failed to prune build cache record", "id", req.Msg.Id, "error", err)
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("failed to prune build cache record: %w", err))
+	}
+
+	count := len(result.Report.CachesDeleted)
+	return connect.NewResponse(&dmanagerv1.PruneBuildCacheRecordResponse{
 		CachesDeleted:  uint32(count), //nolint:gosec // non-negative daemon value
 		SpaceReclaimed: result.Report.SpaceReclaimed,
 	}), nil
