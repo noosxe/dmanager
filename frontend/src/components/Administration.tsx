@@ -7,13 +7,14 @@ import {
   Loader2,
   Network as NetworkIcon,
   PackageOpen,
+  Ruler,
   Recycle,
   RefreshCw,
   ShieldAlert,
   TagX,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import type { BuildCacheRecord } from "../gen/proto/dmanager/v1/admin_pb";
 import type { AdminResourceKind } from "../hooks/useAdminResources";
@@ -59,20 +60,31 @@ export function Administration() {
     builderRecords,
     recordsLoading,
     recordsError,
+    volumeUsage,
+    measuring,
+    measureVolumeUsage,
+    pruneVolumes,
   } = useAdminResources(tab);
-
   // Derived Images-tab summary (design.md §9.6); null on other tabs or
 
   // The prune confirmation is armed by the actions-row buttons (#196/#203); the
   // dialog owns the busy lockout while the RPC is in flight. One scope-driven
   // dialog serves both buttons.
-  const [pendingPrune, setPendingPrune] = useState<"unused" | "dangling" | "builder" | null>(null);
+  const [pendingPrune, setPendingPrune] = useState<
+    "unused" | "dangling" | "builder" | "volumes" | null
+  >(null);
   // The per-record delete dialog is a separate arm (design.md §9.10): it
   // names the specific record instead of an aggregate scope.
   const [pendingRecord, setPendingRecord] = useState<BuildCacheRecord | null>(null);
   // while no successful images result exists yet (-- placeholders).
   const imageStats = result?.kind === "images" ? deriveImageStats(result.data) : null;
   const buildStats = result?.kind === "builder" ? result.data : null;
+  // Volume sizes join onto the table by name (design.md §9.11, #212); the
+  // index is null until the user triggers a measurement.
+  const volumeUsageIndex = useMemo(() => {
+    if (!volumeUsage) return null;
+    return new Map(volumeUsage.volumes.map((v) => [v.name, v]));
+  }, [volumeUsage]);
 
   // Tab bar items (§9.4): active state follows the resolved route tab.
   const adminTabs: PageTabItem[] = [
@@ -220,6 +232,53 @@ export function Administration() {
           </button>
         </div>
       )}
+
+      {tab === "volumes" && (
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-icon-wrapper stopped">
+              <HardDrive size={20} />
+            </div>
+            <div className="stat-info">
+              <span className="stat-value">
+                {result?.kind === "volumes" ? result.data.length : "--"}
+              </span>
+              <span className="stat-label">Volumes</span>
+            </div>
+          </div>
+        </div>
+      )}
+      {tab === "volumes" && (
+        <div className="images-prune-row">
+          {/* Measurement is strictly opt-in (design.md §9.11, #212): the daemon
+              walks every volume's directory tree per call, so this button never
+              fires automatically. */}
+          <button
+            type="button"
+            className="prune-btn"
+            disabled={measuring || pruning}
+            title={
+              measuring
+                ? "Measuring volume sizes…"
+                : "Walks every volume on the daemon and may take a while"
+            }
+            onClick={() => void measureVolumeUsage()}
+          >
+            <Ruler size={14} className={measuring ? "spinner" : ""} />
+            {measuring ? "Measuring…" : "Calculate Sizes"}
+          </button>
+          <button
+            type="button"
+            className="prune-btn"
+            disabled={pruning || !isAdmin}
+            title={!isAdmin ? "Admin role required" : undefined}
+            onClick={() => setPendingPrune("volumes")}
+          >
+            <Trash2 size={14} className={pruningScope === "volumes" ? "spinner" : ""} />
+            {pruningScope === "volumes" ? "Pruning…" : "Reclaim Space"}
+          </button>
+        </div>
+      )}
       {error && (
         <div className="auth-error-banner">
           <ShieldAlert size={18} className="auth-error-icon" />
@@ -249,7 +308,9 @@ export function Administration() {
               onDelete={deleteImage}
             />
           )}
-          {result?.kind === "volumes" && <VolumeTable volumes={result.data} />}
+          {result?.kind === "volumes" && (
+            <VolumeTable volumes={result.data} usage={volumeUsageIndex} />
+          )}
           {result?.kind === "networks" && <NetworkTable networks={result.data} />}
           {tab === "builder" && (
             <>
@@ -281,6 +342,8 @@ export function Administration() {
           setPendingPrune(null);
           if (scope === "builder") {
             void pruneBuildCache();
+          } else if (scope === "volumes") {
+            void pruneVolumes();
           } else {
             void pruneImages(scope === "dangling");
           }
@@ -290,16 +353,22 @@ export function Administration() {
             ? "Prune dangling images?"
             : pendingPrune === "builder"
               ? "Prune build cache?"
-              : "Prune unused images?"
+              : pendingPrune === "volumes"
+                ? "Delete unused volumes?"
+                : "Prune unused images?"
         }
         message={
           pendingPrune === "dangling"
             ? `Deletes all ${imageStats?.danglingCount ?? 0} dangling images, reclaiming up to ${imageStats ? formatBytes(imageStats.danglingFreeableBytes, true) : "0 B"}. Tagged images are never touched.`
             : pendingPrune === "builder"
               ? `Deletes ${buildStats?.recordCount ?? 0} build cache records, reclaiming up to ${buildStats ? formatBytes(buildStats.reclaimableBytes, true) : "0 B"}. Future image builds will be slower until the cache is rebuilt.`
-              : `Deletes all ${imageStats?.unusedCount ?? 0} unused images, reclaiming up to ${imageStats ? formatBytes(imageStats.freeableBytes, true) : "0 B"}. Images in use are never touched.`
+              : pendingPrune === "volumes"
+                ? volumeUsage
+                  ? `Deletes ${volumeUsage.unusedCount} unused volume${volumeUsage.unusedCount === 1 ? "" : "s"}, reclaiming up to ${formatBytes(volumeUsage.reclaimableBytes, true)}. A volume is unused only when no container — running or stopped — references it. This cannot be undone.`
+                  : "Size has not been calculated yet — use Calculate Sizes for a preview. Deletes all unused volumes. A volume is unused only when no container — running or stopped — references it. This cannot be undone."
+                : `Deletes all ${imageStats?.unusedCount ?? 0} unused images, reclaiming up to ${imageStats ? formatBytes(imageStats.freeableBytes, true) : "0 B"}. Images in use are never touched.`
         }
-        confirmLabel="Prune"
+        confirmLabel={pendingPrune === "volumes" ? "Delete" : "Prune"}
         variant="danger"
         busy={pruning}
       />

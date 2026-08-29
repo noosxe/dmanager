@@ -38,6 +38,9 @@ const (
 	// AdminServiceListVolumesProcedure is the fully-qualified name of the AdminService's ListVolumes
 	// RPC.
 	AdminServiceListVolumesProcedure = "/dmanager.v1.AdminService/ListVolumes"
+	// AdminServiceGetVolumeUsageProcedure is the fully-qualified name of the AdminService's
+	// GetVolumeUsage RPC.
+	AdminServiceGetVolumeUsageProcedure = "/dmanager.v1.AdminService/GetVolumeUsage"
 	// AdminServiceListNetworksProcedure is the fully-qualified name of the AdminService's ListNetworks
 	// RPC.
 	AdminServiceListNetworksProcedure = "/dmanager.v1.AdminService/ListNetworks"
@@ -47,6 +50,9 @@ const (
 	// AdminServicePruneImagesProcedure is the fully-qualified name of the AdminService's PruneImages
 	// RPC.
 	AdminServicePruneImagesProcedure = "/dmanager.v1.AdminService/PruneImages"
+	// AdminServicePruneVolumesProcedure is the fully-qualified name of the AdminService's PruneVolumes
+	// RPC.
+	AdminServicePruneVolumesProcedure = "/dmanager.v1.AdminService/PruneVolumes"
 	// AdminServiceGetBuildCacheStatsProcedure is the fully-qualified name of the AdminService's
 	// GetBuildCacheStats RPC.
 	AdminServiceGetBuildCacheStatsProcedure = "/dmanager.v1.AdminService/GetBuildCacheStats"
@@ -70,6 +76,12 @@ type AdminServiceClient interface {
 	ListImages(context.Context, *connect.Request[v1.ListImagesRequest]) (*connect.Response[v1.ListImagesResponse], error)
 	// List volumes present on the host (Authenticated, any role).
 	ListVolumes(context.Context, *connect.Request[v1.ListVolumesRequest]) (*connect.Response[v1.ListVolumesResponse], error)
+	// Measure local volume disk usage (Authenticated, any role). Expensive on
+	// the daemon: each call recursively walks every local volume's directory
+	// tree, serially and uncached (singleflight only deduplicates concurrent
+	// calls) — so the web UI must trigger this only on explicit user action,
+	// never automatically.
+	GetVolumeUsage(context.Context, *connect.Request[v1.GetVolumeUsageRequest]) (*connect.Response[v1.GetVolumeUsageResponse], error)
 	// List networks present on the host (Authenticated, any role).
 	ListNetworks(context.Context, *connect.Request[v1.ListNetworksRequest]) (*connect.Response[v1.ListNetworksResponse], error)
 	// Delete an image from the host (Authenticated, admin role). The
@@ -79,6 +91,11 @@ type AdminServiceClient interface {
 	// admin role). The daemon refuses images referenced by any container
 	// unconditionally; with dangling_only it restricts to untagged images.
 	PruneImages(context.Context, *connect.Request[v1.PruneImagesRequest]) (*connect.Response[v1.PruneImagesResponse], error)
+	// Prune all unused volumes from the host in one call (Authenticated, admin
+	// role). Sends all=true so named volumes are included; the daemon removes
+	// only volumes not referenced by any container — running or stopped — at
+	// prune time, re-evaluating references itself.
+	PruneVolumes(context.Context, *connect.Request[v1.PruneVolumesRequest]) (*connect.Response[v1.PruneVolumesResponse], error)
 	// Report builder-owned disk space: the BuildKit build cache aggregates
 	// as supplied by the daemon (Authenticated, any role).
 	GetBuildCacheStats(context.Context, *connect.Request[v1.GetBuildCacheStatsRequest]) (*connect.Response[v1.GetBuildCacheStatsResponse], error)
@@ -122,6 +139,12 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("ListVolumes")),
 			connect.WithClientOptions(opts...),
 		),
+		getVolumeUsage: connect.NewClient[v1.GetVolumeUsageRequest, v1.GetVolumeUsageResponse](
+			httpClient,
+			baseURL+AdminServiceGetVolumeUsageProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("GetVolumeUsage")),
+			connect.WithClientOptions(opts...),
+		),
 		listNetworks: connect.NewClient[v1.ListNetworksRequest, v1.ListNetworksResponse](
 			httpClient,
 			baseURL+AdminServiceListNetworksProcedure,
@@ -138,6 +161,12 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+AdminServicePruneImagesProcedure,
 			connect.WithSchema(adminServiceMethods.ByName("PruneImages")),
+			connect.WithClientOptions(opts...),
+		),
+		pruneVolumes: connect.NewClient[v1.PruneVolumesRequest, v1.PruneVolumesResponse](
+			httpClient,
+			baseURL+AdminServicePruneVolumesProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("PruneVolumes")),
 			connect.WithClientOptions(opts...),
 		),
 		getBuildCacheStats: connect.NewClient[v1.GetBuildCacheStatsRequest, v1.GetBuildCacheStatsResponse](
@@ -177,9 +206,11 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 type adminServiceClient struct {
 	listImages            *connect.Client[v1.ListImagesRequest, v1.ListImagesResponse]
 	listVolumes           *connect.Client[v1.ListVolumesRequest, v1.ListVolumesResponse]
+	getVolumeUsage        *connect.Client[v1.GetVolumeUsageRequest, v1.GetVolumeUsageResponse]
 	listNetworks          *connect.Client[v1.ListNetworksRequest, v1.ListNetworksResponse]
 	deleteImage           *connect.Client[v1.DeleteImageRequest, v1.DeleteImageResponse]
 	pruneImages           *connect.Client[v1.PruneImagesRequest, v1.PruneImagesResponse]
+	pruneVolumes          *connect.Client[v1.PruneVolumesRequest, v1.PruneVolumesResponse]
 	getBuildCacheStats    *connect.Client[v1.GetBuildCacheStatsRequest, v1.GetBuildCacheStatsResponse]
 	pruneBuildCache       *connect.Client[v1.PruneBuildCacheRequest, v1.PruneBuildCacheResponse]
 	listBuildCacheRecords *connect.Client[v1.ListBuildCacheRecordsRequest, v1.ListBuildCacheRecordsResponse]
@@ -197,6 +228,11 @@ func (c *adminServiceClient) ListVolumes(ctx context.Context, req *connect.Reque
 	return c.listVolumes.CallUnary(ctx, req)
 }
 
+// GetVolumeUsage calls dmanager.v1.AdminService.GetVolumeUsage.
+func (c *adminServiceClient) GetVolumeUsage(ctx context.Context, req *connect.Request[v1.GetVolumeUsageRequest]) (*connect.Response[v1.GetVolumeUsageResponse], error) {
+	return c.getVolumeUsage.CallUnary(ctx, req)
+}
+
 // ListNetworks calls dmanager.v1.AdminService.ListNetworks.
 func (c *adminServiceClient) ListNetworks(ctx context.Context, req *connect.Request[v1.ListNetworksRequest]) (*connect.Response[v1.ListNetworksResponse], error) {
 	return c.listNetworks.CallUnary(ctx, req)
@@ -210,6 +246,11 @@ func (c *adminServiceClient) DeleteImage(ctx context.Context, req *connect.Reque
 // PruneImages calls dmanager.v1.AdminService.PruneImages.
 func (c *adminServiceClient) PruneImages(ctx context.Context, req *connect.Request[v1.PruneImagesRequest]) (*connect.Response[v1.PruneImagesResponse], error) {
 	return c.pruneImages.CallUnary(ctx, req)
+}
+
+// PruneVolumes calls dmanager.v1.AdminService.PruneVolumes.
+func (c *adminServiceClient) PruneVolumes(ctx context.Context, req *connect.Request[v1.PruneVolumesRequest]) (*connect.Response[v1.PruneVolumesResponse], error) {
+	return c.pruneVolumes.CallUnary(ctx, req)
 }
 
 // GetBuildCacheStats calls dmanager.v1.AdminService.GetBuildCacheStats.
@@ -243,6 +284,12 @@ type AdminServiceHandler interface {
 	ListImages(context.Context, *connect.Request[v1.ListImagesRequest]) (*connect.Response[v1.ListImagesResponse], error)
 	// List volumes present on the host (Authenticated, any role).
 	ListVolumes(context.Context, *connect.Request[v1.ListVolumesRequest]) (*connect.Response[v1.ListVolumesResponse], error)
+	// Measure local volume disk usage (Authenticated, any role). Expensive on
+	// the daemon: each call recursively walks every local volume's directory
+	// tree, serially and uncached (singleflight only deduplicates concurrent
+	// calls) — so the web UI must trigger this only on explicit user action,
+	// never automatically.
+	GetVolumeUsage(context.Context, *connect.Request[v1.GetVolumeUsageRequest]) (*connect.Response[v1.GetVolumeUsageResponse], error)
 	// List networks present on the host (Authenticated, any role).
 	ListNetworks(context.Context, *connect.Request[v1.ListNetworksRequest]) (*connect.Response[v1.ListNetworksResponse], error)
 	// Delete an image from the host (Authenticated, admin role). The
@@ -252,6 +299,11 @@ type AdminServiceHandler interface {
 	// admin role). The daemon refuses images referenced by any container
 	// unconditionally; with dangling_only it restricts to untagged images.
 	PruneImages(context.Context, *connect.Request[v1.PruneImagesRequest]) (*connect.Response[v1.PruneImagesResponse], error)
+	// Prune all unused volumes from the host in one call (Authenticated, admin
+	// role). Sends all=true so named volumes are included; the daemon removes
+	// only volumes not referenced by any container — running or stopped — at
+	// prune time, re-evaluating references itself.
+	PruneVolumes(context.Context, *connect.Request[v1.PruneVolumesRequest]) (*connect.Response[v1.PruneVolumesResponse], error)
 	// Report builder-owned disk space: the BuildKit build cache aggregates
 	// as supplied by the daemon (Authenticated, any role).
 	GetBuildCacheStats(context.Context, *connect.Request[v1.GetBuildCacheStatsRequest]) (*connect.Response[v1.GetBuildCacheStatsResponse], error)
@@ -291,6 +343,12 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("ListVolumes")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceGetVolumeUsageHandler := connect.NewUnaryHandler(
+		AdminServiceGetVolumeUsageProcedure,
+		svc.GetVolumeUsage,
+		connect.WithSchema(adminServiceMethods.ByName("GetVolumeUsage")),
+		connect.WithHandlerOptions(opts...),
+	)
 	adminServiceListNetworksHandler := connect.NewUnaryHandler(
 		AdminServiceListNetworksProcedure,
 		svc.ListNetworks,
@@ -307,6 +365,12 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		AdminServicePruneImagesProcedure,
 		svc.PruneImages,
 		connect.WithSchema(adminServiceMethods.ByName("PruneImages")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServicePruneVolumesHandler := connect.NewUnaryHandler(
+		AdminServicePruneVolumesProcedure,
+		svc.PruneVolumes,
+		connect.WithSchema(adminServiceMethods.ByName("PruneVolumes")),
 		connect.WithHandlerOptions(opts...),
 	)
 	adminServiceGetBuildCacheStatsHandler := connect.NewUnaryHandler(
@@ -345,12 +409,16 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceListImagesHandler.ServeHTTP(w, r)
 		case AdminServiceListVolumesProcedure:
 			adminServiceListVolumesHandler.ServeHTTP(w, r)
+		case AdminServiceGetVolumeUsageProcedure:
+			adminServiceGetVolumeUsageHandler.ServeHTTP(w, r)
 		case AdminServiceListNetworksProcedure:
 			adminServiceListNetworksHandler.ServeHTTP(w, r)
 		case AdminServiceDeleteImageProcedure:
 			adminServiceDeleteImageHandler.ServeHTTP(w, r)
 		case AdminServicePruneImagesProcedure:
 			adminServicePruneImagesHandler.ServeHTTP(w, r)
+		case AdminServicePruneVolumesProcedure:
+			adminServicePruneVolumesHandler.ServeHTTP(w, r)
 		case AdminServiceGetBuildCacheStatsProcedure:
 			adminServiceGetBuildCacheStatsHandler.ServeHTTP(w, r)
 		case AdminServicePruneBuildCacheProcedure:
@@ -378,6 +446,10 @@ func (UnimplementedAdminServiceHandler) ListVolumes(context.Context, *connect.Re
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AdminService.ListVolumes is not implemented"))
 }
 
+func (UnimplementedAdminServiceHandler) GetVolumeUsage(context.Context, *connect.Request[v1.GetVolumeUsageRequest]) (*connect.Response[v1.GetVolumeUsageResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AdminService.GetVolumeUsage is not implemented"))
+}
+
 func (UnimplementedAdminServiceHandler) ListNetworks(context.Context, *connect.Request[v1.ListNetworksRequest]) (*connect.Response[v1.ListNetworksResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AdminService.ListNetworks is not implemented"))
 }
@@ -388,6 +460,10 @@ func (UnimplementedAdminServiceHandler) DeleteImage(context.Context, *connect.Re
 
 func (UnimplementedAdminServiceHandler) PruneImages(context.Context, *connect.Request[v1.PruneImagesRequest]) (*connect.Response[v1.PruneImagesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AdminService.PruneImages is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) PruneVolumes(context.Context, *connect.Request[v1.PruneVolumesRequest]) (*connect.Response[v1.PruneVolumesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AdminService.PruneVolumes is not implemented"))
 }
 
 func (UnimplementedAdminServiceHandler) GetBuildCacheStats(context.Context, *connect.Request[v1.GetBuildCacheStatsRequest]) (*connect.Response[v1.GetBuildCacheStatsResponse], error) {

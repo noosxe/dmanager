@@ -3,6 +3,7 @@ package admin
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -1021,5 +1022,164 @@ func TestPruneBuildCacheRecordErrors(t *testing.T) {
 	}
 	if connErr.Code() != connect.CodeUnavailable {
 		t.Errorf("expected code %v, got %v", connect.CodeUnavailable, connErr.Code())
+	}
+}
+
+func TestGetVolumeUsage(t *testing.T) {
+	// The fake pings API 1.52 so the modern decode path runs: aggregates are
+	// decoded from VolumeUsage while Items require Verbose=true — the same
+	// trap as the build-cache records call.
+	var gotType, gotVerbose string
+	svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/_ping") {
+			w.Header().Set("API-Version", "1.52")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("OK"))
+			return
+		}
+		if !strings.HasSuffix(r.URL.Path, "/system/df") {
+			http.NotFound(w, r)
+			return
+		}
+		gotType = r.URL.Query().Get("type")
+		gotVerbose = r.URL.Query().Get("verbose")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"VolumeUsage": {"TotalSize": 10000, "Reclaimable": 300, "TotalCount": 3, "ActiveCount": 1, "Items": [` +
+			`{"Name": "pgdata", "UsageData": {"Size": 9000, "RefCount": 2}},` +
+			`{"Name": "cache", "UsageData": {"Size": 300, "RefCount": 0}},` +
+			`{"Name": "broken", "UsageData": {"Size": -1, "RefCount": 0}},` +
+			`{"Name": "noref", "UsageData": {"RefCount": 0}}` +
+			`]}}`))
+	})
+
+	resp, err := svc.GetVolumeUsage(context.Background(), connect.NewRequest(&v1.GetVolumeUsageRequest{}))
+	if err != nil {
+		t.Fatalf("GetVolumeUsage failed: %v", err)
+	}
+	if gotType != "volume" {
+		t.Errorf("expected type=volume query param, got %q", gotType)
+	}
+	// Without verbose=1 the modern decode drops Items entirely.
+	if gotVerbose != "1" {
+		t.Errorf("expected verbose=1 query param, got %q", gotVerbose)
+	}
+	if len(resp.Msg.Volumes) != 4 {
+		t.Fatalf("expected 4 volume usages, got %d", len(resp.Msg.Volumes))
+	}
+	first := resp.Msg.Volumes[0]
+	if first.Name != "pgdata" || first.SizeBytes != 9000 || first.RefCount != 2 {
+		t.Errorf("unexpected first volume: %s %d %d", first.Name, first.SizeBytes, first.RefCount)
+	}
+	// -1 (walk failure) passes through verbatim and is excluded from sums…
+	if resp.Msg.Volumes[2].SizeBytes != -1 {
+		t.Errorf("expected -1 passthrough for broken volume, got %d", resp.Msg.Volumes[2].SizeBytes)
+	}
+	// …while a missing UsageData maps as unknown (0/0), not an error.
+	if resp.Msg.Volumes[3].SizeBytes != 0 || resp.Msg.Volumes[3].RefCount != 0 {
+		t.Errorf("expected zeroed usage for missing UsageData, got %d/%d", resp.Msg.Volumes[3].SizeBytes, resp.Msg.Volumes[3].RefCount)
+	}
+	// Aggregates are computed server-side, -1 and unknown sizes excluded:
+	// total = 9000 + 300; reclaimable = 300 (only the measured unused volume).
+	if resp.Msg.TotalSizeBytes != 9300 {
+		t.Errorf("expected total_size_bytes 9300, got %d", resp.Msg.TotalSizeBytes)
+	}
+	if resp.Msg.ReclaimableBytes != 300 {
+		t.Errorf("expected reclaimable_bytes 300, got %d", resp.Msg.ReclaimableBytes)
+	}
+	if resp.Msg.UnusedCount != 3 {
+		t.Errorf("expected unused_count 3, got %d", resp.Msg.UnusedCount)
+	}
+}
+
+func TestPruneVolumes(t *testing.T) {
+	var gotFilters string
+	svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) {
+		if pingHandler(w, r) {
+			return
+		}
+		if !strings.HasSuffix(r.URL.Path, "/volumes/prune") {
+			http.NotFound(w, r)
+			return
+		}
+		gotFilters = r.URL.Query().Get("filters")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"VolumesDeleted": ["cache", "old"], "SpaceReclaimed": 450}`))
+	})
+
+	resp, err := svc.PruneVolumes(context.Background(), connect.NewRequest(&v1.PruneVolumesRequest{}))
+	if err != nil {
+		t.Fatalf("PruneVolumes failed: %v", err)
+	}
+	// all=true reaches the daemon inside the filters JSON (the client maps the
+	// All option to an "all" filter) — it includes named volumes, which the
+	// daemon would otherwise skip (anonymous-only by default).
+	if !strings.Contains(gotFilters, "\"all\"") {
+		t.Errorf("expected all filter in %q, missing", gotFilters)
+	}
+	if resp.Msg.VolumesDeleted != 2 {
+		t.Errorf("expected volumes_deleted 2, got %d", resp.Msg.VolumesDeleted)
+	}
+	if len(resp.Msg.Names) != 2 || resp.Msg.Names[0] != "cache" || resp.Msg.Names[1] != "old" {
+		t.Errorf("expected names [cache old], got %v", resp.Msg.Names)
+	}
+	if resp.Msg.SpaceReclaimed != 450 {
+		t.Errorf("expected space_reclaimed 450, got %d", resp.Msg.SpaceReclaimed)
+	}
+}
+
+func TestPruneVolumesNothingToDelete(t *testing.T) {
+	svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) {
+		if pingHandler(w, r) {
+			return
+		}
+		if !strings.HasSuffix(r.URL.Path, "/volumes/prune") {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"VolumesDeleted": [], "SpaceReclaimed": 0}`))
+	})
+
+	resp, err := svc.PruneVolumes(context.Background(), connect.NewRequest(&v1.PruneVolumesRequest{}))
+	if err != nil {
+		t.Fatalf("PruneVolumes failed: %v", err)
+	}
+	// The daemon-protected case maps honestly: 0 deleted, 0 reclaimed.
+	if resp.Msg.VolumesDeleted != 0 || resp.Msg.SpaceReclaimed != 0 {
+		t.Errorf("expected honest 0/0 report, got %d/%d", resp.Msg.VolumesDeleted, resp.Msg.SpaceReclaimed)
+	}
+}
+
+func TestGetVolumeUsageErrors(t *testing.T) {
+	svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) {
+		if pingHandler(w, r) {
+			return
+		}
+		http.NotFound(w, r)
+	})
+	_, err := svc.GetVolumeUsage(context.Background(), connect.NewRequest(&v1.GetVolumeUsageRequest{}))
+	if err == nil {
+		t.Fatal("expected error for daemon-down")
+	}
+	var connErr *connect.Error
+	if !errors.As(err, &connErr) || connErr.Code() != connect.CodeUnavailable {
+		t.Errorf("expected code %v, got %v", connect.CodeUnavailable, err)
+	}
+}
+
+func TestPruneVolumesErrors(t *testing.T) {
+	svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) {
+		if pingHandler(w, r) {
+			return
+		}
+		http.NotFound(w, r)
+	})
+	_, err := svc.PruneVolumes(context.Background(), connect.NewRequest(&v1.PruneVolumesRequest{}))
+	if err == nil {
+		t.Fatal("expected error for daemon-down")
+	}
+	var connErr *connect.Error
+	if !errors.As(err, &connErr) || connErr.Code() != connect.CodeUnavailable {
+		t.Errorf("expected code %v, got %v", connect.CodeUnavailable, err)
 	}
 }

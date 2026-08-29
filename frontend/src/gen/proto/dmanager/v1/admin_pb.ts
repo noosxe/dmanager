@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file proto/dmanager/v1/admin.proto.
  */
 export const file_proto_dmanager_v1_admin: GenFile = /*@__PURE__*/
-  fileDesc("Ch1wcm90by9kbWFuYWdlci92MS9hZG1pbi5wcm90bxILZG1hbmFnZXIudjEiEwoRTGlzdEltYWdlc1JlcXVlc3QiOAoSTGlzdEltYWdlc1Jlc3BvbnNlEiIKBmltYWdlcxgBIAMoCzISLmRtYW5hZ2VyLnYxLkltYWdlImoKBUltYWdlEgoKAmlkGAEgASgJEhEKCXJlcG9fdGFncxgCIAMoCRIUCgxjcmVhdGVkX3VuaXgYAyABKAMSEgoKc2l6ZV9ieXRlcxgEIAEoAxIYChBjb250YWluZXJzX2NvdW50GAUgASgDIhQKEkxpc3RWb2x1bWVzUmVxdWVzdCI7ChNMaXN0Vm9sdW1lc1Jlc3BvbnNlEiQKB3ZvbHVtZXMYASADKAsyEy5kbWFuYWdlci52MS5Wb2x1bWUiygEKBlZvbHVtZRIMCgRuYW1lGAEgASgJEg4KBmRyaXZlchgCIAEoCRISCgptb3VudHBvaW50GAMgASgJEi4KCmNyZWF0ZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi8KBmxhYmVscxgFIAMoCzIfLmRtYW5hZ2VyLnYxLlZvbHVtZS5MYWJlbHNFbnRyeRotCgtMYWJlbHNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIhUKE0xpc3ROZXR3b3Jrc1JlcXVlc3QiPgoUTGlzdE5ldHdvcmtzUmVzcG9uc2USJgoIbmV0d29ya3MYASADKAsyFC5kbWFuYWdlci52MS5OZXR3b3JrIoQBCgdOZXR3b3JrEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSDgoGZHJpdmVyGAMgASgJEg0KBXNjb3BlGAQgASgJEhAKCGludGVybmFsGAUgASgIEi4KCmNyZWF0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIi8KEkRlbGV0ZUltYWdlUmVxdWVzdBIKCgJpZBgBIAEoCRINCgVmb3JjZRgCIAEoCCIVChNEZWxldGVJbWFnZVJlc3BvbnNlIisKElBydW5lSW1hZ2VzUmVxdWVzdBIVCg1kYW5nbGluZ19vbmx5GAEgASgIIjAKC1BydW5lZEltYWdlEg8KB2RlbGV0ZWQYASABKAkSEAoIdW50YWdnZWQYAiABKAkiYAoTUHJ1bmVJbWFnZXNSZXNwb25zZRIwCg5pbWFnZXNfZGVsZXRlZBgBIAMoCzIYLmRtYW5hZ2VyLnYxLlBydW5lZEltYWdlEhcKD3NwYWNlX3JlY2xhaW1lZBgCIAEoBCIbChlHZXRCdWlsZENhY2hlU3RhdHNSZXF1ZXN0IngKGkdldEJ1aWxkQ2FjaGVTdGF0c1Jlc3BvbnNlEhMKC3RvdGFsX2J5dGVzGAEgASgEEhkKEXJlY2xhaW1hYmxlX2J5dGVzGAIgASgEEhQKDHJlY29yZF9jb3VudBgDIAEoDRIUCgxhY3RpdmVfY291bnQYBCABKA0iJQoWUHJ1bmVCdWlsZENhY2hlUmVxdWVzdBILCgNhbGwYASABKAgiSgoXUHJ1bmVCdWlsZENhY2hlUmVzcG9uc2USFgoOY2FjaGVzX2RlbGV0ZWQYASABKA0SFwoPc3BhY2VfcmVjbGFpbWVkGAIgASgEIoICChBCdWlsZENhY2hlUmVjb3JkEgoKAmlkGAEgASgJEgwKBHR5cGUYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSEgoKc2l6ZV9ieXRlcxgEIAEoBBIOCgZpbl91c2UYBSABKAgSDgoGc2hhcmVkGAYgASgIEhMKC3VzYWdlX2NvdW50GAcgASgEEi4KCmNyZWF0ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjUKDGxhc3RfdXNlZF9hdBgJIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIAIgBAUIPCg1fbGFzdF91c2VkX2F0Ih4KHExpc3RCdWlsZENhY2hlUmVjb3Jkc1JlcXVlc3QiTwodTGlzdEJ1aWxkQ2FjaGVSZWNvcmRzUmVzcG9uc2USLgoHcmVjb3JkcxgBIAMoCzIdLmRtYW5hZ2VyLnYxLkJ1aWxkQ2FjaGVSZWNvcmQiKgocUHJ1bmVCdWlsZENhY2hlUmVjb3JkUmVxdWVzdBIKCgJpZBgBIAEoCSJQCh1QcnVuZUJ1aWxkQ2FjaGVSZWNvcmRSZXNwb25zZRIWCg5jYWNoZXNfZGVsZXRlZBgBIAEoDRIXCg9zcGFjZV9yZWNsYWltZWQYAiABKAQiFAoSQ2hlY2tFbmdpbmVSZXF1ZXN0IkwKE0NoZWNrRW5naW5lUmVzcG9uc2USEQoJY29ubmVjdGVkGAEgASgIEhMKC2FwaV92ZXJzaW9uGAIgASgJEg0KBWVycm9yGAMgASgJMp8HCgxBZG1pblNlcnZpY2USTQoKTGlzdEltYWdlcxIeLmRtYW5hZ2VyLnYxLkxpc3RJbWFnZXNSZXF1ZXN0Gh8uZG1hbmFnZXIudjEuTGlzdEltYWdlc1Jlc3BvbnNlElAKC0xpc3RWb2x1bWVzEh8uZG1hbmFnZXIudjEuTGlzdFZvbHVtZXNSZXF1ZXN0GiAuZG1hbmFnZXIudjEuTGlzdFZvbHVtZXNSZXNwb25zZRJTCgxMaXN0TmV0d29ya3MSIC5kbWFuYWdlci52MS5MaXN0TmV0d29ya3NSZXF1ZXN0GiEuZG1hbmFnZXIudjEuTGlzdE5ldHdvcmtzUmVzcG9uc2USUAoLRGVsZXRlSW1hZ2USHy5kbWFuYWdlci52MS5EZWxldGVJbWFnZVJlcXVlc3QaIC5kbWFuYWdlci52MS5EZWxldGVJbWFnZVJlc3BvbnNlElAKC1BydW5lSW1hZ2VzEh8uZG1hbmFnZXIudjEuUHJ1bmVJbWFnZXNSZXF1ZXN0GiAuZG1hbmFnZXIudjEuUHJ1bmVJbWFnZXNSZXNwb25zZRJlChJHZXRCdWlsZENhY2hlU3RhdHMSJi5kbWFuYWdlci52MS5HZXRCdWlsZENhY2hlU3RhdHNSZXF1ZXN0GicuZG1hbmFnZXIudjEuR2V0QnVpbGRDYWNoZVN0YXRzUmVzcG9uc2USXAoPUHJ1bmVCdWlsZENhY2hlEiMuZG1hbmFnZXIudjEuUHJ1bmVCdWlsZENhY2hlUmVxdWVzdBokLmRtYW5hZ2VyLnYxLlBydW5lQnVpbGRDYWNoZVJlc3BvbnNlEm4KFUxpc3RCdWlsZENhY2hlUmVjb3JkcxIpLmRtYW5hZ2VyLnYxLkxpc3RCdWlsZENhY2hlUmVjb3Jkc1JlcXVlc3QaKi5kbWFuYWdlci52MS5MaXN0QnVpbGRDYWNoZVJlY29yZHNSZXNwb25zZRJuChVQcnVuZUJ1aWxkQ2FjaGVSZWNvcmQSKS5kbWFuYWdlci52MS5QcnVuZUJ1aWxkQ2FjaGVSZWNvcmRSZXF1ZXN0GiouZG1hbmFnZXIudjEuUHJ1bmVCdWlsZENhY2hlUmVjb3JkUmVzcG9uc2USUAoLQ2hlY2tFbmdpbmUSHy5kbWFuYWdlci52MS5DaGVja0VuZ2luZVJlcXVlc3QaIC5kbWFuYWdlci52MS5DaGVja0VuZ2luZVJlc3BvbnNlQjRaMmRtYW5hZ2VyL2ludGVybmFsL2dlbi9wcm90by9kbWFuYWdlci92MTtkbWFuYWdlcnYxYgZwcm90bzM", [file_google_protobuf_timestamp]);
+  fileDesc("Ch1wcm90by9kbWFuYWdlci92MS9hZG1pbi5wcm90bxILZG1hbmFnZXIudjEiEwoRTGlzdEltYWdlc1JlcXVlc3QiOAoSTGlzdEltYWdlc1Jlc3BvbnNlEiIKBmltYWdlcxgBIAMoCzISLmRtYW5hZ2VyLnYxLkltYWdlImoKBUltYWdlEgoKAmlkGAEgASgJEhEKCXJlcG9fdGFncxgCIAMoCRIUCgxjcmVhdGVkX3VuaXgYAyABKAMSEgoKc2l6ZV9ieXRlcxgEIAEoAxIYChBjb250YWluZXJzX2NvdW50GAUgASgDIhQKEkxpc3RWb2x1bWVzUmVxdWVzdCI7ChNMaXN0Vm9sdW1lc1Jlc3BvbnNlEiQKB3ZvbHVtZXMYASADKAsyEy5kbWFuYWdlci52MS5Wb2x1bWUiygEKBlZvbHVtZRIMCgRuYW1lGAEgASgJEg4KBmRyaXZlchgCIAEoCRISCgptb3VudHBvaW50GAMgASgJEi4KCmNyZWF0ZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi8KBmxhYmVscxgFIAMoCzIfLmRtYW5hZ2VyLnYxLlZvbHVtZS5MYWJlbHNFbnRyeRotCgtMYWJlbHNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIhUKE0xpc3ROZXR3b3Jrc1JlcXVlc3QiPgoUTGlzdE5ldHdvcmtzUmVzcG9uc2USJgoIbmV0d29ya3MYASADKAsyFC5kbWFuYWdlci52MS5OZXR3b3JrIoQBCgdOZXR3b3JrEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSDgoGZHJpdmVyGAMgASgJEg0KBXNjb3BlGAQgASgJEhAKCGludGVybmFsGAUgASgIEi4KCmNyZWF0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIi8KEkRlbGV0ZUltYWdlUmVxdWVzdBIKCgJpZBgBIAEoCRINCgVmb3JjZRgCIAEoCCIVChNEZWxldGVJbWFnZVJlc3BvbnNlIisKElBydW5lSW1hZ2VzUmVxdWVzdBIVCg1kYW5nbGluZ19vbmx5GAEgASgIIjAKC1BydW5lZEltYWdlEg8KB2RlbGV0ZWQYASABKAkSEAoIdW50YWdnZWQYAiABKAkiYAoTUHJ1bmVJbWFnZXNSZXNwb25zZRIwCg5pbWFnZXNfZGVsZXRlZBgBIAMoCzIYLmRtYW5hZ2VyLnYxLlBydW5lZEltYWdlEhcKD3NwYWNlX3JlY2xhaW1lZBgCIAEoBCIbChlHZXRCdWlsZENhY2hlU3RhdHNSZXF1ZXN0IngKGkdldEJ1aWxkQ2FjaGVTdGF0c1Jlc3BvbnNlEhMKC3RvdGFsX2J5dGVzGAEgASgEEhkKEXJlY2xhaW1hYmxlX2J5dGVzGAIgASgEEhQKDHJlY29yZF9jb3VudBgDIAEoDRIUCgxhY3RpdmVfY291bnQYBCABKA0iJQoWUHJ1bmVCdWlsZENhY2hlUmVxdWVzdBILCgNhbGwYASABKAgiSgoXUHJ1bmVCdWlsZENhY2hlUmVzcG9uc2USFgoOY2FjaGVzX2RlbGV0ZWQYASABKA0SFwoPc3BhY2VfcmVjbGFpbWVkGAIgASgEIoICChBCdWlsZENhY2hlUmVjb3JkEgoKAmlkGAEgASgJEgwKBHR5cGUYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSEgoKc2l6ZV9ieXRlcxgEIAEoBBIOCgZpbl91c2UYBSABKAgSDgoGc2hhcmVkGAYgASgIEhMKC3VzYWdlX2NvdW50GAcgASgEEi4KCmNyZWF0ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjUKDGxhc3RfdXNlZF9hdBgJIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIAIgBAUIPCg1fbGFzdF91c2VkX2F0Ih4KHExpc3RCdWlsZENhY2hlUmVjb3Jkc1JlcXVlc3QiTwodTGlzdEJ1aWxkQ2FjaGVSZWNvcmRzUmVzcG9uc2USLgoHcmVjb3JkcxgBIAMoCzIdLmRtYW5hZ2VyLnYxLkJ1aWxkQ2FjaGVSZWNvcmQiKgocUHJ1bmVCdWlsZENhY2hlUmVjb3JkUmVxdWVzdBIKCgJpZBgBIAEoCSJQCh1QcnVuZUJ1aWxkQ2FjaGVSZWNvcmRSZXNwb25zZRIWCg5jYWNoZXNfZGVsZXRlZBgBIAEoDRIXCg9zcGFjZV9yZWNsYWltZWQYAiABKAQiFAoSQ2hlY2tFbmdpbmVSZXF1ZXN0IkwKE0NoZWNrRW5naW5lUmVzcG9uc2USEQoJY29ubmVjdGVkGAEgASgIEhMKC2FwaV92ZXJzaW9uGAIgASgJEg0KBWVycm9yGAMgASgJIhcKFUdldFZvbHVtZVVzYWdlUmVxdWVzdCJCCgtWb2x1bWVVc2FnZRIMCgRuYW1lGAEgASgJEhIKCnNpemVfYnl0ZXMYAiABKAMSEQoJcmVmX2NvdW50GAMgASgDIo4BChZHZXRWb2x1bWVVc2FnZVJlc3BvbnNlEikKB3ZvbHVtZXMYASADKAsyGC5kbWFuYWdlci52MS5Wb2x1bWVVc2FnZRIYChB0b3RhbF9zaXplX2J5dGVzGAIgASgDEhkKEXJlY2xhaW1hYmxlX2J5dGVzGAMgASgDEhQKDHVudXNlZF9jb3VudBgEIAEoDSIVChNQcnVuZVZvbHVtZXNSZXF1ZXN0IlcKFFBydW5lVm9sdW1lc1Jlc3BvbnNlEhcKD3ZvbHVtZXNfZGVsZXRlZBgBIAEoDRINCgVuYW1lcxgCIAMoCRIXCg9zcGFjZV9yZWNsYWltZWQYAyABKAQyzwgKDEFkbWluU2VydmljZRJNCgpMaXN0SW1hZ2VzEh4uZG1hbmFnZXIudjEuTGlzdEltYWdlc1JlcXVlc3QaHy5kbWFuYWdlci52MS5MaXN0SW1hZ2VzUmVzcG9uc2USUAoLTGlzdFZvbHVtZXMSHy5kbWFuYWdlci52MS5MaXN0Vm9sdW1lc1JlcXVlc3QaIC5kbWFuYWdlci52MS5MaXN0Vm9sdW1lc1Jlc3BvbnNlElkKDkdldFZvbHVtZVVzYWdlEiIuZG1hbmFnZXIudjEuR2V0Vm9sdW1lVXNhZ2VSZXF1ZXN0GiMuZG1hbmFnZXIudjEuR2V0Vm9sdW1lVXNhZ2VSZXNwb25zZRJTCgxMaXN0TmV0d29ya3MSIC5kbWFuYWdlci52MS5MaXN0TmV0d29ya3NSZXF1ZXN0GiEuZG1hbmFnZXIudjEuTGlzdE5ldHdvcmtzUmVzcG9uc2USUAoLRGVsZXRlSW1hZ2USHy5kbWFuYWdlci52MS5EZWxldGVJbWFnZVJlcXVlc3QaIC5kbWFuYWdlci52MS5EZWxldGVJbWFnZVJlc3BvbnNlElAKC1BydW5lSW1hZ2VzEh8uZG1hbmFnZXIudjEuUHJ1bmVJbWFnZXNSZXF1ZXN0GiAuZG1hbmFnZXIudjEuUHJ1bmVJbWFnZXNSZXNwb25zZRJTCgxQcnVuZVZvbHVtZXMSIC5kbWFuYWdlci52MS5QcnVuZVZvbHVtZXNSZXF1ZXN0GiEuZG1hbmFnZXIudjEuUHJ1bmVWb2x1bWVzUmVzcG9uc2USZQoSR2V0QnVpbGRDYWNoZVN0YXRzEiYuZG1hbmFnZXIudjEuR2V0QnVpbGRDYWNoZVN0YXRzUmVxdWVzdBonLmRtYW5hZ2VyLnYxLkdldEJ1aWxkQ2FjaGVTdGF0c1Jlc3BvbnNlElwKD1BydW5lQnVpbGRDYWNoZRIjLmRtYW5hZ2VyLnYxLlBydW5lQnVpbGRDYWNoZVJlcXVlc3QaJC5kbWFuYWdlci52MS5QcnVuZUJ1aWxkQ2FjaGVSZXNwb25zZRJuChVMaXN0QnVpbGRDYWNoZVJlY29yZHMSKS5kbWFuYWdlci52MS5MaXN0QnVpbGRDYWNoZVJlY29yZHNSZXF1ZXN0GiouZG1hbmFnZXIudjEuTGlzdEJ1aWxkQ2FjaGVSZWNvcmRzUmVzcG9uc2USbgoVUHJ1bmVCdWlsZENhY2hlUmVjb3JkEikuZG1hbmFnZXIudjEuUHJ1bmVCdWlsZENhY2hlUmVjb3JkUmVxdWVzdBoqLmRtYW5hZ2VyLnYxLlBydW5lQnVpbGRDYWNoZVJlY29yZFJlc3BvbnNlElAKC0NoZWNrRW5naW5lEh8uZG1hbmFnZXIudjEuQ2hlY2tFbmdpbmVSZXF1ZXN0GiAuZG1hbmFnZXIudjEuQ2hlY2tFbmdpbmVSZXNwb25zZUI0WjJkbWFuYWdlci9pbnRlcm5hbC9nZW4vcHJvdG8vZG1hbmFnZXIvdjE7ZG1hbmFnZXJ2MWIGcHJvdG8z", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message dmanager.v1.ListImagesRequest
@@ -660,10 +660,139 @@ export const CheckEngineResponseSchema: GenMessage<CheckEngineResponse> = /*@__P
   messageDesc(file_proto_dmanager_v1_admin, 24);
 
 /**
+ * @generated from message dmanager.v1.GetVolumeUsageRequest
+ */
+export type GetVolumeUsageRequest = Message<"dmanager.v1.GetVolumeUsageRequest"> & {
+};
+
+/**
+ * Describes the message dmanager.v1.GetVolumeUsageRequest.
+ * Use `create(GetVolumeUsageRequestSchema)` to create a new message.
+ */
+export const GetVolumeUsageRequestSchema: GenMessage<GetVolumeUsageRequest> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_admin, 25);
+
+/**
+ * @generated from message dmanager.v1.VolumeUsage
+ */
+export type VolumeUsage = Message<"dmanager.v1.VolumeUsage"> & {
+  /**
+   * Volume name (the join key against the ListVolumes response).
+   *
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * Size in bytes; -1 when the daemon's per-volume walk failed.
+   *
+   * @generated from field: int64 size_bytes = 2;
+   */
+  sizeBytes: bigint;
+
+  /**
+   * Container config references (running or stopped); -1 when unavailable.
+   *
+   * @generated from field: int64 ref_count = 3;
+   */
+  refCount: bigint;
+};
+
+/**
+ * Describes the message dmanager.v1.VolumeUsage.
+ * Use `create(VolumeUsageSchema)` to create a new message.
+ */
+export const VolumeUsageSchema: GenMessage<VolumeUsage> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_admin, 26);
+
+/**
+ * @generated from message dmanager.v1.GetVolumeUsageResponse
+ */
+export type GetVolumeUsageResponse = Message<"dmanager.v1.GetVolumeUsageResponse"> & {
+  /**
+   * Measured volumes, in daemon order.
+   *
+   * @generated from field: repeated dmanager.v1.VolumeUsage volumes = 1;
+   */
+  volumes: VolumeUsage[];
+
+  /**
+   * Daemon-computed sums; sizes of -1 are excluded from both.
+   *
+   * @generated from field: int64 total_size_bytes = 2;
+   */
+  totalSizeBytes: bigint;
+
+  /**
+   * sum of sizes where ref_count == 0
+   *
+   * @generated from field: int64 reclaimable_bytes = 3;
+   */
+  reclaimableBytes: bigint;
+
+  /**
+   * Count of volumes with ref_count == 0.
+   *
+   * @generated from field: uint32 unused_count = 4;
+   */
+  unusedCount: number;
+};
+
+/**
+ * Describes the message dmanager.v1.GetVolumeUsageResponse.
+ * Use `create(GetVolumeUsageResponseSchema)` to create a new message.
+ */
+export const GetVolumeUsageResponseSchema: GenMessage<GetVolumeUsageResponse> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_admin, 27);
+
+/**
+ * @generated from message dmanager.v1.PruneVolumesRequest
+ */
+export type PruneVolumesRequest = Message<"dmanager.v1.PruneVolumesRequest"> & {
+};
+
+/**
+ * Describes the message dmanager.v1.PruneVolumesRequest.
+ * Use `create(PruneVolumesRequestSchema)` to create a new message.
+ */
+export const PruneVolumesRequestSchema: GenMessage<PruneVolumesRequest> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_admin, 28);
+
+/**
+ * @generated from message dmanager.v1.PruneVolumesResponse
+ */
+export type PruneVolumesResponse = Message<"dmanager.v1.PruneVolumesResponse"> & {
+  /**
+   * @generated from field: uint32 volumes_deleted = 1;
+   */
+  volumesDeleted: number;
+
+  /**
+   * Names of the removed volumes (for the success toast).
+   *
+   * @generated from field: repeated string names = 2;
+   */
+  names: string[];
+
+  /**
+   * @generated from field: uint64 space_reclaimed = 3;
+   */
+  spaceReclaimed: bigint;
+};
+
+/**
+ * Describes the message dmanager.v1.PruneVolumesResponse.
+ * Use `create(PruneVolumesResponseSchema)` to create a new message.
+ */
+export const PruneVolumesResponseSchema: GenMessage<PruneVolumesResponse> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_admin, 29);
+
+/**
  * AdminService exposes Docker host resources (images, volumes, networks)
  * for the Administration page. Lists are read-only for every role;
- * image deletion is admin-gated. Volumes and networks have no mutating
- * procedures.
+ * destructive procedures (image deletion, prunes) are admin-gated.
+ * Volumes gain on-demand usage measurement (any role) and an unused-volume
+ * reclaim (admin); networks have no mutating procedures.
  *
  * @generated from service dmanager.v1.AdminService
  */
@@ -687,6 +816,20 @@ export const AdminService: GenService<{
     methodKind: "unary";
     input: typeof ListVolumesRequestSchema;
     output: typeof ListVolumesResponseSchema;
+  },
+  /**
+   * Measure local volume disk usage (Authenticated, any role). Expensive on
+   * the daemon: each call recursively walks every local volume's directory
+   * tree, serially and uncached (singleflight only deduplicates concurrent
+   * calls) — so the web UI must trigger this only on explicit user action,
+   * never automatically.
+   *
+   * @generated from rpc dmanager.v1.AdminService.GetVolumeUsage
+   */
+  getVolumeUsage: {
+    methodKind: "unary";
+    input: typeof GetVolumeUsageRequestSchema;
+    output: typeof GetVolumeUsageResponseSchema;
   },
   /**
    * List networks present on the host (Authenticated, any role).
@@ -720,6 +863,19 @@ export const AdminService: GenService<{
     methodKind: "unary";
     input: typeof PruneImagesRequestSchema;
     output: typeof PruneImagesResponseSchema;
+  },
+  /**
+   * Prune all unused volumes from the host in one call (Authenticated, admin
+   * role). Sends all=true so named volumes are included; the daemon removes
+   * only volumes not referenced by any container — running or stopped — at
+   * prune time, re-evaluating references itself.
+   *
+   * @generated from rpc dmanager.v1.AdminService.PruneVolumes
+   */
+  pruneVolumes: {
+    methodKind: "unary";
+    input: typeof PruneVolumesRequestSchema;
+    output: typeof PruneVolumesResponseSchema;
   },
   /**
    * Report builder-owned disk space: the BuildKit build cache aggregates

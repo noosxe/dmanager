@@ -12,6 +12,7 @@ import type {
   Volume,
   BuildCacheRecord,
   GetBuildCacheStatsResponse,
+  GetVolumeUsageResponse,
 } from "../gen/proto/dmanager/v1/admin_pb";
 import { Administration } from "./Administration";
 
@@ -74,6 +75,8 @@ vi.mock("../client", () => ({
     pruneBuildCache: vi.fn(),
     listBuildCacheRecords: vi.fn(),
     pruneBuildCacheRecord: vi.fn(),
+    getVolumeUsage: vi.fn(),
+    pruneVolumes: vi.fn(),
   },
 }));
 
@@ -227,7 +230,7 @@ describe("Administration Component", () => {
     expect(screen.getByText("/var/lib/docker/volumes/tardis/_data")).toBeInTheDocument();
     expect(screen.getByText("com.example.some-label=some-value")).toBeInTheDocument();
     // Volume without created_at or labels renders the em dash twice.
-    expect(screen.getAllByText("—")).toHaveLength(2);
+    expect(screen.getAllByText("—")).toHaveLength(4); // created + labels + 2x unmeasured Size
     // Stat cards are Images-tab only.
     expect(screen.queryByText("Total Space Used")).not.toBeInTheDocument();
   });
@@ -1018,5 +1021,160 @@ describe("Administration Component", () => {
     // ...while the records section alone reports the failure.
     expect(screen.getByText("Unable to Load Records")).toBeInTheDocument();
     expect(screen.queryByText("exec.cachemount")).not.toBeInTheDocument();
+  });
+
+  it("does not measure volume usage on open and renders the count card", async () => {
+    useParamsMock.mockReturnValue({ tab: "volumes" });
+    vi.mocked(adminClient.listVolumes).mockResolvedValue({
+      volumes: mockVolumes,
+      $typeName: "dmanager.v1.ListVolumesResponse",
+    } as unknown as ListVolumesResponse);
+    render(<Administration />);
+
+    // The tab opens from the cheap list alone — no daemon walk.
+    await waitFor(() => {
+      expect(screen.getByText("tardis")).toBeInTheDocument();
+    });
+    expect(adminClient.listVolumes).toHaveBeenCalledTimes(1);
+    expect(adminClient.getVolumeUsage).not.toHaveBeenCalled();
+
+    // Count card from the list; sizes render placeholders until measured.
+    const countCard = screen
+      .getAllByText("Volumes")
+      .map((el) => el.closest(".stat-card"))
+      .find(Boolean);
+    expect(countCard?.querySelector(".stat-value")?.textContent).toBe("2");
+    expect(screen.getByText("Calculate Sizes")).toBeInTheDocument();
+    expect(screen.getAllByText("—")).toHaveLength(4); // created + labels + 2x unmeasured Size
+  });
+
+  it("calculates sizes on demand and fills the Size column", async () => {
+    useParamsMock.mockReturnValue({ tab: "volumes" });
+    vi.mocked(adminClient.listVolumes).mockResolvedValue({
+      volumes: mockVolumes,
+      $typeName: "dmanager.v1.ListVolumesResponse",
+    } as unknown as ListVolumesResponse);
+    vi.mocked(adminClient.getVolumeUsage).mockResolvedValue({
+      volumes: [
+        { name: "tardis", sizeBytes: 4831838208n, refCount: 2n },
+        { name: "plain", sizeBytes: -1n, refCount: 0n },
+      ],
+      totalSizeBytes: 4831838208n,
+      reclaimableBytes: 0n,
+      unusedCount: 1,
+      $typeName: "dmanager.v1.GetVolumeUsageResponse",
+    } as unknown as GetVolumeUsageResponse);
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("tardis")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Calculate Sizes" }));
+
+    await waitFor(() => {
+      expect(adminClient.getVolumeUsage).toHaveBeenCalledTimes(1);
+    });
+    // Measured volume shows bytes; the walk-failed volume (-1) stays unknown.
+    await waitFor(() => {
+      expect(screen.getByText("4.8 GB")).toBeInTheDocument();
+    });
+    // plain still renders unknown (created + labels + size -1); tardis shows bytes.
+    expect(screen.getAllByText("—")).toHaveLength(3);
+  });
+
+  it("gates volume reclaim for viewer-role users but allows measuring", async () => {
+    useParamsMock.mockReturnValue({ tab: "volumes" });
+    mockUseAuth.mockReturnValue({ user: { username: "viewer", role: "viewer" } });
+    vi.mocked(adminClient.listVolumes).mockResolvedValue({
+      volumes: mockVolumes,
+      $typeName: "dmanager.v1.ListVolumesResponse",
+    } as unknown as ListVolumesResponse);
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("tardis")).toBeInTheDocument();
+    });
+    const measure = screen.getByRole("button", { name: "Calculate Sizes" });
+    expect(measure).toBeEnabled();
+    const reclaim = screen.getByRole("button", { name: "Reclaim Space" });
+    expect(reclaim).toBeDisabled();
+    expect(reclaim).toHaveAttribute("title", "Admin role required");
+  });
+
+  it("confirms the volume prune with measured upper bounds and re-measures", async () => {
+    useParamsMock.mockReturnValue({ tab: "volumes" });
+    vi.mocked(adminClient.listVolumes).mockResolvedValue({
+      volumes: mockVolumes,
+      $typeName: "dmanager.v1.ListVolumesResponse",
+    } as unknown as ListVolumesResponse);
+    vi.mocked(adminClient.getVolumeUsage).mockResolvedValue({
+      volumes: [
+        { name: "tardis", sizeBytes: 4831838208n, refCount: 2n },
+        { name: "plain", sizeBytes: -1n, refCount: 0n },
+      ],
+      totalSizeBytes: 4831838208n,
+      reclaimableBytes: 0n,
+      unusedCount: 1,
+      $typeName: "dmanager.v1.GetVolumeUsageResponse",
+    } as unknown as GetVolumeUsageResponse);
+    vi.mocked(adminClient.pruneVolumes).mockResolvedValue({
+      volumesDeleted: 1,
+      names: ["plain"],
+      spaceReclaimed: 300n,
+      $typeName: "dmanager.v1.PruneVolumesResponse",
+    } as never);
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("tardis")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Calculate Sizes" }));
+    await waitFor(() => {
+      expect(adminClient.getVolumeUsage).toHaveBeenCalledTimes(1);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Reclaim Space" }));
+    expect(screen.getByRole("dialog")).toHaveAccessibleName("Delete unused volumes?");
+    expect(screen.getByRole("dialog")).toHaveAccessibleDescription(
+      "Deletes 1 unused volume, reclaiming up to 0 B. A volume is unused only when no container — running or stopped — references it. This cannot be undone.",
+    );
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Cancel" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await waitFor(() => {
+      expect(adminClient.pruneVolumes).toHaveBeenCalledWith({});
+    });
+    // Toast reports daemon truth, naming the removed volume.
+    await waitFor(() => {
+      expect(mockToast.success).toHaveBeenCalledWith(
+        "Reclaimed 300.0 B from 1 unused volume (plain).",
+      );
+    });
+    // List refreshes (cheap) and the measurement re-runs — the user opted in.
+    await waitFor(() => {
+      expect(adminClient.listVolumes).toHaveBeenCalledTimes(2);
+      expect(adminClient.getVolumeUsage).toHaveBeenCalledTimes(2);
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+  });
+
+  it("discloses uncalculated sizes when pruning without a measurement", async () => {
+    useParamsMock.mockReturnValue({ tab: "volumes" });
+    vi.mocked(adminClient.listVolumes).mockResolvedValue({
+      volumes: mockVolumes,
+      $typeName: "dmanager.v1.ListVolumesResponse",
+    } as unknown as ListVolumesResponse);
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("tardis")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Reclaim Space" }));
+    expect(screen.getByRole("dialog")).toHaveAccessibleDescription(
+      "Size has not been calculated yet — use Calculate Sizes for a preview. Deletes all unused volumes. A volume is unused only when no container — running or stopped — references it. This cannot be undone.",
+    );
+    expect(adminClient.pruneVolumes).not.toHaveBeenCalled();
   });
 });
