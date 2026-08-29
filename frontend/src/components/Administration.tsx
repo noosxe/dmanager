@@ -37,14 +37,24 @@ export function Administration() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
 
-  const { result, isLoading, error, refresh, deleteImage, deletingId, pruneImages, pruning } =
-    useAdminResources(tab);
+  const {
+    result,
+    isLoading,
+    error,
+    refresh,
+    deleteImage,
+    deletingId,
+    pruneImages,
+    pruning,
+    pruningScope,
+  } = useAdminResources(tab);
 
   // Derived Images-tab summary (design.md §9.6); null on other tabs or
 
-  // The prune confirmation is armed by the actions-row button (#196); the
-  // dialog owns the busy lockout while the RPC is in flight.
-  const [pendingPrune, setPendingPrune] = useState(false);
+  // The prune confirmation is armed by the actions-row buttons (#196/#203); the
+  // dialog owns the busy lockout while the RPC is in flight. One scope-driven
+  // dialog serves both buttons.
+  const [pendingPrune, setPendingPrune] = useState<"unused" | "dangling" | null>(null);
   // while no successful images result exists yet (-- placeholders).
   const imageStats = result?.kind === "images" ? deriveImageStats(result.data) : null;
 
@@ -161,10 +171,26 @@ export function Administration() {
                   ? "No unused images to prune"
                   : undefined
             }
-            onClick={() => setPendingPrune(true)}
+            onClick={() => setPendingPrune("unused")}
           >
-            <Trash2 size={14} className={pruning ? "spinner" : ""} />
-            {pruning ? "Pruning…" : "Prune Unused Images"}
+            <Trash2 size={14} className={pruningScope === "unused" ? "spinner" : ""} />
+            {pruningScope === "unused" ? "Pruning…" : "Prune Unused"}
+          </button>
+          <button
+            type="button"
+            className="prune-btn"
+            disabled={pruning || !isAdmin || !imageStats || imageStats.danglingFreeableBytes === 0n}
+            title={
+              !isAdmin
+                ? "Admin role required"
+                : imageStats && imageStats.danglingFreeableBytes === 0n
+                  ? "No dangling images to prune"
+                  : undefined
+            }
+            onClick={() => setPendingPrune("dangling")}
+          >
+            <Trash2 size={14} className={pruningScope === "dangling" ? "spinner" : ""} />
+            {pruningScope === "dangling" ? "Pruning…" : "Prune Dangling"}
           </button>
         </div>
       )}
@@ -202,14 +228,19 @@ export function Administration() {
         </>
       )}
       <ConfirmDialog
-        open={pendingPrune}
-        onClose={() => setPendingPrune(false)}
+        open={pendingPrune !== null}
+        onClose={() => setPendingPrune(null)}
         onConfirm={() => {
-          setPendingPrune(false);
-          void pruneImages();
+          const scope = pendingPrune;
+          setPendingPrune(null);
+          void pruneImages(scope === "dangling");
         }}
-        title="Prune unused images?"
-        message={`Deletes all ${imageStats?.unusedCount ?? 0} unused images, reclaiming ${imageStats ? formatBytes(imageStats.freeableBytes, true) : "0 B"}. Images in use are never touched.`}
+        title={pendingPrune === "dangling" ? "Prune dangling images?" : "Prune unused images?"}
+        message={
+          pendingPrune === "dangling"
+            ? `Deletes all ${imageStats?.danglingCount ?? 0} dangling images, reclaiming ${imageStats ? formatBytes(imageStats.danglingFreeableBytes, true) : "0 B"}. Tagged images are never touched.`
+            : `Deletes all ${imageStats?.unusedCount ?? 0} unused images, reclaiming ${imageStats ? formatBytes(imageStats.freeableBytes, true) : "0 B"}. Images in use are never touched.`
+        }
         confirmLabel="Prune"
         variant="danger"
         busy={pruning}

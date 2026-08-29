@@ -211,11 +211,12 @@ body {
   margin-top: 10px;
   border: 1px solid rgba(170, 59, 255, 0.15);
 }
-/* Images-tab prune action (design.md §9.8, #196): right-aligned danger
-   button in a slim row so the stats grid keeps its 3-column rhythm. */
+/* Images-tab prune actions (design.md §9.8, #196/#203): right-aligned danger
+   buttons in a slim row so the stats grid keeps its rhythm. */
 .images-prune-row {
   display: flex;
   justify-content: flex-end;
+  gap: 12px;
 }
 
 .prune-btn {

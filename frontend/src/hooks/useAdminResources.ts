@@ -29,6 +29,7 @@ export function useAdminResources(kind: AdminResourceKind) {
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [pruning, setPruning] = useState(false);
+  const [pruningScope, setPruningScope] = useState<"unused" | "dangling" | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -101,29 +102,50 @@ export function useAdminResources(kind: AdminResourceKind) {
     [deletingId, refresh, toast],
   );
 
-  // Prunes all unused images in one daemon call (§9.8, #196); one prune at a
-  // time. The toast reports the daemon-returned reclaimed bytes, not a
-  // client-side estimate; the list is re-fetched as the source of truth.
-  const pruneImages = useCallback(async () => {
-    if (pruning) {
-      return;
-    }
-    setPruning(true);
-    try {
-      const resp = await adminClient.pruneImages({ danglingOnly: false });
-      const count = resp.imagesDeleted.length;
-      const noun = count === 1 ? "image" : "images";
-      toast.success(`Reclaimed ${formatBytes(resp.spaceReclaimed, true)} from ${count} ${noun}.`);
-    } catch (err: unknown) {
-      console.error("Failed to prune images:", err);
-      const msg = err instanceof Error ? err.message : String(err);
-      toast.error(`Failed to prune images: ${msg}`);
-      return;
-    } finally {
-      setPruning(false);
-    }
-    refresh();
-  }, [pruning, refresh, toast]);
+  // Prunes in one daemon call in the scope the caller picks (§9.8, #196/#203):
+  // `danglingOnly: false` = every unused image (tagged + untagged), `true` =
+  // untagged only. One prune at a time — `pruning` gates both buttons while
+  // `pruningScope` names which one spins. The toast reports the
+  // daemon-returned reclaimed bytes, not a client-side estimate; the list is
+  // re-fetched as the source of truth.
+  const pruneImages = useCallback(
+    async (danglingOnly: boolean) => {
+      if (pruning) {
+        return;
+      }
+      setPruning(true);
+      setPruningScope(danglingOnly ? "dangling" : "unused");
+      try {
+        const resp = await adminClient.pruneImages({ danglingOnly });
+        const count = resp.imagesDeleted.length;
+        const noun = count === 1 ? "image" : "images";
+        const scope = danglingOnly ? "dangling" : "unused";
+        toast.success(
+          `Reclaimed ${formatBytes(resp.spaceReclaimed, true)} from ${count} ${scope} ${noun}.`,
+        );
+      } catch (err: unknown) {
+        console.error("Failed to prune images:", err);
+        const msg = err instanceof Error ? err.message : String(err);
+        toast.error(`Failed to prune images: ${msg}`);
+        return;
+      } finally {
+        setPruning(false);
+        setPruningScope(null);
+      }
+      refresh();
+    },
+    [pruning, refresh, toast],
+  );
 
-  return { result, isLoading, error, refresh, deleteImage, deletingId, pruneImages, pruning };
+  return {
+    result,
+    isLoading,
+    error,
+    refresh,
+    deleteImage,
+    deletingId,
+    pruneImages,
+    pruning,
+    pruningScope,
+  };
 }

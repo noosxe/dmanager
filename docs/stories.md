@@ -70,7 +70,7 @@ graph TD
     A62 --> A63["STORY-063: Generic PageTabs & Settings Shell Refinement (#192) (DONE)"]
     A63 --> A64["STORY-064: Image Prune — Bulk Reclaim (#196) (DONE)"]
     A64 --> A65["STORY-065: Images Unused & Dangling Stat Cards (#200) (DONE)"]
-    A65 --> A66["STORY-066: Scoped Prune Buttons — Unused & Dangling (#203)"]
+    A65 --> A66["STORY-066: Scoped Prune Buttons — Unused & Dangling (#203) (DONE)"]
 ```
 
 
@@ -1396,7 +1396,7 @@ graph TD
   - `pnpm check`, `pnpm test`, `pnpm build` pass.
   - Visual: five cards reflow on the Images tab (single row on wide viewports, wrap below); containers/logs strips unaffected.
 
-### STORY-066: Scoped Prune Buttons — Unused & Dangling (issue #203) [PLANNED]
+### STORY-066: Scoped Prune Buttons — Unused & Dangling (issue #203) [DONE]
 - **Scope:** Frontend only — two prune buttons matching the two stat cards; dangling semantics tightened
 - **Estimated Size:** Small-Medium (~120 LOC incl. tests)
 - **Dependencies:** STORY-064 (PruneImages RPC + both wire scopes already present), STORY-065 (Unused/Dangling cards)
