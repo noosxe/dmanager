@@ -178,13 +178,12 @@ func (s *Service) GetBuildCacheStats(ctx context.Context, req *connect.Request[d
 		s.logger.Error("Failed to read build cache stats", "error", err)
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("failed to read build cache stats: %w", err))
 	}
-
 	bc := usage.BuildCache
 	return connect.NewResponse(&dmanagerv1.GetBuildCacheStatsResponse{
-		TotalBytes:       uint64(bc.TotalSize),
-		ReclaimableBytes: uint64(bc.Reclaimable),
-		RecordCount:      uint32(bc.TotalCount),
-		ActiveCount:      uint32(bc.ActiveCount),
+		TotalBytes:       uint64(bc.TotalSize),   //nolint:gosec // non-negative daemon value
+		ReclaimableBytes: uint64(bc.Reclaimable), //nolint:gosec // non-negative daemon value
+		RecordCount:      uint32(bc.TotalCount),  //nolint:gosec // non-negative daemon value
+		ActiveCount:      uint32(bc.ActiveCount), //nolint:gosec // non-negative daemon value
 	}), nil
 }
 
@@ -201,8 +200,9 @@ func (s *Service) PruneBuildCache(ctx context.Context, req *connect.Request[dman
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("failed to prune build cache: %w", err))
 	}
 
+	count := len(result.Report.CachesDeleted)
 	return connect.NewResponse(&dmanagerv1.PruneBuildCacheResponse{
-		CachesDeleted:  uint32(len(result.Report.CachesDeleted)),
+		CachesDeleted:  uint32(count), //nolint:gosec // non-negative daemon value
 		SpaceReclaimed: result.Report.SpaceReclaimed,
 	}), nil
 }
