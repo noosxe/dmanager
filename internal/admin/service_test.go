@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"log/slog"
 	"net/http"
@@ -547,9 +548,14 @@ func TestPruneImages(t *testing.T) {
 	if gotMethod != http.MethodPost {
 		t.Errorf("expected POST request, got %s", gotMethod)
 	}
-	// Default scope: no dangling filter — the daemon prunes every unused image.
-	if gotFilters != "" {
-		t.Errorf("expected no filters for the default prune, got %q", gotFilters)
+	// Default scope: dangling=false — the daemon prunes every unused image,
+	// not just untagged ones (its absent-filter default is dangling-only).
+	parsed, err := parsePruneFilters(t, gotFilters)
+	if err != nil {
+		t.Fatalf("filters query param is not valid JSON: %v", err)
+	}
+	if !parsed["dangling"]["false"] {
+		t.Errorf("expected dangling=false filter for the default prune, got %q", gotFilters)
 	}
 	if len(resp.Msg.ImagesDeleted) != 2 {
 		t.Fatalf("expected 2 deleted entries, got %d", len(resp.Msg.ImagesDeleted))
@@ -579,9 +585,22 @@ func TestPruneImagesDanglingFilter(t *testing.T) {
 	if _, err := svc.PruneImages(context.Background(), connect.NewRequest(&v1.PruneImagesRequest{DanglingOnly: true})); err != nil {
 		t.Fatalf("PruneImages failed: %v", err)
 	}
-	if !strings.Contains(gotFilters, "dangling") {
-		t.Errorf("expected dangling filter in query, got %q", gotFilters)
+	parsed, err := parsePruneFilters(t, gotFilters)
+	if err != nil {
+		t.Fatalf("filters query param is not valid JSON: %v", err)
 	}
+	if !parsed["dangling"]["true"] {
+		t.Errorf("expected dangling=true filter for dangling_only prune, got %q", gotFilters)
+	}
+}
+
+// parsePruneFilters decodes the filters query param the moby client sends
+// (client.Filters serialized as JSON) so tests can assert exact filter terms.
+func parsePruneFilters(t *testing.T, raw string) (map[string]map[string]bool, error) {
+	t.Helper()
+	var parsed map[string]map[string]bool
+	err := json.Unmarshal([]byte(raw), &parsed)
+	return parsed, err
 }
 
 func TestPruneImagesErrors(t *testing.T) {
