@@ -71,6 +71,7 @@ graph TD
     A63 --> A64["STORY-064: Image Prune — Bulk Reclaim (#196) (DONE)"]
     A64 --> A65["STORY-065: Images Unused & Dangling Stat Cards (#200) (DONE)"]
     A65 --> A66["STORY-066: Scoped Prune Buttons — Unused & Dangling (#203) (DONE)"]
+    A66 --> A67["STORY-067: Builder Tab — Cache Stats & Prune (#206)"]
 ```
 
 
@@ -1412,3 +1413,24 @@ graph TD
 - **Validation Check:**
   - `pnpm check`, `pnpm test`, `pnpm build` pass.
   - Manual: Prune Unused behaves as before (renamed); Prune Dangling deletes only untagged images and its dialog count matches the Dangling card exactly.
+
+### STORY-067: Builder Tab — Cache Stats & Prune (issue #206) [PLANNED]
+- **Scope:** Backend + frontend — two new RPCs + a dedicated Builder Administration tab
+- **Estimated Size:** Medium (~400 LOC incl. tests)
+- **Dependencies:** STORY-055 (Administration shell/tabs), STORY-064 (mutating-RPC/ConfirmDialog/toast patterns), STORY-066 (whose field verification proved builder-owned space is the real lever)
+- **Goal:** Per #206 / design.md §9.9 / protocol.md: expose builder-owned disk space (BuildKit cache) as a dedicated **Builder** tab (right after Images) — three stat cards (Build Cache total, Reclaimable, Records) and a danger **Prune Build Cache** action. This is the lever that actually frees the ~27 GB image prunes can't touch. No table in v1: 66% of records are ≤1 MB dust and the aggregate is the actionable unit; per-record drill-down is future work.
+- **Tasks:**
+  1. `proto/dmanager/v1/admin.proto`: `GetBuildCacheStats() → GetBuildCacheStatsResponse{total_bytes, reclaimable_bytes, record_count, active_count}` + `PruneBuildCache(PruneBuildCacheRequest{all}) → PruneBuildCacheResponse{caches_deleted, space_reclaimed}`; `buf generate`.
+  2. `internal/auth/interceptor.go`: both procedures → `RoleAdmin` (reflection test keeps 100% coverage).
+  3. `internal/admin/service.go`: `GetBuildCacheStats` via `Client.DiskUsage(ctx, DiskUsageOptions{BuildCache: true})` (`/system/df?type=build-cache` — hyphen matters) mapping `BuildCacheUsage` aggregates 1:1; `PruneBuildCache` via `Client.BuildCachePrune(ctx, BuildCachePruneOptions{All})` (`/build/prune`) mapping `CachePruneReport{CachesDeleted (count), SpaceReclaimed}`; daemon-down → `CodeUnavailable`. Tests: httptest fakes for both wire shapes incl. zero-record aggregate, `all` flag on the query, daemon-down.
+  4. `frontend/src/components/Builder.tsx` (+ tab entry in `Administration.tsx` `adminTabs` between Images and Volumes, router): three cards — Build Cache (`Database`, blue, `total_bytes`), Reclaimable (`Recycle`, amber, `reclaimable_bytes`), Records (`Layers`, gray, `record_count`); actions row with **Prune Build Cache** (danger, disabled when `!isAdmin` / `reclaimable_bytes === 0` / in flight); danger `ConfirmDialog` — *"Deletes {record_count} build cache records, reclaiming up to {reclaimable_bytes}. Future image builds will be slower until the cache is rebuilt."*
+  5. `frontend/src/hooks/useAdminResources.ts`: builder-stats state slice independent of the images inventory (failure renders `--`, not the banner); `pruneBuildCache()` with single-flight + toast `Reclaimed {size} from {count} cache records.` (daemon-reported) and stats+images re-fetch on settle.
+  6. Tests: interceptor reflection, backend fakes, Builder tab card rendering + independent failure, gating matrix, confirm flow (copy incl. rebuild-cost sentence, Cancel focus, busy lockout), toast contents, refresh.
+- **Files Affected:**
+  - `proto/dmanager/v1/admin.proto`, `internal/gen/**`, `frontend/src/gen/**` (generated)
+  - `internal/auth/interceptor.go` (+ test), `internal/admin/service.go` (+ test)
+  - `frontend/src/components/Builder.tsx` (new), `frontend/src/components/Administration.tsx`, `frontend/src/hooks/useAdminResources.ts`, `frontend/src/routes/router.tsx`, test files
+- **Validation Check:**
+  - `go test ./...`, `go vet ./...` pass; interceptor reflection test green.
+  - `pnpm check`, `pnpm test`, `pnpm build` pass.
+  - Manual: Builder tab shows the live aggregates (host: ~33.5 GB / ~27.7 GB / 634); prune reclaims with daemon-reported toast; images tab unaffected by builder-stats failures.

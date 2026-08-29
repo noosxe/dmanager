@@ -364,6 +364,14 @@ The three list procedures are unary, take empty requests, and are classified as 
 
 Volumes and networks remain read-only: no create, mutate, or prune procedures are defined for them in this phase. Images carry the mutation surface: per-image `DeleteImage` and bulk `PruneImages` (#196).
 
+`GetBuildCacheStats` (issue #206) and `PruneBuildCache` (issue #206) expose builder-owned disk space — the BuildKit cache that holds the layer content image prunes cannot free — as a new **Builder** tab's data source. Both are **authenticated, admin role**.
+
+`GetBuildCacheStats` is read-only and proxies `GET /system/df?type=build-cache` (moby `client.DiskUsage` with `BuildCache: true` — the type value is hyphenated; `type=buildcache` is rejected by the daemon). The daemon supplies the aggregates; the response maps them 1:1: `total_bytes` and `reclaimable_bytes` (reclaimable already excludes records whose blobs are shared with other records), plus `record_count` and `active_count`. No per-record data ships: records are opaque buildkit hashes with build-step descriptions, the actionable unit is the aggregate.
+
+`PruneBuildCache` proxies `POST /build/prune` (`client.BuildCachePrune`) with a single `all` boolean: false (the only scope the UI ships) preserves buildkit-internal cache types, true removes them as well; records in active use are never removed, enforced daemon-side — unlike images, cache records have no in-use protection concept because nothing running depends on them. The response carries `space_reclaimed`, the bytes the daemon actually freed, and `caches_deleted`, the number of removed records; per-record IDs are not shipped. Error mapping follows the daemon convention: unreachable → `CodeUnavailable`.
+
+`PruneImages`, `GetBuildCacheStats`, and `PruneBuildCache` share one client-side invariant: prune responses report what happened (the daemon is the source of truth) while every dialog size is an **upper bound** labeled as such — layer/blob sharing means actual freed space can be lower, including zero.
+
 `CheckEngine` is classified as **authenticated, any role** (same policy as the list procedures) and proxies the daemon `GET /_ping` (moby `client.Ping`). Its semantics intentionally deviate from the daemon-error convention: when the daemon is unreachable the procedure **succeeds** with `connected: false` and a short `error` reason — the daemon outage *is* the answer, not an RPC failure. It only fails with a Connect error for request/auth/transport problems (backend itself down), which is exactly the distinction the sidebar status pill needs (issue #180). The handler wraps the ping in a short (~5 s) context timeout so a hung socket cannot accumulate goroutines under polling.
 
 ---
