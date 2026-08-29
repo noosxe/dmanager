@@ -47,6 +47,12 @@ const (
 	// AdminServicePruneImagesProcedure is the fully-qualified name of the AdminService's PruneImages
 	// RPC.
 	AdminServicePruneImagesProcedure = "/dmanager.v1.AdminService/PruneImages"
+	// AdminServiceGetBuildCacheStatsProcedure is the fully-qualified name of the AdminService's
+	// GetBuildCacheStats RPC.
+	AdminServiceGetBuildCacheStatsProcedure = "/dmanager.v1.AdminService/GetBuildCacheStats"
+	// AdminServicePruneBuildCacheProcedure is the fully-qualified name of the AdminService's
+	// PruneBuildCache RPC.
+	AdminServicePruneBuildCacheProcedure = "/dmanager.v1.AdminService/PruneBuildCache"
 	// AdminServiceCheckEngineProcedure is the fully-qualified name of the AdminService's CheckEngine
 	// RPC.
 	AdminServiceCheckEngineProcedure = "/dmanager.v1.AdminService/CheckEngine"
@@ -67,6 +73,13 @@ type AdminServiceClient interface {
 	// admin role). The daemon refuses images referenced by any container
 	// unconditionally; with dangling_only it restricts to untagged images.
 	PruneImages(context.Context, *connect.Request[v1.PruneImagesRequest]) (*connect.Response[v1.PruneImagesResponse], error)
+	// Report builder-owned disk space: the BuildKit build cache aggregates
+	// as supplied by the daemon (Authenticated, any role).
+	GetBuildCacheStats(context.Context, *connect.Request[v1.GetBuildCacheStatsRequest]) (*connect.Response[v1.GetBuildCacheStatsResponse], error)
+	// Prune build cache records in one daemon call (Authenticated, admin role).
+	// With all=false buildkit-internal cache types are preserved; records in
+	// active use are never removed (enforced daemon-side).
+	PruneBuildCache(context.Context, *connect.Request[v1.PruneBuildCacheRequest]) (*connect.Response[v1.PruneBuildCacheResponse], error)
 	// Report whether the Docker Engine is reachable (Authenticated, any role).
 	// Daemon unreachability is a successful response with connected=false —
 	// the outage is the answer, not an RPC failure (design.md §10.2).
@@ -114,6 +127,18 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("PruneImages")),
 			connect.WithClientOptions(opts...),
 		),
+		getBuildCacheStats: connect.NewClient[v1.GetBuildCacheStatsRequest, v1.GetBuildCacheStatsResponse](
+			httpClient,
+			baseURL+AdminServiceGetBuildCacheStatsProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("GetBuildCacheStats")),
+			connect.WithClientOptions(opts...),
+		),
+		pruneBuildCache: connect.NewClient[v1.PruneBuildCacheRequest, v1.PruneBuildCacheResponse](
+			httpClient,
+			baseURL+AdminServicePruneBuildCacheProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("PruneBuildCache")),
+			connect.WithClientOptions(opts...),
+		),
 		checkEngine: connect.NewClient[v1.CheckEngineRequest, v1.CheckEngineResponse](
 			httpClient,
 			baseURL+AdminServiceCheckEngineProcedure,
@@ -125,12 +150,14 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 
 // adminServiceClient implements AdminServiceClient.
 type adminServiceClient struct {
-	listImages   *connect.Client[v1.ListImagesRequest, v1.ListImagesResponse]
-	listVolumes  *connect.Client[v1.ListVolumesRequest, v1.ListVolumesResponse]
-	listNetworks *connect.Client[v1.ListNetworksRequest, v1.ListNetworksResponse]
-	deleteImage  *connect.Client[v1.DeleteImageRequest, v1.DeleteImageResponse]
-	pruneImages  *connect.Client[v1.PruneImagesRequest, v1.PruneImagesResponse]
-	checkEngine  *connect.Client[v1.CheckEngineRequest, v1.CheckEngineResponse]
+	listImages         *connect.Client[v1.ListImagesRequest, v1.ListImagesResponse]
+	listVolumes        *connect.Client[v1.ListVolumesRequest, v1.ListVolumesResponse]
+	listNetworks       *connect.Client[v1.ListNetworksRequest, v1.ListNetworksResponse]
+	deleteImage        *connect.Client[v1.DeleteImageRequest, v1.DeleteImageResponse]
+	pruneImages        *connect.Client[v1.PruneImagesRequest, v1.PruneImagesResponse]
+	getBuildCacheStats *connect.Client[v1.GetBuildCacheStatsRequest, v1.GetBuildCacheStatsResponse]
+	pruneBuildCache    *connect.Client[v1.PruneBuildCacheRequest, v1.PruneBuildCacheResponse]
+	checkEngine        *connect.Client[v1.CheckEngineRequest, v1.CheckEngineResponse]
 }
 
 // ListImages calls dmanager.v1.AdminService.ListImages.
@@ -158,6 +185,16 @@ func (c *adminServiceClient) PruneImages(ctx context.Context, req *connect.Reque
 	return c.pruneImages.CallUnary(ctx, req)
 }
 
+// GetBuildCacheStats calls dmanager.v1.AdminService.GetBuildCacheStats.
+func (c *adminServiceClient) GetBuildCacheStats(ctx context.Context, req *connect.Request[v1.GetBuildCacheStatsRequest]) (*connect.Response[v1.GetBuildCacheStatsResponse], error) {
+	return c.getBuildCacheStats.CallUnary(ctx, req)
+}
+
+// PruneBuildCache calls dmanager.v1.AdminService.PruneBuildCache.
+func (c *adminServiceClient) PruneBuildCache(ctx context.Context, req *connect.Request[v1.PruneBuildCacheRequest]) (*connect.Response[v1.PruneBuildCacheResponse], error) {
+	return c.pruneBuildCache.CallUnary(ctx, req)
+}
+
 // CheckEngine calls dmanager.v1.AdminService.CheckEngine.
 func (c *adminServiceClient) CheckEngine(ctx context.Context, req *connect.Request[v1.CheckEngineRequest]) (*connect.Response[v1.CheckEngineResponse], error) {
 	return c.checkEngine.CallUnary(ctx, req)
@@ -178,6 +215,13 @@ type AdminServiceHandler interface {
 	// admin role). The daemon refuses images referenced by any container
 	// unconditionally; with dangling_only it restricts to untagged images.
 	PruneImages(context.Context, *connect.Request[v1.PruneImagesRequest]) (*connect.Response[v1.PruneImagesResponse], error)
+	// Report builder-owned disk space: the BuildKit build cache aggregates
+	// as supplied by the daemon (Authenticated, any role).
+	GetBuildCacheStats(context.Context, *connect.Request[v1.GetBuildCacheStatsRequest]) (*connect.Response[v1.GetBuildCacheStatsResponse], error)
+	// Prune build cache records in one daemon call (Authenticated, admin role).
+	// With all=false buildkit-internal cache types are preserved; records in
+	// active use are never removed (enforced daemon-side).
+	PruneBuildCache(context.Context, *connect.Request[v1.PruneBuildCacheRequest]) (*connect.Response[v1.PruneBuildCacheResponse], error)
 	// Report whether the Docker Engine is reachable (Authenticated, any role).
 	// Daemon unreachability is a successful response with connected=false —
 	// the outage is the answer, not an RPC failure (design.md §10.2).
@@ -221,6 +265,18 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("PruneImages")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceGetBuildCacheStatsHandler := connect.NewUnaryHandler(
+		AdminServiceGetBuildCacheStatsProcedure,
+		svc.GetBuildCacheStats,
+		connect.WithSchema(adminServiceMethods.ByName("GetBuildCacheStats")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServicePruneBuildCacheHandler := connect.NewUnaryHandler(
+		AdminServicePruneBuildCacheProcedure,
+		svc.PruneBuildCache,
+		connect.WithSchema(adminServiceMethods.ByName("PruneBuildCache")),
+		connect.WithHandlerOptions(opts...),
+	)
 	adminServiceCheckEngineHandler := connect.NewUnaryHandler(
 		AdminServiceCheckEngineProcedure,
 		svc.CheckEngine,
@@ -239,6 +295,10 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceDeleteImageHandler.ServeHTTP(w, r)
 		case AdminServicePruneImagesProcedure:
 			adminServicePruneImagesHandler.ServeHTTP(w, r)
+		case AdminServiceGetBuildCacheStatsProcedure:
+			adminServiceGetBuildCacheStatsHandler.ServeHTTP(w, r)
+		case AdminServicePruneBuildCacheProcedure:
+			adminServicePruneBuildCacheHandler.ServeHTTP(w, r)
 		case AdminServiceCheckEngineProcedure:
 			adminServiceCheckEngineHandler.ServeHTTP(w, r)
 		default:
@@ -268,6 +328,14 @@ func (UnimplementedAdminServiceHandler) DeleteImage(context.Context, *connect.Re
 
 func (UnimplementedAdminServiceHandler) PruneImages(context.Context, *connect.Request[v1.PruneImagesRequest]) (*connect.Response[v1.PruneImagesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AdminService.PruneImages is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) GetBuildCacheStats(context.Context, *connect.Request[v1.GetBuildCacheStatsRequest]) (*connect.Response[v1.GetBuildCacheStatsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AdminService.GetBuildCacheStats is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) PruneBuildCache(context.Context, *connect.Request[v1.PruneBuildCacheRequest]) (*connect.Response[v1.PruneBuildCacheResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AdminService.PruneBuildCache is not implemented"))
 }
 
 func (UnimplementedAdminServiceHandler) CheckEngine(context.Context, *connect.Request[v1.CheckEngineRequest]) (*connect.Response[v1.CheckEngineResponse], error) {

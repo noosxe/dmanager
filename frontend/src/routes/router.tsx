@@ -122,7 +122,12 @@ const administrationTabRoute = createRoute({
     if (!context.auth.isAuthenticated) {
       throw redirect({ to: "/login" });
     }
-    if (params.tab !== "images" && params.tab !== "volumes" && params.tab !== "networks") {
+    if (
+      params.tab !== "images" &&
+      params.tab !== "builder" &&
+      params.tab !== "volumes" &&
+      params.tab !== "networks"
+    ) {
       throw redirect({ to: "/administration/$tab", params: { tab: "images" } });
     }
   },

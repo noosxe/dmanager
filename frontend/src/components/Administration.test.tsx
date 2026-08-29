@@ -10,6 +10,7 @@ import type {
   ListVolumesResponse,
   Network,
   Volume,
+  GetBuildCacheStatsResponse,
 } from "../gen/proto/dmanager/v1/admin_pb";
 import { Administration } from "./Administration";
 
@@ -68,6 +69,8 @@ vi.mock("../client", () => ({
     listNetworks: vi.fn(),
     deleteImage: vi.fn(),
     pruneImages: vi.fn(),
+    getBuildCacheStats: vi.fn(),
+    pruneBuildCache: vi.fn(),
   },
 }));
 
@@ -719,6 +722,117 @@ describe("Administration Component", () => {
     });
     await waitFor(() => {
       expect(adminClient.listImages).toHaveBeenCalledTimes(2);
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+  });
+
+  it("renders builder cache stat cards on the builder tab", async () => {
+    useParamsMock.mockReturnValue({ tab: "builder" });
+    vi.mocked(adminClient.getBuildCacheStats).mockResolvedValue({
+      totalBytes: 33541322317n,
+      reclaimableBytes: 27653977878n,
+      recordCount: 634,
+      activeCount: 0,
+      $typeName: "dmanager.v1.GetBuildCacheStatsResponse",
+    } as unknown as GetBuildCacheStatsResponse);
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Build Cache")).toBeInTheDocument();
+    });
+
+    const totalCard = screen.getByText("Build Cache").closest(".stat-card");
+    expect(totalCard?.querySelector(".stat-value")?.textContent).toBe("33.5 GB");
+    const reclaimCard = screen.getByText("Reclaimable").closest(".stat-card");
+    expect(reclaimCard?.querySelector(".stat-value")?.textContent).toBe("27.7 GB");
+    const recordsCard = screen.getByText("Records").closest(".stat-card");
+    expect(recordsCard?.querySelector(".stat-value")?.textContent).toBe("634");
+
+    // Admin sees an armed prune button.
+    expect(screen.getByRole("button", { name: /prune build cache/i })).toBeEnabled();
+  });
+
+  it("gates the builder prune when nothing is reclaimable or the user is a viewer", async () => {
+    useParamsMock.mockReturnValue({ tab: "builder" });
+    vi.mocked(adminClient.getBuildCacheStats).mockResolvedValue({
+      totalBytes: 0n,
+      reclaimableBytes: 0n,
+      recordCount: 0,
+      activeCount: 0,
+      $typeName: "dmanager.v1.GetBuildCacheStatsResponse",
+    } as unknown as GetBuildCacheStatsResponse);
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Build Cache")).toBeInTheDocument();
+    });
+    const button = screen.getByRole("button", { name: /prune build cache/i });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute("title", "No build cache to prune");
+
+    mockUseAuth.mockReturnValue({ user: { username: "viewer", role: "viewer" } });
+  });
+
+  it("gates the builder prune for viewer-role users", async () => {
+    useParamsMock.mockReturnValue({ tab: "builder" });
+    vi.mocked(adminClient.getBuildCacheStats).mockResolvedValue({
+      totalBytes: 33541322317n,
+      reclaimableBytes: 27653977878n,
+      recordCount: 634,
+      activeCount: 0,
+      $typeName: "dmanager.v1.GetBuildCacheStatsResponse",
+    } as unknown as GetBuildCacheStatsResponse);
+    mockUseAuth.mockReturnValue({ user: { username: "viewer", role: "viewer" } });
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Build Cache")).toBeInTheDocument();
+    });
+    const button = screen.getByRole("button", { name: /prune build cache/i });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute("title", "Admin role required");
+  });
+
+  it("confirms the builder prune, reports daemon bytes, and refreshes", async () => {
+    useParamsMock.mockReturnValue({ tab: "builder" });
+    vi.mocked(adminClient.getBuildCacheStats).mockResolvedValue({
+      totalBytes: 33541322317n,
+      reclaimableBytes: 27653977878n,
+      recordCount: 634,
+      activeCount: 0,
+      $typeName: "dmanager.v1.GetBuildCacheStatsResponse",
+    } as unknown as GetBuildCacheStatsResponse);
+    vi.mocked(adminClient.pruneBuildCache).mockResolvedValue({
+      cachesDeleted: 634,
+      spaceReclaimed: 27653977878n,
+      $typeName: "dmanager.v1.PruneBuildCacheResponse",
+    } as never);
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Build Cache")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /prune build cache/i }));
+    expect(screen.getByRole("dialog")).toHaveAccessibleName("Prune build cache?");
+    expect(screen.getByRole("dialog")).toHaveAccessibleDescription(
+      "Deletes 634 build cache records, reclaiming up to 27.7 GB. Future image builds will be slower until the cache is rebuilt.",
+    );
+    // Danger variant focuses Cancel — Enter never pre-arms the destructive action.
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Cancel" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Prune" }));
+    await waitFor(() => {
+      expect(adminClient.pruneBuildCache).toHaveBeenCalledTimes(1);
+    });
+    expect(vi.mocked(adminClient.pruneBuildCache).mock.calls[0][0]).toEqual({ all: false });
+    await waitFor(() => {
+      expect(mockToast.success).toHaveBeenCalledWith("Reclaimed 27.7 GB from 634 cache records.");
+    });
+    await waitFor(() => {
+      expect(adminClient.getBuildCacheStats).toHaveBeenCalledTimes(2);
     });
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();

@@ -364,7 +364,7 @@ The three list procedures are unary, take empty requests, and are classified as 
 
 Volumes and networks remain read-only: no create, mutate, or prune procedures are defined for them in this phase. Images carry the mutation surface: per-image `DeleteImage` and bulk `PruneImages` (#196).
 
-`GetBuildCacheStats` (issue #206) and `PruneBuildCache` (issue #206) expose builder-owned disk space — the BuildKit cache that holds the layer content image prunes cannot free — as a new **Builder** tab's data source. Both are **authenticated, admin role**.
+`GetBuildCacheStats` (issue #206) and `PruneBuildCache` (issue #206) expose builder-owned disk space — the BuildKit cache that holds the layer content image prunes cannot free — as a new **Builder** tab's data source. `GetBuildCacheStats` is **authenticated, any role** (the service's read convention); `PruneBuildCache` is **authenticated, admin role**.
 
 `GetBuildCacheStats` is read-only and proxies `GET /system/df?type=build-cache` (moby `client.DiskUsage` with `BuildCache: true` — the type value is hyphenated; `type=buildcache` is rejected by the daemon). The daemon supplies the aggregates; the response maps them 1:1: `total_bytes` and `reclaimable_bytes` (reclaimable already excludes records whose blobs are shared with other records), plus `record_count` and `active_count`. No per-record data ships: records are opaque buildkit hashes with build-step descriptions, the actionable unit is the aggregate.
 
