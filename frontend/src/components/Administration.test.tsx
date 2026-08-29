@@ -1316,4 +1316,89 @@ describe("Administration Component", () => {
       expect(adminClient.listNetworks).toHaveBeenCalledTimes(2);
     });
   });
+
+  it("disables network prune when every row is authoritatively non-prunable", async () => {
+    // bridge is in use; backbone carries containers and is user-defined —
+    // the derived scope is empty and no row has unknown usage.
+    vi.mocked(adminClient.listNetworks).mockResolvedValue({
+      networks: [
+        {
+          id: "1111111111111111111111111111111111111111111111111111111111111111",
+          name: "bridge",
+          driver: "bridge",
+          scope: "local",
+          internal: false,
+          containersCount: 2n,
+          predefined: true,
+          createdAt: undefined,
+        } as unknown as Network,
+        {
+          id: "2222222222222222222222222222222222222222222222222222222222222222",
+          name: "backbone",
+          driver: "overlay",
+          scope: "swarm",
+          internal: false,
+          containersCount: 3n,
+          predefined: false,
+          createdAt: undefined,
+        } as unknown as Network,
+      ],
+    } as never);
+    useParamsMock.mockReturnValue({ tab: "networks" });
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("backbone")).toBeInTheDocument();
+    });
+
+    const prune = screen.getByRole("button", { name: "Prune Unused" });
+    expect(prune).toBeDisabled();
+    expect(prune).toHaveAttribute("title", "No unused networks to prune");
+  });
+
+  it("keeps network prune enabled when a row has unknown usage", async () => {
+    // The derived scope is empty (bridge predefined with zero, flaky unused
+    // is unknown), but -1 means inspect failure — the daemon may still prune
+    // it, so the button must stay armed (design.md §9.12, #215).
+    vi.mocked(adminClient.listNetworks).mockResolvedValue({
+      networks: [
+        {
+          id: "3333333333333333333333333333333333333333333333333333333333333333",
+          name: "bridge",
+          driver: "bridge",
+          scope: "local",
+          internal: false,
+          containersCount: 0n,
+          predefined: true,
+          createdAt: undefined,
+        } as unknown as Network,
+        {
+          id: "4444444444444444444444444444444444444444444444444444444444444444",
+          name: "flaky",
+          driver: "bridge",
+          scope: "local",
+          internal: false,
+          containersCount: -1n,
+          predefined: false,
+          createdAt: undefined,
+        } as unknown as Network,
+      ],
+    } as never);
+    useParamsMock.mockReturnValue({ tab: "networks" });
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("flaky")).toBeInTheDocument();
+    });
+
+    const prune = screen.getByRole("button", { name: "Prune Unused" });
+    expect(prune).toBeEnabled();
+    expect(prune).not.toHaveAttribute("title");
+
+    // The dialog still discloses the derived scope: zero client-side.
+    fireEvent.click(prune);
+    expect(screen.getByRole("dialog")).toHaveAccessibleDescription(
+      "Deletes 0 unused networks. In-use, pre-defined and swarm-ingress networks are never touched. This cannot be undone.",
+    );
+  });
 });
