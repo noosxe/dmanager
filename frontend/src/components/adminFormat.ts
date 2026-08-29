@@ -96,22 +96,34 @@ export function deriveImageStats(images: Image[]): {
   imageCount: number;
   /** Images with containersCount === 0 — the prune/delete scope (#196). */
   unusedCount: number;
-  /** Images with no repository tag (#200) — a tag property, not a usage property. */
+  /** Untagged images with containersCount === 0 (#203) — exactly what the
+   * dangling-scope prune deletes; an untagged in-use image is never counted. */
   danglingCount: number;
+  /** Σ sizeBytes of the dangling set (#203) — the dangling prune dialog's estimate. */
+  danglingFreeableBytes: bigint;
 } {
   let totalBytes = 0n;
   let freeableBytes = 0n;
   let unusedCount = 0;
   let danglingCount = 0;
+  let danglingFreeableBytes = 0n;
   for (const image of images) {
     totalBytes += image.sizeBytes;
     if (image.containersCount === 0n) {
       freeableBytes += image.sizeBytes;
       unusedCount += 1;
     }
-    if (image.repoTags.length === 0) {
+    if (image.repoTags.length === 0 && image.containersCount === 0n) {
       danglingCount += 1;
+      danglingFreeableBytes += image.sizeBytes;
     }
   }
-  return { totalBytes, freeableBytes, imageCount: images.length, unusedCount, danglingCount };
+  return {
+    totalBytes,
+    freeableBytes,
+    imageCount: images.length,
+    unusedCount,
+    danglingCount,
+    danglingFreeableBytes,
+  };
 }

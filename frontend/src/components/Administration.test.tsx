@@ -330,12 +330,12 @@ describe("Administration Component", () => {
     expect(screen.getByText("2")).toBeInTheDocument();
 
     // Unused: 0 — the tagless image has an unknown (-1) count, so it stays
-    // conservatively out of the usage-derived card. Dangling: 1 — tag-based,
-    // so the same image counts regardless of usage (#200).
+    // conservatively out of the usage-derived cards. Dangling: 0 — the same
+    // image is untagged AND unused-required (#203): unknown usage excludes it.
     const unusedCard = screen.getByText("Unused").closest(".stat-card");
     expect(unusedCard?.querySelector(".stat-value")?.textContent).toBe("0");
     const danglingCard = screen.getByText("Dangling").closest(".stat-card");
-    expect(danglingCard?.querySelector(".stat-value")?.textContent).toBe("1");
+    expect(danglingCard?.querySelector(".stat-value")?.textContent).toBe("0");
   });
 
   it("treats unknown container counts (-1) as in use when deriving freeable space", async () => {
@@ -389,11 +389,11 @@ describe("Administration Component", () => {
     });
 
     // scratch is tagged with zero containers → Unused 1 (#200); the tagless
-    // fixture image (unknown usage) stays the only Dangling entry.
+    // fixture image (unknown usage) counts as neither (#203).
     const unusedCard = screen.getByText("Unused").closest(".stat-card");
     expect(unusedCard?.querySelector(".stat-value")?.textContent).toBe("1");
     const danglingCard = screen.getByText("Dangling").closest(".stat-card");
-    expect(danglingCard?.querySelector(".stat-value")?.textContent).toBe("1");
+    expect(danglingCard?.querySelector(".stat-value")?.textContent).toBe("0");
   });
 
   it("gates the delete action to unused images", async () => {
@@ -556,7 +556,7 @@ describe("Administration Component", () => {
     await waitFor(() => {
       expect(screen.getByText("busybox")).toBeInTheDocument();
     });
-    expect(screen.getByRole("button", { name: /prune unused images/i })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /prune unused/i })).toBeEnabled();
   });
 
   it("disables the prune button with an explanatory title when nothing is reclaimable", async () => {
@@ -569,7 +569,7 @@ describe("Administration Component", () => {
     await waitFor(() => {
       expect(screen.getByText("nginx")).toBeInTheDocument();
     });
-    const button = screen.getByRole("button", { name: /prune unused images/i });
+    const button = screen.getByRole("button", { name: /prune unused/i });
     expect(button).toBeDisabled();
     expect(button).toHaveAttribute("title", "No unused images to prune");
   });
@@ -582,9 +582,12 @@ describe("Administration Component", () => {
     await waitFor(() => {
       expect(screen.getByText("busybox")).toBeInTheDocument();
     });
-    const button = screen.getByRole("button", { name: /prune unused images/i });
-    expect(button).toBeDisabled();
-    expect(button).toHaveAttribute("title", "Admin role required");
+    const unusedButton = screen.getByRole("button", { name: /prune unused/i });
+    expect(unusedButton).toBeDisabled();
+    expect(unusedButton).toHaveAttribute("title", "Admin role required");
+    const danglingButton = screen.getByRole("button", { name: /prune dangling/i });
+    expect(danglingButton).toBeDisabled();
+    expect(danglingButton).toHaveAttribute("title", "Admin role required");
   });
 
   it("confirms the prune, reports the daemon-reclaimed bytes, and refreshes", async () => {
@@ -601,7 +604,7 @@ describe("Administration Component", () => {
     });
 
     // Arming opens a danger dialog stating the scope from the current listing.
-    fireEvent.click(screen.getByRole("button", { name: /prune unused images/i }));
+    fireEvent.click(screen.getByRole("button", { name: /prune unused/i }));
     expect(screen.getByRole("dialog")).toHaveAccessibleName("Prune unused images?");
     expect(screen.getByRole("dialog")).toHaveAccessibleDescription(
       "Deletes all 1 unused images, reclaiming 4.2 MB. Images in use are never touched.",
@@ -615,7 +618,7 @@ describe("Administration Component", () => {
     });
     expect(vi.mocked(adminClient.pruneImages).mock.calls[0][0]).toEqual({ danglingOnly: false });
     await waitFor(() => {
-      expect(mockToast.success).toHaveBeenCalledWith("Reclaimed 4.2 MB from 1 image.");
+      expect(mockToast.success).toHaveBeenCalledWith("Reclaimed 4.2 MB from 1 unused image.");
     });
     await waitFor(() => {
       expect(adminClient.listImages).toHaveBeenCalledTimes(2);
@@ -633,7 +636,7 @@ describe("Administration Component", () => {
     await waitFor(() => {
       expect(screen.getByText("busybox")).toBeInTheDocument();
     });
-    fireEvent.click(screen.getByRole("button", { name: /prune unused images/i }));
+    fireEvent.click(screen.getByRole("button", { name: /prune unused/i }));
     fireEvent.click(screen.getByRole("button", { name: "Prune" }));
 
     await waitFor(() => {
@@ -641,5 +644,84 @@ describe("Administration Component", () => {
     });
     expect(adminClient.listImages).toHaveBeenCalledTimes(1);
     expect(mockToast.success).not.toHaveBeenCalled();
+  });
+
+  it("excludes untagged in-use images from the Dangling card and leaves the dangling prune disabled", async () => {
+    vi.mocked(adminClient.listImages).mockResolvedValue({
+      images: [
+        {
+          id: "sha256:ccc111222333444555666777888999000111222333444555666777888999000",
+          repoTags: [],
+          createdUnix: twoHoursAgoUnix,
+          sizeBytes: 52428800n,
+          containersCount: 2n,
+        } as unknown as Image,
+        ...mockImages,
+      ],
+      $typeName: "dmanager.v1.ListImagesResponse",
+    } as unknown as ListImagesResponse);
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("ccc111222333")).toBeInTheDocument();
+    });
+
+    // The tagless image is referenced by 2 containers: neither Dangling card
+    // nor dangling-prune scope may count it (#203); unused stays 0 as well.
+    const danglingCard = screen.getByText("Dangling").closest(".stat-card");
+    expect(danglingCard?.querySelector(".stat-value")?.textContent).toBe("0");
+    const danglingButton = screen.getByRole("button", { name: /prune dangling/i });
+    expect(danglingButton).toBeDisabled();
+    expect(danglingButton).toHaveAttribute("title", "No dangling images to prune");
+  });
+
+  it("confirms the dangling prune, reports daemon bytes, and refreshes", async () => {
+    vi.mocked(adminClient.listImages).mockResolvedValue({
+      images: [
+        {
+          id: "sha256:ccc111222333444555666777888999000111222333444555666777888999000",
+          repoTags: [],
+          createdUnix: twoHoursAgoUnix,
+          sizeBytes: 52428800n,
+          containersCount: 0n,
+        } as unknown as Image,
+        ...mockImages,
+      ],
+      $typeName: "dmanager.v1.ListImagesResponse",
+    } as unknown as ListImagesResponse);
+    vi.mocked(adminClient.pruneImages).mockResolvedValue({
+      imagesDeleted: [{ deleted: "", untagged: "" }],
+      spaceReclaimed: 52428800n,
+      $typeName: "dmanager.v1.PruneImagesResponse",
+    } as never);
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("ccc111222333")).toBeInTheDocument();
+    });
+
+    const danglingButton = screen.getByRole("button", { name: /prune dangling/i });
+    expect(danglingButton).toBeEnabled();
+    fireEvent.click(danglingButton);
+    expect(screen.getByRole("dialog")).toHaveAccessibleName("Prune dangling images?");
+    expect(screen.getByRole("dialog")).toHaveAccessibleDescription(
+      "Deletes all 1 dangling images, reclaiming 52.4 MB. Tagged images are never touched.",
+    );
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Cancel" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Prune" }));
+    await waitFor(() => {
+      expect(adminClient.pruneImages).toHaveBeenCalledTimes(1);
+    });
+    expect(vi.mocked(adminClient.pruneImages).mock.calls[0][0]).toEqual({ danglingOnly: true });
+    await waitFor(() => {
+      expect(mockToast.success).toHaveBeenCalledWith("Reclaimed 52.4 MB from 1 dangling image.");
+    });
+    await waitFor(() => {
+      expect(adminClient.listImages).toHaveBeenCalledTimes(2);
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
   });
 });
