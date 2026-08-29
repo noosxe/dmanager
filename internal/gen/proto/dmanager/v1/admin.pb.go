@@ -434,8 +434,18 @@ type Network struct {
 	// Network scope ("local", "swarm", or "global").
 	Scope string `protobuf:"bytes,4,opt,name=scope,proto3" json:"scope,omitempty"`
 	// Whether the network is isolated from external routing.
-	Internal      bool                   `protobuf:"varint,5,opt,name=internal,proto3" json:"internal,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Internal  bool                   `protobuf:"varint,5,opt,name=internal,proto3" json:"internal,omitempty"`
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	// Number of containers attached to this network. Populated via one
+	// per-network inspect (the list endpoint carries no attachment data on
+	// API >= 1.28); a stopped container still counts — its endpoint persists
+	// until the container is removed. -1 when the per-network inspect failed
+	// (usage unknown; the rest of the list is unaffected).
+	ContainersCount int64 `protobuf:"varint,7,opt,name=containers_count,json=containersCount,proto3" json:"containers_count,omitempty"`
+	// True when the daemon owns this network (bridge, host, none on Linux):
+	// deletion is always refused with "is a pre-defined network", so clients
+	// hide delete affordances.
+	Predefined    bool `protobuf:"varint,8,opt,name=predefined,proto3" json:"predefined,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -512,6 +522,192 @@ func (x *Network) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *Network) GetContainersCount() int64 {
+	if x != nil {
+		return x.ContainersCount
+	}
+	return 0
+}
+
+func (x *Network) GetPredefined() bool {
+	if x != nil {
+		return x.Predefined
+	}
+	return false
+}
+
+type DeleteNetworkRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Network ID exactly as returned by ListNetworks.
+	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteNetworkRequest) Reset() {
+	*x = DeleteNetworkRequest{}
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteNetworkRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteNetworkRequest) ProtoMessage() {}
+
+func (x *DeleteNetworkRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteNetworkRequest.ProtoReflect.Descriptor instead.
+func (*DeleteNetworkRequest) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *DeleteNetworkRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type DeleteNetworkResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteNetworkResponse) Reset() {
+	*x = DeleteNetworkResponse{}
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteNetworkResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteNetworkResponse) ProtoMessage() {}
+
+func (x *DeleteNetworkResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteNetworkResponse.ProtoReflect.Descriptor instead.
+func (*DeleteNetworkResponse) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{10}
+}
+
+type PruneNetworksRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PruneNetworksRequest) Reset() {
+	*x = PruneNetworksRequest{}
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PruneNetworksRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PruneNetworksRequest) ProtoMessage() {}
+
+func (x *PruneNetworksRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PruneNetworksRequest.ProtoReflect.Descriptor instead.
+func (*PruneNetworksRequest) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{11}
+}
+
+type PruneNetworksResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Count of networks the daemon actually removed; daemon-protected ones
+	// are simply absent (protection re-evaluated at prune time).
+	NetworksDeleted uint64 `protobuf:"varint,1,opt,name=networks_deleted,json=networksDeleted,proto3" json:"networks_deleted,omitempty"`
+	// Removed networks' names, for the success toast.
+	Names         []string `protobuf:"bytes,2,rep,name=names,proto3" json:"names,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PruneNetworksResponse) Reset() {
+	*x = PruneNetworksResponse{}
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PruneNetworksResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PruneNetworksResponse) ProtoMessage() {}
+
+func (x *PruneNetworksResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PruneNetworksResponse.ProtoReflect.Descriptor instead.
+func (*PruneNetworksResponse) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *PruneNetworksResponse) GetNetworksDeleted() uint64 {
+	if x != nil {
+		return x.NetworksDeleted
+	}
+	return 0
+}
+
+func (x *PruneNetworksResponse) GetNames() []string {
+	if x != nil {
+		return x.Names
+	}
+	return nil
+}
+
 type DeleteImageRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Image ID (sha256:...) exactly as returned by ListImages.
@@ -525,7 +721,7 @@ type DeleteImageRequest struct {
 
 func (x *DeleteImageRequest) Reset() {
 	*x = DeleteImageRequest{}
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[9]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -537,7 +733,7 @@ func (x *DeleteImageRequest) String() string {
 func (*DeleteImageRequest) ProtoMessage() {}
 
 func (x *DeleteImageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[9]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -550,7 +746,7 @@ func (x *DeleteImageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteImageRequest.ProtoReflect.Descriptor instead.
 func (*DeleteImageRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{9}
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *DeleteImageRequest) GetId() string {
@@ -575,7 +771,7 @@ type DeleteImageResponse struct {
 
 func (x *DeleteImageResponse) Reset() {
 	*x = DeleteImageResponse{}
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[10]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -587,7 +783,7 @@ func (x *DeleteImageResponse) String() string {
 func (*DeleteImageResponse) ProtoMessage() {}
 
 func (x *DeleteImageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[10]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -600,7 +796,7 @@ func (x *DeleteImageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteImageResponse.ProtoReflect.Descriptor instead.
 func (*DeleteImageResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{10}
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{14}
 }
 
 type PruneImagesRequest struct {
@@ -614,7 +810,7 @@ type PruneImagesRequest struct {
 
 func (x *PruneImagesRequest) Reset() {
 	*x = PruneImagesRequest{}
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[11]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -626,7 +822,7 @@ func (x *PruneImagesRequest) String() string {
 func (*PruneImagesRequest) ProtoMessage() {}
 
 func (x *PruneImagesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[11]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -639,7 +835,7 @@ func (x *PruneImagesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PruneImagesRequest.ProtoReflect.Descriptor instead.
 func (*PruneImagesRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{11}
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *PruneImagesRequest) GetDanglingOnly() bool {
@@ -661,7 +857,7 @@ type PrunedImage struct {
 
 func (x *PrunedImage) Reset() {
 	*x = PrunedImage{}
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[12]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -673,7 +869,7 @@ func (x *PrunedImage) String() string {
 func (*PrunedImage) ProtoMessage() {}
 
 func (x *PrunedImage) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[12]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -686,7 +882,7 @@ func (x *PrunedImage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PrunedImage.ProtoReflect.Descriptor instead.
 func (*PrunedImage) Descriptor() ([]byte, []int) {
-	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{12}
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *PrunedImage) GetDeleted() string {
@@ -715,7 +911,7 @@ type PruneImagesResponse struct {
 
 func (x *PruneImagesResponse) Reset() {
 	*x = PruneImagesResponse{}
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[13]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -727,7 +923,7 @@ func (x *PruneImagesResponse) String() string {
 func (*PruneImagesResponse) ProtoMessage() {}
 
 func (x *PruneImagesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[13]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -740,7 +936,7 @@ func (x *PruneImagesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PruneImagesResponse.ProtoReflect.Descriptor instead.
 func (*PruneImagesResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{13}
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *PruneImagesResponse) GetImagesDeleted() []*PrunedImage {
@@ -765,7 +961,7 @@ type GetBuildCacheStatsRequest struct {
 
 func (x *GetBuildCacheStatsRequest) Reset() {
 	*x = GetBuildCacheStatsRequest{}
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[14]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -777,7 +973,7 @@ func (x *GetBuildCacheStatsRequest) String() string {
 func (*GetBuildCacheStatsRequest) ProtoMessage() {}
 
 func (x *GetBuildCacheStatsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[14]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -790,7 +986,7 @@ func (x *GetBuildCacheStatsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetBuildCacheStatsRequest.ProtoReflect.Descriptor instead.
 func (*GetBuildCacheStatsRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{14}
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{18}
 }
 
 type GetBuildCacheStatsResponse struct {
@@ -810,7 +1006,7 @@ type GetBuildCacheStatsResponse struct {
 
 func (x *GetBuildCacheStatsResponse) Reset() {
 	*x = GetBuildCacheStatsResponse{}
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[15]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -822,7 +1018,7 @@ func (x *GetBuildCacheStatsResponse) String() string {
 func (*GetBuildCacheStatsResponse) ProtoMessage() {}
 
 func (x *GetBuildCacheStatsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[15]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -835,7 +1031,7 @@ func (x *GetBuildCacheStatsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetBuildCacheStatsResponse.ProtoReflect.Descriptor instead.
 func (*GetBuildCacheStatsResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{15}
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *GetBuildCacheStatsResponse) GetTotalBytes() uint64 {
@@ -877,7 +1073,7 @@ type PruneBuildCacheRequest struct {
 
 func (x *PruneBuildCacheRequest) Reset() {
 	*x = PruneBuildCacheRequest{}
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[16]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -889,7 +1085,7 @@ func (x *PruneBuildCacheRequest) String() string {
 func (*PruneBuildCacheRequest) ProtoMessage() {}
 
 func (x *PruneBuildCacheRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[16]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -902,7 +1098,7 @@ func (x *PruneBuildCacheRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PruneBuildCacheRequest.ProtoReflect.Descriptor instead.
 func (*PruneBuildCacheRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{16}
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *PruneBuildCacheRequest) GetAll() bool {
@@ -924,7 +1120,7 @@ type PruneBuildCacheResponse struct {
 
 func (x *PruneBuildCacheResponse) Reset() {
 	*x = PruneBuildCacheResponse{}
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[17]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -936,7 +1132,7 @@ func (x *PruneBuildCacheResponse) String() string {
 func (*PruneBuildCacheResponse) ProtoMessage() {}
 
 func (x *PruneBuildCacheResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[17]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -949,7 +1145,7 @@ func (x *PruneBuildCacheResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PruneBuildCacheResponse.ProtoReflect.Descriptor instead.
 func (*PruneBuildCacheResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{17}
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *PruneBuildCacheResponse) GetCachesDeleted() uint32 {
@@ -994,7 +1190,7 @@ type BuildCacheRecord struct {
 
 func (x *BuildCacheRecord) Reset() {
 	*x = BuildCacheRecord{}
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[18]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1006,7 +1202,7 @@ func (x *BuildCacheRecord) String() string {
 func (*BuildCacheRecord) ProtoMessage() {}
 
 func (x *BuildCacheRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[18]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1019,7 +1215,7 @@ func (x *BuildCacheRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BuildCacheRecord.ProtoReflect.Descriptor instead.
 func (*BuildCacheRecord) Descriptor() ([]byte, []int) {
-	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{18}
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *BuildCacheRecord) GetId() string {
@@ -1093,7 +1289,7 @@ type ListBuildCacheRecordsRequest struct {
 
 func (x *ListBuildCacheRecordsRequest) Reset() {
 	*x = ListBuildCacheRecordsRequest{}
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[19]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1105,7 +1301,7 @@ func (x *ListBuildCacheRecordsRequest) String() string {
 func (*ListBuildCacheRecordsRequest) ProtoMessage() {}
 
 func (x *ListBuildCacheRecordsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[19]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1118,7 +1314,7 @@ func (x *ListBuildCacheRecordsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListBuildCacheRecordsRequest.ProtoReflect.Descriptor instead.
 func (*ListBuildCacheRecordsRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{19}
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{23}
 }
 
 type ListBuildCacheRecordsResponse struct {
@@ -1131,7 +1327,7 @@ type ListBuildCacheRecordsResponse struct {
 
 func (x *ListBuildCacheRecordsResponse) Reset() {
 	*x = ListBuildCacheRecordsResponse{}
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[20]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1143,7 +1339,7 @@ func (x *ListBuildCacheRecordsResponse) String() string {
 func (*ListBuildCacheRecordsResponse) ProtoMessage() {}
 
 func (x *ListBuildCacheRecordsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[20]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1156,7 +1352,7 @@ func (x *ListBuildCacheRecordsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListBuildCacheRecordsResponse.ProtoReflect.Descriptor instead.
 func (*ListBuildCacheRecordsResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{20}
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ListBuildCacheRecordsResponse) GetRecords() []*BuildCacheRecord {
@@ -1176,7 +1372,7 @@ type PruneBuildCacheRecordRequest struct {
 
 func (x *PruneBuildCacheRecordRequest) Reset() {
 	*x = PruneBuildCacheRecordRequest{}
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[21]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1188,7 +1384,7 @@ func (x *PruneBuildCacheRecordRequest) String() string {
 func (*PruneBuildCacheRecordRequest) ProtoMessage() {}
 
 func (x *PruneBuildCacheRecordRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[21]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1201,7 +1397,7 @@ func (x *PruneBuildCacheRecordRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PruneBuildCacheRecordRequest.ProtoReflect.Descriptor instead.
 func (*PruneBuildCacheRecordRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{21}
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *PruneBuildCacheRecordRequest) GetId() string {
@@ -1223,7 +1419,7 @@ type PruneBuildCacheRecordResponse struct {
 
 func (x *PruneBuildCacheRecordResponse) Reset() {
 	*x = PruneBuildCacheRecordResponse{}
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[22]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1235,7 +1431,7 @@ func (x *PruneBuildCacheRecordResponse) String() string {
 func (*PruneBuildCacheRecordResponse) ProtoMessage() {}
 
 func (x *PruneBuildCacheRecordResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[22]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1248,7 +1444,7 @@ func (x *PruneBuildCacheRecordResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PruneBuildCacheRecordResponse.ProtoReflect.Descriptor instead.
 func (*PruneBuildCacheRecordResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{22}
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *PruneBuildCacheRecordResponse) GetCachesDeleted() uint32 {
@@ -1273,7 +1469,7 @@ type CheckEngineRequest struct {
 
 func (x *CheckEngineRequest) Reset() {
 	*x = CheckEngineRequest{}
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[23]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1285,7 +1481,7 @@ func (x *CheckEngineRequest) String() string {
 func (*CheckEngineRequest) ProtoMessage() {}
 
 func (x *CheckEngineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[23]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1298,7 +1494,7 @@ func (x *CheckEngineRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CheckEngineRequest.ProtoReflect.Descriptor instead.
 func (*CheckEngineRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{23}
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{27}
 }
 
 type CheckEngineResponse struct {
@@ -1312,7 +1508,7 @@ type CheckEngineResponse struct {
 
 func (x *CheckEngineResponse) Reset() {
 	*x = CheckEngineResponse{}
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[24]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1324,7 +1520,7 @@ func (x *CheckEngineResponse) String() string {
 func (*CheckEngineResponse) ProtoMessage() {}
 
 func (x *CheckEngineResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[24]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1337,7 +1533,7 @@ func (x *CheckEngineResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CheckEngineResponse.ProtoReflect.Descriptor instead.
 func (*CheckEngineResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{24}
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *CheckEngineResponse) GetConnected() bool {
@@ -1369,7 +1565,7 @@ type GetVolumeUsageRequest struct {
 
 func (x *GetVolumeUsageRequest) Reset() {
 	*x = GetVolumeUsageRequest{}
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[25]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1381,7 +1577,7 @@ func (x *GetVolumeUsageRequest) String() string {
 func (*GetVolumeUsageRequest) ProtoMessage() {}
 
 func (x *GetVolumeUsageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[25]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1394,7 +1590,7 @@ func (x *GetVolumeUsageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetVolumeUsageRequest.ProtoReflect.Descriptor instead.
 func (*GetVolumeUsageRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{25}
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{29}
 }
 
 type VolumeUsage struct {
@@ -1411,7 +1607,7 @@ type VolumeUsage struct {
 
 func (x *VolumeUsage) Reset() {
 	*x = VolumeUsage{}
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[26]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1423,7 +1619,7 @@ func (x *VolumeUsage) String() string {
 func (*VolumeUsage) ProtoMessage() {}
 
 func (x *VolumeUsage) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[26]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1436,7 +1632,7 @@ func (x *VolumeUsage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VolumeUsage.ProtoReflect.Descriptor instead.
 func (*VolumeUsage) Descriptor() ([]byte, []int) {
-	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{26}
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *VolumeUsage) GetName() string {
@@ -1475,7 +1671,7 @@ type GetVolumeUsageResponse struct {
 
 func (x *GetVolumeUsageResponse) Reset() {
 	*x = GetVolumeUsageResponse{}
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[27]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1487,7 +1683,7 @@ func (x *GetVolumeUsageResponse) String() string {
 func (*GetVolumeUsageResponse) ProtoMessage() {}
 
 func (x *GetVolumeUsageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[27]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1500,7 +1696,7 @@ func (x *GetVolumeUsageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetVolumeUsageResponse.ProtoReflect.Descriptor instead.
 func (*GetVolumeUsageResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{27}
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *GetVolumeUsageResponse) GetVolumes() []*VolumeUsage {
@@ -1539,7 +1735,7 @@ type PruneVolumesRequest struct {
 
 func (x *PruneVolumesRequest) Reset() {
 	*x = PruneVolumesRequest{}
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[28]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1551,7 +1747,7 @@ func (x *PruneVolumesRequest) String() string {
 func (*PruneVolumesRequest) ProtoMessage() {}
 
 func (x *PruneVolumesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[28]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1564,7 +1760,7 @@ func (x *PruneVolumesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PruneVolumesRequest.ProtoReflect.Descriptor instead.
 func (*PruneVolumesRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{28}
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{32}
 }
 
 type PruneVolumesResponse struct {
@@ -1579,7 +1775,7 @@ type PruneVolumesResponse struct {
 
 func (x *PruneVolumesResponse) Reset() {
 	*x = PruneVolumesResponse{}
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[29]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1591,7 +1787,7 @@ func (x *PruneVolumesResponse) String() string {
 func (*PruneVolumesResponse) ProtoMessage() {}
 
 func (x *PruneVolumesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[29]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1604,7 +1800,7 @@ func (x *PruneVolumesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PruneVolumesResponse.ProtoReflect.Descriptor instead.
 func (*PruneVolumesResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{29}
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *PruneVolumesResponse) GetVolumesDeleted() uint32 {
@@ -1660,7 +1856,7 @@ const file_proto_dmanager_v1_admin_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x15\n" +
 	"\x13ListNetworksRequest\"H\n" +
 	"\x14ListNetworksResponse\x120\n" +
-	"\bnetworks\x18\x01 \x03(\v2\x14.dmanager.v1.NetworkR\bnetworks\"\xb2\x01\n" +
+	"\bnetworks\x18\x01 \x03(\v2\x14.dmanager.v1.NetworkR\bnetworks\"\xfd\x01\n" +
 	"\aNetwork\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
@@ -1668,7 +1864,18 @@ const file_proto_dmanager_v1_admin_proto_rawDesc = "" +
 	"\x05scope\x18\x04 \x01(\tR\x05scope\x12\x1a\n" +
 	"\binternal\x18\x05 \x01(\bR\binternal\x129\n" +
 	"\n" +
-	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\":\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12)\n" +
+	"\x10containers_count\x18\a \x01(\x03R\x0fcontainersCount\x12\x1e\n" +
+	"\n" +
+	"predefined\x18\b \x01(\bR\n" +
+	"predefined\"&\n" +
+	"\x14DeleteNetworkRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\x17\n" +
+	"\x15DeleteNetworkResponse\"\x16\n" +
+	"\x14PruneNetworksRequest\"X\n" +
+	"\x15PruneNetworksResponse\x12)\n" +
+	"\x10networks_deleted\x18\x01 \x01(\x04R\x0fnetworksDeleted\x12\x14\n" +
+	"\x05names\x18\x02 \x03(\tR\x05names\":\n" +
 	"\x12DeleteImageRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05force\x18\x02 \x01(\bR\x05force\"\x15\n" +
@@ -1737,7 +1944,7 @@ const file_proto_dmanager_v1_admin_proto_rawDesc = "" +
 	"\x14PruneVolumesResponse\x12'\n" +
 	"\x0fvolumes_deleted\x18\x01 \x01(\rR\x0evolumesDeleted\x12\x14\n" +
 	"\x05names\x18\x02 \x03(\tR\x05names\x12'\n" +
-	"\x0fspace_reclaimed\x18\x03 \x01(\x04R\x0espaceReclaimed2\xcf\b\n" +
+	"\x0fspace_reclaimed\x18\x03 \x01(\x04R\x0espaceReclaimed2\xff\t\n" +
 	"\fAdminService\x12M\n" +
 	"\n" +
 	"ListImages\x12\x1e.dmanager.v1.ListImagesRequest\x1a\x1f.dmanager.v1.ListImagesResponse\x12P\n" +
@@ -1746,7 +1953,9 @@ const file_proto_dmanager_v1_admin_proto_rawDesc = "" +
 	"\fListNetworks\x12 .dmanager.v1.ListNetworksRequest\x1a!.dmanager.v1.ListNetworksResponse\x12P\n" +
 	"\vDeleteImage\x12\x1f.dmanager.v1.DeleteImageRequest\x1a .dmanager.v1.DeleteImageResponse\x12P\n" +
 	"\vPruneImages\x12\x1f.dmanager.v1.PruneImagesRequest\x1a .dmanager.v1.PruneImagesResponse\x12S\n" +
-	"\fPruneVolumes\x12 .dmanager.v1.PruneVolumesRequest\x1a!.dmanager.v1.PruneVolumesResponse\x12e\n" +
+	"\fPruneVolumes\x12 .dmanager.v1.PruneVolumesRequest\x1a!.dmanager.v1.PruneVolumesResponse\x12V\n" +
+	"\rDeleteNetwork\x12!.dmanager.v1.DeleteNetworkRequest\x1a\".dmanager.v1.DeleteNetworkResponse\x12V\n" +
+	"\rPruneNetworks\x12!.dmanager.v1.PruneNetworksRequest\x1a\".dmanager.v1.PruneNetworksResponse\x12e\n" +
 	"\x12GetBuildCacheStats\x12&.dmanager.v1.GetBuildCacheStatsRequest\x1a'.dmanager.v1.GetBuildCacheStatsResponse\x12\\\n" +
 	"\x0fPruneBuildCache\x12#.dmanager.v1.PruneBuildCacheRequest\x1a$.dmanager.v1.PruneBuildCacheResponse\x12n\n" +
 	"\x15ListBuildCacheRecords\x12).dmanager.v1.ListBuildCacheRecordsRequest\x1a*.dmanager.v1.ListBuildCacheRecordsResponse\x12n\n" +
@@ -1765,7 +1974,7 @@ func file_proto_dmanager_v1_admin_proto_rawDescGZIP() []byte {
 	return file_proto_dmanager_v1_admin_proto_rawDescData
 }
 
-var file_proto_dmanager_v1_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
+var file_proto_dmanager_v1_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 35)
 var file_proto_dmanager_v1_admin_proto_goTypes = []any{
 	(*ListImagesRequest)(nil),             // 0: dmanager.v1.ListImagesRequest
 	(*ListImagesResponse)(nil),            // 1: dmanager.v1.ListImagesResponse
@@ -1776,68 +1985,76 @@ var file_proto_dmanager_v1_admin_proto_goTypes = []any{
 	(*ListNetworksRequest)(nil),           // 6: dmanager.v1.ListNetworksRequest
 	(*ListNetworksResponse)(nil),          // 7: dmanager.v1.ListNetworksResponse
 	(*Network)(nil),                       // 8: dmanager.v1.Network
-	(*DeleteImageRequest)(nil),            // 9: dmanager.v1.DeleteImageRequest
-	(*DeleteImageResponse)(nil),           // 10: dmanager.v1.DeleteImageResponse
-	(*PruneImagesRequest)(nil),            // 11: dmanager.v1.PruneImagesRequest
-	(*PrunedImage)(nil),                   // 12: dmanager.v1.PrunedImage
-	(*PruneImagesResponse)(nil),           // 13: dmanager.v1.PruneImagesResponse
-	(*GetBuildCacheStatsRequest)(nil),     // 14: dmanager.v1.GetBuildCacheStatsRequest
-	(*GetBuildCacheStatsResponse)(nil),    // 15: dmanager.v1.GetBuildCacheStatsResponse
-	(*PruneBuildCacheRequest)(nil),        // 16: dmanager.v1.PruneBuildCacheRequest
-	(*PruneBuildCacheResponse)(nil),       // 17: dmanager.v1.PruneBuildCacheResponse
-	(*BuildCacheRecord)(nil),              // 18: dmanager.v1.BuildCacheRecord
-	(*ListBuildCacheRecordsRequest)(nil),  // 19: dmanager.v1.ListBuildCacheRecordsRequest
-	(*ListBuildCacheRecordsResponse)(nil), // 20: dmanager.v1.ListBuildCacheRecordsResponse
-	(*PruneBuildCacheRecordRequest)(nil),  // 21: dmanager.v1.PruneBuildCacheRecordRequest
-	(*PruneBuildCacheRecordResponse)(nil), // 22: dmanager.v1.PruneBuildCacheRecordResponse
-	(*CheckEngineRequest)(nil),            // 23: dmanager.v1.CheckEngineRequest
-	(*CheckEngineResponse)(nil),           // 24: dmanager.v1.CheckEngineResponse
-	(*GetVolumeUsageRequest)(nil),         // 25: dmanager.v1.GetVolumeUsageRequest
-	(*VolumeUsage)(nil),                   // 26: dmanager.v1.VolumeUsage
-	(*GetVolumeUsageResponse)(nil),        // 27: dmanager.v1.GetVolumeUsageResponse
-	(*PruneVolumesRequest)(nil),           // 28: dmanager.v1.PruneVolumesRequest
-	(*PruneVolumesResponse)(nil),          // 29: dmanager.v1.PruneVolumesResponse
-	nil,                                   // 30: dmanager.v1.Volume.LabelsEntry
-	(*timestamppb.Timestamp)(nil),         // 31: google.protobuf.Timestamp
+	(*DeleteNetworkRequest)(nil),          // 9: dmanager.v1.DeleteNetworkRequest
+	(*DeleteNetworkResponse)(nil),         // 10: dmanager.v1.DeleteNetworkResponse
+	(*PruneNetworksRequest)(nil),          // 11: dmanager.v1.PruneNetworksRequest
+	(*PruneNetworksResponse)(nil),         // 12: dmanager.v1.PruneNetworksResponse
+	(*DeleteImageRequest)(nil),            // 13: dmanager.v1.DeleteImageRequest
+	(*DeleteImageResponse)(nil),           // 14: dmanager.v1.DeleteImageResponse
+	(*PruneImagesRequest)(nil),            // 15: dmanager.v1.PruneImagesRequest
+	(*PrunedImage)(nil),                   // 16: dmanager.v1.PrunedImage
+	(*PruneImagesResponse)(nil),           // 17: dmanager.v1.PruneImagesResponse
+	(*GetBuildCacheStatsRequest)(nil),     // 18: dmanager.v1.GetBuildCacheStatsRequest
+	(*GetBuildCacheStatsResponse)(nil),    // 19: dmanager.v1.GetBuildCacheStatsResponse
+	(*PruneBuildCacheRequest)(nil),        // 20: dmanager.v1.PruneBuildCacheRequest
+	(*PruneBuildCacheResponse)(nil),       // 21: dmanager.v1.PruneBuildCacheResponse
+	(*BuildCacheRecord)(nil),              // 22: dmanager.v1.BuildCacheRecord
+	(*ListBuildCacheRecordsRequest)(nil),  // 23: dmanager.v1.ListBuildCacheRecordsRequest
+	(*ListBuildCacheRecordsResponse)(nil), // 24: dmanager.v1.ListBuildCacheRecordsResponse
+	(*PruneBuildCacheRecordRequest)(nil),  // 25: dmanager.v1.PruneBuildCacheRecordRequest
+	(*PruneBuildCacheRecordResponse)(nil), // 26: dmanager.v1.PruneBuildCacheRecordResponse
+	(*CheckEngineRequest)(nil),            // 27: dmanager.v1.CheckEngineRequest
+	(*CheckEngineResponse)(nil),           // 28: dmanager.v1.CheckEngineResponse
+	(*GetVolumeUsageRequest)(nil),         // 29: dmanager.v1.GetVolumeUsageRequest
+	(*VolumeUsage)(nil),                   // 30: dmanager.v1.VolumeUsage
+	(*GetVolumeUsageResponse)(nil),        // 31: dmanager.v1.GetVolumeUsageResponse
+	(*PruneVolumesRequest)(nil),           // 32: dmanager.v1.PruneVolumesRequest
+	(*PruneVolumesResponse)(nil),          // 33: dmanager.v1.PruneVolumesResponse
+	nil,                                   // 34: dmanager.v1.Volume.LabelsEntry
+	(*timestamppb.Timestamp)(nil),         // 35: google.protobuf.Timestamp
 }
 var file_proto_dmanager_v1_admin_proto_depIdxs = []int32{
 	2,  // 0: dmanager.v1.ListImagesResponse.images:type_name -> dmanager.v1.Image
 	5,  // 1: dmanager.v1.ListVolumesResponse.volumes:type_name -> dmanager.v1.Volume
-	31, // 2: dmanager.v1.Volume.created_at:type_name -> google.protobuf.Timestamp
-	30, // 3: dmanager.v1.Volume.labels:type_name -> dmanager.v1.Volume.LabelsEntry
+	35, // 2: dmanager.v1.Volume.created_at:type_name -> google.protobuf.Timestamp
+	34, // 3: dmanager.v1.Volume.labels:type_name -> dmanager.v1.Volume.LabelsEntry
 	8,  // 4: dmanager.v1.ListNetworksResponse.networks:type_name -> dmanager.v1.Network
-	31, // 5: dmanager.v1.Network.created_at:type_name -> google.protobuf.Timestamp
-	12, // 6: dmanager.v1.PruneImagesResponse.images_deleted:type_name -> dmanager.v1.PrunedImage
-	31, // 7: dmanager.v1.BuildCacheRecord.created_at:type_name -> google.protobuf.Timestamp
-	31, // 8: dmanager.v1.BuildCacheRecord.last_used_at:type_name -> google.protobuf.Timestamp
-	18, // 9: dmanager.v1.ListBuildCacheRecordsResponse.records:type_name -> dmanager.v1.BuildCacheRecord
-	26, // 10: dmanager.v1.GetVolumeUsageResponse.volumes:type_name -> dmanager.v1.VolumeUsage
+	35, // 5: dmanager.v1.Network.created_at:type_name -> google.protobuf.Timestamp
+	16, // 6: dmanager.v1.PruneImagesResponse.images_deleted:type_name -> dmanager.v1.PrunedImage
+	35, // 7: dmanager.v1.BuildCacheRecord.created_at:type_name -> google.protobuf.Timestamp
+	35, // 8: dmanager.v1.BuildCacheRecord.last_used_at:type_name -> google.protobuf.Timestamp
+	22, // 9: dmanager.v1.ListBuildCacheRecordsResponse.records:type_name -> dmanager.v1.BuildCacheRecord
+	30, // 10: dmanager.v1.GetVolumeUsageResponse.volumes:type_name -> dmanager.v1.VolumeUsage
 	0,  // 11: dmanager.v1.AdminService.ListImages:input_type -> dmanager.v1.ListImagesRequest
 	3,  // 12: dmanager.v1.AdminService.ListVolumes:input_type -> dmanager.v1.ListVolumesRequest
-	25, // 13: dmanager.v1.AdminService.GetVolumeUsage:input_type -> dmanager.v1.GetVolumeUsageRequest
+	29, // 13: dmanager.v1.AdminService.GetVolumeUsage:input_type -> dmanager.v1.GetVolumeUsageRequest
 	6,  // 14: dmanager.v1.AdminService.ListNetworks:input_type -> dmanager.v1.ListNetworksRequest
-	9,  // 15: dmanager.v1.AdminService.DeleteImage:input_type -> dmanager.v1.DeleteImageRequest
-	11, // 16: dmanager.v1.AdminService.PruneImages:input_type -> dmanager.v1.PruneImagesRequest
-	28, // 17: dmanager.v1.AdminService.PruneVolumes:input_type -> dmanager.v1.PruneVolumesRequest
-	14, // 18: dmanager.v1.AdminService.GetBuildCacheStats:input_type -> dmanager.v1.GetBuildCacheStatsRequest
-	16, // 19: dmanager.v1.AdminService.PruneBuildCache:input_type -> dmanager.v1.PruneBuildCacheRequest
-	19, // 20: dmanager.v1.AdminService.ListBuildCacheRecords:input_type -> dmanager.v1.ListBuildCacheRecordsRequest
-	21, // 21: dmanager.v1.AdminService.PruneBuildCacheRecord:input_type -> dmanager.v1.PruneBuildCacheRecordRequest
-	23, // 22: dmanager.v1.AdminService.CheckEngine:input_type -> dmanager.v1.CheckEngineRequest
-	1,  // 23: dmanager.v1.AdminService.ListImages:output_type -> dmanager.v1.ListImagesResponse
-	4,  // 24: dmanager.v1.AdminService.ListVolumes:output_type -> dmanager.v1.ListVolumesResponse
-	27, // 25: dmanager.v1.AdminService.GetVolumeUsage:output_type -> dmanager.v1.GetVolumeUsageResponse
-	7,  // 26: dmanager.v1.AdminService.ListNetworks:output_type -> dmanager.v1.ListNetworksResponse
-	10, // 27: dmanager.v1.AdminService.DeleteImage:output_type -> dmanager.v1.DeleteImageResponse
-	13, // 28: dmanager.v1.AdminService.PruneImages:output_type -> dmanager.v1.PruneImagesResponse
-	29, // 29: dmanager.v1.AdminService.PruneVolumes:output_type -> dmanager.v1.PruneVolumesResponse
-	15, // 30: dmanager.v1.AdminService.GetBuildCacheStats:output_type -> dmanager.v1.GetBuildCacheStatsResponse
-	17, // 31: dmanager.v1.AdminService.PruneBuildCache:output_type -> dmanager.v1.PruneBuildCacheResponse
-	20, // 32: dmanager.v1.AdminService.ListBuildCacheRecords:output_type -> dmanager.v1.ListBuildCacheRecordsResponse
-	22, // 33: dmanager.v1.AdminService.PruneBuildCacheRecord:output_type -> dmanager.v1.PruneBuildCacheRecordResponse
-	24, // 34: dmanager.v1.AdminService.CheckEngine:output_type -> dmanager.v1.CheckEngineResponse
-	23, // [23:35] is the sub-list for method output_type
-	11, // [11:23] is the sub-list for method input_type
+	13, // 15: dmanager.v1.AdminService.DeleteImage:input_type -> dmanager.v1.DeleteImageRequest
+	15, // 16: dmanager.v1.AdminService.PruneImages:input_type -> dmanager.v1.PruneImagesRequest
+	32, // 17: dmanager.v1.AdminService.PruneVolumes:input_type -> dmanager.v1.PruneVolumesRequest
+	9,  // 18: dmanager.v1.AdminService.DeleteNetwork:input_type -> dmanager.v1.DeleteNetworkRequest
+	11, // 19: dmanager.v1.AdminService.PruneNetworks:input_type -> dmanager.v1.PruneNetworksRequest
+	18, // 20: dmanager.v1.AdminService.GetBuildCacheStats:input_type -> dmanager.v1.GetBuildCacheStatsRequest
+	20, // 21: dmanager.v1.AdminService.PruneBuildCache:input_type -> dmanager.v1.PruneBuildCacheRequest
+	23, // 22: dmanager.v1.AdminService.ListBuildCacheRecords:input_type -> dmanager.v1.ListBuildCacheRecordsRequest
+	25, // 23: dmanager.v1.AdminService.PruneBuildCacheRecord:input_type -> dmanager.v1.PruneBuildCacheRecordRequest
+	27, // 24: dmanager.v1.AdminService.CheckEngine:input_type -> dmanager.v1.CheckEngineRequest
+	1,  // 25: dmanager.v1.AdminService.ListImages:output_type -> dmanager.v1.ListImagesResponse
+	4,  // 26: dmanager.v1.AdminService.ListVolumes:output_type -> dmanager.v1.ListVolumesResponse
+	31, // 27: dmanager.v1.AdminService.GetVolumeUsage:output_type -> dmanager.v1.GetVolumeUsageResponse
+	7,  // 28: dmanager.v1.AdminService.ListNetworks:output_type -> dmanager.v1.ListNetworksResponse
+	14, // 29: dmanager.v1.AdminService.DeleteImage:output_type -> dmanager.v1.DeleteImageResponse
+	17, // 30: dmanager.v1.AdminService.PruneImages:output_type -> dmanager.v1.PruneImagesResponse
+	33, // 31: dmanager.v1.AdminService.PruneVolumes:output_type -> dmanager.v1.PruneVolumesResponse
+	10, // 32: dmanager.v1.AdminService.DeleteNetwork:output_type -> dmanager.v1.DeleteNetworkResponse
+	12, // 33: dmanager.v1.AdminService.PruneNetworks:output_type -> dmanager.v1.PruneNetworksResponse
+	19, // 34: dmanager.v1.AdminService.GetBuildCacheStats:output_type -> dmanager.v1.GetBuildCacheStatsResponse
+	21, // 35: dmanager.v1.AdminService.PruneBuildCache:output_type -> dmanager.v1.PruneBuildCacheResponse
+	24, // 36: dmanager.v1.AdminService.ListBuildCacheRecords:output_type -> dmanager.v1.ListBuildCacheRecordsResponse
+	26, // 37: dmanager.v1.AdminService.PruneBuildCacheRecord:output_type -> dmanager.v1.PruneBuildCacheRecordResponse
+	28, // 38: dmanager.v1.AdminService.CheckEngine:output_type -> dmanager.v1.CheckEngineResponse
+	25, // [25:39] is the sub-list for method output_type
+	11, // [11:25] is the sub-list for method input_type
 	11, // [11:11] is the sub-list for extension type_name
 	11, // [11:11] is the sub-list for extension extendee
 	0,  // [0:11] is the sub-list for field type_name
@@ -1848,14 +2065,14 @@ func file_proto_dmanager_v1_admin_proto_init() {
 	if File_proto_dmanager_v1_admin_proto != nil {
 		return
 	}
-	file_proto_dmanager_v1_admin_proto_msgTypes[18].OneofWrappers = []any{}
+	file_proto_dmanager_v1_admin_proto_msgTypes[22].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_dmanager_v1_admin_proto_rawDesc), len(file_proto_dmanager_v1_admin_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   31,
+			NumMessages:   35,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

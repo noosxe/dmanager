@@ -43,6 +43,20 @@ service AdminService {
   // prune time, re-evaluating references itself.
   rpc PruneVolumes(PruneVolumesRequest) returns (PruneVolumesResponse);
 
+  // Delete a network from the host (Authenticated, admin role). The daemon
+  // refuses in-use networks ("has active endpoints") and pre-defined ones
+  // (bridge/host/none) regardless of the request — the client only hides
+  // the affordance; the daemon remains the gatekeeper.
+  rpc DeleteNetwork(DeleteNetworkRequest) returns (DeleteNetworkResponse);
+
+  // Prune all unused networks from the host in one call (Authenticated,
+  // admin role). No filters: the daemon's scope is fixed — local-path prune
+  // skips config-only, non-pruneable (pre-defined) and endpoint-carrying
+  // networks; the cluster path additionally skips the swarm-ingress network;
+  // protection is re-evaluated at prune time. The report carries names only,
+  // no byte figures.
+  rpc PruneNetworks(PruneNetworksRequest) returns (PruneNetworksResponse);
+
   // Report builder-owned disk space: the BuildKit build cache aggregates
   // as supplied by the daemon (Authenticated, any role).
   rpc GetBuildCacheStats(GetBuildCacheStatsRequest) returns (GetBuildCacheStatsResponse);
@@ -135,6 +149,36 @@ message Network {
   bool internal = 5;
 
   google.protobuf.Timestamp created_at = 6;
+
+  // Number of containers attached to this network. Populated via one
+  // per-network inspect (the list endpoint carries no attachment data on
+  // API >= 1.28); a stopped container still counts — its endpoint persists
+  // until the container is removed. -1 when the per-network inspect failed
+  // (usage unknown; the rest of the list is unaffected).
+  int64 containers_count = 7;
+
+  // True when the daemon owns this network (bridge, host, none on Linux):
+  // deletion is always refused with "is a pre-defined network", so clients
+  // hide delete affordances.
+  bool predefined = 8;
+}
+
+message DeleteNetworkRequest {
+  // Network ID exactly as returned by ListNetworks.
+  string id = 1;
+}
+
+message DeleteNetworkResponse {}
+
+message PruneNetworksRequest {}
+
+message PruneNetworksResponse {
+  // Count of networks the daemon actually removed; daemon-protected ones
+  // are simply absent (protection re-evaluated at prune time).
+  uint64 networks_deleted = 1;
+
+  // Removed networks' names, for the success toast.
+  repeated string names = 2;
 }
 
 message DeleteImageRequest {

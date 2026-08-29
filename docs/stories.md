@@ -74,7 +74,7 @@ graph TD
     A66 --> A67["STORY-067: Builder Tab — Cache Stats & Prune (#206) (DONE)"]
     A67 --> A68["STORY-068: Builder Records Drill-Down — Table & Per-Record Prune (#209) (DONE)"]
     A68 --> A69["STORY-069: Volume Usage On Demand — Sizes, Reclaim & Count (#212) (DONE)"]
-    A69 --> A70["STORY-070: Networks Tab — In-Use Visibility, Deletion & Reclaim (#215)"]
+    A69 --> A70["STORY-070: Networks Tab — In-Use Visibility, Deletion & Reclaim (#215) (DONE)"]
 ```
 
 
@@ -1490,7 +1490,7 @@ graph TD
   - `pnpm check`, `pnpm test`, `pnpm build` pass.
   - Manual: opening Volumes tab issues only `ListVolumes`; Calculate sizes fills sizes (seconds-scale on the live host — spinner visible); Reclaim space dialog states the measured upper bound; pruning unused volumes reports daemon truth and re-measures; viewer cannot see an enabled Reclaim button.
 
-### STORY-070: Networks Tab — In-Use Visibility, Deletion & Reclaim (issue #215) [PLANNED]
+### STORY-070: Networks Tab — In-Use Visibility, Deletion & Reclaim (issue #215) [DONE]
 
 **Goal:** Close the Networks tab's three read-only gaps in one story: in-use state is invisible, unused networks have no delete path, and `docker network prune` has no UI equivalent. Unlike volumes (§9.11), the economics are inverted — the list endpoint is blind (no `Containers` on API ≥ 1.28) but per-network inspection is an in-memory read with no walk, so everything ships in the read path with no opt-in gating.
 

@@ -64,6 +64,9 @@ export function Administration() {
     measuring,
     measureVolumeUsage,
     pruneVolumes,
+    pruneNetworks,
+    deleteNetwork,
+    deletingNetworkId,
   } = useAdminResources(tab);
   // Derived Images-tab summary (design.md §9.6); null on other tabs or
 
@@ -71,7 +74,7 @@ export function Administration() {
   // dialog owns the busy lockout while the RPC is in flight. One scope-driven
   // dialog serves both buttons.
   const [pendingPrune, setPendingPrune] = useState<
-    "unused" | "dangling" | "builder" | "volumes" | null
+    "unused" | "dangling" | "builder" | "volumes" | "networks" | null
   >(null);
   // The per-record delete dialog is a separate arm (design.md §9.10): it
   // names the specific record instead of an aggregate scope.
@@ -85,6 +88,14 @@ export function Administration() {
     if (!volumeUsage) return null;
     return new Map(volumeUsage.volumes.map((v) => [v.name, v]));
   }, [volumeUsage]);
+
+  // Networks the daemon would accept for deletion (§9.12, #215): zero
+  // attachments and not daemon-owned. Derived from the loaded rows — the
+  // list is in memory; the daemon re-evaluates protection at prune time.
+  const unusedNetworks = useMemo(() => {
+    if (result?.kind !== "networks") return [];
+    return result.data.filter((n) => n.containersCount === 0n && !n.predefined);
+  }, [result]);
 
   // Tab bar items (§9.4): active state follows the resolved route tab.
   const adminTabs: PageTabItem[] = [
@@ -279,6 +290,24 @@ export function Administration() {
           </button>
         </div>
       )}
+      {tab === "networks" && (
+        <div className="images-prune-row">
+          {/* Bulk reclaim (design.md §9.12, #215): the daemon skips in-use,
+              pre-defined and swarm-ingress networks at prune time, so the
+              button stays enabled even when every listed network is used —
+              the dialog discloses the derived scope instead. */}
+          <button
+            type="button"
+            className="prune-btn"
+            disabled={pruning || !isAdmin}
+            title={!isAdmin ? "Admin role required" : undefined}
+            onClick={() => setPendingPrune("networks")}
+          >
+            <Trash2 size={14} className={pruningScope === "networks" ? "spinner" : ""} />
+            {pruningScope === "networks" ? "Pruning…" : "Prune Unused"}
+          </button>
+        </div>
+      )}
       {error && (
         <div className="auth-error-banner">
           <ShieldAlert size={18} className="auth-error-icon" />
@@ -311,7 +340,14 @@ export function Administration() {
           {result?.kind === "volumes" && (
             <VolumeTable volumes={result.data} usage={volumeUsageIndex} />
           )}
-          {result?.kind === "networks" && <NetworkTable networks={result.data} />}
+          {result?.kind === "networks" && (
+            <NetworkTable
+              networks={result.data}
+              isAdmin={isAdmin}
+              deletingId={deletingNetworkId}
+              onDelete={deleteNetwork}
+            />
+          )}
           {tab === "builder" && (
             <>
               <Builder
@@ -344,6 +380,8 @@ export function Administration() {
             void pruneBuildCache();
           } else if (scope === "volumes") {
             void pruneVolumes();
+          } else if (scope === "networks") {
+            void pruneNetworks();
           } else {
             void pruneImages(scope === "dangling");
           }
@@ -355,7 +393,9 @@ export function Administration() {
               ? "Prune build cache?"
               : pendingPrune === "volumes"
                 ? "Delete unused volumes?"
-                : "Prune unused images?"
+                : pendingPrune === "networks"
+                  ? "Prune unused networks?"
+                  : "Prune unused images?"
         }
         message={
           pendingPrune === "dangling"
@@ -366,7 +406,9 @@ export function Administration() {
                 ? volumeUsage
                   ? `Deletes ${volumeUsage.unusedCount} unused volume${volumeUsage.unusedCount === 1 ? "" : "s"}, reclaiming up to ${formatBytes(volumeUsage.reclaimableBytes, true)}. A volume is unused only when no container — running or stopped — references it. This cannot be undone.`
                   : "Size has not been calculated yet — use Calculate Sizes for a preview. Deletes all unused volumes. A volume is unused only when no container — running or stopped — references it. This cannot be undone."
-                : `Deletes all ${imageStats?.unusedCount ?? 0} unused images, reclaiming up to ${imageStats ? formatBytes(imageStats.freeableBytes, true) : "0 B"}. Images in use are never touched.`
+                : pendingPrune === "networks"
+                  ? `Deletes ${unusedNetworks.length} unused network${unusedNetworks.length === 1 ? "" : "s"}${unusedNetworks.length > 0 ? ` (${unusedNetworks.map((n) => n.name).join(", ")})` : ""}. In-use, pre-defined and swarm-ingress networks are never touched. This cannot be undone.`
+                  : `Deletes all ${imageStats?.unusedCount ?? 0} unused images, reclaiming up to ${imageStats ? formatBytes(imageStats.freeableBytes, true) : "0 B"}. Images in use are never touched.`
         }
         confirmLabel={pendingPrune === "volumes" ? "Delete" : "Prune"}
         variant="danger"
