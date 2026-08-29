@@ -97,6 +97,15 @@ export function Administration() {
     return result.data.filter((n) => n.containersCount === 0n && !n.predefined);
   }, [result]);
 
+  // An unknown-count row keeps the button honest (design.md §9.12, #215):
+  // inspect failure hides attachments from the client, but the daemon may
+  // still prune that network — only gate on the scope when every row is
+  // authoritatively non-prunable.
+  const hasUnknownNetworkUsage = useMemo(() => {
+    if (result?.kind !== "networks") return false;
+    return result.data.some((n) => n.containersCount < 0n);
+  }, [result]);
+
   // Tab bar items (§9.4): active state follows the resolved route tab.
   const adminTabs: PageTabItem[] = [
     {
@@ -292,15 +301,23 @@ export function Administration() {
       )}
       {tab === "networks" && (
         <div className="images-prune-row">
-          {/* Bulk reclaim (design.md §9.12, #215): the daemon skips in-use,
-              pre-defined and swarm-ingress networks at prune time, so the
-              button stays enabled even when every listed network is used —
-              the dialog discloses the derived scope instead. */}
+          {/* Bulk reclaim (design.md §9.12, #215). Gated like the images
+              buttons: disabled once the derived scope is empty — unless some
+              row has unknown usage (-1), in which case the daemon may still
+              have something to prune that the client cannot see. */}
           <button
             type="button"
             className="prune-btn"
-            disabled={pruning || !isAdmin}
-            title={!isAdmin ? "Admin role required" : undefined}
+            disabled={
+              pruning || !isAdmin || (unusedNetworks.length === 0 && !hasUnknownNetworkUsage)
+            }
+            title={
+              !isAdmin
+                ? "Admin role required"
+                : unusedNetworks.length === 0 && !hasUnknownNetworkUsage
+                  ? "No unused networks to prune"
+                  : undefined
+            }
             onClick={() => setPendingPrune("networks")}
           >
             <Trash2 size={14} className={pruningScope === "networks" ? "spinner" : ""} />
