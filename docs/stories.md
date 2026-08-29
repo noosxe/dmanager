@@ -73,6 +73,7 @@ graph TD
     A65 --> A66["STORY-066: Scoped Prune Buttons — Unused & Dangling (#203) (DONE)"]
     A66 --> A67["STORY-067: Builder Tab — Cache Stats & Prune (#206) (DONE)"]
     A67 --> A68["STORY-068: Builder Records Drill-Down — Table & Per-Record Prune (#209) (DONE)"]
+    A68 --> A69["STORY-069: Volume Usage On Demand — Sizes, Reclaim & Count (#212)"]
 ```
 
 
@@ -1457,3 +1458,33 @@ graph TD
   - `go test ./...`, `go vet ./...` pass; interceptor reflection test green.
   - `pnpm check`, `pnpm test`, `pnpm build` pass.
   - Manual: Builder tab lists 634 records size-desc (4.8 GB exec mount first); deleting a record asks per-record confirmation, reports daemon truth, refreshes stats+records; in-use rows refuse deletion.
+
+### STORY-069: Volume Usage On Demand — Sizes, Reclaim & Count (issue #212) [PLANNED]
+
+- **As a** user (measure) / admin (reclaim)
+- **I want** volume sizes only when I explicitly ask for them, a one-call reclaim of unused volumes, and a volume-count card
+- **So that** the tab opens instantly forever, while I can still find fat unused volumes and reclaim them when I choose
+- **Notes:** Wire verified against moby v28.5.2: `GET /system/df?type=volumes` walks every local volume's directory tree **serially and uncached** (singleflight deduplicates concurrent calls only) — a seconds-scale op on large volumes — so measurement is strictly button-triggered; sizes `-1` = per-volume walk failure; `ref_count` counts running+stopped container config references but is only available in the same df response. `POST /volumes/prune` (no filters) deletes only volumes unreferenced **at prune time** and reports `PruneReport{VolumesDeleted []string, SpaceReclaimed}` — stale previews can never cause a wrong deletion.
+- **Acceptance Criteria:**
+  1. Tab-open cost unchanged: no usage RPC in any auto-effect (regression-tested).
+  2. Stats card `Volumes` shows the count from the list call.
+  3. "Calculate sizes" (any role) fires `GetVolumeUsage` on click; Size column fills (`—` unmeasured, `—` on `-1`, bytes otherwise); in-button spinner while measuring.
+  4. "Reclaim space" (admin; `title="Admin role required"` for viewers) arms **Delete unused volumes?** — measured copy states unused count + upper-bound bytes; unmeasured copy states size is not calculated yet; both disclose the unused definition and irreversibility. Confirm verb **Delete**, Cancel focus, busy lockout.
+  5. On confirm: one `PruneVolumes` call; toast `Reclaimed {size} from {count} unused volumes.` (daemon truth, names included); re-measure automatically only if sizes were previously calculated.
+  6. Daemon-down → `CodeUnavailable` (both RPCs); backend tests assert `type=volumes` query and report mapping.
+- **Tasks:**
+  1. `proto/dmanager/v1/admin.proto`: `GetVolumeUsage() → GetVolumeUsageResponse{repeated VolumeUsage volumes, total_size_bytes, reclaimable_bytes, unused_count}` with `VolumeUsage{name, size_bytes, ref_count}`; `PruneVolumes() → PruneVolumesResponse{volumes_deleted, repeated string names, space_reclaimed}`; `buf generate`; amend the file-header comment (volumes gain mutations).
+  2. `internal/auth/interceptor.go`: `GetVolumeUsage` → `RoleViewer` (read convention), `PruneVolumes` → `RoleAdmin` (reflection test keeps 100% coverage).
+  3. `internal/admin/service.go`: `GetVolumeUsage` = `DiskUsage{Volumes: true}` mapped by name (`-1` and nil `UsageData` passthrough, aggregates computed server-side); `PruneVolumes` = `VolumesPrune(ctx, VolumesPruneOptions{})` mapped to count/names/bytes. Tests: mapping incl. `-1`/nil, aggregates, `type=volumes` query assertion, prune wire + report, daemon-down.
+  4. `frontend/src/hooks/useAdminResources.ts`: `volumeUsage` slice fetched **only** via `measureVolumeUsage()` (no effect), `measuring` flag; `pruneVolumes` joining the shared single-flight guard with `"volumes"` scope; toast with names when ≤3 deleted; auto re-measure after prune iff `volumeUsage` was non-null.
+  5. `frontend/src/components/VolumeTable.tsx`: optional `usage` prop → Size column (`—`/bytes/`—`), no sort integration; rows keep list order.
+  6. `frontend/src/components/Administration.tsx`: volumes tab stats row (count card), actions row (Calculate sizes + Reclaim space), `pendingPrune` gains `"volumes"`, dialog arm with measured/unmeasured copy.
+  7. Tests: no-usage-RPC-on-open regression; measure flow populating the column; gating matrix; dialog copy arms; confirm → `{}` on the wire, toast, conditional re-measure; count card from list.
+- **Files Affected:**
+  - `proto/dmanager/v1/admin.proto`, `internal/gen/**`, `frontend/src/gen/**` (generated)
+  - `internal/auth/interceptor.go` (+ test), `internal/admin/service.go` (+ test)
+  - `frontend/src/hooks/useAdminResources.ts`, `frontend/src/components/VolumeTable.tsx`, `frontend/src/components/Administration.tsx`, test files
+- **Validation Check:**
+  - `go test ./...`, `go vet ./...` pass; interceptor reflection test green.
+  - `pnpm check`, `pnpm test`, `pnpm build` pass.
+  - Manual: opening Volumes tab issues only `ListVolumes`; Calculate sizes fills sizes (seconds-scale on the live host — spinner visible); Reclaim space dialog states the measured upper bound; pruning unused volumes reports daemon truth and re-measures; viewer cannot see an enabled Reclaim button.

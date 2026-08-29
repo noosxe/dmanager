@@ -571,6 +571,31 @@ STORY-067 shipped the aggregate; live usage then showed the drill-down is worth 
 
 **Testing.** Backend: records mapping/sort/timestamps + empty-list; prune-record wire assertions (filters JSON `id` value, `all=1`), report mapping, empty-id rejection, daemon-down. Frontend: table render with live-scale rows, gating matrix (viewer / in-use / busy), confirm flow with the short-ID copy, toast, and refresh recomputation.
 
+### 9.11. Volume Usage On Demand — Sizes, Reclaim & Count (issue #212)
+
+The Volumes tab has been read-only since §9.5. Two gaps: volume sizes are invisible (the daemon's volume list carries no size field at all) and unused volumes have no reclaim path. Both fixable in one story — **if** the daemon cost is respected, because volume sizes are uniquely expensive to know.
+
+**Wire facts** (verified against moby daemon source, v28.5.2 — stable through 29): `GET /system/df?type=volumes` computes each local volume's size via `directory.Size` — a **full recursive walk of every volume's directory tree, executed serially** in a loop. There is **no daemon-side cache**: a singleflight guard deduplicates concurrent calls, but every new call walks again. With one large database volume the walk alone can take seconds, which is why the volume list (`GET /volumes`) ships metadata only. Two consequences drive the design: (1) sizes must never be fetched on the tab-open path, and (2) `RefCount` — which is cheap (in-memory container store counting config references from running **and** stopped containers) — is only available inside the same df response, next to each size. Sizes reported `-1` mean the walk failed for that volume. `/volumes/prune` removes only volumes **not referenced by any container config at prune time** (local driver, no mount options) and answers `PruneReport{VolumesDeleted []string, SpaceReclaimed uint64}` — daemon-protected volumes are simply absent from the report.
+
+**Principle: measurement is strictly opt-in.** Nothing in this story fetches usage automatically — not on tab open, not on refresh, not in any auto-effect. The tab-open cost profile is unchanged from §9.5.
+
+**Backend.** Two new `AdminService` procedures (§3.5 of [protocol.md](protocol.md)), read any role / mutate admin per the §9.9 split:
+
+- `GetVolumeUsage` → `GetVolumeUsageResponse{repeated VolumeUsage volumes, total_size_bytes, reclaimable_bytes, unused_count}` with `VolumeUsage{name, size_bytes, ref_count}` — one `DiskUsage{Volumes: true}` daemon call, mapped by volume name; `size_bytes: -1` passes through (the client renders an em dash) and a nil `UsageData` maps as unknown. The aggregates are computed server-side from the same response (`reclaimable_bytes` = sum of sizes where `ref_count == 0`; `unused_count` = that set's cardinality) so clients never re-derive them. The walk failure mode is per-volume (`-1`), not per-request: one unreadable volume does not fail the RPC.
+- `PruneVolumes` → `PruneVolumesResponse{volumes_deleted, repeated string names, space_reclaimed}` — one `VolumesPrune` daemon call, no filters (the daemon's unused scope is fixed: unreferenced at prune time). Daemon-down → `CodeUnavailable`, per convention.
+
+**UI.** The Volumes tab gains a stats row, an actions row, and a Size column — but only the card and the buttons exist from the start:
+
+- **Stats card:** `Volumes` — total count from the existing cheap list (§9.5). No usage data involved.
+- **Actions row, two buttons:**
+  - **Calculate sizes** (any role — a read, `ListImages` precedent): fires `GetVolumeUsage` once per click; spinner in-button while measuring; the row it populates is the table's Size column.
+  - **Reclaim space** (admin, `Trash2` affordance parity with §9.8): arms the volume-prune `ConfirmDialog`. Disabled only while a prune or measurement is in flight — without measurement the scope is genuinely unknown, and the daemon protects referenced volumes regardless, so the button stays enabled; the dialog copy carries the honesty instead.
+- **Size column:** `—` until measured; `formatBytes` once measured; `—` for `-1` (walk failure). No sort integration — sizes are a snapshot, and sorting an unmeasured column is incoherent; rows keep the list order (§9.5).
+- **ConfirmDialog** (the scope dialog's fourth arm): title **Delete unused volumes?**, message when measured: `Deletes {unused_count} unused volumes, reclaiming up to {reclaimable_bytes}. A volume is unused only when no container — running or stopped — references it. This cannot be undone.` — and when not measured: `Size has not been calculated yet — use Calculate sizes for a preview. Deletes all unused volumes. A volume is unused only when no container — running or stopped — references it. This cannot be undone.` Confirm verb **Delete** (more honest than "Prune" for data-bearing volumes), danger variant, Cancel focus, busy lockout.
+- **Result UX:** toast `Reclaimed {size} from {count} unused volumes.` — daemon-reported (`PruneReport`), never the preview. **If sizes had been calculated before the prune, `GetVolumeUsage` re-runs automatically** on settle (the user opted into measurement once; the second walk validates the reclaim against reality). If they had not, nothing re-fetches.
+
+**Testing.** Backend: mapping (size, `-1` passthrough, nil `UsageData`, ref counts), aggregate computation, `type=volumes` query assertion on the fake daemon, prune wire call + report mapping (names preserved), daemon-down. Frontend: tab open fires no usage RPC (regression guard); Calculate sizes populates the column (`—` before, bytes after, `—` on `-1`); viewer can measure but not reclaim (`title="Admin role required"`); dialog copy switches between measured/not-measured arms; confirm flow (`{}` on the wire), toast contents, post-prune re-measure only-when-previously-measured; the count card renders from the list without any usage call.
+
 ---
 
 ## 10. Engine Status Indicator (Sidebar, issue #180)
