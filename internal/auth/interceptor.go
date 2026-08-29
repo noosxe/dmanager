@@ -125,6 +125,7 @@ var procedureRoles = map[string]ProcedureRole{
 	// Admin procedures (requires User.Role == "admin")
 	dmanagerv1connect.AdminServiceDeleteImageProcedure:                RoleAdmin,
 	dmanagerv1connect.ContainerServiceStartContainerProcedure:         RoleAdmin,
+	dmanagerv1connect.AdminServicePruneImagesProcedure:                RoleAdmin,
 	dmanagerv1connect.ContainerServiceStopContainerProcedure:          RoleAdmin,
 	dmanagerv1connect.ContainerServiceUpgradeContainerProcedure:       RoleAdmin,
 	dmanagerv1connect.ContainerServiceSetContainerAutoUpdateProcedure: RoleAdmin,

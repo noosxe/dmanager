@@ -94,14 +94,18 @@ export function deriveImageStats(images: Image[]): {
   totalBytes: bigint;
   freeableBytes: bigint;
   imageCount: number;
+  /** Images with containersCount === 0 — the prune/delete scope (#196). */
+  unusedCount: number;
 } {
   let totalBytes = 0n;
   let freeableBytes = 0n;
+  let unusedCount = 0;
   for (const image of images) {
     totalBytes += image.sizeBytes;
     if (image.containersCount === 0n) {
       freeableBytes += image.sizeBytes;
+      unusedCount += 1;
     }
   }
-  return { totalBytes, freeableBytes, imageCount: images.length };
+  return { totalBytes, freeableBytes, imageCount: images.length, unusedCount };
 }

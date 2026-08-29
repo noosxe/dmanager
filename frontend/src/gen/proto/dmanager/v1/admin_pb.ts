@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file proto/dmanager/v1/admin.proto.
  */
 export const file_proto_dmanager_v1_admin: GenFile = /*@__PURE__*/
-  fileDesc("Ch1wcm90by9kbWFuYWdlci92MS9hZG1pbi5wcm90bxILZG1hbmFnZXIudjEiEwoRTGlzdEltYWdlc1JlcXVlc3QiOAoSTGlzdEltYWdlc1Jlc3BvbnNlEiIKBmltYWdlcxgBIAMoCzISLmRtYW5hZ2VyLnYxLkltYWdlImoKBUltYWdlEgoKAmlkGAEgASgJEhEKCXJlcG9fdGFncxgCIAMoCRIUCgxjcmVhdGVkX3VuaXgYAyABKAMSEgoKc2l6ZV9ieXRlcxgEIAEoAxIYChBjb250YWluZXJzX2NvdW50GAUgASgDIhQKEkxpc3RWb2x1bWVzUmVxdWVzdCI7ChNMaXN0Vm9sdW1lc1Jlc3BvbnNlEiQKB3ZvbHVtZXMYASADKAsyEy5kbWFuYWdlci52MS5Wb2x1bWUiygEKBlZvbHVtZRIMCgRuYW1lGAEgASgJEg4KBmRyaXZlchgCIAEoCRISCgptb3VudHBvaW50GAMgASgJEi4KCmNyZWF0ZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi8KBmxhYmVscxgFIAMoCzIfLmRtYW5hZ2VyLnYxLlZvbHVtZS5MYWJlbHNFbnRyeRotCgtMYWJlbHNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIhUKE0xpc3ROZXR3b3Jrc1JlcXVlc3QiPgoUTGlzdE5ldHdvcmtzUmVzcG9uc2USJgoIbmV0d29ya3MYASADKAsyFC5kbWFuYWdlci52MS5OZXR3b3JrIoQBCgdOZXR3b3JrEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSDgoGZHJpdmVyGAMgASgJEg0KBXNjb3BlGAQgASgJEhAKCGludGVybmFsGAUgASgIEi4KCmNyZWF0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIi8KEkRlbGV0ZUltYWdlUmVxdWVzdBIKCgJpZBgBIAEoCRINCgVmb3JjZRgCIAEoCCIVChNEZWxldGVJbWFnZVJlc3BvbnNlIhQKEkNoZWNrRW5naW5lUmVxdWVzdCJMChNDaGVja0VuZ2luZVJlc3BvbnNlEhEKCWNvbm5lY3RlZBgBIAEoCBITCgthcGlfdmVyc2lvbhgCIAEoCRINCgVlcnJvchgDIAEoCTKoAwoMQWRtaW5TZXJ2aWNlEk0KCkxpc3RJbWFnZXMSHi5kbWFuYWdlci52MS5MaXN0SW1hZ2VzUmVxdWVzdBofLmRtYW5hZ2VyLnYxLkxpc3RJbWFnZXNSZXNwb25zZRJQCgtMaXN0Vm9sdW1lcxIfLmRtYW5hZ2VyLnYxLkxpc3RWb2x1bWVzUmVxdWVzdBogLmRtYW5hZ2VyLnYxLkxpc3RWb2x1bWVzUmVzcG9uc2USUwoMTGlzdE5ldHdvcmtzEiAuZG1hbmFnZXIudjEuTGlzdE5ldHdvcmtzUmVxdWVzdBohLmRtYW5hZ2VyLnYxLkxpc3ROZXR3b3Jrc1Jlc3BvbnNlElAKC0RlbGV0ZUltYWdlEh8uZG1hbmFnZXIudjEuRGVsZXRlSW1hZ2VSZXF1ZXN0GiAuZG1hbmFnZXIudjEuRGVsZXRlSW1hZ2VSZXNwb25zZRJQCgtDaGVja0VuZ2luZRIfLmRtYW5hZ2VyLnYxLkNoZWNrRW5naW5lUmVxdWVzdBogLmRtYW5hZ2VyLnYxLkNoZWNrRW5naW5lUmVzcG9uc2VCNFoyZG1hbmFnZXIvaW50ZXJuYWwvZ2VuL3Byb3RvL2RtYW5hZ2VyL3YxO2RtYW5hZ2VydjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
+  fileDesc("Ch1wcm90by9kbWFuYWdlci92MS9hZG1pbi5wcm90bxILZG1hbmFnZXIudjEiEwoRTGlzdEltYWdlc1JlcXVlc3QiOAoSTGlzdEltYWdlc1Jlc3BvbnNlEiIKBmltYWdlcxgBIAMoCzISLmRtYW5hZ2VyLnYxLkltYWdlImoKBUltYWdlEgoKAmlkGAEgASgJEhEKCXJlcG9fdGFncxgCIAMoCRIUCgxjcmVhdGVkX3VuaXgYAyABKAMSEgoKc2l6ZV9ieXRlcxgEIAEoAxIYChBjb250YWluZXJzX2NvdW50GAUgASgDIhQKEkxpc3RWb2x1bWVzUmVxdWVzdCI7ChNMaXN0Vm9sdW1lc1Jlc3BvbnNlEiQKB3ZvbHVtZXMYASADKAsyEy5kbWFuYWdlci52MS5Wb2x1bWUiygEKBlZvbHVtZRIMCgRuYW1lGAEgASgJEg4KBmRyaXZlchgCIAEoCRISCgptb3VudHBvaW50GAMgASgJEi4KCmNyZWF0ZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi8KBmxhYmVscxgFIAMoCzIfLmRtYW5hZ2VyLnYxLlZvbHVtZS5MYWJlbHNFbnRyeRotCgtMYWJlbHNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIhUKE0xpc3ROZXR3b3Jrc1JlcXVlc3QiPgoUTGlzdE5ldHdvcmtzUmVzcG9uc2USJgoIbmV0d29ya3MYASADKAsyFC5kbWFuYWdlci52MS5OZXR3b3JrIoQBCgdOZXR3b3JrEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSDgoGZHJpdmVyGAMgASgJEg0KBXNjb3BlGAQgASgJEhAKCGludGVybmFsGAUgASgIEi4KCmNyZWF0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIi8KEkRlbGV0ZUltYWdlUmVxdWVzdBIKCgJpZBgBIAEoCRINCgVmb3JjZRgCIAEoCCIVChNEZWxldGVJbWFnZVJlc3BvbnNlIisKElBydW5lSW1hZ2VzUmVxdWVzdBIVCg1kYW5nbGluZ19vbmx5GAEgASgIIjAKC1BydW5lZEltYWdlEg8KB2RlbGV0ZWQYASABKAkSEAoIdW50YWdnZWQYAiABKAkiYAoTUHJ1bmVJbWFnZXNSZXNwb25zZRIwCg5pbWFnZXNfZGVsZXRlZBgBIAMoCzIYLmRtYW5hZ2VyLnYxLlBydW5lZEltYWdlEhcKD3NwYWNlX3JlY2xhaW1lZBgCIAEoBCIUChJDaGVja0VuZ2luZVJlcXVlc3QiTAoTQ2hlY2tFbmdpbmVSZXNwb25zZRIRCgljb25uZWN0ZWQYASABKAgSEwoLYXBpX3ZlcnNpb24YAiABKAkSDQoFZXJyb3IYAyABKAky+gMKDEFkbWluU2VydmljZRJNCgpMaXN0SW1hZ2VzEh4uZG1hbmFnZXIudjEuTGlzdEltYWdlc1JlcXVlc3QaHy5kbWFuYWdlci52MS5MaXN0SW1hZ2VzUmVzcG9uc2USUAoLTGlzdFZvbHVtZXMSHy5kbWFuYWdlci52MS5MaXN0Vm9sdW1lc1JlcXVlc3QaIC5kbWFuYWdlci52MS5MaXN0Vm9sdW1lc1Jlc3BvbnNlElMKDExpc3ROZXR3b3JrcxIgLmRtYW5hZ2VyLnYxLkxpc3ROZXR3b3Jrc1JlcXVlc3QaIS5kbWFuYWdlci52MS5MaXN0TmV0d29ya3NSZXNwb25zZRJQCgtEZWxldGVJbWFnZRIfLmRtYW5hZ2VyLnYxLkRlbGV0ZUltYWdlUmVxdWVzdBogLmRtYW5hZ2VyLnYxLkRlbGV0ZUltYWdlUmVzcG9uc2USUAoLUHJ1bmVJbWFnZXMSHy5kbWFuYWdlci52MS5QcnVuZUltYWdlc1JlcXVlc3QaIC5kbWFuYWdlci52MS5QcnVuZUltYWdlc1Jlc3BvbnNlElAKC0NoZWNrRW5naW5lEh8uZG1hbmFnZXIudjEuQ2hlY2tFbmdpbmVSZXF1ZXN0GiAuZG1hbmFnZXIudjEuQ2hlY2tFbmdpbmVSZXNwb25zZUI0WjJkbWFuYWdlci9pbnRlcm5hbC9nZW4vcHJvdG8vZG1hbmFnZXIvdjE7ZG1hbmFnZXJ2MWIGcHJvdG8z", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message dmanager.v1.ListImagesRequest
@@ -288,6 +288,78 @@ export const DeleteImageResponseSchema: GenMessage<DeleteImageResponse> = /*@__P
   messageDesc(file_proto_dmanager_v1_admin, 10);
 
 /**
+ * @generated from message dmanager.v1.PruneImagesRequest
+ */
+export type PruneImagesRequest = Message<"dmanager.v1.PruneImagesRequest"> & {
+  /**
+   * false (default): delete every image not used by any container
+   * (docker image prune -a semantics); true: untagged (dangling) images only.
+   *
+   * @generated from field: bool dangling_only = 1;
+   */
+  danglingOnly: boolean;
+};
+
+/**
+ * Describes the message dmanager.v1.PruneImagesRequest.
+ * Use `create(PruneImagesRequestSchema)` to create a new message.
+ */
+export const PruneImagesRequestSchema: GenMessage<PruneImagesRequest> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_admin, 11);
+
+/**
+ * @generated from message dmanager.v1.PrunedImage
+ */
+export type PrunedImage = Message<"dmanager.v1.PrunedImage"> & {
+  /**
+   * Image ID removed from disk.
+   *
+   * @generated from field: string deleted = 1;
+   */
+  deleted: string;
+
+  /**
+   * Tag reference removed (the image may still exist under other tags).
+   *
+   * @generated from field: string untagged = 2;
+   */
+  untagged: string;
+};
+
+/**
+ * Describes the message dmanager.v1.PrunedImage.
+ * Use `create(PrunedImageSchema)` to create a new message.
+ */
+export const PrunedImageSchema: GenMessage<PrunedImage> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_admin, 12);
+
+/**
+ * @generated from message dmanager.v1.PruneImagesResponse
+ */
+export type PruneImagesResponse = Message<"dmanager.v1.PruneImagesResponse"> & {
+  /**
+   * Per-image report as returned by the daemon.
+   *
+   * @generated from field: repeated dmanager.v1.PrunedImage images_deleted = 1;
+   */
+  imagesDeleted: PrunedImage[];
+
+  /**
+   * Bytes actually reclaimed on disk.
+   *
+   * @generated from field: uint64 space_reclaimed = 2;
+   */
+  spaceReclaimed: bigint;
+};
+
+/**
+ * Describes the message dmanager.v1.PruneImagesResponse.
+ * Use `create(PruneImagesResponseSchema)` to create a new message.
+ */
+export const PruneImagesResponseSchema: GenMessage<PruneImagesResponse> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_admin, 13);
+
+/**
  * @generated from message dmanager.v1.CheckEngineRequest
  */
 export type CheckEngineRequest = Message<"dmanager.v1.CheckEngineRequest"> & {
@@ -298,7 +370,7 @@ export type CheckEngineRequest = Message<"dmanager.v1.CheckEngineRequest"> & {
  * Use `create(CheckEngineRequestSchema)` to create a new message.
  */
 export const CheckEngineRequestSchema: GenMessage<CheckEngineRequest> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 11);
+  messageDesc(file_proto_dmanager_v1_admin, 14);
 
 /**
  * @generated from message dmanager.v1.CheckEngineResponse
@@ -331,7 +403,7 @@ export type CheckEngineResponse = Message<"dmanager.v1.CheckEngineResponse"> & {
  * Use `create(CheckEngineResponseSchema)` to create a new message.
  */
 export const CheckEngineResponseSchema: GenMessage<CheckEngineResponse> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 12);
+  messageDesc(file_proto_dmanager_v1_admin, 15);
 
 /**
  * AdminService exposes Docker host resources (images, volumes, networks)
@@ -382,6 +454,18 @@ export const AdminService: GenService<{
     methodKind: "unary";
     input: typeof DeleteImageRequestSchema;
     output: typeof DeleteImageResponseSchema;
+  },
+  /**
+   * Prune all unused images from the host in one daemon call (Authenticated,
+   * admin role). The daemon refuses images referenced by any container
+   * unconditionally; with dangling_only it restricts to untagged images.
+   *
+   * @generated from rpc dmanager.v1.AdminService.PruneImages
+   */
+  pruneImages: {
+    methodKind: "unary";
+    input: typeof PruneImagesRequestSchema;
+    output: typeof PruneImagesResponseSchema;
   },
   /**
    * Report whether the Docker Engine is reachable (Authenticated, any role).

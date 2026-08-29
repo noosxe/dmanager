@@ -24,6 +24,11 @@ service AdminService {
   // daemon refuses images referenced by any container regardless of force.
   rpc DeleteImage(DeleteImageRequest) returns (DeleteImageResponse);
 
+  // Prune all unused images from the host in one daemon call (Authenticated,
+  // admin role). The daemon refuses images referenced by any container
+  // unconditionally; with dangling_only it restricts to untagged images.
+  rpc PruneImages(PruneImagesRequest) returns (PruneImagesResponse);
+
   // Report whether the Docker Engine is reachable (Authenticated, any role).
   // Daemon unreachability is a successful response with connected=false —
   // the outage is the answer, not an RPC failure (design.md §10.2).
@@ -110,6 +115,28 @@ message DeleteImageRequest {
 }
 
 message DeleteImageResponse {}
+
+message PruneImagesRequest {
+  // false (default): delete every image not used by any container
+  // (docker image prune -a semantics); true: untagged (dangling) images only.
+  bool dangling_only = 1;
+}
+
+message PrunedImage {
+  // Image ID removed from disk.
+  string deleted = 1;
+
+  // Tag reference removed (the image may still exist under other tags).
+  string untagged = 2;
+}
+
+message PruneImagesResponse {
+  // Per-image report as returned by the daemon.
+  repeated PrunedImage images_deleted = 1;
+
+  // Bytes actually reclaimed on disk.
+  uint64 space_reclaimed = 2;
+}
 
 message CheckEngineRequest {}
 

@@ -1,5 +1,8 @@
 version: v1
 name: buf.build/dmanager/dmanager
+build:
+  excludes:
+    - .direnv
 lint:
   use:
     - DEFAULT
