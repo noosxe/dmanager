@@ -607,7 +607,7 @@ describe("Administration Component", () => {
     fireEvent.click(screen.getByRole("button", { name: /prune unused/i }));
     expect(screen.getByRole("dialog")).toHaveAccessibleName("Prune unused images?");
     expect(screen.getByRole("dialog")).toHaveAccessibleDescription(
-      "Deletes all 1 unused images, reclaiming 4.2 MB. Images in use are never touched.",
+      "Deletes all 1 unused images, reclaiming up to 4.2 MB. Images in use are never touched.",
     );
     // Danger variant focuses Cancel — Enter never pre-arms the destructive action.
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "Cancel" }));
@@ -705,7 +705,7 @@ describe("Administration Component", () => {
     fireEvent.click(danglingButton);
     expect(screen.getByRole("dialog")).toHaveAccessibleName("Prune dangling images?");
     expect(screen.getByRole("dialog")).toHaveAccessibleDescription(
-      "Deletes all 1 dangling images, reclaiming 52.4 MB. Tagged images are never touched.",
+      "Deletes all 1 dangling images, reclaiming up to 52.4 MB. Tagged images are never touched.",
     );
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "Cancel" }));
 

@@ -238,8 +238,8 @@ export function Administration() {
         title={pendingPrune === "dangling" ? "Prune dangling images?" : "Prune unused images?"}
         message={
           pendingPrune === "dangling"
-            ? `Deletes all ${imageStats?.danglingCount ?? 0} dangling images, reclaiming ${imageStats ? formatBytes(imageStats.danglingFreeableBytes, true) : "0 B"}. Tagged images are never touched.`
-            : `Deletes all ${imageStats?.unusedCount ?? 0} unused images, reclaiming ${imageStats ? formatBytes(imageStats.freeableBytes, true) : "0 B"}. Images in use are never touched.`
+            ? `Deletes all ${imageStats?.danglingCount ?? 0} dangling images, reclaiming up to ${imageStats ? formatBytes(imageStats.danglingFreeableBytes, true) : "0 B"}. Tagged images are never touched.`
+            : `Deletes all ${imageStats?.unusedCount ?? 0} unused images, reclaiming up to ${imageStats ? formatBytes(imageStats.freeableBytes, true) : "0 B"}. Images in use are never touched.`
         }
         confirmLabel="Prune"
         variant="danger"
