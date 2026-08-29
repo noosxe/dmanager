@@ -72,6 +72,7 @@ graph TD
     A64 --> A65["STORY-065: Images Unused & Dangling Stat Cards (#200) (DONE)"]
     A65 --> A66["STORY-066: Scoped Prune Buttons — Unused & Dangling (#203) (DONE)"]
     A66 --> A67["STORY-067: Builder Tab — Cache Stats & Prune (#206) (DONE)"]
+    A67 --> A68["STORY-068: Builder Records Drill-Down — Table & Per-Record Prune (#209)"]
 ```
 
 
@@ -1434,3 +1435,25 @@ graph TD
   - `go test ./...`, `go vet ./...` pass; interceptor reflection test green.
   - `pnpm check`, `pnpm test`, `pnpm build` pass.
   - Manual: Builder tab shows the live aggregates (host: ~33.5 GB / ~27.7 GB / 634); prune reclaims with daemon-reported toast; images tab unaffected by builder-stats failures.
+
+### STORY-068: Builder Records Drill-Down — Table & Per-Record Prune (issue #209) [PLANNED]
+- **Scope:** Backend + frontend — two new RPCs + a records table on the Builder tab
+- **Estimated Size:** Medium (~450 LOC incl. tests)
+- **Dependencies:** STORY-067 (Builder tab, stats slice, single-flight prune state)
+- **Goal:** Per #209 / design.md §9.10 / protocol.md: add the size-sorted records view and per-record deletion to the Builder tab — the "top offenders" drill-down (64 records hold 90% of bytes; top: 4.8 GB exec.cachemount). Wire verified against moby daemon source: `/build/prune` accepts `id` (converted to buildkit `id~=<value>`, prefix match — full ID ⇒ exactly one record); `all=1` + `id` is deterministic (filter already scopes candidates; `all` only lifts internal-type protection for that record); `InUse` records are daemon-protected.
+- **Tasks:**
+  1. `proto/dmanager/v1/admin.proto`: `message BuildCacheRecord{id, type, description, size_bytes, in_use, shared, usage_count, created_at, optional last_used_at}`; `ListBuildCacheRecords() → ListBuildCacheRecordsResponse{repeated BuildCacheRecord records}`; `PruneBuildCacheRecord(PruneBuildCacheRecordRequest{id}) → PruneBuildCacheRecordResponse{caches_deleted, space_reclaimed}`; `buf generate`.
+  2. `internal/auth/interceptor.go`: `ListBuildCacheRecords` → `RoleViewer` (read convention), `PruneBuildCacheRecord` → `RoleAdmin` (reflection test keeps 100% coverage).
+  3. `internal/admin/service.go`: `ListBuildCacheRecords` reuses the stats daemon call and maps/sorts `Items` by size desc (never-used last within ties); `PruneBuildCacheRecord` validates non-blank `id` (`CodeInvalidArgument` before touching the daemon), calls `BuildCachePrune(ctx, BuildCachePruneOptions{All: true, Filters: filters.NewArgs(filters.Arg("id", id))})`, maps the report. Tests: mapping/sort/timestamps/empty list; wire assertions on the fake daemon (query `all=1`, filters JSON `id` value), report mapping incl. the daemon-protected zero case, blank-id rejection, daemon-down.
+  4. `frontend/src/components/BuilderRecords.tsx` (new): admin-table vocabulary — Size (desc, right-aligned) · Type (mono chip) · Description (truncated + `title`) · Last used (relative or `never`) · Used (`usage_count`) · In use/Shared chips · row delete (`Trash2`, disabled when `!isAdmin` / `in_use` / busy with titles). Rendered under the actions row on the Builder tab.
+  5. `frontend/src/hooks/useAdminResources.ts`: independent records slice (`listBuildCacheRecords`, own loading/error) + `pruneBuildCacheRecord(id)` sharing the aggregate prune's single-flight guard; toast `Deleted {count} cache records, reclaimed {size}.` (daemon-reported, honest 0); stats + records re-fetch on settle.
+  6. `frontend/src/components/Administration.tsx`: per-record `ConfirmDialog` arm (separate state from the scope dialog) — title **Delete cache record?**, message `Deletes build cache record {shortId} ({size}). Shared blob content may free less. Rebuilding this step will be slower until the cache is rebuilt.`; confirm verb **Delete**, Cancel focus, busy lockout.
+  7. Tests: backend fakes per above; frontend table render with live-scale rows, gating matrix, confirm flow with short-ID copy, toast contents, refresh recomputation.
+- **Files Affected:**
+  - `proto/dmanager/v1/admin.proto`, `internal/gen/**`, `frontend/src/gen/**` (generated)
+  - `internal/auth/interceptor.go` (+ test), `internal/admin/service.go` (+ test)
+  - `frontend/src/components/BuilderRecords.tsx` (new), `frontend/src/components/Builder.tsx`, `frontend/src/components/Administration.tsx`, `frontend/src/hooks/useAdminResources.ts`, test files
+- **Validation Check:**
+  - `go test ./...`, `go vet ./...` pass; interceptor reflection test green.
+  - `pnpm check`, `pnpm test`, `pnpm build` pass.
+  - Manual: Builder tab lists 634 records size-desc (4.8 GB exec mount first); deleting a record asks per-record confirmation, reports daemon truth, refreshes stats+records; in-use rows refuse deletion.

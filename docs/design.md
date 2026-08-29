@@ -551,6 +551,26 @@ STORY-066's field verification showed where image-layer bytes actually live: Bui
 
 **Testing.** Backend: httptest fake for `GET /system/df?type=build-cache` (aggregate mapping incl. the zero-records case) and `POST /build/prune` (query `all` flag, report mapping, daemon-down → `CodeUnavailable`); interceptor reflection keeps 100% `RoleAdmin` coverage. Frontend: card rendering + independent failure, gating matrix, confirm flow with the rebuild-cost copy, toast contents, refresh recomputation, and single-flight interaction with the image prunes.
 
+
+### 9.10. Builder Records Drill-Down — Table & Per-Record Prune (issue #209)
+
+STORY-067 shipped the aggregate; live usage then showed the drill-down is worth its own pass: 64 records hold 90% of the bytes and the top offender is a 4.8 GB `exec.cachemount`. §9.10 adds the size-sorted records view and per-record deletion to the Builder tab — the "top offenders" v2 flagged in §9.9.
+
+**Wire facts** (verified against moby daemon source, v28.5.2 — stable through 29): `/build/prune` validates `id` among its cache filters and converts it to buildkit `id~=<value>` (prefix match) — sending the full record ID targets exactly one record. `all=1` combined with the `id` filter is deterministic: the filter already restricts candidates to that record; `all` only lifts the internal-type restriction so an explicitly targeted `exec.cachemount`/`source.local` record can be deleted. Blast radius stays 1. `InUse` records are daemon-protected — the prune returns an empty report rather than deleting. The response's `CachesDeleted`/`SpaceReclaimed` carry daemon truth.
+
+**Backend.** Two new `AdminService` procedures (§3.5 of [protocol.md](protocol.md)), read any role / mutate admin per the §9.9 split:
+
+- `ListBuildCacheRecords` → `ListBuildCacheRecordsResponse{repeated BuildCacheRecord records}` — the **same daemon call as stats** (`GET /system/df?type=build-cache`, whose `Items []CacheRecord` we already receive) mapped per record: `id`, `type`, `description`, `size_bytes`, `in_use`, `shared`, `usage_count`, `created_at`, optional `last_used_at`. **Sorted server-side by size desc**: dust (66% of records ≤1 MB) sinks naturally and the client renders top-offenders-first without sort controls. The drill-down is the Builder tab's own fetch slice so a records failure never hides the cards.
+- `PruneBuildCacheRecord{id}` → `PruneBuildCacheRecordResponse{caches_deleted, space_reclaimed}` — `POST /build/prune` with `all=1` + `filters={"id":[id]}` (rationale above). Empty/blank `id` → `CodeInvalidArgument` before the daemon is touched; daemon-down → `CodeUnavailable`, mirroring §9.9.
+
+**Table.** A records section under the actions row, reusing the admin table vocabulary (`.table`, header row, right-aligned numeric column): **Size** (desc) · **Type** (mono chip) · **Description** (truncated, `title` tooltip — e.g. `exec mount /bin/sh …`) · **Last used** (relative time or `never`) · **Used** (`usage_count`) · chips **In use** / **Shared** · row delete (danger icon `Trash2`). Row identity = full record ID; no pagination (634 rows render fine; size-desc makes the top the story).
+
+**Controls & confirmation.** Row delete is disabled when `!isAdmin` (`title="Admin role required"`), when the record is `in_use` (`title="Record is in use"`), or while any builder prune is in flight. Per-record `ConfirmDialog` (separate state arm from §9.8/§9.9's scope dialog): title **Delete cache record?**, message `Deletes build cache record {shortId} ({size}). Shared blob content may free less. Rebuilding this step will be slower until the cache is rebuilt.` Confirm verb **Delete**, Cancel focus, busy lockout. One destructive builder op at a time: the record prune joins the aggregate prune's single-flight guard.
+
+**Result UX.** Success toast: `Deleted {count} cache records, reclaimed {size}.` (daemon-reported; `count` can be 0 when the daemon protected the record — the toast then says `0 records` honestly). Both stats and records re-fetch on settle.
+
+**Testing.** Backend: records mapping/sort/timestamps + empty-list; prune-record wire assertions (filters JSON `id` value, `all=1`), report mapping, empty-id rejection, daemon-down. Frontend: table render with live-scale rows, gating matrix (viewer / in-use / busy), confirm flow with the short-ID copy, toast, and refresh recomputation.
+
 ---
 
 ## 10. Engine Status Indicator (Sidebar, issue #180)
