@@ -259,7 +259,7 @@ describe("Administration Component", () => {
 
     // Stat cards render zeros for an empty inventory.
     expect(screen.getAllByText("0 B")).toHaveLength(2);
-    expect(screen.getByText("0")).toBeInTheDocument();
+    expect(screen.getAllByText("0")).toHaveLength(3); // Images, Unused, Dangling
   });
 
   it("shows an error banner when the backend is unreachable", async () => {
@@ -272,7 +272,7 @@ describe("Administration Component", () => {
     ).toBeInTheDocument();
 
     // Stat cards fall back to -- placeholders on error.
-    expect(screen.getAllByText("--")).toHaveLength(3);
+    expect(screen.getAllByText("--")).toHaveLength(5); // one per stat card
   });
 
   it("re-fetches resources when the Refresh button is clicked", async () => {
@@ -328,6 +328,14 @@ describe("Administration Component", () => {
     // Freeable: both fixture images are in use or unknown (-1) — nothing freeable.
     expect(screen.getByText("0 B")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument();
+
+    // Unused: 0 — the tagless image has an unknown (-1) count, so it stays
+    // conservatively out of the usage-derived card. Dangling: 1 — tag-based,
+    // so the same image counts regardless of usage (#200).
+    const unusedCard = screen.getByText("Unused").closest(".stat-card");
+    expect(unusedCard?.querySelector(".stat-value")?.textContent).toBe("0");
+    const danglingCard = screen.getByText("Dangling").closest(".stat-card");
+    expect(danglingCard?.querySelector(".stat-value")?.textContent).toBe("1");
   });
 
   it("treats unknown container counts (-1) as in use when deriving freeable space", async () => {
@@ -357,6 +365,35 @@ describe("Administration Component", () => {
     expect(screen.getByText("0 B")).toBeInTheDocument();
     // Image count (card) and the nginx in-use cell both render 3.
     expect(screen.getAllByText("3")).toHaveLength(2);
+  });
+
+  it("counts a tagged zero-usage image as unused but not dangling", async () => {
+    vi.mocked(adminClient.listImages).mockResolvedValue({
+      images: [
+        {
+          id: "sha256:aaa111222333444555666777888999000111222333444555666777888999000",
+          repoTags: ["scratch:latest"],
+          createdUnix: twoHoursAgoUnix,
+          sizeBytes: 52428800n,
+          containersCount: 0n,
+        } as unknown as Image,
+        ...mockImages,
+      ],
+      $typeName: "dmanager.v1.ListImagesResponse",
+    } as unknown as ListImagesResponse);
+
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("scratch")).toBeInTheDocument();
+    });
+
+    // scratch is tagged with zero containers → Unused 1 (#200); the tagless
+    // fixture image (unknown usage) stays the only Dangling entry.
+    const unusedCard = screen.getByText("Unused").closest(".stat-card");
+    expect(unusedCard?.querySelector(".stat-value")?.textContent).toBe("1");
+    const danglingCard = screen.getByText("Dangling").closest(".stat-card");
+    expect(danglingCard?.querySelector(".stat-value")?.textContent).toBe("1");
   });
 
   it("gates the delete action to unused images", async () => {
@@ -490,7 +527,7 @@ describe("Administration Component", () => {
 
     render(<Administration />);
 
-    expect(screen.getAllByText("--")).toHaveLength(3);
+    expect(screen.getAllByText("--")).toHaveLength(5); // one per stat card
 
     resolveList({
       images: mockImages,

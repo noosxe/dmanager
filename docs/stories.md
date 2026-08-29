@@ -69,7 +69,7 @@ graph TD
     A61 --> A62["STORY-062: Administration Containers-Style Layout (#189) (DONE)"]
     A62 --> A63["STORY-063: Generic PageTabs & Settings Shell Refinement (#192) (DONE)"]
     A63 --> A64["STORY-064: Image Prune — Bulk Reclaim (#196) (DONE)"]
-    A64 --> A65["STORY-065: Images Unused & Dangling Stat Cards (#200)"]
+    A64 --> A65["STORY-065: Images Unused & Dangling Stat Cards (#200) (DONE)"]
 ```
 
 
@@ -1379,7 +1379,7 @@ graph TD
   - `pnpm check`, `pnpm test`, `pnpm build` pass.
   - Manual: with unused images present → confirm shows count/size, prune reclaims, toast shows daemon-reported bytes, stats/cards refresh; with none → button disabled.
 
-### STORY-065: Images Unused & Dangling Stat Cards (issue #200) [PLANNED]
+### STORY-065: Images Unused & Dangling Stat Cards (issue #200) [DONE]
 - **Scope:** Frontend only — two new summary cards on the Images tab
 - **Estimated Size:** Small (~60 LOC incl. tests)
 - **Dependencies:** STORY-056 (established the stat-card strip), STORY-064 (defined "unused" as the prune/delete scope)

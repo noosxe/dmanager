@@ -758,6 +758,8 @@ body {
 .stat-icon-wrapper.running { background: rgba(16, 185, 129, 0.1); color: #10b981; }
 .stat-icon-wrapper.stopped { background: rgba(107, 114, 128, 0.1); color: #6b7280; }
 .stat-icon-wrapper.updates { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+.stat-icon-wrapper.unused { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+.stat-icon-wrapper.dangling { background: rgba(107, 114, 128, 0.1); color: #6b7280; }
 
 .stat-info {
   display: flex;

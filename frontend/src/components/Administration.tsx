@@ -5,9 +5,11 @@ import {
   Layers,
   Loader2,
   Network as NetworkIcon,
+  PackageOpen,
   Recycle,
   RefreshCw,
   ShieldAlert,
+  TagX,
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
@@ -123,6 +125,24 @@ export function Administration() {
             <div className="stat-info">
               <span className="stat-value">{imageStats ? imageStats.imageCount : "--"}</span>
               <span className="stat-label">Images</span>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon-wrapper unused">
+              <PackageOpen size={20} />
+            </div>
+            <div className="stat-info">
+              <span className="stat-value">{imageStats ? imageStats.unusedCount : "--"}</span>
+              <span className="stat-label">Unused</span>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon-wrapper dangling">
+              <TagX size={20} />
+            </div>
+            <div className="stat-info">
+              <span className="stat-value">{imageStats ? imageStats.danglingCount : "--"}</span>
+              <span className="stat-label">Dangling</span>
             </div>
           </div>
         </div>
