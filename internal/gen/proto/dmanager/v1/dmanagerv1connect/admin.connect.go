@@ -44,6 +44,9 @@ const (
 	// AdminServiceDeleteImageProcedure is the fully-qualified name of the AdminService's DeleteImage
 	// RPC.
 	AdminServiceDeleteImageProcedure = "/dmanager.v1.AdminService/DeleteImage"
+	// AdminServicePruneImagesProcedure is the fully-qualified name of the AdminService's PruneImages
+	// RPC.
+	AdminServicePruneImagesProcedure = "/dmanager.v1.AdminService/PruneImages"
 	// AdminServiceCheckEngineProcedure is the fully-qualified name of the AdminService's CheckEngine
 	// RPC.
 	AdminServiceCheckEngineProcedure = "/dmanager.v1.AdminService/CheckEngine"
@@ -60,6 +63,10 @@ type AdminServiceClient interface {
 	// Delete an image from the host (Authenticated, admin role). The
 	// daemon refuses images referenced by any container regardless of force.
 	DeleteImage(context.Context, *connect.Request[v1.DeleteImageRequest]) (*connect.Response[v1.DeleteImageResponse], error)
+	// Prune all unused images from the host in one daemon call (Authenticated,
+	// admin role). The daemon refuses images referenced by any container
+	// unconditionally; with dangling_only it restricts to untagged images.
+	PruneImages(context.Context, *connect.Request[v1.PruneImagesRequest]) (*connect.Response[v1.PruneImagesResponse], error)
 	// Report whether the Docker Engine is reachable (Authenticated, any role).
 	// Daemon unreachability is a successful response with connected=false —
 	// the outage is the answer, not an RPC failure (design.md §10.2).
@@ -101,6 +108,12 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("DeleteImage")),
 			connect.WithClientOptions(opts...),
 		),
+		pruneImages: connect.NewClient[v1.PruneImagesRequest, v1.PruneImagesResponse](
+			httpClient,
+			baseURL+AdminServicePruneImagesProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("PruneImages")),
+			connect.WithClientOptions(opts...),
+		),
 		checkEngine: connect.NewClient[v1.CheckEngineRequest, v1.CheckEngineResponse](
 			httpClient,
 			baseURL+AdminServiceCheckEngineProcedure,
@@ -116,6 +129,7 @@ type adminServiceClient struct {
 	listVolumes  *connect.Client[v1.ListVolumesRequest, v1.ListVolumesResponse]
 	listNetworks *connect.Client[v1.ListNetworksRequest, v1.ListNetworksResponse]
 	deleteImage  *connect.Client[v1.DeleteImageRequest, v1.DeleteImageResponse]
+	pruneImages  *connect.Client[v1.PruneImagesRequest, v1.PruneImagesResponse]
 	checkEngine  *connect.Client[v1.CheckEngineRequest, v1.CheckEngineResponse]
 }
 
@@ -139,6 +153,11 @@ func (c *adminServiceClient) DeleteImage(ctx context.Context, req *connect.Reque
 	return c.deleteImage.CallUnary(ctx, req)
 }
 
+// PruneImages calls dmanager.v1.AdminService.PruneImages.
+func (c *adminServiceClient) PruneImages(ctx context.Context, req *connect.Request[v1.PruneImagesRequest]) (*connect.Response[v1.PruneImagesResponse], error) {
+	return c.pruneImages.CallUnary(ctx, req)
+}
+
 // CheckEngine calls dmanager.v1.AdminService.CheckEngine.
 func (c *adminServiceClient) CheckEngine(ctx context.Context, req *connect.Request[v1.CheckEngineRequest]) (*connect.Response[v1.CheckEngineResponse], error) {
 	return c.checkEngine.CallUnary(ctx, req)
@@ -155,6 +174,10 @@ type AdminServiceHandler interface {
 	// Delete an image from the host (Authenticated, admin role). The
 	// daemon refuses images referenced by any container regardless of force.
 	DeleteImage(context.Context, *connect.Request[v1.DeleteImageRequest]) (*connect.Response[v1.DeleteImageResponse], error)
+	// Prune all unused images from the host in one daemon call (Authenticated,
+	// admin role). The daemon refuses images referenced by any container
+	// unconditionally; with dangling_only it restricts to untagged images.
+	PruneImages(context.Context, *connect.Request[v1.PruneImagesRequest]) (*connect.Response[v1.PruneImagesResponse], error)
 	// Report whether the Docker Engine is reachable (Authenticated, any role).
 	// Daemon unreachability is a successful response with connected=false —
 	// the outage is the answer, not an RPC failure (design.md §10.2).
@@ -192,6 +215,12 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("DeleteImage")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServicePruneImagesHandler := connect.NewUnaryHandler(
+		AdminServicePruneImagesProcedure,
+		svc.PruneImages,
+		connect.WithSchema(adminServiceMethods.ByName("PruneImages")),
+		connect.WithHandlerOptions(opts...),
+	)
 	adminServiceCheckEngineHandler := connect.NewUnaryHandler(
 		AdminServiceCheckEngineProcedure,
 		svc.CheckEngine,
@@ -208,6 +237,8 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceListNetworksHandler.ServeHTTP(w, r)
 		case AdminServiceDeleteImageProcedure:
 			adminServiceDeleteImageHandler.ServeHTTP(w, r)
+		case AdminServicePruneImagesProcedure:
+			adminServicePruneImagesHandler.ServeHTTP(w, r)
 		case AdminServiceCheckEngineProcedure:
 			adminServiceCheckEngineHandler.ServeHTTP(w, r)
 		default:
@@ -233,6 +264,10 @@ func (UnimplementedAdminServiceHandler) ListNetworks(context.Context, *connect.R
 
 func (UnimplementedAdminServiceHandler) DeleteImage(context.Context, *connect.Request[v1.DeleteImageRequest]) (*connect.Response[v1.DeleteImageResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AdminService.DeleteImage is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) PruneImages(context.Context, *connect.Request[v1.PruneImagesRequest]) (*connect.Response[v1.PruneImagesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AdminService.PruneImages is not implemented"))
 }
 
 func (UnimplementedAdminServiceHandler) CheckEngine(context.Context, *connect.Request[v1.CheckEngineRequest]) (*connect.Response[v1.CheckEngineResponse], error) {

@@ -131,6 +131,38 @@ func (s *Service) DeleteImage(ctx context.Context, req *connect.Request[dmanager
 	return connect.NewResponse(&dmanagerv1.DeleteImageResponse{}), nil
 }
 
+// PruneImages deletes unused images from the Docker host in one daemon call
+// (design.md §9.8, #196). Unlike DeleteImage, the response carries the
+// daemon's per-image report and the bytes actually reclaimed; the client
+// still re-fetches ListImages for the authoritative inventory. With
+// dangling_only the daemon restricts to untagged (dangling) images; the
+// default prunes every image no container references — in-use protection is
+// enforced server-side regardless.
+func (s *Service) PruneImages(ctx context.Context, req *connect.Request[dmanagerv1.PruneImagesRequest]) (*connect.Response[dmanagerv1.PruneImagesResponse], error) {
+	filters := client.Filters{}
+	if req.Msg.DanglingOnly {
+		filters["dangling"] = map[string]bool{"true": true}
+	}
+
+	result, err := s.dockerClient.ImagePrune(ctx, client.ImagePruneOptions{Filters: filters})
+	if err != nil {
+		s.logger.Error("Failed to prune images", "dangling_only", req.Msg.DanglingOnly, "error", err)
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("failed to prune images: %w", err))
+	}
+
+	resp := &dmanagerv1.PruneImagesResponse{
+		SpaceReclaimed: result.Report.SpaceReclaimed,
+	}
+	for _, item := range result.Report.ImagesDeleted {
+		resp.ImagesDeleted = append(resp.ImagesDeleted, &dmanagerv1.PrunedImage{
+			Deleted:  item.Deleted,
+			Untagged: item.Untagged,
+		})
+	}
+
+	return connect.NewResponse(resp), nil
+}
+
 // CheckEngine reports whether the Docker Engine is reachable (design.md
 // §10.2). Unlike every other procedure, daemon unreachability is NOT a
 // Connect error here: the outage is the answer, so the RPC succeeds with

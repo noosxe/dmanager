@@ -8,12 +8,15 @@ import {
   Recycle,
   RefreshCw,
   ShieldAlert,
+  Trash2,
 } from "lucide-react";
+import { useState } from "react";
 
 import type { AdminResourceKind } from "../hooks/useAdminResources";
 import { useAdminResources } from "../hooks/useAdminResources";
 import { useAuth } from "../hooks/useAuth";
 import { deriveImageStats, formatBytes } from "./adminFormat";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { ImageTable } from "./ImageTable";
 import { NetworkTable } from "./NetworkTable";
 import { PageTabs, type PageTabItem } from "./PageTabs";
@@ -32,9 +35,14 @@ export function Administration() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
 
-  const { result, isLoading, error, refresh, deleteImage, deletingId } = useAdminResources(tab);
+  const { result, isLoading, error, refresh, deleteImage, deletingId, pruneImages, pruning } =
+    useAdminResources(tab);
 
   // Derived Images-tab summary (design.md §9.6); null on other tabs or
+
+  // The prune confirmation is armed by the actions-row button (#196); the
+  // dialog owns the busy lockout while the RPC is in flight.
+  const [pendingPrune, setPendingPrune] = useState(false);
   // while no successful images result exists yet (-- placeholders).
   const imageStats = result?.kind === "images" ? deriveImageStats(result.data) : null;
 
@@ -120,6 +128,26 @@ export function Administration() {
         </div>
       )}
 
+      {tab === "images" && (
+        <div className="images-prune-row">
+          <button
+            type="button"
+            className="prune-btn"
+            disabled={pruning || !isAdmin || !imageStats || imageStats.freeableBytes === 0n}
+            title={
+              !isAdmin
+                ? "Admin role required"
+                : imageStats && imageStats.freeableBytes === 0n
+                  ? "No unused images to prune"
+                  : undefined
+            }
+            onClick={() => setPendingPrune(true)}
+          >
+            <Trash2 size={14} className={pruning ? "spinner" : ""} />
+            {pruning ? "Pruning…" : "Prune Unused Images"}
+          </button>
+        </div>
+      )}
       {error && (
         <div className="auth-error-banner">
           <ShieldAlert size={18} className="auth-error-icon" />
@@ -153,6 +181,19 @@ export function Administration() {
           {result?.kind === "networks" && <NetworkTable networks={result.data} />}
         </>
       )}
+      <ConfirmDialog
+        open={pendingPrune}
+        onClose={() => setPendingPrune(false)}
+        onConfirm={() => {
+          setPendingPrune(false);
+          void pruneImages();
+        }}
+        title="Prune unused images?"
+        message={`Deletes all ${imageStats?.unusedCount ?? 0} unused images, reclaiming ${imageStats ? formatBytes(imageStats.freeableBytes, true) : "0 B"}. Images in use are never touched.`}
+        confirmLabel="Prune"
+        variant="danger"
+        busy={pruning}
+      />
     </div>
   );
 }

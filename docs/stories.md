@@ -1357,7 +1357,7 @@ graph TD
   - `pnpm check`, `pnpm test`, `pnpm build` pass.
   - Visual: 24px rhythm below tabs on Administration (no doubled 48px); Settings header/tabs/panel spacing unchanged in effect.
 
-### STORY-064: Image Prune — Bulk Reclaim (issue #196) [PENDING]
+### STORY-064: Image Prune — Bulk Reclaim (issue #196) [DONE]
 - **Scope:** Backend + frontend — new mutating RPC (`PruneImages`) + Images tab bulk action UI
 - **Estimated Size:** Medium (~350 LOC incl. tests)
 - **Dependencies:** STORY-057 (delete flow established the mutating-RPC/ConfirmDialog/toast patterns), STORY-062/063 (layout shell + shared tabs)

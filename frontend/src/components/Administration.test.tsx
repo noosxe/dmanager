@@ -67,6 +67,7 @@ vi.mock("../client", () => ({
     listVolumes: vi.fn(),
     listNetworks: vi.fn(),
     deleteImage: vi.fn(),
+    pruneImages: vi.fn(),
   },
 }));
 
@@ -509,5 +510,99 @@ describe("Administration Component", () => {
     expect(volumesTab).toHaveClass("page-tab");
     expect(volumesTab).not.toHaveClass("active");
     expect(screen.getAllByText("Images")[0].closest("button")).toHaveClass("active");
+  });
+
+  it("keeps the prune button enabled for admins while unused images exist", async () => {
+    stubDeletableImages();
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("busybox")).toBeInTheDocument();
+    });
+    expect(screen.getByRole("button", { name: /prune unused images/i })).toBeEnabled();
+  });
+
+  it("disables the prune button with an explanatory title when nothing is reclaimable", async () => {
+    vi.mocked(adminClient.listImages).mockResolvedValue({
+      images: [mockImages[0]],
+      $typeName: "dmanager.v1.ListImagesResponse",
+    } as unknown as ListImagesResponse);
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("nginx")).toBeInTheDocument();
+    });
+    const button = screen.getByRole("button", { name: /prune unused images/i });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute("title", "No unused images to prune");
+  });
+
+  it("disables the prune button for viewer-role users", async () => {
+    stubDeletableImages();
+    mockUseAuth.mockReturnValue({ user: { username: "viewer", role: "viewer" } });
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("busybox")).toBeInTheDocument();
+    });
+    const button = screen.getByRole("button", { name: /prune unused images/i });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute("title", "Admin role required");
+  });
+
+  it("confirms the prune, reports the daemon-reclaimed bytes, and refreshes", async () => {
+    stubDeletableImages();
+    vi.mocked(adminClient.pruneImages).mockResolvedValue({
+      imagesDeleted: [{ deleted: "", untagged: "busybox:1.36" }],
+      spaceReclaimed: 4194304n,
+      $typeName: "dmanager.v1.PruneImagesResponse",
+    } as never);
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("busybox")).toBeInTheDocument();
+    });
+
+    // Arming opens a danger dialog stating the scope from the current listing.
+    fireEvent.click(screen.getByRole("button", { name: /prune unused images/i }));
+    expect(screen.getByRole("dialog")).toHaveAccessibleName("Prune unused images?");
+    expect(screen.getByRole("dialog")).toHaveAccessibleDescription(
+      "Deletes all 1 unused images, reclaiming 4.2 MB. Images in use are never touched.",
+    );
+    // Danger variant focuses Cancel — Enter never pre-arms the destructive action.
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Cancel" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Prune" }));
+    await waitFor(() => {
+      expect(adminClient.pruneImages).toHaveBeenCalledTimes(1);
+    });
+    expect(vi.mocked(adminClient.pruneImages).mock.calls[0][0]).toEqual({ danglingOnly: false });
+    await waitFor(() => {
+      expect(mockToast.success).toHaveBeenCalledWith("Reclaimed 4.2 MB from 1 image.");
+    });
+    await waitFor(() => {
+      expect(adminClient.listImages).toHaveBeenCalledTimes(2);
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+  });
+
+  it("reports prune failures through the error toast without a refresh", async () => {
+    stubDeletableImages();
+    vi.mocked(adminClient.pruneImages).mockRejectedValue(new Error("daemon went away"));
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("busybox")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: /prune unused images/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Prune" }));
+
+    await waitFor(() => {
+      expect(mockToast.error).toHaveBeenCalledWith("Failed to prune images: daemon went away");
+    });
+    expect(adminClient.listImages).toHaveBeenCalledTimes(1);
+    expect(mockToast.success).not.toHaveBeenCalled();
   });
 });

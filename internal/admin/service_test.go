@@ -520,3 +520,92 @@ func TestCheckEngineDaemonDown(t *testing.T) {
 		t.Error("Error is empty, want the transport failure reason")
 	}
 }
+
+func TestPruneImages(t *testing.T) {
+	var gotMethod, gotFilters string
+	svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) {
+		if pingHandler(w, r) {
+			return
+		}
+		if !strings.HasSuffix(r.URL.Path, "/images/prune") {
+			http.NotFound(w, r)
+			return
+		}
+		gotMethod = r.Method
+		gotFilters = r.URL.Query().Get("filters")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"ImagesDeleted": [{"Untagged": "nginx:latest"}, {"Deleted": "sha256:bbb222333444"}], "SpaceReclaimed": 142600000}`))
+	})
+
+	resp, err := svc.PruneImages(context.Background(), connect.NewRequest(&v1.PruneImagesRequest{}))
+	if err != nil {
+		t.Fatalf("PruneImages failed: %v", err)
+	}
+	if resp == nil || resp.Msg == nil {
+		t.Fatal("expected non-nil response")
+	}
+	if gotMethod != http.MethodPost {
+		t.Errorf("expected POST request, got %s", gotMethod)
+	}
+	// Default scope: no dangling filter — the daemon prunes every unused image.
+	if gotFilters != "" {
+		t.Errorf("expected no filters for the default prune, got %q", gotFilters)
+	}
+	if len(resp.Msg.ImagesDeleted) != 2 {
+		t.Fatalf("expected 2 deleted entries, got %d", len(resp.Msg.ImagesDeleted))
+	}
+	if resp.Msg.ImagesDeleted[0].Untagged != "nginx:latest" || resp.Msg.ImagesDeleted[0].Deleted != "" {
+		t.Errorf("entry 0 mismatch: %+v", resp.Msg.ImagesDeleted[0])
+	}
+	if resp.Msg.ImagesDeleted[1].Deleted != "sha256:bbb222333444" || resp.Msg.ImagesDeleted[1].Untagged != "" {
+		t.Errorf("entry 1 mismatch: %+v", resp.Msg.ImagesDeleted[1])
+	}
+	if resp.Msg.SpaceReclaimed != 142600000 {
+		t.Errorf("expected space_reclaimed 142600000, got %d", resp.Msg.SpaceReclaimed)
+	}
+}
+
+func TestPruneImagesDanglingFilter(t *testing.T) {
+	var gotFilters string
+	svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) {
+		if pingHandler(w, r) {
+			return
+		}
+		gotFilters = r.URL.Query().Get("filters")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"ImagesDeleted": [], "SpaceReclaimed": 0}`))
+	})
+
+	if _, err := svc.PruneImages(context.Background(), connect.NewRequest(&v1.PruneImagesRequest{DanglingOnly: true})); err != nil {
+		t.Fatalf("PruneImages failed: %v", err)
+	}
+	if !strings.Contains(gotFilters, "dangling") {
+		t.Errorf("expected dangling filter in query, got %q", gotFilters)
+	}
+}
+
+func TestPruneImagesErrors(t *testing.T) {
+	svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) {
+		if pingHandler(w, r) {
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`{"message": "daemon unavailable"}`))
+	})
+
+	_, err := svc.PruneImages(context.Background(), connect.NewRequest(&v1.PruneImagesRequest{}))
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	connErr, ok := err.(*connect.Error)
+	if !ok {
+		t.Fatalf("expected *connect.Error, got %T", err)
+	}
+	if connErr.Code() != connect.CodeUnavailable {
+		t.Errorf("expected code %v, got %v", connect.CodeUnavailable, connErr.Code())
+	}
+	if !strings.Contains(connErr.Message(), "failed to prune images") {
+		t.Errorf("expected message to contain %q, got %q", "failed to prune images", connErr.Message())
+	}
+}
