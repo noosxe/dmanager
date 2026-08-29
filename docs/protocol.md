@@ -296,6 +296,13 @@ service AdminService {
   // role). The daemon removes only volumes not referenced by any container
   // — running or stopped — at prune time.
   rpc PruneVolumes(PruneVolumesRequest) returns (PruneVolumesResponse);
+  // Delete an unused network from the host (Authenticated, admin role). The
+  // daemon refuses in-use and pre-defined networks regardless of the request.
+  rpc DeleteNetwork(DeleteNetworkRequest) returns (DeleteNetworkResponse);
+  // Prune all unused networks from the host in one call (Authenticated, admin
+  // role). Pre-defined (bridge/host/none), swarm-ingress and in-use networks
+  // are daemon-protected.
+  rpc PruneNetworks(PruneNetworksRequest) returns (PruneNetworksResponse);
   // Report whether the Docker Engine is reachable (Authenticated, read-only).
   rpc CheckEngine(CheckEngineRequest) returns (CheckEngineResponse);
 }
@@ -338,6 +345,18 @@ message Network {
   string scope = 4;             // "local", "swarm", or "global"
   bool internal = 5;            // isolated from external routing
   google.protobuf.Timestamp created_at = 6;
+  int64 containers_count = 7;   // containers attached to this network; -1 when the per-network inspect failed
+  bool predefined = 8;          // daemon-owned (bridge/host/none); can never be deleted
+}
+
+message DeleteNetworkRequest {
+  string id = 1; // network ID exactly as returned by ListNetworks
+}
+message DeleteNetworkResponse {}
+message PruneNetworksRequest {}
+message PruneNetworksResponse {
+  uint64 networks_deleted = 1;   // count of removed networks (daemon-protected ones are absent)
+  repeated string names = 2;     // removed networks' names, for the success toast
 }
 message DeleteImageRequest {
   string id = 1;    // image ID (sha256:...) exactly as returned by ListImages
@@ -371,7 +390,7 @@ The three list procedures are unary, take empty requests, and are classified as 
 
 `PruneImages` (issue #196) is the bulk companion to `DeleteImage` and is likewise **authenticated, admin role**. It proxies the Docker Engine `POST /images/prune` API (`ImagePrune`), **always sending the `dangling` filter explicitly** — the daemon's absent-filter default is dangling-only, which silently narrowed the first shipped prune (STORY-064 follow-up): with `dangling_only` false (the default) the handler sends `dangling=false` and the daemon deletes **every image not referenced by any container** (`docker image prune -a` semantics); with it true, `dangling=true` restricts to untagged (dangling) images — the in-use protection is enforced server-side regardless. Unlike `DeleteImage` the response carries data: the per-image report (`images_deleted`, each entry `deleted` or `untagged` exactly as the daemon reports) and `space_reclaimed`, the bytes actually freed — the client renders the daemon's number rather than an estimate and still re-fetches `ListImages` afterwards. Prune has no not-found/conflict failure modes, so the only daemon-error mapping is `CodeUnavailable`.
 
-Volumes and networks remain read-only: no create, mutate, or prune procedures are defined for them in this phase. Images carry the mutation surface: per-image `DeleteImage` and bulk `PruneImages` (#196).
+Images carry the mutation surface since #196: per-image `DeleteImage` and bulk `PruneImages`. Volumes gained measurement and reclaim in #212 (`GetVolumeUsage`, `PruneVolumes`). Networks gain per-network deletion and bulk reclaim in #215 (`DeleteNetwork`, `PruneNetworks`); no network create or connect/disconnect procedures are defined.
 
 `GetBuildCacheStats` (issue #206) and `PruneBuildCache` (issue #206) expose builder-owned disk space — the BuildKit cache that holds the layer content image prunes cannot free — as a new **Builder** tab's data source. `GetBuildCacheStats` is **authenticated, any role** (the service's read convention); `PruneBuildCache` is **authenticated, admin role**.
 
@@ -388,6 +407,12 @@ Volumes and networks remain read-only: no create, mutate, or prune procedures ar
 `GetVolumeUsage` (issue #212) is **authenticated, any role** (read convention, `ListImages` precedent — a viewer may list volumes, so a viewer may measure them) and issues one `GET /system/df?type=volume` daemon call. The daemon walks every local volume's directory tree **serially and uncached** (singleflight only deduplicates concurrent calls) to compute sizes — a seconds-scale operation on hosts with large volumes — so the response must only ever be requested by an explicit user action, never by an automatic fetch. It maps to `VolumeUsage{name, size_bytes, ref_count}` per volume, where `size_bytes: -1` is the daemon's per-volume walk-failure signal (passed through verbatim; the client renders it as unknown) and `ref_count` counts container config references including stopped containers. Aggregate fields (`total_size_bytes`, `reclaimable_bytes` = sizes where `ref_count == 0`, `unused_count` = that set's cardinality) are computed server-side so clients never re-derive them. Only `local`-driver volumes without mount options appear, matching the daemon's df and prune scopes.
 
 `PruneVolumes` (issue #212) is **authenticated, admin role** and issues one `POST /volumes/prune` with no filters — the daemon's unused scope is fixed: a volume is removable only when **no container, running or stopped, references it at prune time** (local driver, no mount options; references are re-evaluated by the daemon, so a stale client preview can never cause a wrong deletion — protected volumes are simply absent from the report). The response maps the daemon report honestly: `volumes_deleted` (count), `names` (the removed volumes' names, for the success toast), and `space_reclaimed`. Daemon-down follows the `CodeUnavailable` convention.
+
+`ListNetworks` is enriched in issue #215 with per-network usage data. The daemon's list endpoint (`GET /networks`) carries **no attachment data on API ≥ 1.28** — the detailed mode that populates `Containers` is served only to legacy clients (`Detailed: versions.LessThan(ctx, "1.28")` in the daemon router) — so the handler issues one `NetworkInspect` per listed network after the cheap list call. Unlike volume sizing this is an **in-memory** libnetwork store read with no filesystem walk, so the enrichment stays well under the list round-trip's own cost and needs no opt-in gating. `containers_count` counts attachments from `Inspect.Containers` — a **stopped** container still counts, because its endpoint persists until the container is removed, matching the volume `ref_count` semantics. A per-network inspect failure degrades gracefully: that network's `containers_count` is `-1` (unknown, like the image usage convention) while the rest of the list still succeeds. `predefined` mirrors the daemon's `isPreDefined` (Linux: `bridge`, `host`, `none`) so clients can hide deletion affordances for networks the daemon will always refuse.
+
+`DeleteNetwork` (issue #215) is **authenticated, admin role** and proxies `DELETE /networks/{id}` (`NetworkRemove`). The daemon remains the gatekeeper: an in-use network fails with the `ActiveEndpointsError` "network has active endpoints" and a pre-defined one with "is a pre-defined network and cannot be removed" — both map to `CodeFailedPrecondition` with the daemon's message surfaced (the client hides the button for these rows, but a stale listing can never turn a refused delete into a wrong deletion). Not-found → `CodeNotFound`; daemon-down → `CodeUnavailable`. The empty response relies on the client re-fetching `ListNetworks` afterwards.
+
+`PruneNetworks` (issue #215) is **authenticated, admin role** and proxies `POST /networks/prune` with no filters — the daemon's scope is fixed: local-path prune skips config-only, non-pruneable (pre-defined) and `len(Endpoints()) > 0` networks; the cluster path additionally skips the `ingress` routing-mesh network, with all protection **re-evaluated at prune time**. The response maps `network.PruneReport` honestly: `networks_deleted` and `names` — and deliberately **no byte count**, because the daemon's network prune reports none (its prune event literally records `reclaimed: "0"`); success toasts name the removed networks instead. Daemon-down follows the `CodeUnavailable` convention.
 
 `CheckEngine` is classified as **authenticated, any role** (same policy as the list procedures) and proxies the daemon `GET /_ping` (moby `client.Ping`). Its semantics intentionally deviate from the daemon-error convention: when the daemon is unreachable the procedure **succeeds** with `connected: false` and a short `error` reason — the daemon outage *is* the answer, not an RPC failure. It only fails with a Connect error for request/auth/transport problems (backend itself down), which is exactly the distinction the sidebar status pill needs (issue #180). The handler wraps the ping in a short (~5 s) context timeout so a hung socket cannot accumulate goroutines under polling.
 
