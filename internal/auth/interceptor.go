@@ -132,6 +132,8 @@ var procedureRoles = map[string]ProcedureRole{
 	dmanagerv1connect.AdminServicePruneBuildCacheProcedure:            RoleAdmin,
 	dmanagerv1connect.AdminServicePruneBuildCacheRecordProcedure:      RoleAdmin,
 	dmanagerv1connect.AdminServicePruneVolumesProcedure:               RoleAdmin,
+	dmanagerv1connect.AdminServiceDeleteNetworkProcedure:              RoleAdmin,
+	dmanagerv1connect.AdminServicePruneNetworksProcedure:              RoleAdmin,
 	dmanagerv1connect.ContainerServiceStopContainerProcedure:          RoleAdmin,
 	dmanagerv1connect.ContainerServiceUpgradeContainerProcedure:       RoleAdmin,
 	dmanagerv1connect.ContainerServiceSetContainerAutoUpdateProcedure: RoleAdmin,

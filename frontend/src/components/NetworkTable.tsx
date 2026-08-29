@@ -6,18 +6,142 @@ import {
   type SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { Network as NetworkIcon } from "lucide-react";
-import { useState } from "react";
+import { Network as NetworkIcon, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
 
 import type { Network } from "../gen/proto/dmanager/v1/admin_pb";
 import { formatShortId, formatTimestamp, isDefaultNetwork } from "./adminFormat";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { SortButton } from "./SortButton";
 
 interface NetworkTableProps {
   networks: Network[];
+
+  // Delete affordances are admin-gated (§9.12, #215); viewer rows render an
+  // em dash in the Actions column.
+  isAdmin: boolean;
+
+  // Row currently being deleted (spinner on its button); null while idle.
+  deletingId: string | null;
+
+  onDelete: (id: string) => void | Promise<void>;
 }
 
-const columns: ColumnDef<Network>[] = [
+export function NetworkTable({ networks, isAdmin, deletingId, onDelete }: NetworkTableProps) {
+  // The network awaiting confirmation in the dialog; null while closed.
+  const [pendingDelete, setPendingDelete] = useState<Network | null>(null);
+
+  // Dispatches through the deleting hook (toasts + refresh) and closes the
+  // dialog once the outcome settles — the error toast is the failure path's
+  // feedback, so the dialog does not linger.
+  const handleConfirm = async () => {
+    if (pendingDelete === null) {
+      return;
+    }
+    const id = pendingDelete.id;
+    await onDelete(id);
+    setPendingDelete(null);
+  };
+
+  const columns = useMemo<ColumnDef<Network>[]>(() => {
+    const actionsColumn: ColumnDef<Network> = {
+      id: "actions",
+      header: "Actions",
+      enableSorting: false,
+      cell: ({ row }) => {
+        const network = row.original;
+        // Only unused (zero attachments), non-predefined networks are
+        // deletable; in-use, pre-defined and unknown-count (-1) rows render
+        // an em dash — the daemon would refuse all of them anyway.
+        if (!isAdmin || network.containersCount !== 0n || network.predefined) {
+          return <span className="table-cell-date">—</span>;
+        }
+        const deleting = deletingId === network.id;
+        return (
+          <button
+            type="button"
+            className="card-action-btn"
+            disabled={!isAdmin || deletingId !== null}
+            onClick={() => setPendingDelete(network)}
+            title="Delete network"
+          >
+            <Trash2 size={16} className={deleting ? "spinner" : undefined} />
+          </button>
+        );
+      },
+    };
+    return [...staticColumns, actionsColumn];
+  }, [isAdmin, deletingId]);
+
+  // Name asc — a network inventory is scanned by name, not by size.
+  const [sorting, setSorting] = useState<SortingState>([{ id: "name", desc: false }]);
+
+  const table = useReactTable({
+    data: networks,
+    columns,
+    state: {
+      sorting,
+    },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  });
+
+  return (
+    <div className="container-table-wrapper">
+      <table className="container-table">
+        <thead>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <tr key={headerGroup.id}>
+              {headerGroup.headers.map((header) => (
+                <th key={header.id}>
+                  {header.isPlaceholder
+                    ? null
+                    : flexRender(header.column.columnDef.header, header.getContext())}
+                </th>
+              ))}
+            </tr>
+          ))}
+        </thead>
+        <tbody>
+          {table.getRowModel().rows.map((row) => (
+            <tr key={row.id} className="container-table-row">
+              {row.getVisibleCells().map((cell) => (
+                <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {networks.length === 0 && (
+        <div
+          className="empty-state-card"
+          style={{ borderTop: "none", borderTopLeftRadius: 0, borderTopRightRadius: 0 }}
+        >
+          <NetworkIcon size={32} className="empty-state-icon" />
+          <h3>No Networks Found</h3>
+          <p>No Docker networks present on the host system.</p>
+        </div>
+      )}
+
+      {pendingDelete !== null && (
+        <ConfirmDialog
+          open
+          onClose={() => setPendingDelete(null)}
+          onConfirm={handleConfirm}
+          title="Delete network?"
+          message={`Network ${pendingDelete.name} (${pendingDelete.driver}) will be permanently removed from the host. This cannot be undone.`}
+          confirmLabel="Delete"
+          variant="danger"
+          busy={deletingId === pendingDelete.id}
+        />
+      )}
+    </div>
+  );
+}
+
+const staticColumns: ColumnDef<Network>[] = [
   {
     id: "name",
     accessorKey: "name",
@@ -85,6 +209,28 @@ const columns: ColumnDef<Network>[] = [
     ),
   },
   {
+    // Attachment count from the per-network inspect enrichment (§9.12, #215).
+    // A stopped container still counts — its endpoint persists until removal.
+    // -1 = inspect failure, rendered unknown.
+    id: "inUse",
+    accessorKey: "containersCount",
+    header: ({ column }) => <SortButton column={column} label="In Use" />,
+    cell: ({ row }) => {
+      const count = row.original.containersCount;
+      if (count < 0n) {
+        return <span className="table-cell-date">—</span>;
+      }
+      return (
+        <span
+          className={`status-badge ${count > 0n ? "running" : "stopped"}`}
+          title={count === 1n ? "1 attached container" : `${count} attached containers`}
+        >
+          {count > 0n ? "Yes" : "No"}
+        </span>
+      );
+    },
+  },
+  {
     id: "createdAt",
     accessorKey: "createdAt",
     header: ({ column }) => <SortButton column={column} label="Created" />,
@@ -95,59 +241,3 @@ const columns: ColumnDef<Network>[] = [
     ),
   },
 ];
-
-// Read-only network inventory table. No actions column by design.
-export function NetworkTable({ networks }: NetworkTableProps) {
-  const [sorting, setSorting] = useState<SortingState>([{ id: "name", desc: false }]);
-
-  const table = useReactTable({
-    data: networks,
-    columns,
-    state: {
-      sorting,
-    },
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  });
-
-  return (
-    <div className="container-table-wrapper">
-      <table className="container-table">
-        <thead>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <th key={header.id}>
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(header.column.columnDef.header, header.getContext())}
-                </th>
-              ))}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {table.getRowModel().rows.map((row) => (
-            <tr key={row.id} className="container-table-row">
-              {row.getVisibleCells().map((cell) => (
-                <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {networks.length === 0 && (
-        <div
-          className="empty-state-card"
-          style={{ borderTop: "none", borderTopLeftRadius: 0, borderTopRightRadius: 0 }}
-        >
-          <NetworkIcon size={32} className="empty-state-icon" />
-          <h3>No Networks Found</h3>
-          <p>No Docker networks present on the host system.</p>
-        </div>
-      )}
-    </div>
-  );
-}

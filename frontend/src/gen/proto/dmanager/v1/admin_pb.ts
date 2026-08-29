@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file proto/dmanager/v1/admin.proto.
  */
 export const file_proto_dmanager_v1_admin: GenFile = /*@__PURE__*/
-  fileDesc("Ch1wcm90by9kbWFuYWdlci92MS9hZG1pbi5wcm90bxILZG1hbmFnZXIudjEiEwoRTGlzdEltYWdlc1JlcXVlc3QiOAoSTGlzdEltYWdlc1Jlc3BvbnNlEiIKBmltYWdlcxgBIAMoCzISLmRtYW5hZ2VyLnYxLkltYWdlImoKBUltYWdlEgoKAmlkGAEgASgJEhEKCXJlcG9fdGFncxgCIAMoCRIUCgxjcmVhdGVkX3VuaXgYAyABKAMSEgoKc2l6ZV9ieXRlcxgEIAEoAxIYChBjb250YWluZXJzX2NvdW50GAUgASgDIhQKEkxpc3RWb2x1bWVzUmVxdWVzdCI7ChNMaXN0Vm9sdW1lc1Jlc3BvbnNlEiQKB3ZvbHVtZXMYASADKAsyEy5kbWFuYWdlci52MS5Wb2x1bWUiygEKBlZvbHVtZRIMCgRuYW1lGAEgASgJEg4KBmRyaXZlchgCIAEoCRISCgptb3VudHBvaW50GAMgASgJEi4KCmNyZWF0ZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi8KBmxhYmVscxgFIAMoCzIfLmRtYW5hZ2VyLnYxLlZvbHVtZS5MYWJlbHNFbnRyeRotCgtMYWJlbHNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIhUKE0xpc3ROZXR3b3Jrc1JlcXVlc3QiPgoUTGlzdE5ldHdvcmtzUmVzcG9uc2USJgoIbmV0d29ya3MYASADKAsyFC5kbWFuYWdlci52MS5OZXR3b3JrIoQBCgdOZXR3b3JrEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSDgoGZHJpdmVyGAMgASgJEg0KBXNjb3BlGAQgASgJEhAKCGludGVybmFsGAUgASgIEi4KCmNyZWF0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIi8KEkRlbGV0ZUltYWdlUmVxdWVzdBIKCgJpZBgBIAEoCRINCgVmb3JjZRgCIAEoCCIVChNEZWxldGVJbWFnZVJlc3BvbnNlIisKElBydW5lSW1hZ2VzUmVxdWVzdBIVCg1kYW5nbGluZ19vbmx5GAEgASgIIjAKC1BydW5lZEltYWdlEg8KB2RlbGV0ZWQYASABKAkSEAoIdW50YWdnZWQYAiABKAkiYAoTUHJ1bmVJbWFnZXNSZXNwb25zZRIwCg5pbWFnZXNfZGVsZXRlZBgBIAMoCzIYLmRtYW5hZ2VyLnYxLlBydW5lZEltYWdlEhcKD3NwYWNlX3JlY2xhaW1lZBgCIAEoBCIbChlHZXRCdWlsZENhY2hlU3RhdHNSZXF1ZXN0IngKGkdldEJ1aWxkQ2FjaGVTdGF0c1Jlc3BvbnNlEhMKC3RvdGFsX2J5dGVzGAEgASgEEhkKEXJlY2xhaW1hYmxlX2J5dGVzGAIgASgEEhQKDHJlY29yZF9jb3VudBgDIAEoDRIUCgxhY3RpdmVfY291bnQYBCABKA0iJQoWUHJ1bmVCdWlsZENhY2hlUmVxdWVzdBILCgNhbGwYASABKAgiSgoXUHJ1bmVCdWlsZENhY2hlUmVzcG9uc2USFgoOY2FjaGVzX2RlbGV0ZWQYASABKA0SFwoPc3BhY2VfcmVjbGFpbWVkGAIgASgEIoICChBCdWlsZENhY2hlUmVjb3JkEgoKAmlkGAEgASgJEgwKBHR5cGUYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSEgoKc2l6ZV9ieXRlcxgEIAEoBBIOCgZpbl91c2UYBSABKAgSDgoGc2hhcmVkGAYgASgIEhMKC3VzYWdlX2NvdW50GAcgASgEEi4KCmNyZWF0ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjUKDGxhc3RfdXNlZF9hdBgJIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIAIgBAUIPCg1fbGFzdF91c2VkX2F0Ih4KHExpc3RCdWlsZENhY2hlUmVjb3Jkc1JlcXVlc3QiTwodTGlzdEJ1aWxkQ2FjaGVSZWNvcmRzUmVzcG9uc2USLgoHcmVjb3JkcxgBIAMoCzIdLmRtYW5hZ2VyLnYxLkJ1aWxkQ2FjaGVSZWNvcmQiKgocUHJ1bmVCdWlsZENhY2hlUmVjb3JkUmVxdWVzdBIKCgJpZBgBIAEoCSJQCh1QcnVuZUJ1aWxkQ2FjaGVSZWNvcmRSZXNwb25zZRIWCg5jYWNoZXNfZGVsZXRlZBgBIAEoDRIXCg9zcGFjZV9yZWNsYWltZWQYAiABKAQiFAoSQ2hlY2tFbmdpbmVSZXF1ZXN0IkwKE0NoZWNrRW5naW5lUmVzcG9uc2USEQoJY29ubmVjdGVkGAEgASgIEhMKC2FwaV92ZXJzaW9uGAIgASgJEg0KBWVycm9yGAMgASgJIhcKFUdldFZvbHVtZVVzYWdlUmVxdWVzdCJCCgtWb2x1bWVVc2FnZRIMCgRuYW1lGAEgASgJEhIKCnNpemVfYnl0ZXMYAiABKAMSEQoJcmVmX2NvdW50GAMgASgDIo4BChZHZXRWb2x1bWVVc2FnZVJlc3BvbnNlEikKB3ZvbHVtZXMYASADKAsyGC5kbWFuYWdlci52MS5Wb2x1bWVVc2FnZRIYChB0b3RhbF9zaXplX2J5dGVzGAIgASgDEhkKEXJlY2xhaW1hYmxlX2J5dGVzGAMgASgDEhQKDHVudXNlZF9jb3VudBgEIAEoDSIVChNQcnVuZVZvbHVtZXNSZXF1ZXN0IlcKFFBydW5lVm9sdW1lc1Jlc3BvbnNlEhcKD3ZvbHVtZXNfZGVsZXRlZBgBIAEoDRINCgVuYW1lcxgCIAMoCRIXCg9zcGFjZV9yZWNsYWltZWQYAyABKAQyzwgKDEFkbWluU2VydmljZRJNCgpMaXN0SW1hZ2VzEh4uZG1hbmFnZXIudjEuTGlzdEltYWdlc1JlcXVlc3QaHy5kbWFuYWdlci52MS5MaXN0SW1hZ2VzUmVzcG9uc2USUAoLTGlzdFZvbHVtZXMSHy5kbWFuYWdlci52MS5MaXN0Vm9sdW1lc1JlcXVlc3QaIC5kbWFuYWdlci52MS5MaXN0Vm9sdW1lc1Jlc3BvbnNlElkKDkdldFZvbHVtZVVzYWdlEiIuZG1hbmFnZXIudjEuR2V0Vm9sdW1lVXNhZ2VSZXF1ZXN0GiMuZG1hbmFnZXIudjEuR2V0Vm9sdW1lVXNhZ2VSZXNwb25zZRJTCgxMaXN0TmV0d29ya3MSIC5kbWFuYWdlci52MS5MaXN0TmV0d29ya3NSZXF1ZXN0GiEuZG1hbmFnZXIudjEuTGlzdE5ldHdvcmtzUmVzcG9uc2USUAoLRGVsZXRlSW1hZ2USHy5kbWFuYWdlci52MS5EZWxldGVJbWFnZVJlcXVlc3QaIC5kbWFuYWdlci52MS5EZWxldGVJbWFnZVJlc3BvbnNlElAKC1BydW5lSW1hZ2VzEh8uZG1hbmFnZXIudjEuUHJ1bmVJbWFnZXNSZXF1ZXN0GiAuZG1hbmFnZXIudjEuUHJ1bmVJbWFnZXNSZXNwb25zZRJTCgxQcnVuZVZvbHVtZXMSIC5kbWFuYWdlci52MS5QcnVuZVZvbHVtZXNSZXF1ZXN0GiEuZG1hbmFnZXIudjEuUHJ1bmVWb2x1bWVzUmVzcG9uc2USZQoSR2V0QnVpbGRDYWNoZVN0YXRzEiYuZG1hbmFnZXIudjEuR2V0QnVpbGRDYWNoZVN0YXRzUmVxdWVzdBonLmRtYW5hZ2VyLnYxLkdldEJ1aWxkQ2FjaGVTdGF0c1Jlc3BvbnNlElwKD1BydW5lQnVpbGRDYWNoZRIjLmRtYW5hZ2VyLnYxLlBydW5lQnVpbGRDYWNoZVJlcXVlc3QaJC5kbWFuYWdlci52MS5QcnVuZUJ1aWxkQ2FjaGVSZXNwb25zZRJuChVMaXN0QnVpbGRDYWNoZVJlY29yZHMSKS5kbWFuYWdlci52MS5MaXN0QnVpbGRDYWNoZVJlY29yZHNSZXF1ZXN0GiouZG1hbmFnZXIudjEuTGlzdEJ1aWxkQ2FjaGVSZWNvcmRzUmVzcG9uc2USbgoVUHJ1bmVCdWlsZENhY2hlUmVjb3JkEikuZG1hbmFnZXIudjEuUHJ1bmVCdWlsZENhY2hlUmVjb3JkUmVxdWVzdBoqLmRtYW5hZ2VyLnYxLlBydW5lQnVpbGRDYWNoZVJlY29yZFJlc3BvbnNlElAKC0NoZWNrRW5naW5lEh8uZG1hbmFnZXIudjEuQ2hlY2tFbmdpbmVSZXF1ZXN0GiAuZG1hbmFnZXIudjEuQ2hlY2tFbmdpbmVSZXNwb25zZUI0WjJkbWFuYWdlci9pbnRlcm5hbC9nZW4vcHJvdG8vZG1hbmFnZXIvdjE7ZG1hbmFnZXJ2MWIGcHJvdG8z", [file_google_protobuf_timestamp]);
+  fileDesc("Ch1wcm90by9kbWFuYWdlci92MS9hZG1pbi5wcm90bxILZG1hbmFnZXIudjEiEwoRTGlzdEltYWdlc1JlcXVlc3QiOAoSTGlzdEltYWdlc1Jlc3BvbnNlEiIKBmltYWdlcxgBIAMoCzISLmRtYW5hZ2VyLnYxLkltYWdlImoKBUltYWdlEgoKAmlkGAEgASgJEhEKCXJlcG9fdGFncxgCIAMoCRIUCgxjcmVhdGVkX3VuaXgYAyABKAMSEgoKc2l6ZV9ieXRlcxgEIAEoAxIYChBjb250YWluZXJzX2NvdW50GAUgASgDIhQKEkxpc3RWb2x1bWVzUmVxdWVzdCI7ChNMaXN0Vm9sdW1lc1Jlc3BvbnNlEiQKB3ZvbHVtZXMYASADKAsyEy5kbWFuYWdlci52MS5Wb2x1bWUiygEKBlZvbHVtZRIMCgRuYW1lGAEgASgJEg4KBmRyaXZlchgCIAEoCRISCgptb3VudHBvaW50GAMgASgJEi4KCmNyZWF0ZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi8KBmxhYmVscxgFIAMoCzIfLmRtYW5hZ2VyLnYxLlZvbHVtZS5MYWJlbHNFbnRyeRotCgtMYWJlbHNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIhUKE0xpc3ROZXR3b3Jrc1JlcXVlc3QiPgoUTGlzdE5ldHdvcmtzUmVzcG9uc2USJgoIbmV0d29ya3MYASADKAsyFC5kbWFuYWdlci52MS5OZXR3b3JrIrIBCgdOZXR3b3JrEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSDgoGZHJpdmVyGAMgASgJEg0KBXNjb3BlGAQgASgJEhAKCGludGVybmFsGAUgASgIEi4KCmNyZWF0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhgKEGNvbnRhaW5lcnNfY291bnQYByABKAMSEgoKcHJlZGVmaW5lZBgIIAEoCCIiChREZWxldGVOZXR3b3JrUmVxdWVzdBIKCgJpZBgBIAEoCSIXChVEZWxldGVOZXR3b3JrUmVzcG9uc2UiFgoUUHJ1bmVOZXR3b3Jrc1JlcXVlc3QiQAoVUHJ1bmVOZXR3b3Jrc1Jlc3BvbnNlEhgKEG5ldHdvcmtzX2RlbGV0ZWQYASABKAQSDQoFbmFtZXMYAiADKAkiLwoSRGVsZXRlSW1hZ2VSZXF1ZXN0EgoKAmlkGAEgASgJEg0KBWZvcmNlGAIgASgIIhUKE0RlbGV0ZUltYWdlUmVzcG9uc2UiKwoSUHJ1bmVJbWFnZXNSZXF1ZXN0EhUKDWRhbmdsaW5nX29ubHkYASABKAgiMAoLUHJ1bmVkSW1hZ2USDwoHZGVsZXRlZBgBIAEoCRIQCgh1bnRhZ2dlZBgCIAEoCSJgChNQcnVuZUltYWdlc1Jlc3BvbnNlEjAKDmltYWdlc19kZWxldGVkGAEgAygLMhguZG1hbmFnZXIudjEuUHJ1bmVkSW1hZ2USFwoPc3BhY2VfcmVjbGFpbWVkGAIgASgEIhsKGUdldEJ1aWxkQ2FjaGVTdGF0c1JlcXVlc3QieAoaR2V0QnVpbGRDYWNoZVN0YXRzUmVzcG9uc2USEwoLdG90YWxfYnl0ZXMYASABKAQSGQoRcmVjbGFpbWFibGVfYnl0ZXMYAiABKAQSFAoMcmVjb3JkX2NvdW50GAMgASgNEhQKDGFjdGl2ZV9jb3VudBgEIAEoDSIlChZQcnVuZUJ1aWxkQ2FjaGVSZXF1ZXN0EgsKA2FsbBgBIAEoCCJKChdQcnVuZUJ1aWxkQ2FjaGVSZXNwb25zZRIWCg5jYWNoZXNfZGVsZXRlZBgBIAEoDRIXCg9zcGFjZV9yZWNsYWltZWQYAiABKAQiggIKEEJ1aWxkQ2FjaGVSZWNvcmQSCgoCaWQYASABKAkSDAoEdHlwZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRISCgpzaXplX2J5dGVzGAQgASgEEg4KBmluX3VzZRgFIAEoCBIOCgZzaGFyZWQYBiABKAgSEwoLdXNhZ2VfY291bnQYByABKAQSLgoKY3JlYXRlZF9hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASNQoMbGFzdF91c2VkX2F0GAkgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgAiAEBQg8KDV9sYXN0X3VzZWRfYXQiHgocTGlzdEJ1aWxkQ2FjaGVSZWNvcmRzUmVxdWVzdCJPCh1MaXN0QnVpbGRDYWNoZVJlY29yZHNSZXNwb25zZRIuCgdyZWNvcmRzGAEgAygLMh0uZG1hbmFnZXIudjEuQnVpbGRDYWNoZVJlY29yZCIqChxQcnVuZUJ1aWxkQ2FjaGVSZWNvcmRSZXF1ZXN0EgoKAmlkGAEgASgJIlAKHVBydW5lQnVpbGRDYWNoZVJlY29yZFJlc3BvbnNlEhYKDmNhY2hlc19kZWxldGVkGAEgASgNEhcKD3NwYWNlX3JlY2xhaW1lZBgCIAEoBCIUChJDaGVja0VuZ2luZVJlcXVlc3QiTAoTQ2hlY2tFbmdpbmVSZXNwb25zZRIRCgljb25uZWN0ZWQYASABKAgSEwoLYXBpX3ZlcnNpb24YAiABKAkSDQoFZXJyb3IYAyABKAkiFwoVR2V0Vm9sdW1lVXNhZ2VSZXF1ZXN0IkIKC1ZvbHVtZVVzYWdlEgwKBG5hbWUYASABKAkSEgoKc2l6ZV9ieXRlcxgCIAEoAxIRCglyZWZfY291bnQYAyABKAMijgEKFkdldFZvbHVtZVVzYWdlUmVzcG9uc2USKQoHdm9sdW1lcxgBIAMoCzIYLmRtYW5hZ2VyLnYxLlZvbHVtZVVzYWdlEhgKEHRvdGFsX3NpemVfYnl0ZXMYAiABKAMSGQoRcmVjbGFpbWFibGVfYnl0ZXMYAyABKAMSFAoMdW51c2VkX2NvdW50GAQgASgNIhUKE1BydW5lVm9sdW1lc1JlcXVlc3QiVwoUUHJ1bmVWb2x1bWVzUmVzcG9uc2USFwoPdm9sdW1lc19kZWxldGVkGAEgASgNEg0KBW5hbWVzGAIgAygJEhcKD3NwYWNlX3JlY2xhaW1lZBgDIAEoBDL/CQoMQWRtaW5TZXJ2aWNlEk0KCkxpc3RJbWFnZXMSHi5kbWFuYWdlci52MS5MaXN0SW1hZ2VzUmVxdWVzdBofLmRtYW5hZ2VyLnYxLkxpc3RJbWFnZXNSZXNwb25zZRJQCgtMaXN0Vm9sdW1lcxIfLmRtYW5hZ2VyLnYxLkxpc3RWb2x1bWVzUmVxdWVzdBogLmRtYW5hZ2VyLnYxLkxpc3RWb2x1bWVzUmVzcG9uc2USWQoOR2V0Vm9sdW1lVXNhZ2USIi5kbWFuYWdlci52MS5HZXRWb2x1bWVVc2FnZVJlcXVlc3QaIy5kbWFuYWdlci52MS5HZXRWb2x1bWVVc2FnZVJlc3BvbnNlElMKDExpc3ROZXR3b3JrcxIgLmRtYW5hZ2VyLnYxLkxpc3ROZXR3b3Jrc1JlcXVlc3QaIS5kbWFuYWdlci52MS5MaXN0TmV0d29ya3NSZXNwb25zZRJQCgtEZWxldGVJbWFnZRIfLmRtYW5hZ2VyLnYxLkRlbGV0ZUltYWdlUmVxdWVzdBogLmRtYW5hZ2VyLnYxLkRlbGV0ZUltYWdlUmVzcG9uc2USUAoLUHJ1bmVJbWFnZXMSHy5kbWFuYWdlci52MS5QcnVuZUltYWdlc1JlcXVlc3QaIC5kbWFuYWdlci52MS5QcnVuZUltYWdlc1Jlc3BvbnNlElMKDFBydW5lVm9sdW1lcxIgLmRtYW5hZ2VyLnYxLlBydW5lVm9sdW1lc1JlcXVlc3QaIS5kbWFuYWdlci52MS5QcnVuZVZvbHVtZXNSZXNwb25zZRJWCg1EZWxldGVOZXR3b3JrEiEuZG1hbmFnZXIudjEuRGVsZXRlTmV0d29ya1JlcXVlc3QaIi5kbWFuYWdlci52MS5EZWxldGVOZXR3b3JrUmVzcG9uc2USVgoNUHJ1bmVOZXR3b3JrcxIhLmRtYW5hZ2VyLnYxLlBydW5lTmV0d29ya3NSZXF1ZXN0GiIuZG1hbmFnZXIudjEuUHJ1bmVOZXR3b3Jrc1Jlc3BvbnNlEmUKEkdldEJ1aWxkQ2FjaGVTdGF0cxImLmRtYW5hZ2VyLnYxLkdldEJ1aWxkQ2FjaGVTdGF0c1JlcXVlc3QaJy5kbWFuYWdlci52MS5HZXRCdWlsZENhY2hlU3RhdHNSZXNwb25zZRJcCg9QcnVuZUJ1aWxkQ2FjaGUSIy5kbWFuYWdlci52MS5QcnVuZUJ1aWxkQ2FjaGVSZXF1ZXN0GiQuZG1hbmFnZXIudjEuUHJ1bmVCdWlsZENhY2hlUmVzcG9uc2USbgoVTGlzdEJ1aWxkQ2FjaGVSZWNvcmRzEikuZG1hbmFnZXIudjEuTGlzdEJ1aWxkQ2FjaGVSZWNvcmRzUmVxdWVzdBoqLmRtYW5hZ2VyLnYxLkxpc3RCdWlsZENhY2hlUmVjb3Jkc1Jlc3BvbnNlEm4KFVBydW5lQnVpbGRDYWNoZVJlY29yZBIpLmRtYW5hZ2VyLnYxLlBydW5lQnVpbGRDYWNoZVJlY29yZFJlcXVlc3QaKi5kbWFuYWdlci52MS5QcnVuZUJ1aWxkQ2FjaGVSZWNvcmRSZXNwb25zZRJQCgtDaGVja0VuZ2luZRIfLmRtYW5hZ2VyLnYxLkNoZWNrRW5naW5lUmVxdWVzdBogLmRtYW5hZ2VyLnYxLkNoZWNrRW5naW5lUmVzcG9uc2VCNFoyZG1hbmFnZXIvaW50ZXJuYWwvZ2VuL3Byb3RvL2RtYW5hZ2VyL3YxO2RtYW5hZ2VydjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message dmanager.v1.ListImagesRequest
@@ -238,6 +238,26 @@ export type Network = Message<"dmanager.v1.Network"> & {
    * @generated from field: google.protobuf.Timestamp created_at = 6;
    */
   createdAt?: Timestamp | undefined;
+
+  /**
+   * Number of containers attached to this network. Populated via one
+   * per-network inspect (the list endpoint carries no attachment data on
+   * API >= 1.28); a stopped container still counts — its endpoint persists
+   * until the container is removed. -1 when the per-network inspect failed
+   * (usage unknown; the rest of the list is unaffected).
+   *
+   * @generated from field: int64 containers_count = 7;
+   */
+  containersCount: bigint;
+
+  /**
+   * True when the daemon owns this network (bridge, host, none on Linux):
+   * deletion is always refused with "is a pre-defined network", so clients
+   * hide delete affordances.
+   *
+   * @generated from field: bool predefined = 8;
+   */
+  predefined: boolean;
 };
 
 /**
@@ -246,6 +266,78 @@ export type Network = Message<"dmanager.v1.Network"> & {
  */
 export const NetworkSchema: GenMessage<Network> = /*@__PURE__*/
   messageDesc(file_proto_dmanager_v1_admin, 8);
+
+/**
+ * @generated from message dmanager.v1.DeleteNetworkRequest
+ */
+export type DeleteNetworkRequest = Message<"dmanager.v1.DeleteNetworkRequest"> & {
+  /**
+   * Network ID exactly as returned by ListNetworks.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+};
+
+/**
+ * Describes the message dmanager.v1.DeleteNetworkRequest.
+ * Use `create(DeleteNetworkRequestSchema)` to create a new message.
+ */
+export const DeleteNetworkRequestSchema: GenMessage<DeleteNetworkRequest> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_admin, 9);
+
+/**
+ * @generated from message dmanager.v1.DeleteNetworkResponse
+ */
+export type DeleteNetworkResponse = Message<"dmanager.v1.DeleteNetworkResponse"> & {
+};
+
+/**
+ * Describes the message dmanager.v1.DeleteNetworkResponse.
+ * Use `create(DeleteNetworkResponseSchema)` to create a new message.
+ */
+export const DeleteNetworkResponseSchema: GenMessage<DeleteNetworkResponse> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_admin, 10);
+
+/**
+ * @generated from message dmanager.v1.PruneNetworksRequest
+ */
+export type PruneNetworksRequest = Message<"dmanager.v1.PruneNetworksRequest"> & {
+};
+
+/**
+ * Describes the message dmanager.v1.PruneNetworksRequest.
+ * Use `create(PruneNetworksRequestSchema)` to create a new message.
+ */
+export const PruneNetworksRequestSchema: GenMessage<PruneNetworksRequest> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_admin, 11);
+
+/**
+ * @generated from message dmanager.v1.PruneNetworksResponse
+ */
+export type PruneNetworksResponse = Message<"dmanager.v1.PruneNetworksResponse"> & {
+  /**
+   * Count of networks the daemon actually removed; daemon-protected ones
+   * are simply absent (protection re-evaluated at prune time).
+   *
+   * @generated from field: uint64 networks_deleted = 1;
+   */
+  networksDeleted: bigint;
+
+  /**
+   * Removed networks' names, for the success toast.
+   *
+   * @generated from field: repeated string names = 2;
+   */
+  names: string[];
+};
+
+/**
+ * Describes the message dmanager.v1.PruneNetworksResponse.
+ * Use `create(PruneNetworksResponseSchema)` to create a new message.
+ */
+export const PruneNetworksResponseSchema: GenMessage<PruneNetworksResponse> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_admin, 12);
 
 /**
  * @generated from message dmanager.v1.DeleteImageRequest
@@ -272,7 +364,7 @@ export type DeleteImageRequest = Message<"dmanager.v1.DeleteImageRequest"> & {
  * Use `create(DeleteImageRequestSchema)` to create a new message.
  */
 export const DeleteImageRequestSchema: GenMessage<DeleteImageRequest> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 9);
+  messageDesc(file_proto_dmanager_v1_admin, 13);
 
 /**
  * @generated from message dmanager.v1.DeleteImageResponse
@@ -285,7 +377,7 @@ export type DeleteImageResponse = Message<"dmanager.v1.DeleteImageResponse"> & {
  * Use `create(DeleteImageResponseSchema)` to create a new message.
  */
 export const DeleteImageResponseSchema: GenMessage<DeleteImageResponse> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 10);
+  messageDesc(file_proto_dmanager_v1_admin, 14);
 
 /**
  * @generated from message dmanager.v1.PruneImagesRequest
@@ -305,7 +397,7 @@ export type PruneImagesRequest = Message<"dmanager.v1.PruneImagesRequest"> & {
  * Use `create(PruneImagesRequestSchema)` to create a new message.
  */
 export const PruneImagesRequestSchema: GenMessage<PruneImagesRequest> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 11);
+  messageDesc(file_proto_dmanager_v1_admin, 15);
 
 /**
  * @generated from message dmanager.v1.PrunedImage
@@ -331,7 +423,7 @@ export type PrunedImage = Message<"dmanager.v1.PrunedImage"> & {
  * Use `create(PrunedImageSchema)` to create a new message.
  */
 export const PrunedImageSchema: GenMessage<PrunedImage> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 12);
+  messageDesc(file_proto_dmanager_v1_admin, 16);
 
 /**
  * @generated from message dmanager.v1.PruneImagesResponse
@@ -357,7 +449,7 @@ export type PruneImagesResponse = Message<"dmanager.v1.PruneImagesResponse"> & {
  * Use `create(PruneImagesResponseSchema)` to create a new message.
  */
 export const PruneImagesResponseSchema: GenMessage<PruneImagesResponse> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 13);
+  messageDesc(file_proto_dmanager_v1_admin, 17);
 
 /**
  * @generated from message dmanager.v1.GetBuildCacheStatsRequest
@@ -370,7 +462,7 @@ export type GetBuildCacheStatsRequest = Message<"dmanager.v1.GetBuildCacheStatsR
  * Use `create(GetBuildCacheStatsRequestSchema)` to create a new message.
  */
 export const GetBuildCacheStatsRequestSchema: GenMessage<GetBuildCacheStatsRequest> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 14);
+  messageDesc(file_proto_dmanager_v1_admin, 18);
 
 /**
  * @generated from message dmanager.v1.GetBuildCacheStatsResponse
@@ -411,7 +503,7 @@ export type GetBuildCacheStatsResponse = Message<"dmanager.v1.GetBuildCacheStats
  * Use `create(GetBuildCacheStatsResponseSchema)` to create a new message.
  */
 export const GetBuildCacheStatsResponseSchema: GenMessage<GetBuildCacheStatsResponse> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 15);
+  messageDesc(file_proto_dmanager_v1_admin, 19);
 
 /**
  * @generated from message dmanager.v1.PruneBuildCacheRequest
@@ -431,7 +523,7 @@ export type PruneBuildCacheRequest = Message<"dmanager.v1.PruneBuildCacheRequest
  * Use `create(PruneBuildCacheRequestSchema)` to create a new message.
  */
 export const PruneBuildCacheRequestSchema: GenMessage<PruneBuildCacheRequest> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 16);
+  messageDesc(file_proto_dmanager_v1_admin, 20);
 
 /**
  * @generated from message dmanager.v1.PruneBuildCacheResponse
@@ -457,7 +549,7 @@ export type PruneBuildCacheResponse = Message<"dmanager.v1.PruneBuildCacheRespon
  * Use `create(PruneBuildCacheResponseSchema)` to create a new message.
  */
 export const PruneBuildCacheResponseSchema: GenMessage<PruneBuildCacheResponse> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 17);
+  messageDesc(file_proto_dmanager_v1_admin, 21);
 
 /**
  * A single BuildKit build cache record. Records are opaque content hashes
@@ -534,7 +626,7 @@ export type BuildCacheRecord = Message<"dmanager.v1.BuildCacheRecord"> & {
  * Use `create(BuildCacheRecordSchema)` to create a new message.
  */
 export const BuildCacheRecordSchema: GenMessage<BuildCacheRecord> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 18);
+  messageDesc(file_proto_dmanager_v1_admin, 22);
 
 /**
  * @generated from message dmanager.v1.ListBuildCacheRecordsRequest
@@ -547,7 +639,7 @@ export type ListBuildCacheRecordsRequest = Message<"dmanager.v1.ListBuildCacheRe
  * Use `create(ListBuildCacheRecordsRequestSchema)` to create a new message.
  */
 export const ListBuildCacheRecordsRequestSchema: GenMessage<ListBuildCacheRecordsRequest> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 19);
+  messageDesc(file_proto_dmanager_v1_admin, 23);
 
 /**
  * @generated from message dmanager.v1.ListBuildCacheRecordsResponse
@@ -566,7 +658,7 @@ export type ListBuildCacheRecordsResponse = Message<"dmanager.v1.ListBuildCacheR
  * Use `create(ListBuildCacheRecordsResponseSchema)` to create a new message.
  */
 export const ListBuildCacheRecordsResponseSchema: GenMessage<ListBuildCacheRecordsResponse> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 20);
+  messageDesc(file_proto_dmanager_v1_admin, 24);
 
 /**
  * @generated from message dmanager.v1.PruneBuildCacheRecordRequest
@@ -585,7 +677,7 @@ export type PruneBuildCacheRecordRequest = Message<"dmanager.v1.PruneBuildCacheR
  * Use `create(PruneBuildCacheRecordRequestSchema)` to create a new message.
  */
 export const PruneBuildCacheRecordRequestSchema: GenMessage<PruneBuildCacheRecordRequest> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 21);
+  messageDesc(file_proto_dmanager_v1_admin, 25);
 
 /**
  * @generated from message dmanager.v1.PruneBuildCacheRecordResponse
@@ -611,7 +703,7 @@ export type PruneBuildCacheRecordResponse = Message<"dmanager.v1.PruneBuildCache
  * Use `create(PruneBuildCacheRecordResponseSchema)` to create a new message.
  */
 export const PruneBuildCacheRecordResponseSchema: GenMessage<PruneBuildCacheRecordResponse> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 22);
+  messageDesc(file_proto_dmanager_v1_admin, 26);
 
 /**
  * @generated from message dmanager.v1.CheckEngineRequest
@@ -624,7 +716,7 @@ export type CheckEngineRequest = Message<"dmanager.v1.CheckEngineRequest"> & {
  * Use `create(CheckEngineRequestSchema)` to create a new message.
  */
 export const CheckEngineRequestSchema: GenMessage<CheckEngineRequest> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 23);
+  messageDesc(file_proto_dmanager_v1_admin, 27);
 
 /**
  * @generated from message dmanager.v1.CheckEngineResponse
@@ -657,7 +749,7 @@ export type CheckEngineResponse = Message<"dmanager.v1.CheckEngineResponse"> & {
  * Use `create(CheckEngineResponseSchema)` to create a new message.
  */
 export const CheckEngineResponseSchema: GenMessage<CheckEngineResponse> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 24);
+  messageDesc(file_proto_dmanager_v1_admin, 28);
 
 /**
  * @generated from message dmanager.v1.GetVolumeUsageRequest
@@ -670,7 +762,7 @@ export type GetVolumeUsageRequest = Message<"dmanager.v1.GetVolumeUsageRequest">
  * Use `create(GetVolumeUsageRequestSchema)` to create a new message.
  */
 export const GetVolumeUsageRequestSchema: GenMessage<GetVolumeUsageRequest> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 25);
+  messageDesc(file_proto_dmanager_v1_admin, 29);
 
 /**
  * @generated from message dmanager.v1.VolumeUsage
@@ -703,7 +795,7 @@ export type VolumeUsage = Message<"dmanager.v1.VolumeUsage"> & {
  * Use `create(VolumeUsageSchema)` to create a new message.
  */
 export const VolumeUsageSchema: GenMessage<VolumeUsage> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 26);
+  messageDesc(file_proto_dmanager_v1_admin, 30);
 
 /**
  * @generated from message dmanager.v1.GetVolumeUsageResponse
@@ -743,7 +835,7 @@ export type GetVolumeUsageResponse = Message<"dmanager.v1.GetVolumeUsageResponse
  * Use `create(GetVolumeUsageResponseSchema)` to create a new message.
  */
 export const GetVolumeUsageResponseSchema: GenMessage<GetVolumeUsageResponse> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 27);
+  messageDesc(file_proto_dmanager_v1_admin, 31);
 
 /**
  * @generated from message dmanager.v1.PruneVolumesRequest
@@ -756,7 +848,7 @@ export type PruneVolumesRequest = Message<"dmanager.v1.PruneVolumesRequest"> & {
  * Use `create(PruneVolumesRequestSchema)` to create a new message.
  */
 export const PruneVolumesRequestSchema: GenMessage<PruneVolumesRequest> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 28);
+  messageDesc(file_proto_dmanager_v1_admin, 32);
 
 /**
  * @generated from message dmanager.v1.PruneVolumesResponse
@@ -785,7 +877,7 @@ export type PruneVolumesResponse = Message<"dmanager.v1.PruneVolumesResponse"> &
  * Use `create(PruneVolumesResponseSchema)` to create a new message.
  */
 export const PruneVolumesResponseSchema: GenMessage<PruneVolumesResponse> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 29);
+  messageDesc(file_proto_dmanager_v1_admin, 33);
 
 /**
  * AdminService exposes Docker host resources (images, volumes, networks)
@@ -876,6 +968,34 @@ export const AdminService: GenService<{
     methodKind: "unary";
     input: typeof PruneVolumesRequestSchema;
     output: typeof PruneVolumesResponseSchema;
+  },
+  /**
+   * Delete a network from the host (Authenticated, admin role). The daemon
+   * refuses in-use networks ("has active endpoints") and pre-defined ones
+   * (bridge/host/none) regardless of the request — the client only hides
+   * the affordance; the daemon remains the gatekeeper.
+   *
+   * @generated from rpc dmanager.v1.AdminService.DeleteNetwork
+   */
+  deleteNetwork: {
+    methodKind: "unary";
+    input: typeof DeleteNetworkRequestSchema;
+    output: typeof DeleteNetworkResponseSchema;
+  },
+  /**
+   * Prune all unused networks from the host in one call (Authenticated,
+   * admin role). No filters: the daemon's scope is fixed — local-path prune
+   * skips config-only, non-pruneable (pre-defined) and endpoint-carrying
+   * networks; the cluster path additionally skips the swarm-ingress network;
+   * protection is re-evaluated at prune time. The report carries names only,
+   * no byte figures.
+   *
+   * @generated from rpc dmanager.v1.AdminService.PruneNetworks
+   */
+  pruneNetworks: {
+    methodKind: "unary";
+    input: typeof PruneNetworksRequestSchema;
+    output: typeof PruneNetworksResponseSchema;
   },
   /**
    * Report builder-owned disk space: the BuildKit build cache aggregates

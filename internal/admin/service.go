@@ -163,12 +163,26 @@ func (s *Service) ListNetworks(ctx context.Context, req *connect.Request[dmanage
 
 	networks := make([]*dmanagerv1.Network, len(result.Items))
 	for i, summary := range result.Items {
+		// Enrichment (design.md §9.12, #215): the list endpoint carries no
+		// attachment data on API >= 1.28, so usage comes from one inspect per
+		// network — an in-memory libnetwork read, no filesystem walk. A failing
+		// inspect degrades that row to -1 (unknown) instead of failing the list.
+		containersCount := int64(-1)
+		inspect, err := s.dockerClient.NetworkInspect(ctx, summary.ID, client.NetworkInspectOptions{})
+		if err != nil {
+			s.logger.Warn("Failed to inspect network; usage unknown", "network_id", summary.ID, "error", err)
+		} else {
+			containersCount = int64(len(inspect.Network.Containers))
+		}
+
 		networks[i] = &dmanagerv1.Network{
-			Id:       summary.ID,
-			Name:     summary.Name,
-			Driver:   summary.Driver,
-			Scope:    summary.Scope,
-			Internal: summary.Internal,
+			Id:              summary.ID,
+			Name:            summary.Name,
+			Driver:          summary.Driver,
+			Scope:           summary.Scope,
+			Internal:        summary.Internal,
+			ContainersCount: containersCount,
+			Predefined:      isPredefinedNetwork(summary.Name),
 			CreatedAt: func() *timestamppb.Timestamp {
 				if summary.Created.IsZero() {
 					return nil
@@ -179,6 +193,66 @@ func (s *Service) ListNetworks(ctx context.Context, req *connect.Request[dmanage
 	}
 
 	return connect.NewResponse(&dmanagerv1.ListNetworksResponse{Networks: networks}), nil
+}
+
+// isPredefinedNetwork mirrors the daemon's isPreDefined rule for Linux hosts
+// (daemon/network/network_mode_unix.go): these networks are daemon-owned and
+// NetworkRemove is always refused with "is a pre-defined network". Windows
+// hosts use a broader rule (everything not user-defined); dmanager targets
+// Linux daemons and the daemon remains the gatekeeper regardless.
+func isPredefinedNetwork(name string) bool {
+	switch name {
+	case "bridge", "host", "none":
+		return true
+	default:
+		return false
+	}
+}
+
+// DeleteNetwork removes a network from the Docker host. The empty response
+// is deliberate: clients re-fetch ListNetworks for the authoritative
+// inventory. The daemon refuses in-use networks ("has active endpoints",
+// 403) and pre-defined ones regardless of the request; the service maps
+// both to CodeFailedPrecondition with the daemon's message surfaced.
+func (s *Service) DeleteNetwork(ctx context.Context, req *connect.Request[dmanagerv1.DeleteNetworkRequest]) (*connect.Response[dmanagerv1.DeleteNetworkResponse], error) {
+	if req.Msg.Id == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("network ID is required"))
+	}
+
+	if _, err := s.dockerClient.NetworkRemove(ctx, req.Msg.Id, client.NetworkRemoveOptions{}); err != nil {
+		switch {
+		case cerrdefs.IsNotFound(err):
+			s.logger.Error("Failed to delete network: not found on Docker host", "network_id", req.Msg.Id, "error", err)
+			return nil, connect.NewError(connect.CodeNotFound, errors.New("network not found on Docker host"))
+		case cerrdefs.IsPermissionDenied(err):
+			s.logger.Error("Failed to delete network: in use or pre-defined", "network_id", req.Msg.Id, "error", err)
+			return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("network is in use or pre-defined: %w", err))
+		default:
+			s.logger.Error("Failed to delete network", "network_id", req.Msg.Id, "error", err)
+			return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("failed to delete network: %w", err))
+		}
+	}
+
+	return connect.NewResponse(&dmanagerv1.DeleteNetworkResponse{}), nil
+}
+
+// PruneNetworks removes unused networks from the Docker host in one daemon
+// call (design.md §9.12, #215). No filters: the daemon's scope is fixed —
+// config-only, non-pruneable (pre-defined) and endpoint-carrying networks
+// are skipped locally, swarm-ingress additionally on the cluster path, all
+// re-evaluated at prune time. The report carries names only — the daemon
+// reports no byte figures for network prunes — so none are mapped; the
+// client re-fetches ListNetworks for the authoritative inventory.
+func (s *Service) PruneNetworks(ctx context.Context, req *connect.Request[dmanagerv1.PruneNetworksRequest]) (*connect.Response[dmanagerv1.PruneNetworksResponse], error) {
+	result, err := s.dockerClient.NetworkPrune(ctx, client.NetworkPruneOptions{})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("failed to prune networks: %w", err))
+	}
+
+	return connect.NewResponse(&dmanagerv1.PruneNetworksResponse{
+		NetworksDeleted: uint64(len(result.Report.NetworksDeleted)),
+		Names:           result.Report.NetworksDeleted,
+	}), nil
 }
 
 // DeleteImage removes an image from the Docker host. The empty response is

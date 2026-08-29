@@ -13,6 +13,7 @@ import type {
   BuildCacheRecord,
   GetBuildCacheStatsResponse,
   GetVolumeUsageResponse,
+  PruneNetworksResponse,
 } from "../gen/proto/dmanager/v1/admin_pb";
 import { Administration } from "./Administration";
 
@@ -77,6 +78,8 @@ vi.mock("../client", () => ({
     pruneBuildCacheRecord: vi.fn(),
     getVolumeUsage: vi.fn(),
     pruneVolumes: vi.fn(),
+    deleteNetwork: vi.fn(),
+    pruneNetworks: vi.fn(),
   },
 }));
 
@@ -142,6 +145,8 @@ const mockNetworks: Network[] = [
     driver: "bridge",
     scope: "local",
     internal: false,
+    containersCount: 2n,
+    predefined: true,
     createdAt: { seconds: 1717171717n },
   } as unknown as Network,
   {
@@ -150,6 +155,18 @@ const mockNetworks: Network[] = [
     driver: "bridge",
     scope: "local",
     internal: true,
+    containersCount: 0n,
+    predefined: false,
+    createdAt: undefined,
+  } as unknown as Network,
+  {
+    id: "dead42beef421234567890abcdef1234567890abcdef1234567890abcdef12",
+    name: "flaky",
+    driver: "bridge",
+    scope: "local",
+    internal: false,
+    containersCount: -1n,
+    predefined: false,
     createdAt: undefined,
   } as unknown as Network,
 ];
@@ -251,9 +268,15 @@ describe("Administration Component", () => {
     expect(screen.getByText("system")).toBeInTheDocument();
     expect(screen.getByText("7d86d31b1478")).toBeInTheDocument();
 
-    // Internal flags.
-    expect(screen.getByText("No")).toBeInTheDocument();
-    expect(screen.getByText("Yes")).toBeInTheDocument();
+    expect(screen.getByText("Created")).toBeInTheDocument();
+    expect(screen.getByText("In Use")).toBeInTheDocument();
+    expect(screen.getByText("Actions")).toBeInTheDocument();
+
+    // Internal: No (bridge) + Yes (secure); In Use badges mirror that
+    // (bridge in use, secure unused; flaky is unknown -1, a dash).
+    expect(screen.getAllByText("No")).toHaveLength(3);
+    expect(screen.getAllByText("Yes")).toHaveLength(2);
+    expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(3);
   });
 
   it("shows an empty state when no images exist", async () => {
@@ -1176,5 +1199,121 @@ describe("Administration Component", () => {
       "Size has not been calculated yet — use Calculate Sizes for a preview. Deletes all unused volumes. A volume is unused only when no container — running or stopped — references it. This cannot be undone.",
     );
     expect(adminClient.pruneVolumes).not.toHaveBeenCalled();
+  });
+
+  it("gates network deletion to unused, non-predefined, admin rows", async () => {
+    useParamsMock.mockReturnValue({ tab: "networks" });
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("secure")).toBeInTheDocument();
+    });
+
+    // secure: unused + user-defined → armed delete button for the admin.
+    const rows = screen.getAllByRole("row");
+    const secureRow = rows.find((row) => row.textContent?.includes("secure"));
+    expect(secureRow).toBeDefined();
+    const secureDelete = within(secureRow as HTMLElement).getByRole("button", {
+      name: "Delete network",
+    });
+    expect(secureDelete).toBeEnabled();
+
+    // bridge: predefined (even though in use) → no button, only a dash.
+    const bridgeRow = rows.find((row) => row.textContent?.includes("bridge"));
+    expect(within(bridgeRow as HTMLElement).queryByRole("button")).toBeNull();
+
+    // flaky: unknown usage (-1) → conservative dash, no button.
+    const flakyRow = rows.find((row) => row.textContent?.includes("flaky"));
+    expect(within(flakyRow as HTMLElement).queryByRole("button")).toBeNull();
+  });
+
+  it("hides network delete buttons from viewer-role users", async () => {
+    useParamsMock.mockReturnValue({ tab: "networks" });
+    mockUseAuth.mockReturnValue({ user: { username: "viewer", role: "viewer" } });
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("secure")).toBeInTheDocument();
+    });
+
+    // Deletable row renders a dash for viewers, not a disabled button.
+    const rows = screen.getAllByRole("row");
+    const secureRow = rows.find((row) => row.textContent?.includes("secure"));
+    expect(within(secureRow as HTMLElement).queryByRole("button")).toBeNull();
+
+    // The bulk prune button is disabled with the conventional title.
+    const prune = screen.getByRole("button", { name: "Prune Unused" });
+    expect(prune).toBeDisabled();
+    expect(prune).toHaveAttribute("title", "Admin role required");
+  });
+
+  it("confirms a per-network delete through the dialog", async () => {
+    useParamsMock.mockReturnValue({ tab: "networks" });
+    vi.mocked(adminClient.deleteNetwork).mockResolvedValue({} as never);
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("secure")).toBeInTheDocument();
+    });
+
+    const rows = screen.getAllByRole("row");
+    const secureRow = rows.find((row) => row.textContent?.includes("secure"));
+    fireEvent.click(
+      within(secureRow as HTMLElement).getByRole("button", { name: "Delete network" }),
+    );
+
+    expect(screen.getByRole("dialog")).toHaveAccessibleName("Delete network?");
+    expect(screen.getByRole("dialog")).toHaveAccessibleDescription(
+      "Network secure (bridge) will be permanently removed from the host. This cannot be undone.",
+    );
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Cancel" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await waitFor(() => {
+      expect(adminClient.deleteNetwork).toHaveBeenCalledWith({
+        id: "abc123def4567890abcdef1234567890abcdef12345678",
+      });
+    });
+    await waitFor(() => {
+      expect(mockToast.success).toHaveBeenCalledWith("Network deleted successfully.");
+    });
+    await waitFor(() => {
+      expect(adminClient.listNetworks).toHaveBeenCalledTimes(2);
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+  });
+
+  it("prunes unused networks with the derived scope in the dialog", async () => {
+    useParamsMock.mockReturnValue({ tab: "networks" });
+    vi.mocked(adminClient.pruneNetworks).mockResolvedValue({
+      networksDeleted: 1n,
+      names: ["secure"],
+      $typeName: "dmanager.v1.PruneNetworksResponse",
+    } as unknown as PruneNetworksResponse);
+    render(<Administration />);
+
+    await waitFor(() => {
+      expect(screen.getByText("secure")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Prune Unused" }));
+    expect(screen.getByRole("dialog")).toHaveAccessibleName("Prune unused networks?");
+    expect(screen.getByRole("dialog")).toHaveAccessibleDescription(
+      "Deletes 1 unused network (secure). In-use, pre-defined and swarm-ingress networks are never touched. This cannot be undone.",
+    );
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Cancel" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Prune" }));
+    await waitFor(() => {
+      expect(adminClient.pruneNetworks).toHaveBeenCalledWith({});
+    });
+    await waitFor(() => {
+      expect(mockToast.success).toHaveBeenCalledWith("Deleted 1 unused network (secure).");
+    });
+    await waitFor(() => {
+      expect(adminClient.listNetworks).toHaveBeenCalledTimes(2);
+    });
   });
 });

@@ -53,6 +53,12 @@ const (
 	// AdminServicePruneVolumesProcedure is the fully-qualified name of the AdminService's PruneVolumes
 	// RPC.
 	AdminServicePruneVolumesProcedure = "/dmanager.v1.AdminService/PruneVolumes"
+	// AdminServiceDeleteNetworkProcedure is the fully-qualified name of the AdminService's
+	// DeleteNetwork RPC.
+	AdminServiceDeleteNetworkProcedure = "/dmanager.v1.AdminService/DeleteNetwork"
+	// AdminServicePruneNetworksProcedure is the fully-qualified name of the AdminService's
+	// PruneNetworks RPC.
+	AdminServicePruneNetworksProcedure = "/dmanager.v1.AdminService/PruneNetworks"
 	// AdminServiceGetBuildCacheStatsProcedure is the fully-qualified name of the AdminService's
 	// GetBuildCacheStats RPC.
 	AdminServiceGetBuildCacheStatsProcedure = "/dmanager.v1.AdminService/GetBuildCacheStats"
@@ -96,6 +102,18 @@ type AdminServiceClient interface {
 	// only volumes not referenced by any container — running or stopped — at
 	// prune time, re-evaluating references itself.
 	PruneVolumes(context.Context, *connect.Request[v1.PruneVolumesRequest]) (*connect.Response[v1.PruneVolumesResponse], error)
+	// Delete a network from the host (Authenticated, admin role). The daemon
+	// refuses in-use networks ("has active endpoints") and pre-defined ones
+	// (bridge/host/none) regardless of the request — the client only hides
+	// the affordance; the daemon remains the gatekeeper.
+	DeleteNetwork(context.Context, *connect.Request[v1.DeleteNetworkRequest]) (*connect.Response[v1.DeleteNetworkResponse], error)
+	// Prune all unused networks from the host in one call (Authenticated,
+	// admin role). No filters: the daemon's scope is fixed — local-path prune
+	// skips config-only, non-pruneable (pre-defined) and endpoint-carrying
+	// networks; the cluster path additionally skips the swarm-ingress network;
+	// protection is re-evaluated at prune time. The report carries names only,
+	// no byte figures.
+	PruneNetworks(context.Context, *connect.Request[v1.PruneNetworksRequest]) (*connect.Response[v1.PruneNetworksResponse], error)
 	// Report builder-owned disk space: the BuildKit build cache aggregates
 	// as supplied by the daemon (Authenticated, any role).
 	GetBuildCacheStats(context.Context, *connect.Request[v1.GetBuildCacheStatsRequest]) (*connect.Response[v1.GetBuildCacheStatsResponse], error)
@@ -169,6 +187,18 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("PruneVolumes")),
 			connect.WithClientOptions(opts...),
 		),
+		deleteNetwork: connect.NewClient[v1.DeleteNetworkRequest, v1.DeleteNetworkResponse](
+			httpClient,
+			baseURL+AdminServiceDeleteNetworkProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("DeleteNetwork")),
+			connect.WithClientOptions(opts...),
+		),
+		pruneNetworks: connect.NewClient[v1.PruneNetworksRequest, v1.PruneNetworksResponse](
+			httpClient,
+			baseURL+AdminServicePruneNetworksProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("PruneNetworks")),
+			connect.WithClientOptions(opts...),
+		),
 		getBuildCacheStats: connect.NewClient[v1.GetBuildCacheStatsRequest, v1.GetBuildCacheStatsResponse](
 			httpClient,
 			baseURL+AdminServiceGetBuildCacheStatsProcedure,
@@ -211,6 +241,8 @@ type adminServiceClient struct {
 	deleteImage           *connect.Client[v1.DeleteImageRequest, v1.DeleteImageResponse]
 	pruneImages           *connect.Client[v1.PruneImagesRequest, v1.PruneImagesResponse]
 	pruneVolumes          *connect.Client[v1.PruneVolumesRequest, v1.PruneVolumesResponse]
+	deleteNetwork         *connect.Client[v1.DeleteNetworkRequest, v1.DeleteNetworkResponse]
+	pruneNetworks         *connect.Client[v1.PruneNetworksRequest, v1.PruneNetworksResponse]
 	getBuildCacheStats    *connect.Client[v1.GetBuildCacheStatsRequest, v1.GetBuildCacheStatsResponse]
 	pruneBuildCache       *connect.Client[v1.PruneBuildCacheRequest, v1.PruneBuildCacheResponse]
 	listBuildCacheRecords *connect.Client[v1.ListBuildCacheRecordsRequest, v1.ListBuildCacheRecordsResponse]
@@ -251,6 +283,16 @@ func (c *adminServiceClient) PruneImages(ctx context.Context, req *connect.Reque
 // PruneVolumes calls dmanager.v1.AdminService.PruneVolumes.
 func (c *adminServiceClient) PruneVolumes(ctx context.Context, req *connect.Request[v1.PruneVolumesRequest]) (*connect.Response[v1.PruneVolumesResponse], error) {
 	return c.pruneVolumes.CallUnary(ctx, req)
+}
+
+// DeleteNetwork calls dmanager.v1.AdminService.DeleteNetwork.
+func (c *adminServiceClient) DeleteNetwork(ctx context.Context, req *connect.Request[v1.DeleteNetworkRequest]) (*connect.Response[v1.DeleteNetworkResponse], error) {
+	return c.deleteNetwork.CallUnary(ctx, req)
+}
+
+// PruneNetworks calls dmanager.v1.AdminService.PruneNetworks.
+func (c *adminServiceClient) PruneNetworks(ctx context.Context, req *connect.Request[v1.PruneNetworksRequest]) (*connect.Response[v1.PruneNetworksResponse], error) {
+	return c.pruneNetworks.CallUnary(ctx, req)
 }
 
 // GetBuildCacheStats calls dmanager.v1.AdminService.GetBuildCacheStats.
@@ -304,6 +346,18 @@ type AdminServiceHandler interface {
 	// only volumes not referenced by any container — running or stopped — at
 	// prune time, re-evaluating references itself.
 	PruneVolumes(context.Context, *connect.Request[v1.PruneVolumesRequest]) (*connect.Response[v1.PruneVolumesResponse], error)
+	// Delete a network from the host (Authenticated, admin role). The daemon
+	// refuses in-use networks ("has active endpoints") and pre-defined ones
+	// (bridge/host/none) regardless of the request — the client only hides
+	// the affordance; the daemon remains the gatekeeper.
+	DeleteNetwork(context.Context, *connect.Request[v1.DeleteNetworkRequest]) (*connect.Response[v1.DeleteNetworkResponse], error)
+	// Prune all unused networks from the host in one call (Authenticated,
+	// admin role). No filters: the daemon's scope is fixed — local-path prune
+	// skips config-only, non-pruneable (pre-defined) and endpoint-carrying
+	// networks; the cluster path additionally skips the swarm-ingress network;
+	// protection is re-evaluated at prune time. The report carries names only,
+	// no byte figures.
+	PruneNetworks(context.Context, *connect.Request[v1.PruneNetworksRequest]) (*connect.Response[v1.PruneNetworksResponse], error)
 	// Report builder-owned disk space: the BuildKit build cache aggregates
 	// as supplied by the daemon (Authenticated, any role).
 	GetBuildCacheStats(context.Context, *connect.Request[v1.GetBuildCacheStatsRequest]) (*connect.Response[v1.GetBuildCacheStatsResponse], error)
@@ -373,6 +427,18 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("PruneVolumes")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceDeleteNetworkHandler := connect.NewUnaryHandler(
+		AdminServiceDeleteNetworkProcedure,
+		svc.DeleteNetwork,
+		connect.WithSchema(adminServiceMethods.ByName("DeleteNetwork")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServicePruneNetworksHandler := connect.NewUnaryHandler(
+		AdminServicePruneNetworksProcedure,
+		svc.PruneNetworks,
+		connect.WithSchema(adminServiceMethods.ByName("PruneNetworks")),
+		connect.WithHandlerOptions(opts...),
+	)
 	adminServiceGetBuildCacheStatsHandler := connect.NewUnaryHandler(
 		AdminServiceGetBuildCacheStatsProcedure,
 		svc.GetBuildCacheStats,
@@ -419,6 +485,10 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServicePruneImagesHandler.ServeHTTP(w, r)
 		case AdminServicePruneVolumesProcedure:
 			adminServicePruneVolumesHandler.ServeHTTP(w, r)
+		case AdminServiceDeleteNetworkProcedure:
+			adminServiceDeleteNetworkHandler.ServeHTTP(w, r)
+		case AdminServicePruneNetworksProcedure:
+			adminServicePruneNetworksHandler.ServeHTTP(w, r)
 		case AdminServiceGetBuildCacheStatsProcedure:
 			adminServiceGetBuildCacheStatsHandler.ServeHTTP(w, r)
 		case AdminServicePruneBuildCacheProcedure:
@@ -464,6 +534,14 @@ func (UnimplementedAdminServiceHandler) PruneImages(context.Context, *connect.Re
 
 func (UnimplementedAdminServiceHandler) PruneVolumes(context.Context, *connect.Request[v1.PruneVolumesRequest]) (*connect.Response[v1.PruneVolumesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AdminService.PruneVolumes is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) DeleteNetwork(context.Context, *connect.Request[v1.DeleteNetworkRequest]) (*connect.Response[v1.DeleteNetworkResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AdminService.DeleteNetwork is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) PruneNetworks(context.Context, *connect.Request[v1.PruneNetworksRequest]) (*connect.Response[v1.PruneNetworksResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AdminService.PruneNetworks is not implemented"))
 }
 
 func (UnimplementedAdminServiceHandler) GetBuildCacheStats(context.Context, *connect.Request[v1.GetBuildCacheStatsRequest]) (*connect.Response[v1.GetBuildCacheStatsResponse], error) {

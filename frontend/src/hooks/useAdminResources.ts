@@ -37,9 +37,12 @@ export function useAdminResources(kind: AdminResourceKind) {
   const [error, setError] = useState<string | null>(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  // Independent slice (§9.10 precedent): a failing network deletion must
+  // not disable unrelated tables' spinners.
+  const [deletingNetworkId, setDeletingNetworkId] = useState<string | null>(null);
   const [pruning, setPruning] = useState(false);
   const [pruningScope, setPruningScope] = useState<
-    "unused" | "dangling" | "builder" | "volumes" | null
+    "unused" | "dangling" | "builder" | "volumes" | "networks" | null
   >(null);
   const [pruningRecordId, setPruningRecordId] = useState<string | null>(null);
   // Builder records are the Builder tab's drill-down slice (design.md §9.10):
@@ -318,6 +321,60 @@ export function useAdminResources(kind: AdminResourceKind) {
     }
   }, [pruning, refresh, toast, volumeUsage, measureVolumeUsage]);
 
+  // Deletes one network at a time (design.md §9.12, #215); mirrors the
+  // image-delete slice but independently gated. The button only arms on
+  // unused, non-predefined rows — the daemon re-checks both anyway.
+  const deleteNetwork = useCallback(
+    async (id: string) => {
+      if (deletingNetworkId !== null) {
+        return;
+      }
+      setDeletingNetworkId(id);
+      try {
+        await adminClient.deleteNetwork({ id });
+      } catch (err: unknown) {
+        console.error("Failed to delete network:", err);
+        const msg = err instanceof Error ? err.message : String(err);
+        toast.error(`Failed to delete network: ${msg}`);
+        return;
+      } finally {
+        setDeletingNetworkId(null);
+      }
+      toast.success("Network deleted successfully.");
+      refresh();
+    },
+    [deletingNetworkId, refresh, toast],
+  );
+
+  // Prunes all unused networks in one daemon call (design.md §9.12, #215).
+  // Joins the shared single-flight pruning guard with the "networks" scope.
+  // No byte figures exist for network prunes (the daemon's prune event
+  // records reclaimed: "0"), so the toast names the removals instead.
+  const pruneNetworks = useCallback(async () => {
+    if (pruning) {
+      return;
+    }
+    setPruning(true);
+    setPruningScope("networks");
+    try {
+      const resp = await adminClient.pruneNetworks({});
+      const count = resp.networksDeleted; // uint64 → bigint
+      const noun = count === 1n ? "network" : "networks";
+      const namesSuffix =
+        count > 0n && count <= 3n && resp.names.length > 0 ? ` (${resp.names.join(", ")})` : "";
+      toast.success(`Deleted ${count} unused ${noun}${namesSuffix}.`);
+    } catch (err: unknown) {
+      console.error("Failed to prune networks:", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Failed to prune networks: ${msg}`);
+      return;
+    } finally {
+      setPruning(false);
+      setPruningScope(null);
+    }
+    refresh();
+  }, [pruning, refresh, toast]);
+
   return {
     result,
     isLoading,
@@ -325,6 +382,8 @@ export function useAdminResources(kind: AdminResourceKind) {
     refresh,
     deleteImage,
     deletingId,
+    deleteNetwork,
+    deletingNetworkId,
     pruneImages,
     pruneBuildCache,
     pruneBuildCacheRecord,
@@ -338,5 +397,6 @@ export function useAdminResources(kind: AdminResourceKind) {
     measuring,
     measureVolumeUsage,
     pruneVolumes,
+    pruneNetworks,
   };
 }

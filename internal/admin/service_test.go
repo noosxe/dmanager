@@ -182,29 +182,51 @@ func TestListNetworks(t *testing.T) {
 		if pingHandler(w, r) {
 			return
 		}
-		if !strings.HasSuffix(r.URL.Path, "/networks") {
-			http.NotFound(w, r)
+		// List endpoint (no attachment data, matching API >= 1.28).
+		if strings.HasSuffix(r.URL.Path, "/networks") || strings.HasSuffix(r.URL.Path, "/networks/json") {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`[
+				{
+					"Name": "bridge",
+					"Id": "7d86d31b1478e7cca9ebed7e73aa0fdeec46c5ca29497431d3007d2d9e15ed99",
+					"Created": "2016-10-19T04:33:30.360899459Z",
+					"Scope": "local",
+					"Driver": "bridge",
+					"Internal": false
+				},
+				{
+					"Name": "secure",
+					"Id": "abc123",
+					"Created": "2024-01-02T03:04:05Z",
+					"Scope": "local",
+					"Driver": "bridge",
+					"Internal": true
+				},
+				{
+					"Name": "flaky",
+					"Id": "flk456",
+					"Created": "2024-02-03T04:05:06Z",
+					"Scope": "local",
+					"Driver": "bridge",
+					"Internal": false
+				}
+			]`))
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`[
-			{
-				"Name": "bridge",
-				"Id": "7d86d31b1478e7cca9ebed7e73aa0fdeec46c5ca29497431d3007d2d9e15ed99",
-				"Created": "2016-10-19T04:33:30.360899459Z",
-				"Scope": "local",
-				"Driver": "bridge",
-				"Internal": false
-			},
-			{
-				"Name": "secure",
-				"Id": "abc123",
-				"Created": "2024-01-02T03:04:05Z",
-				"Scope": "local",
-				"Driver": "bridge",
-				"Internal": true
-			}
-		]`))
+		// Per-network inspect enrichment. bridge carries two attachments
+		// (a stopped container still counts), app-net zero, flaky fails.
+		if strings.HasPrefix(r.URL.Path, "/networks/7d86d31b") || strings.Contains(r.URL.Path, "7d86d31b") {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"Name": "bridge", "Id": "7d86d31b1478e7cca9ebed7e73aa0fdeec46c5ca29497431d3007d2d9e15ed99", "Containers": {"c1": {"Name": "web", "IPv4Address": "172.17.0.2/16"}, "c2": {"Name": "db-stopped", "IPv4Address": "172.17.0.3/16"}}}`))
+			return
+		}
+		if strings.Contains(r.URL.Path, "abc123") {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"Name": "secure", "Id": "abc123", "Containers": {}}`))
+			return
+		}
+		// flk456 inspect intentionally 404s: containers_count degrades to -1.
+		http.NotFound(w, r)
 	})
 
 	resp, err := svc.ListNetworks(context.Background(), connect.NewRequest(&v1.ListNetworksRequest{}))
@@ -213,8 +235,8 @@ func TestListNetworks(t *testing.T) {
 	}
 
 	networks := resp.Msg.Networks
-	if len(networks) != 2 {
-		t.Fatalf("expected 2 networks, got %d", len(networks))
+	if len(networks) != 3 {
+		t.Fatalf("expected 3 networks, got %d", len(networks))
 	}
 
 	first := networks[0]
@@ -232,8 +254,32 @@ func TestListNetworks(t *testing.T) {
 		t.Errorf("expected created at %v, got %v", wantCreated, first.CreatedAt.AsTime())
 	}
 
-	if !networks[1].Internal {
+	// Enrichment (design.md §9.12, #215).
+	if first.ContainersCount != 2 {
+		t.Errorf("expected containers_count=2 for bridge (stopped container still attached), got %d", first.ContainersCount)
+	}
+	if !first.Predefined {
+		t.Error("expected predefined=true for bridge")
+	}
+
+	second := networks[1]
+	if !second.Internal {
 		t.Error("expected internal=true for secure network")
+	}
+	if second.ContainersCount != 0 {
+		t.Errorf("expected containers_count=0 for secure, got %d", second.ContainersCount)
+	}
+	if second.Predefined {
+		t.Error("expected predefined=false for user-defined network secure")
+	}
+
+	// Per-network inspect failure degrades the count, not the list.
+	third := networks[2]
+	if third.Name != "flaky" {
+		t.Fatalf("unexpected third network: %q", third.Name)
+	}
+	if third.ContainersCount != -1 {
+		t.Errorf("expected containers_count=-1 for failed inspect, got %d", third.ContainersCount)
 	}
 }
 
@@ -1181,5 +1227,185 @@ func TestPruneVolumesErrors(t *testing.T) {
 	var connErr *connect.Error
 	if !errors.As(err, &connErr) || connErr.Code() != connect.CodeUnavailable {
 		t.Errorf("expected code %v, got %v", connect.CodeUnavailable, err)
+	}
+}
+
+const testNetworkID = "net-abc"
+
+func TestDeleteNetwork(t *testing.T) {
+	var removedID string
+	svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) {
+		if pingHandler(w, r) {
+			return
+		}
+		// DELETE /networks/{id}
+		if r.Method == http.MethodDelete && strings.Contains(r.URL.Path, "/networks/") {
+			parts := strings.Split(r.URL.Path, "/")
+			removedID = parts[len(parts)-1]
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		http.NotFound(w, r)
+	})
+
+	resp, err := svc.DeleteNetwork(context.Background(), connect.NewRequest(&v1.DeleteNetworkRequest{Id: testNetworkID}))
+	if err != nil {
+		t.Fatalf("DeleteNetwork failed: %v", err)
+	}
+	if resp.Msg == nil {
+		t.Fatal("expected empty response message")
+	}
+	if removedID != testNetworkID {
+		t.Errorf("expected DELETE for the network, got %q", removedID)
+	}
+}
+
+func TestDeleteNetworkBlankID(t *testing.T) {
+	var daemonCalled bool
+	svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) {
+		if pingHandler(w, r) {
+			return
+		}
+		daemonCalled = true
+		http.NotFound(w, r)
+	})
+
+	_, err := svc.DeleteNetwork(context.Background(), connect.NewRequest(&v1.DeleteNetworkRequest{Id: ""}))
+	if err == nil {
+		t.Fatal("expected error for blank network ID")
+	}
+	if connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Errorf("expected CodeInvalidArgument, got %v", connect.CodeOf(err))
+	}
+	if daemonCalled {
+		t.Error("expected no daemon call for blank network ID")
+	}
+}
+
+func TestDeleteNetworkErrors(t *testing.T) {
+	for name, tc := range map[string]struct {
+		status int
+		want   connect.Code
+	}{
+		"in-use or pre-defined (403)": {status: http.StatusForbidden, want: connect.CodeFailedPrecondition},
+		"not found (404)":             {status: http.StatusNotFound, want: connect.CodeNotFound},
+		"daemon error (500)":          {status: http.StatusInternalServerError, want: connect.CodeUnavailable},
+	} {
+		t.Run(name, func(t *testing.T) {
+			svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) {
+				if pingHandler(w, r) {
+					return
+				}
+				if r.Method == http.MethodDelete && strings.Contains(r.URL.Path, "/networks/") {
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(tc.status)
+					_, _ = w.Write([]byte(`{"message": "network has active endpoints"}`))
+					return
+				}
+				http.NotFound(w, r)
+			})
+
+			_, err := svc.DeleteNetwork(context.Background(), connect.NewRequest(&v1.DeleteNetworkRequest{Id: testNetworkID}))
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			if connect.CodeOf(err) != tc.want {
+				t.Errorf("expected %v, got %v: %v", tc.want, connect.CodeOf(err), err)
+			}
+		})
+	}
+}
+
+func TestDeleteNetworkDaemonDown(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	server.Close() // dead endpoint
+
+	dockerClient, err := client.New(client.WithHost(server.URL))
+	if err != nil {
+		t.Fatalf("failed to create docker client: %v", err)
+	}
+	svc := NewService(dockerClient, slog.New(slog.NewTextHandler(io.Discard, nil)))
+
+	_, err = svc.DeleteNetwork(context.Background(), connect.NewRequest(&v1.DeleteNetworkRequest{Id: testNetworkID}))
+	if err == nil {
+		t.Fatal("expected error for dead daemon")
+	}
+	if connect.CodeOf(err) != connect.CodeUnavailable {
+		t.Errorf("expected CodeUnavailable, got %v", connect.CodeOf(err))
+	}
+}
+
+func TestPruneNetworks(t *testing.T) {
+	var rawQuery string
+	svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) {
+		if pingHandler(w, r) {
+			return
+		}
+		// POST /networks/prune
+		if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/networks/prune") {
+			rawQuery = r.URL.RawQuery
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"NetworksDeleted": ["app-net", "staging"]}`))
+			return
+		}
+		http.NotFound(w, r)
+	})
+
+	resp, err := svc.PruneNetworks(context.Background(), connect.NewRequest(&v1.PruneNetworksRequest{}))
+	if err != nil {
+		t.Fatalf("PruneNetworks failed: %v", err)
+	}
+	if resp.Msg.NetworksDeleted != 2 {
+		t.Errorf("expected networks_deleted=2, got %d", resp.Msg.NetworksDeleted)
+	}
+	if len(resp.Msg.Names) != 2 || resp.Msg.Names[0] != "app-net" || resp.Msg.Names[1] != "staging" {
+		t.Errorf("expected names [app-net staging], got %v", resp.Msg.Names)
+	}
+	// No filters shipped: the daemon's unused scope is fixed server-side.
+	if rawQuery != "" {
+		t.Errorf("expected no query parameters (no filters), got %q", rawQuery)
+	}
+}
+
+func TestPruneNetworksNothingToDelete(t *testing.T) {
+	svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) {
+		if pingHandler(w, r) {
+			return
+		}
+		if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/networks/prune") {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"NetworksDeleted": []}`))
+			return
+		}
+		http.NotFound(w, r)
+	})
+
+	resp, err := svc.PruneNetworks(context.Background(), connect.NewRequest(&v1.PruneNetworksRequest{}))
+	if err != nil {
+		t.Fatalf("PruneNetworks failed: %v", err)
+	}
+	// Protected networks (bridge/host/none, in-use) are daemon-protected at
+	// prune time and simply absent from the report: an honest 0.
+	if resp.Msg.NetworksDeleted != 0 || len(resp.Msg.Names) != 0 {
+		t.Errorf("expected honest empty report, got %d/%v", resp.Msg.NetworksDeleted, resp.Msg.Names)
+	}
+}
+
+func TestPruneNetworksDaemonDown(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	server.Close() // dead endpoint
+
+	dockerClient, err := client.New(client.WithHost(server.URL))
+	if err != nil {
+		t.Fatalf("failed to create docker client: %v", err)
+	}
+	svc := NewService(dockerClient, slog.New(slog.NewTextHandler(io.Discard, nil)))
+
+	_, err = svc.PruneNetworks(context.Background(), connect.NewRequest(&v1.PruneNetworksRequest{}))
+	if err == nil {
+		t.Fatal("expected error for dead daemon")
+	}
+	if connect.CodeOf(err) != connect.CodeUnavailable {
+		t.Errorf("expected CodeUnavailable, got %v", connect.CodeOf(err))
 	}
 }
