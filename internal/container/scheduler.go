@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"dmanager/internal/audit"
 	"dmanager/internal/db"
 )
 
@@ -55,7 +56,8 @@ func (s *Service) checkAllContainers(ctx context.Context) {
 			// Trigger automated re-deployment workflow if auto-update is enabled
 			if record.AutoUpdate != 0 {
 				s.logger.Info("Scheduler: auto-update is enabled. Triggering automated container re-deployment", "container_name", record.Name, "container_id", record.ID)
-				_, upgradeErr := s.upgradeContainerInternal(ctx, record.ID)
+				resp, upgradeErr := s.upgradeContainerInternal(ctx, record.ID)
+				s.auditUpgrade(ctx, audit.SourceSystem, audit.SystemActor, "", record.ID, resp, upgradeErr)
 				if upgradeErr != nil {
 					s.logger.Error("Scheduler: automated re-deployment failed", "container_name", record.Name, "container_id", record.ID, "error", upgradeErr)
 					s.notifier.SendGotify(ctx, "Auto-Update Failed", fmt.Sprintf("Automated container re-deployment for %s failed: %v", record.Name, upgradeErr), 8)

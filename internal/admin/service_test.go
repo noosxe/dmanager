@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"io"
@@ -14,6 +15,8 @@ import (
 
 	connect "connectrpc.com/connect"
 	"github.com/moby/moby/client"
+
+	"dmanager/internal/db"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	v1 "dmanager/internal/gen/proto/dmanager/v1"
@@ -35,7 +38,7 @@ func newTestService(t *testing.T, handler http.HandlerFunc) *Service {
 	if err != nil {
 		t.Fatalf("failed to create docker client: %v", err)
 	}
-	return NewService(dockerClient, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	return NewService(dockerClient, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 }
 
 // pingHandler responds to the client's API version negotiation probe.
@@ -555,7 +558,7 @@ func TestCheckEngineDaemonDown(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create docker client: %v", err)
 	}
-	svc := NewService(dockerClient, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	svc := NewService(dockerClient, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 
 	resp, err := svc.CheckEngine(context.Background(), connect.NewRequest(&v1.CheckEngineRequest{}))
 	if err != nil {
@@ -1324,7 +1327,7 @@ func TestDeleteNetworkDaemonDown(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create docker client: %v", err)
 	}
-	svc := NewService(dockerClient, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	svc := NewService(dockerClient, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 
 	_, err = svc.DeleteNetwork(context.Background(), connect.NewRequest(&v1.DeleteNetworkRequest{Id: testNetworkID}))
 	if err == nil {
@@ -1399,7 +1402,7 @@ func TestPruneNetworksDaemonDown(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create docker client: %v", err)
 	}
-	svc := NewService(dockerClient, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	svc := NewService(dockerClient, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 
 	_, err = svc.PruneNetworks(context.Background(), connect.NewRequest(&v1.PruneNetworksRequest{}))
 	if err == nil {
@@ -1407,5 +1410,191 @@ func TestPruneNetworksDaemonDown(t *testing.T) {
 	}
 	if connect.CodeOf(err) != connect.CodeUnavailable {
 		t.Errorf("expected CodeUnavailable, got %v", connect.CodeOf(err))
+	}
+}
+
+// --- Audit trail (issue #219, design.md §12.4) ---
+
+const (
+	auditActionImageDelete   = "image.delete"
+	auditActionContainerUpg  = "container.upgrade"
+	auditActionNetworkDelete = "network.delete"
+	auditTestActorSystem     = "system"
+	auditTestActorViewer     = "viewer"
+)
+
+func newAuditTestService(t *testing.T) *Service {
+	t.Helper()
+	dbConn, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to open in-memory db: %v", err)
+	}
+	dbConn.SetMaxOpenConns(1)
+	t.Cleanup(func() { _ = dbConn.Close() })
+	if err := db.RunMigrations(dbConn); err != nil {
+		t.Fatalf("failed to run migrations: %v", err)
+	}
+	return NewService(nil, db.New(dbConn), slog.New(slog.NewTextHandler(io.Discard, nil)))
+}
+
+func seedAuditEntries(t *testing.T, queries *db.Queries) {
+	t.Helper()
+	ctx := context.Background()
+	seed := []db.CreateAuditLogParams{
+		{Actor: "admin", ActorRole: "admin", Source: "user", Action: auditActionImageDelete, ResourceType: "image", ResourceID: "img1", Outcome: "success", Detail: "image deleted"},
+		{Actor: auditTestActorSystem, Source: "system", Action: auditActionContainerUpg, ResourceType: "container", ResourceID: "c1", Outcome: "success", Detail: "upgraded"},
+		{Actor: auditTestActorViewer, ActorRole: "viewer", Source: "user", Action: auditActionNetworkDelete, ResourceType: "network", ResourceID: "net1", Outcome: "denied", Detail: "admin role required"},
+	}
+	for _, p := range seed {
+		if _, err := queries.CreateAuditLog(ctx, p); err != nil {
+			t.Fatalf("failed to seed audit entry: %v", err)
+		}
+	}
+}
+
+func TestListAuditLogsReturnsNewestFirstWithTotal(t *testing.T) {
+	svc := newAuditTestService(t)
+	seedAuditEntries(t, svc.queries)
+
+	resp, err := svc.ListAuditLogs(context.Background(), connect.NewRequest(&v1.ListAuditLogsRequest{}))
+	if err != nil {
+		t.Fatalf("expected success, got: %v", err)
+	}
+	if resp.Msg.Total != 3 {
+		t.Fatalf("expected total 3, got %d", resp.Msg.Total)
+	}
+	if len(resp.Msg.Entries) != 3 {
+		t.Fatalf("expected 3 entries, got %d", len(resp.Msg.Entries))
+	}
+	// Newest first: the last-seeded row comes back first.
+	if resp.Msg.Entries[0].Action != auditActionNetworkDelete {
+		t.Errorf("expected newest entry first, got %q", resp.Msg.Entries[0].Action)
+	}
+	first := resp.Msg.Entries[0]
+	if first.Source != 1 || first.Outcome != 3 {
+		t.Errorf("enum mapping broken: %+v", first)
+	}
+	if first.ActorRole != "viewer" || first.ResourceId != "net1" {
+		t.Errorf("field mapping broken: %+v", first)
+	}
+}
+
+func TestListAuditLogsFilters(t *testing.T) {
+	svc := newAuditTestService(t)
+	seedAuditEntries(t, svc.queries)
+
+	tests := []struct {
+		name      string
+		req       func() *v1.ListAuditLogsRequest
+		wantTotal uint64
+		wantFirst string
+	}{
+		{
+			name: "source filter system",
+			req: func() *v1.ListAuditLogsRequest {
+				return &v1.ListAuditLogsRequest{Source: 2}
+			},
+			wantTotal: 1,
+			wantFirst: auditActionContainerUpg,
+		},
+		{
+			name: "outcome filter denied",
+			req: func() *v1.ListAuditLogsRequest {
+				return &v1.ListAuditLogsRequest{Outcome: 3}
+			},
+			wantTotal: 1,
+			wantFirst: auditActionNetworkDelete,
+		},
+		{
+			name:      "query matches action",
+			req:       func() *v1.ListAuditLogsRequest { return &v1.ListAuditLogsRequest{Query: "image"} },
+			wantTotal: 1,
+			wantFirst: auditActionImageDelete,
+		},
+		{
+			name:      "query matches detail",
+			req:       func() *v1.ListAuditLogsRequest { return &v1.ListAuditLogsRequest{Query: "admin role required"} },
+			wantTotal: 1,
+			wantFirst: auditActionNetworkDelete,
+		},
+		{
+			name:      "query matches actor",
+			req:       func() *v1.ListAuditLogsRequest { return &v1.ListAuditLogsRequest{Query: "system"} },
+			wantTotal: 1,
+			wantFirst: auditActionContainerUpg,
+		},
+		{
+			name: "combined filters intersect",
+			req: func() *v1.ListAuditLogsRequest {
+				return &v1.ListAuditLogsRequest{Query: "delete", Outcome: 3}
+			},
+			wantTotal: 1,
+			wantFirst: auditActionNetworkDelete,
+		},
+		{
+			name:      "no match yields zero with total 0",
+			req:       func() *v1.ListAuditLogsRequest { return &v1.ListAuditLogsRequest{Query: "nonexistent"} },
+			wantTotal: 0,
+			wantFirst: "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			resp, err := svc.ListAuditLogs(context.Background(), connect.NewRequest(tc.req()))
+			if err != nil {
+				t.Fatalf("expected success, got: %v", err)
+			}
+			if resp.Msg.Total != tc.wantTotal {
+				t.Fatalf("expected total %d, got %d", tc.wantTotal, resp.Msg.Total)
+			}
+			if tc.wantTotal > 0 && resp.Msg.Entries[0].Action != tc.wantFirst {
+				t.Errorf("expected first action %q, got %q", tc.wantFirst, resp.Msg.Entries[0].Action)
+			}
+		})
+	}
+}
+
+func TestListAuditLogsPagination(t *testing.T) {
+	svc := newAuditTestService(t)
+	seedAuditEntries(t, svc.queries)
+
+	resp, err := svc.ListAuditLogs(context.Background(), connect.NewRequest(&v1.ListAuditLogsRequest{Limit: 2}))
+	if err != nil {
+		t.Fatalf("expected success, got: %v", err)
+	}
+	if len(resp.Msg.Entries) != 2 || resp.Msg.Total != 3 {
+		t.Fatalf("expected page of 2 with total 3, got %d/%d", len(resp.Msg.Entries), resp.Msg.Total)
+	}
+
+	// Page 2: offset 2, limit 2 → the last row.
+	resp, err = svc.ListAuditLogs(context.Background(), connect.NewRequest(&v1.ListAuditLogsRequest{Limit: 2, Offset: 2}))
+	if err != nil {
+		t.Fatalf("expected success, got: %v", err)
+	}
+	if len(resp.Msg.Entries) != 1 || resp.Msg.Entries[0].Action != auditActionImageDelete {
+		t.Fatalf("expected oldest row on page 2, got %+v", resp.Msg.Entries)
+	}
+
+	// Limit clamps to the maximum.
+	resp, err = svc.ListAuditLogs(context.Background(), connect.NewRequest(&v1.ListAuditLogsRequest{Limit: 100000}))
+	if err != nil {
+		t.Fatalf("expected success, got: %v", err)
+	}
+	if len(resp.Msg.Entries) != 3 {
+		t.Errorf("expected clamped limit to return all rows, got %d", len(resp.Msg.Entries))
+	}
+}
+
+func TestListAuditLogsWithoutStorageReturnsInternal(t *testing.T) {
+	svc := NewService(nil, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+
+	_, err := svc.ListAuditLogs(context.Background(), connect.NewRequest(&v1.ListAuditLogsRequest{}))
+	if err == nil {
+		t.Fatal("expected error when audit storage is unavailable")
+	}
+	var cerr *connect.Error
+	if !errors.As(err, &cerr) || cerr.Code() != connect.CodeInternal {
+		t.Fatalf("expected CodeInternal, got: %v", err)
 	}
 }

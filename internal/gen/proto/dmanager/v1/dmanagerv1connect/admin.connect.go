@@ -74,6 +74,9 @@ const (
 	// AdminServiceCheckEngineProcedure is the fully-qualified name of the AdminService's CheckEngine
 	// RPC.
 	AdminServiceCheckEngineProcedure = "/dmanager.v1.AdminService/CheckEngine"
+	// AdminServiceListAuditLogsProcedure is the fully-qualified name of the AdminService's
+	// ListAuditLogs RPC.
+	AdminServiceListAuditLogsProcedure = "/dmanager.v1.AdminService/ListAuditLogs"
 )
 
 // AdminServiceClient is a client for the dmanager.v1.AdminService service.
@@ -132,6 +135,10 @@ type AdminServiceClient interface {
 	// Daemon unreachability is a successful response with connected=false —
 	// the outage is the answer, not an RPC failure (design.md §10.2).
 	CheckEngine(context.Context, *connect.Request[v1.CheckEngineRequest]) (*connect.Response[v1.CheckEngineResponse], error)
+	// Review the audit trail (Authenticated, admin role): recorded mutation
+	// outcomes by users and system-originated automatic updates, filtered and
+	// paginated server-side. Entries are written by the server, never by RPC.
+	ListAuditLogs(context.Context, *connect.Request[v1.ListAuditLogsRequest]) (*connect.Response[v1.ListAuditLogsResponse], error)
 }
 
 // NewAdminServiceClient constructs a client for the dmanager.v1.AdminService service. By default,
@@ -229,6 +236,12 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("CheckEngine")),
 			connect.WithClientOptions(opts...),
 		),
+		listAuditLogs: connect.NewClient[v1.ListAuditLogsRequest, v1.ListAuditLogsResponse](
+			httpClient,
+			baseURL+AdminServiceListAuditLogsProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("ListAuditLogs")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -248,6 +261,7 @@ type adminServiceClient struct {
 	listBuildCacheRecords *connect.Client[v1.ListBuildCacheRecordsRequest, v1.ListBuildCacheRecordsResponse]
 	pruneBuildCacheRecord *connect.Client[v1.PruneBuildCacheRecordRequest, v1.PruneBuildCacheRecordResponse]
 	checkEngine           *connect.Client[v1.CheckEngineRequest, v1.CheckEngineResponse]
+	listAuditLogs         *connect.Client[v1.ListAuditLogsRequest, v1.ListAuditLogsResponse]
 }
 
 // ListImages calls dmanager.v1.AdminService.ListImages.
@@ -320,6 +334,11 @@ func (c *adminServiceClient) CheckEngine(ctx context.Context, req *connect.Reque
 	return c.checkEngine.CallUnary(ctx, req)
 }
 
+// ListAuditLogs calls dmanager.v1.AdminService.ListAuditLogs.
+func (c *adminServiceClient) ListAuditLogs(ctx context.Context, req *connect.Request[v1.ListAuditLogsRequest]) (*connect.Response[v1.ListAuditLogsResponse], error) {
+	return c.listAuditLogs.CallUnary(ctx, req)
+}
+
 // AdminServiceHandler is an implementation of the dmanager.v1.AdminService service.
 type AdminServiceHandler interface {
 	// List images present on the host (Authenticated, any role).
@@ -376,6 +395,10 @@ type AdminServiceHandler interface {
 	// Daemon unreachability is a successful response with connected=false —
 	// the outage is the answer, not an RPC failure (design.md §10.2).
 	CheckEngine(context.Context, *connect.Request[v1.CheckEngineRequest]) (*connect.Response[v1.CheckEngineResponse], error)
+	// Review the audit trail (Authenticated, admin role): recorded mutation
+	// outcomes by users and system-originated automatic updates, filtered and
+	// paginated server-side. Entries are written by the server, never by RPC.
+	ListAuditLogs(context.Context, *connect.Request[v1.ListAuditLogsRequest]) (*connect.Response[v1.ListAuditLogsResponse], error)
 }
 
 // NewAdminServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -469,6 +492,12 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("CheckEngine")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceListAuditLogsHandler := connect.NewUnaryHandler(
+		AdminServiceListAuditLogsProcedure,
+		svc.ListAuditLogs,
+		connect.WithSchema(adminServiceMethods.ByName("ListAuditLogs")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/dmanager.v1.AdminService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AdminServiceListImagesProcedure:
@@ -499,6 +528,8 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServicePruneBuildCacheRecordHandler.ServeHTTP(w, r)
 		case AdminServiceCheckEngineProcedure:
 			adminServiceCheckEngineHandler.ServeHTTP(w, r)
+		case AdminServiceListAuditLogsProcedure:
+			adminServiceListAuditLogsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -562,4 +593,8 @@ func (UnimplementedAdminServiceHandler) PruneBuildCacheRecord(context.Context, *
 
 func (UnimplementedAdminServiceHandler) CheckEngine(context.Context, *connect.Request[v1.CheckEngineRequest]) (*connect.Response[v1.CheckEngineResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AdminService.CheckEngine is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ListAuditLogs(context.Context, *connect.Request[v1.ListAuditLogsRequest]) (*connect.Response[v1.ListAuditLogsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AdminService.ListAuditLogs is not implemented"))
 }

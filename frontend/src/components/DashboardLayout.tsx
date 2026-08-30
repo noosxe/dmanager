@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Activity, Boxes, LayoutDashboard, LogOut, Menu, Settings } from "lucide-react";
+import { Activity, Boxes, LayoutDashboard, LogOut, Menu, ScrollText, Settings } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 
@@ -99,6 +99,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <Boxes size={18} />
               <span>Administration</span>
             </Link>
+
+            {user?.role === "admin" && (
+              <Link
+                to="/audit-logs"
+                className="menu-item"
+                activeProps={{ className: "menu-item active" }}
+                onClick={closeSidebar}
+              >
+                <ScrollText size={18} />
+                <span>Audit Logs</span>
+              </Link>
+            )}
 
             <Link
               to="/settings/$tab"

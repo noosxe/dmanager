@@ -239,7 +239,7 @@ func TestListContainers(t *testing.T) {
 	}
 
 	// Create service
-	svc := NewService(dbConn, NewBroker(), nil, slog.Default(), nil)
+	svc := NewService(dbConn, NewBroker(), nil, slog.Default(), nil, nil)
 
 	// Call ListContainers
 	resp, err := svc.ListContainers(ctx, connect.NewRequest(&v1.ListContainersRequest{}))
@@ -281,7 +281,7 @@ func TestListContainers(t *testing.T) {
 func TestStreamContainers(t *testing.T) {
 	dbConn, _ := newTestDB(t)
 	broker := NewBroker()
-	svc := NewService(dbConn, broker, nil, slog.Default(), nil)
+	svc := NewService(dbConn, broker, nil, slog.Default(), nil, nil)
 
 	mux := http.NewServeMux()
 	path, handler := dmanagerv1connect.NewContainerServiceHandler(svc)
@@ -392,7 +392,7 @@ func TestContainerActions(t *testing.T) {
 		t.Fatalf("failed to create docker client: %v", err)
 	}
 
-	svc := NewService(dbConn, broker, dockerClient, slog.Default(), nil)
+	svc := NewService(dbConn, broker, dockerClient, slog.Default(), nil, nil)
 
 	// Contexts
 	adminCtx := auth.WithUser(context.Background(), db.User{
@@ -609,7 +609,7 @@ func TestUpgradeContainer(t *testing.T) {
 		t.Fatalf("failed to create docker client: %v", err)
 	}
 
-	svc := NewService(dbConn, broker, dockerClient, slog.Default(), nil)
+	svc := NewService(dbConn, broker, dockerClient, slog.Default(), nil, nil)
 
 	adminCtx := auth.WithUser(context.Background(), db.User{Role: roleAdmin})
 	viewerCtx := auth.WithUser(context.Background(), db.User{Role: "viewer"})
@@ -802,10 +802,10 @@ func TestGetContainerLogs(t *testing.T) {
 		t.Fatalf("failed to create docker client: %v", err)
 	}
 
-	svc := NewService(dbConn, broker, dockerClient, slog.Default(), nil)
+	svc := NewService(dbConn, broker, dockerClient, slog.Default(), nil, nil)
 
 	// Setup Connect handler / server with the Authentication Interceptor
-	interceptor := auth.NewInterceptor(queries, slog.Default(), 0)
+	interceptor := auth.NewInterceptor(queries, slog.Default(), 0, nil)
 	mux := http.NewServeMux()
 	path, handler := dmanagerv1connect.NewContainerServiceHandler(svc, connect.WithInterceptors(interceptor))
 	mux.Handle(path, handler)
@@ -907,7 +907,7 @@ func makeLogFrame(streamType byte, payload string) []byte {
 func TestSetContainerAutoUpdate(t *testing.T) {
 	dbConn, queries := newTestDB(t)
 	broker := NewBroker()
-	svc := NewService(dbConn, broker, nil, slog.Default(), nil)
+	svc := NewService(dbConn, broker, nil, slog.Default(), nil, nil)
 
 	containerID := "test-autoupdate-id"
 	if err := queries.SaveContainer(context.Background(), db.SaveContainerParams{
@@ -1043,7 +1043,7 @@ func TestCheckContainerUpdates(t *testing.T) {
 		t.Fatalf("failed to create docker client: %v", err)
 	}
 
-	svc := NewService(dbConn, broker, dockerClient, slog.Default(), nil)
+	svc := NewService(dbConn, broker, dockerClient, slog.Default(), nil, nil)
 
 	adminCtx := auth.WithUser(context.Background(), db.User{Role: roleAdmin})
 	viewerCtx := auth.WithUser(context.Background(), db.User{Role: roleViewer})
