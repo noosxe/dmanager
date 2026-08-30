@@ -765,3 +765,71 @@ interface ConfirmDialogProps {
 - **`Dialog.test.tsx`** (jsdom): renders nothing when closed; renders `role="dialog"` with `aria-modal`, `aria-labelledby`/`aria-describedby` pointing at real nodes; Esc and backdrop `mousedown` dismiss while a click inside the card does not; Tab focus wraps first ↔ last and never escapes the card; focus is restored to the opener element on close; the scroll-lock class is applied while open and removed on close/unmount.
 - **`ConfirmDialog.test.tsx`**: renders title/message/labels; `danger` marks the confirm button with the danger class; confirm and cancel fire their callbacks (cancel via `onClose`, button and Esc both); `busy` disables both buttons, blocks Esc/backdrop dismissal, and shows the spinner.
 - No consumer is migrated in this story — #177/#178 carry their own behavior-preserving migrations with tests updated from the inline confirm to the dialog.
+
+---
+
+## 12. Audit Logs (issue #219)
+
+### 12.1. Concept & Guarantees
+
+Every state-changing action in dmanager leaves an append-only trace in the local database: **all mutation RPCs by any user** (the `RoleAdmin` procedure set — 14 procedures across four services today, and anything the map gains later) and **automatic updates** (the scheduler's background container re-deployments, which run with no user context). Entries record **who** (actor + role, or `system`), **what** (dotted action verb + resource), **outcome** (`success` / `failure` / `denied`) and **detail** (human-readable summary; the daemon's error message on failure). Review is **admin-only end to end**: the RPC, the nav item and the route all gate on the admin role. Recording is **best-effort and synchronous** — an audit-write failure logs a warning and never fails or delays the mutation it observes; an audit read failure never affects any other page.
+
+Two scoping decisions: first, the existing `auth_events` trail (logins, passkey changes, rate limiting — migration 00004) **stays where it is** (Settings → Security shows a user their own events); audit logs cover resource mutations, and folding auth events in is deferred until wanted. Second, retention is a **fixed cap of the 10,000 most recent entries**, trimmed opportunistically after insert — no configuration knob until a need shows up.
+
+### 12.2. Storage — Migration 00006 + sqlc
+
+A new `audit_logs` table in the existing SQLite stack (`ncruces/go-sqlite3`, goose, sqlc — the `auth_events` pattern):
+
+```sql
+CREATE TABLE audit_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    actor TEXT NOT NULL DEFAULT '',
+    actor_role TEXT NOT NULL DEFAULT '',
+    source TEXT NOT NULL DEFAULT 'user',
+    action TEXT NOT NULL,
+    resource_type TEXT NOT NULL DEFAULT '',
+    resource_id TEXT NOT NULL DEFAULT '',
+    outcome TEXT NOT NULL DEFAULT 'success',
+    detail TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at);
+CREATE INDEX idx_audit_logs_action ON audit_logs(action);
+```
+
+`source` ∈ `user|system`, `outcome` ∈ `success|failure|denied` — plain TEXT (checked in Go, not SQL) so the table survives enum additions without migrations. sqlc queries in `internal/db/queries/audit_logs.sql`: `CreateAuditLog`, `ListAuditLogs` (filter + `LIMIT`/`OFFSET`, ordered `created_at DESC, id DESC`), `CountAuditLogs` (same filter), `TrimAuditLogs` (delete everything below the retention watermark).
+
+### 12.3. Recording Seam — `internal/audit` + the Interceptor
+
+New package `internal/audit`: an `Entry` struct and a `Recorder` wrapping `*sql.DB` with `Record(ctx, Entry)` (best-effort, warn-and-continue) and the retention trim after each successful insert. The server wires one shared `*Recorder` into the auth interceptor and the container service.
+
+The **connect interceptor in `internal/auth` is the single seam for user mutations** — it already owns the `RoleAdmin` procedure map and the resolved claims, so no per-service instrumentation can be forgotten:
+
+- After authorization passes for a `RoleAdmin` procedure, the handler runs and exactly one entry is recorded: `success` with response-derived detail, or `failure` with the error message.
+- A **denied** attempt by an authenticated non-admin records `outcome: denied` (actor known, action known) — a security signal — before the `PermissionDenied` response.
+- Read procedures (`RoleViewer`) are never recorded; `RoleUnauthenticated` procedures are never recorded (no actor exists yet).
+- A static mapping table (procedure → action verb, resource type, detail extractor) covers the current set: `image.delete`, `image.prune`, `builder.prune`, `builder.record_prune`, `volume.prune`, `network.delete`, `network.prune`, `container.start`, `container.stop`, `container.upgrade_check`, `container.auto_update_set`, `settings.update`, `settings.gotify_test`. Detail carries what the response knows: prune counts and reclaimed bytes, deleted/removed names, the enabled flag for auto-update toggles.
+- **`ContainerServiceUpgradeContainer` is the one interceptor skip** — the upgrade path records its own richer entries (see below) and the interceptor must not double-record it.
+
+The **system path** records explicitly: `upgradeContainerInternal` grows an origin parameter — the RPC handler passes the caller's username with `source: user`, the scheduler passes `actor: "system"` with `source: system` — and both record one entry with the old → new image digest transition as detail and the upgrade error as a `failure` detail. This is the "automatic updates" trace the feature exists for.
+
+### 12.4. Protocol — `ListAuditLogs`
+
+`AdminService.ListAuditLogs` (admin role, §3 of the protocol doc): `ListAuditLogsRequest{query, source, outcome, limit, offset}` — `query` is a substring match over actor, action, resource id and detail (SQL `LIKE`, **server-side**: the log is unbounded, so client-side search over one page would silently lie); `source`/`outcome` are proto enums where `UNSPECIFIED` means *all*; `limit` defaults to 50 and clamps to ≤ 200; `offset` drives pagination. `ListAuditLogsResponse{entries, total}` — `total` is the filtered row count so the UI can print `n–m of T`. `AuditLogEntry{id, created_at, actor, actor_role, source, action, resource_type, resource_id, outcome, detail}` with `AuditSource{USER, SYSTEM}` and `AuditOutcome{SUCCESS, FAILURE, DENIED}`. Ordering is fixed (`created_at DESC, id DESC`) — newest first, no client-side column sorting against the server.
+
+### 12.5. Frontend — Nav, Route Guard, Page
+
+- **Sidebar**: a new item between **Administration** and **Settings** — `ScrollText` icon, label **Audit Logs**, `/audit-logs`, rendered **only when `user?.role === "admin"`** (viewers never see the affordance at all).
+- **Route guard**: `/audit-logs` `beforeLoad` redirects non-admins to `/` (the router context already carries `user.role` — defense in depth under the RPC's `RoleAdmin`).
+- **Page**: header with a manual refresh button; a **search input** mirroring the containers-page search (debounced 300 ms, server-side); **source** and **outcome** filter selects (`All sources` / `Users` / `System`, `All outcomes` / `Success` / `Failure` / `Denied`); and the main table — **Time | Actor | Action | Resource | Outcome | Details**. Time renders via the existing timestamp formatter; Actor renders `name (role)` or `System`; Action is the dotted verb; Resource is `type` plus short id when a name is not known; Outcome is a status badge (success green, failure red, denied red with a "not authorized" title); Details truncates with a full-text `title` tooltip.
+- **Pagination**: Prev/Next with `n–m of T`, page size 50 — no infinite scroll. Filter/search/page changes refetch; there is **no polling** (audit history is not live data), only the manual refresh.
+- **`useAuditLogs` hook**: owns `{query (debounced), source, outcome, page}` state, exposes `entries, total, loading, error, refresh` — one `ListAuditLogs` call per committed state change, no refetch storms on keystrokes.
+
+### 12.6. Testing
+
+- **Migration**: goose up/down round-trip for 00006 (existing migration-test pattern).
+- **Recorder**: insert/read round-trip, retention trim at the cap, best-effort failure (a broken DB logs and returns without panicking).
+- **Interceptor**: each outcome recorded exactly once with the mapped action/resource and correct actor; reads never recorded; denied attempts recorded; the `UpgradeContainer` skip holds; a recorder failure leaves the mutation's response untouched.
+- **Upgrade audit**: RPC path records one user-source entry; scheduler path records one system-source entry; failure detail carries the daemon error.
+- **`ListAuditLogs` handler**: filter matrix (query/source/outcome/combined), clamped limit, total correctness, ordering, daemon-free (pure DB).
+- **Frontend**: nav item admin-only; route guard redirects viewers; table rendering incl. outcome badges and truncation; search debounce issues one call; filters and pagination recompute the request; empty state; error banner with retry.
