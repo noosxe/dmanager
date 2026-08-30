@@ -851,4 +851,89 @@ Audit retention is **time-based with five fixed presets**, chosen by the admin i
 - **Protocol**: `GetSettingsResponse.audit_retention_days` and `UpdateSettingsRequest.audit_retention_days`, `int32` field 3 on both. Get always returns the **effective** value (default when unset) so the UI shows what is actually enforced. Update validates server-side — any value outside the preset set is refused with `CodeInvalidArgument`; there is no "unlimited" mode (a busy log rolling its window is exactly what this knob exists to prevent, and unbounded growth is a foot-gun we chose not to expose).
 - **Trim mechanics**: `TrimAuditLogsBefore` deletes `WHERE created_at < ?` with the cutoff bound as a UTC string in the same `YYYY-MM-DD HH:MM:SS` shape `CURRENT_TIMESTAMP` writes — string comparison over that format is chronologically correct, and it sidesteps driver time-binding ambiguity entirely. The `idx_audit_logs_created_at` index already exists (migration 00006). The trim stays opportunistic (after each successful insert) — lowering the window deletes the excess on the next recorded action, with no background job to schedule or miss.
 - **`Recorder` change**: `NewRecorder(queries, logger)` drops the fixed cap; at trim time it reads `audit_retention_days` (missing → default, invalid → default + warning), so the policy is honored without a restart and a corrupt value cannot disable trimming.
-- **Settings UI**: Settings → General grows an **Audit Log Retention** select with the five presets below the Gotify fields, loaded from `GetSettings` and saved with the existing Save button (always included in every save — the form is the full settings object).
+- **Settings UI**: Settings → General grows an **Audit Logs** card (between Notification Configurations and Registry Status) holding the **Audit Log Retention** select with the five presets. The select applies immediately on change (closed preset set, no extra save click) — the wire update is the full settings object (loaded Gotify values ride along unchanged); on failure it reverts to the previously effective window and stays disabled until the initial load lands.
+## 13. Email/SMTP Delivery (issue #226)
+
+dmanager gains **system-only outbound email**: an internal mailer that delivers through an administrator-configured SMTP relay (the self-hosted postfix container that forwards upstream to a provider such as Resend). There is **no user-facing send path** — no RPC, no UI button — the only senders are system flows (future stories: password change notifications, invitations, high-impact alerts, weekly stats) and one ops-only CLI verification command. This section covers the infrastructure story; consumers are designed in their own stories.
+
+### 13.1. Why Config, Not the Settings Table
+
+The SMTP section lives in the deployment config (file + `DMANAGER_SMTP_*` env), unlike Gotify (settings UI) or audit retention. Rationale:
+
+- **Machine-level, not operator-level**: relay host, port and credentials are per-deployment facts, not per-tenant preferences. They change with the compose file, not with an admin's whim — the same category as `docker.host` and `webauthn.*`.
+- **Secrets stay out of the DB**: relay credentials ride the established env-var secret path, never the `settings` table.
+- **Independent of DB health**: the planned "high-impact system alerts" consumer must be able to report *database-scale* problems; a mailer configured through that same broken database could not.
+- **No wire surface**: nothing about mail belongs in the API yet, and the config path avoids a proto change, a settings-UI card, and an RPC someone could abuse as a send primitive.
+
+### 13.2. Configuration Schema
+
+New `SMTPConfig` section in `internal/config`:
+
+```yaml
+smtp:
+  enabled: false                 # explicit kill-switch, default false
+  host: "postfix.relay.internal" # the postfix container's network name/IP
+  port: "25"                     # "25" default (relay convention); 587 for submission
+  username: ""                   # optional SMTP AUTH (PLAIN/LOGIN); empty = no auth
+  password: ""                   # env DMANAGER_SMTP_PASSWORD in practice
+  from_email: "noreply@example.com"  # required when enabled — must be on the provider-verified domain
+  from_name: "dmanager"          # optional display name, rendered as `From: "dmanager" <noreply@example.com>`
+  tls_mode: "none"               # none | starttls | tls (implicit TLS, port 465 style)
+  timeout_seconds: 15            # dial + send budget per message
+```
+
+- **Env mapping**: the existing koanf `TransformFunc` gains the `smtp_` prefix → `DMANAGER_SMTP_HOST`, `DMANAGER_SMTP_PASSWORD`, … consistent with every other section.
+- **Validation** (in `Config.Validate`, applied only when `enabled: true`): `host`, `port` and `from_email` are required; `from_email` must contain `@`; `tls_mode` must be one of the three modes; `timeout_seconds` clamped to `[1, 120]`. When disabled, the section is inert — no other field is validated, so a compose file can carry commented-out relay details without breaking startup.
+- **Defaults chosen for the stated deployment** (internal postfix relay): `port: "25"`, `tls_mode: "none"`, no auth. Operators fronting a submission-style relay set `587` + `starttls` (+ auth) explicitly. `none` is safe only inside a trusted network — the deployment docs say so in exactly those words.
+
+### 13.3. Package Design — `internal/mailer`
+
+```go
+type Message struct {
+    To       []string // one or more recipients
+    Subject  string
+    TextBody string // required
+    HTMLBody string // optional alternative part
+}
+
+type Mailer interface {
+    // Send performs a single synchronous delivery attempt with the
+    // configured timeout. It returns an error on failure; callers decide
+    // whether that failure is best-effort (log) or surfaced.
+    Send(ctx context.Context, msg Message) error
+    // Enabled reports whether SMTP is configured, so flows can skip
+    // expensive work (rendering, token creation) before calling Send.
+    Enabled() bool
+}
+
+func New(cfg config.SMTPConfig, logger *slog.Logger) Mailer
+```
+
+- **No-op mode**: `New` returns a `NoopMailer` when `enabled` is false. Consumers therefore never nil-check or branch on configuration; a disabled mailer logs `smtp not configured, dropped email to=%s subject=%q` at debug and returns nil. Future invitation/alert flows degrade to log lines exactly like the audit recorder degrades on a broken DB.
+- **Library**: `github.com/wneessen/go-mail` — actively maintained, context-aware, supports all three TLS modes plus AUTH PLAIN/LOGIN, and builds MIME/headers itself. Recipients, subject and `From` go through its APIs exclusively: **no hand-concatenated SMTP headers**, which closes the header-injection hole by construction.
+- **Semantics**: one attempt per `Send`, bounded by `timeout_seconds` and honored `ctx`; no queue, no retry, no rate limiting in this scope. The mailer never panics and never blocks `serve` startup on reachability — SMTP is dialed lazily per send.
+- **Logging**: host, port, TLS mode and `from_email` may appear in logs; `password` never does (it lives only in the config struct).
+
+### 13.4. Startup Wiring and Verification
+
+- `cmd/serve.go` constructs the mailer once from the loaded config and logs a single startup line when enabled: `smtp enabled: host=:port tls=<mode> from=<from_email>` (at info), or `smtp disabled` (at debug). No service consumes it yet — the wiring exists so consumer stories only add their call sites.
+- **`dmanager smtp test --to=<address>`**: ops-only cobra subcommand. Loads config via the normal `--config` path, calls `Mailer.Send` with a short diagnostic message, prints `test email sent to <address>` or the error, and exits 0/1 accordingly. This is the verification affordance until the first consumer lands — and remains useful afterwards for checking the relay from the deployment itself. It is a server-side CLI tool operated by whoever runs the host, not a product capability: the "no user sends mail" rule is untouched.
+
+### 13.5. Template Seam (Forward-Looking)
+
+Each future consumer owns its rendering: Go `html/template` files embedded with `embed`, producing `TextBody` (and `HTMLBody` where justified) for a `mailer.Message`. No shared template engine, theming or i18n is built now; if the four planned flows show real duplication, a small `internal/mailer/templates` package gets extracted then. Recipient resolution also belongs to each flow (e.g. invitation: the address entered by the admin; password change: the account's stored email — users' email field is a prerequisite that story must add).
+
+### 13.6. Security Considerations
+
+- **Header injection**: impossible by construction — every header value passes through the go-mail API, which validates addresses and encodes headers.
+- **Credentials**: `smtp.password` only ever exists in env/config memory; it is excluded from the startup log line and from any error wrapping (library errors quote the SMTP conversation status, not AUTH material).
+- **Relay trust**: `tls_mode: none` transmits plaintext across the Docker network only. The relay must be restricted to internal networks (postfix `mynetworks`), and the docs recommend `starttls` whenever the relay offers it.
+- **Upstream deliverability**: with Resend behind the relay, `from_email` must be on the verified domain — an unverified sender surfaces as a relay-side rejection (550), reported verbatim by `smtp test` and logged by the mailer.
+- **No audit-log coupling**: mail delivery is infrastructure, not a user action — sends are not audit entries. The triggering events of future consumers (invitation created, password changed) are audited by those flows if their designs say so.
+
+### 13.7. Testing Strategy
+
+- **Config**: defaults (disabled, port 25, tls none), env overrides via `DMANAGER_SMTP_*`, and the validation matrix — enabled without host/from_email → error, malformed from_email → error, bad `tls_mode` → error, `timeout_seconds` out of range → clamped, disabled section with partial fields → accepted and inert.
+- **Mailer**: an in-process SMTP server (a `net.Listener` speaking the minimal verb conversation) asserts: envelope `MAIL FROM` is `from_email`, `RCPT TO` covers every recipient, headers carry the display-name `From`, subject and both body parts; the `NoopMailer` records nothing; `ctx` cancellation and the timeout path surface as errors; AUTH is exercised by making the fake server require it.
+- **CLI**: `smtp test` against the in-process server (config pointed at the listener's loopback port) — success path exits 0 with the confirmation line; server-side rejection exits 1 with the relay's message.
+- **serve wiring**: enabled config logs the info line once; disabled logs nothing beyond debug.

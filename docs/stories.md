@@ -77,6 +77,7 @@ graph TD
     A69 --> A70["STORY-070: Networks Tab — In-Use Visibility, Deletion & Reclaim (#215) (DONE)"]
     A70 --> A71["STORY-071: Audit Logs — Mutation & System-Action Trail (#219) (DONE)"]
     A71 --> A72["STORY-072: Audit Retention — Days-Based, Admin-Configurable (#222) (DONE)"]
+    A72 --> A73["STORY-073: SMTP Email Delivery — Relay Config, Mailer Package, Test CLI (#226)"]
 ```
 
 
@@ -1545,7 +1546,7 @@ graph TD
   2. `internal/db/queries/audit_logs.sql`: `TrimAuditLogs` → `TrimAuditLogsBefore` (`DELETE ... WHERE created_at < ?`); `sqlc generate`.
   3. `internal/audit/audit.go`: drop `RetentionRows`/`retention` param — `NewRecorder(queries, logger)`; at trim time read `audit_retention_days` (missing → 90, invalid → 90 + warn), cutoff bound as UTC `YYYY-MM-DD HH:MM:SS`; `cmd/serve.go` updated. Tests: age trim (old seeded rows deleted), default, invalid fallback, best-effort intact.
   4. `internal/settings/service.go`: `UpdateSettings` validates the value against the preset set (`CodeInvalidArgument` otherwise) and persists; `GetSettings` returns the effective value (default when the row is missing). Tests: accept each preset, reject 42, default read.
-  5. `frontend/src/components/Settings.tsx` General tab: **Audit Log Retention** select (7 days / 1 month / 3 months / 6 months / 1 year) below the Gotify fields, loaded from `GetSettings`, saved with the form. Tests: renders five options, loads effective value, includes the field on save.
+  5. `frontend/src/components/Settings.tsx` General tab: dedicated **Audit Logs** card holding the **Audit Log Retention** select (7 days / 1 month / 3 months / 6 months / 1 year), loaded from `GetSettings`, applied immediately on change (no separate save click). Tests: renders five options, loads effective value, persists on change, Audit Logs card separate from Notification Configurations.
 - **Files Affected:**
   - `proto/dmanager/v1/settings.proto`, `internal/gen/**`, `frontend/src/gen/**` (generated)
   - `internal/db/queries/audit_logs.sql`, `internal/db/audit_logs.sql.go` (generated)
@@ -1555,3 +1556,23 @@ graph TD
   - `go test ./...`, `go vet ./...`, `golangci-lint run ./...` pass.
   - `pnpm check`, `pnpm test`, `pnpm build` pass.
   - Manual: set 7 days in Settings → General, seed an older entry, record a new action → the old entry disappears; the Audit Logs page total reflects the trim; a non-admin cannot read the setting.
+
+### STORY-073: SMTP Email Delivery — Relay Config, Mailer Package, Test CLI (issue #226) [PLANNED]
+
+**Goal:** Give dmanager system-only outbound email through an admin-configured SMTP relay (postfix container forwarding upstream, e.g. Resend): an `[smtp]` config section (file + `DMANAGER_SMTP_*` env) with sender identity and TLS mode, an `internal/mailer` package with a no-op mode when unconfigured, startup wiring, and an ops-only `dmanager smtp test --to=...` verification subcommand. No user-facing or RPC send path. Closes #226.
+
+**Tasks:**
+  1. `internal/config`: `SMTPConfig` struct (`enabled`, `host`, `port`, `username`, `password`, `from_email`, `from_name`, `tls_mode`, `timeout_seconds`), defaults (disabled, port "25", tls `none`, 15s), `smtp_` env prefix in the koanf transform, validation rules (enabled ⇒ host/port/from_email required, from contains `@`, tls_mode ∈ {none,starttls,tls}, timeout clamped [1,120]; disabled ⇒ inert). Tests: defaults, env override, validation matrix, disabled-inert.
+  2. `internal/mailer`: `Message`, `Mailer` interface (`Send`/`Enabled`), go-mail-backed implementation (three TLS modes, optional AUTH PLAIN/LOGIN, timeout honored), `NoopMailer` when disabled (debug log, nil error). Tests against an in-process minimal SMTP server: envelope and headers correct (display-name From, subject, both body parts), multi-recipient RCPT, noop records nothing, ctx-cancel/timeout errors, AUTH path.
+  3. `cmd`: construct the mailer in `serve.go` from loaded config + the `smtp enabled: ...` / debug disabled startup log (no consumers yet); new `dmanager smtp test --to=<address>` subcommand printing the outcome and exiting 0/1. Tests: startup log line, CLI success/rejection against the in-process server.
+  4. `README.md`: `[smtp]` block in the config example with a commented relay setup and the plaintext-inside-trusted-network caveat.
+- **Files Affected:**
+  - `internal/config/config.go` (+ test), `internal/mailer/mailer.go` (+ test + in-process SMTP harness), `cmd/serve.go`, `cmd/root.go` / new `cmd/smtp.go` (+ test), `README.md`
+- **Validation Check:**
+  - `go test ./...`, `go vet ./...`, `golangci-lint run ./...` pass.
+  - Manual: run `dmanager smtp test --to=<your address>` against the postfix relay → mail arrives from the configured `from_email`; with `smtp.enabled: false`, serve starts unchanged and the subcommand reports the mailer as disabled.
+- **Decisions:**
+  - **Config, not the settings table**: relay host/port/credentials are deployment facts and secrets, must survive a broken DB (planned alerts consumer), and must not open a send primitive on the API — the opposite trade-off from Gotify, which is an operator-facing runtime integration.
+  - **No-op mailer over nil**: `Mailer.Enabled()` + `NoopMailer` let consumer stories skip expensive work and degrade to debug logs without branching on configuration.
+  - **Single synchronous attempt, no queue/retry**: failure policy is per-consumer; queue/retry infra is only worth building once a real consumer needs it.
+  - **Library over stdlib `net/smtp`**: wneessen/go-mail handles MIME, UTF-8, header encoding, AUTH and all TLS modes; hand-rolling headers is the classic injection hole.
