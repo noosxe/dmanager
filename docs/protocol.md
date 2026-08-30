@@ -264,7 +264,7 @@ service SettingsService {
 }
 ```
 
-Persists application settings in SQLite, sends Gotify test notifications, and reports private registry credential/connectivity status. Full field definitions live in the proto source.
+Persists application settings in SQLite, sends Gotify test notifications, and reports private registry credential/connectivity status. `GetSettingsResponse` and `UpdateSettingsRequest` carry `int32 audit_retention_days = 3` — one of the fixed retention presets `7 | 30 | 90 | 180 | 365` (days; default 90, issue #222). `GetSettings` always reports the effective value; `UpdateSettings` rejects any other value with `CodeInvalidArgument`. Full field definitions live in the proto source.
 
 ### 3.5. `proto/dmanager/v1/admin.proto`
 ```protobuf
@@ -364,34 +364,29 @@ message PruneNetworksResponse {
 }
 
 // Audit trail (issue #219). One row per recorded mutation: every RoleAdmin
-// RPC outcome plus scheduler-initiated automatic upgrades (source SYSTEM).
-enum AuditSource {
-  AUDIT_SOURCE_UNSPECIFIED = 0;
-  AUDIT_SOURCE_USER = 1;
-  AUDIT_SOURCE_SYSTEM = 2;
-}
-enum AuditOutcome {
-  AUDIT_OUTCOME_UNSPECIFIED = 0;
-  AUDIT_OUTCOME_SUCCESS = 1;
-  AUDIT_OUTCOME_FAILURE = 2;
-  AUDIT_OUTCOME_DENIED = 3;      // authenticated non-admin attempted an admin mutation
-}
+// RPC outcome plus scheduler-initiated automatic upgrades (source 2).
+//
+// Source/outcome are documented int32 values rather than proto enums: the
+// generated TS enums violate the app's erasableSyntaxOnly config.
+//   source:  0 = unspecified (filter: all), 1 = user, 2 = system
+//   outcome: 0 = unspecified (filter: all), 1 = success, 2 = failure,
+//            3 = denied (authenticated non-admin attempted an admin mutation)
 message AuditLogEntry {
   uint64 id = 1;                 // monotonic row id
   google.protobuf.Timestamp created_at = 2;
   string actor = 3;              // username; "system" when source = SYSTEM
   string actor_role = 4;         // admin|viewer; empty for system entries
-  AuditSource source = 5;
+  int32 source = 5;              // 1 = user, 2 = system
   string action = 6;             // dotted verb: image.delete, container.upgrade, network.prune, …
   string resource_type = 7;      // container|image|volume|network|builder|settings
   string resource_id = 8;        // daemon id where one exists, else empty
-  AuditOutcome outcome = 9;
+  int32 outcome = 9;             // 1 = success, 2 = failure, 3 = denied
   string detail = 10;            // human summary (prune counts, names); error message on failure
 }
 message ListAuditLogsRequest {
   string query = 1;              // substring match over actor, action, resource_id, detail (server-side)
-  AuditSource source = 2;        // UNSPECIFIED = all sources
-  AuditOutcome outcome = 3;      // UNSPECIFIED = all outcomes
+  int32 source = 2;              // 0 = all, 1 = user, 2 = system
+  int32 outcome = 3;             // 0 = all, 1 = success, 2 = failure, 3 = denied
   uint32 limit = 4;              // default 50, clamped to <= 200
   uint64 offset = 5;
 }

@@ -774,7 +774,7 @@ interface ConfirmDialogProps {
 
 Every state-changing action in dmanager leaves an append-only trace in the local database: **all mutation RPCs by any user** (the `RoleAdmin` procedure set — 14 procedures across four services today, and anything the map gains later) and **automatic updates** (the scheduler's background container re-deployments, which run with no user context). Entries record **who** (actor + role, or `system`), **what** (dotted action verb + resource), **outcome** (`success` / `failure` / `denied`) and **detail** (human-readable summary; the daemon's error message on failure). Review is **admin-only end to end**: the RPC, the nav item and the route all gate on the admin role. Recording is **best-effort and synchronous** — an audit-write failure logs a warning and never fails or delays the mutation it observes; an audit read failure never affects any other page.
 
-Two scoping decisions: first, the existing `auth_events` trail (logins, passkey changes, rate limiting — migration 00004) **stays where it is** (Settings → Security shows a user their own events); audit logs cover resource mutations, and folding auth events in is deferred until wanted. Second, retention is a **fixed cap of the 10,000 most recent entries**, trimmed opportunistically after insert — no configuration knob until a need shows up.
+Two scoping decisions: first, the existing `auth_events` trail (logins, passkey changes, rate limiting — migration 00004) **stays where it is** (Settings → Security shows a user their own events); audit logs cover resource mutations, and folding auth events in is deferred until wanted. Second, retention is **time-based and admin-configurable** (§12.7, issue #222): the admin picks one of five windows — 7 days, 1 month (30 days), 3 months (90 days, default), 6 months (180 days), 1 year (365 days) — in Settings → General, and entries older than the window are trimmed opportunistically after each insert.
 
 ### 12.2. Storage — Migration 00006 + sqlc
 
@@ -797,11 +797,11 @@ CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at);
 CREATE INDEX idx_audit_logs_action ON audit_logs(action);
 ```
 
-`source` ∈ `user|system`, `outcome` ∈ `success|failure|denied` — plain TEXT (checked in Go, not SQL) so the table survives enum additions without migrations. sqlc queries in `internal/db/queries/audit_logs.sql`: `CreateAuditLog`, `ListAuditLogs` (filter + `LIMIT`/`OFFSET`, ordered `created_at DESC, id DESC`), `CountAuditLogs` (same filter), `TrimAuditLogs` (delete everything below the retention watermark).
+`source` ∈ `user|system`, `outcome` ∈ `success|failure|denied` — plain TEXT (checked in Go, not SQL) so the table survives enum additions without migrations. sqlc queries in `internal/db/queries/audit_logs.sql`: `CreateAuditLog`, `ListAuditLogs` (filter + `LIMIT`/`OFFSET`, ordered `created_at DESC, id DESC`), `CountAuditLogs` (same filter), `TrimAuditLogsBefore` (delete every row older than the retention cutoff — see §12.7).
 
 ### 12.3. Recording Seam — `internal/audit` + the Interceptor
 
-New package `internal/audit`: an `Entry` struct and a `Recorder` wrapping `*sql.DB` with `Record(ctx, Entry)` (best-effort, warn-and-continue) and the retention trim after each successful insert. The server wires one shared `*Recorder` into the auth interceptor and the container service.
+New package `internal/audit`: an `Entry` struct and a `Recorder` wrapping `*sql.DB` with `Record(ctx, Entry)` (best-effort, warn-and-continue) and the retention trim after each successful insert — the window is read from the settings table at trim time, so an admin's change takes effect on the next recorded action without a restart. The server wires one shared `*Recorder` into the auth interceptor and the container service.
 
 The **connect interceptor in `internal/auth` is the single seam for user mutations** — it already owns the `RoleAdmin` procedure map and the resolved claims, so no per-service instrumentation can be forgotten:
 
@@ -815,7 +815,7 @@ The **system path** records explicitly: `upgradeContainerInternal` grows an orig
 
 ### 12.4. Protocol — `ListAuditLogs`
 
-`AdminService.ListAuditLogs` (admin role, §3 of the protocol doc): `ListAuditLogsRequest{query, source, outcome, limit, offset}` — `query` is a substring match over actor, action, resource id and detail (SQL `LIKE`, **server-side**: the log is unbounded, so client-side search over one page would silently lie); `source`/`outcome` are proto enums where `UNSPECIFIED` means *all*; `limit` defaults to 50 and clamps to ≤ 200; `offset` drives pagination. `ListAuditLogsResponse{entries, total}` — `total` is the filtered row count so the UI can print `n–m of T`. `AuditLogEntry{id, created_at, actor, actor_role, source, action, resource_type, resource_id, outcome, detail}` with `AuditSource{USER, SYSTEM}` and `AuditOutcome{SUCCESS, FAILURE, DENIED}`. Ordering is fixed (`created_at DESC, id DESC`) — newest first, no client-side column sorting against the server.
+`AdminService.ListAuditLogs` (admin role, §3 of the protocol doc): `ListAuditLogsRequest{query, source, outcome, limit, offset}` — `query` is a substring match over actor, action, resource id and detail (SQL `LIKE`, **server-side**: the log is unbounded, so client-side search over one page would silently lie); `source`/`outcome` are documented int32 values (see §3.5 of the protocol doc) where `0` means *all*; `limit` defaults to 50 and clamps to ≤ 200; `offset` drives pagination. `ListAuditLogsResponse{entries, total}` — `total` is the filtered row count so the UI can print `n–m of T`. `AuditLogEntry{id, created_at, actor, actor_role, source, action, resource_type, resource_id, outcome, detail}` with the same int32 value sets (source: 1 = user, 2 = system; outcome: 1 = success, 2 = failure, 3 = denied). Ordering is fixed (`created_at DESC, id DESC`) — newest first, no client-side column sorting against the server.
 
 ### 12.5. Frontend — Nav, Route Guard, Page
 
@@ -828,8 +828,27 @@ The **system path** records explicitly: `upgradeContainerInternal` grows an orig
 ### 12.6. Testing
 
 - **Migration**: goose up/down round-trip for 00006 (existing migration-test pattern).
-- **Recorder**: insert/read round-trip, retention trim at the cap, best-effort failure (a broken DB logs and returns without panicking).
+- **Recorder**: insert/read round-trip, retention trim by age (old seeded rows deleted, fresh ones kept), default window when the setting is missing, fallback when the setting is invalid, best-effort failure (a broken DB logs and returns without panicking).
+- **Settings retention validation**: `UpdateSettings` accepts each of the five presets and rejects anything else with `CodeInvalidArgument`; `GetSettings` reports the effective default when no row exists.
 - **Interceptor**: each outcome recorded exactly once with the mapped action/resource and correct actor; reads never recorded; denied attempts recorded; the `UpgradeContainer` skip holds; a recorder failure leaves the mutation's response untouched.
 - **Upgrade audit**: RPC path records one user-source entry; scheduler path records one system-source entry; failure detail carries the daemon error.
 - **`ListAuditLogs` handler**: filter matrix (query/source/outcome/combined), clamped limit, total correctness, ordering, daemon-free (pure DB).
-- **Frontend**: nav item admin-only; route guard redirects viewers; table rendering incl. outcome badges and truncation; search debounce issues one call; filters and pagination recompute the request; empty state; error banner with retry.
+- **Frontend**: nav item admin-only; route guard redirects viewers; table rendering incl. outcome badges and truncation; search debounce issues one call; filters and pagination recompute the request; empty state; error banner with retry; Settings General renders the five-window select, loads the effective value and saves it with the form.
+
+### 12.7. Retention Policy — Days-Based, Admin-Configurable (issue #222, STORY-072)
+
+Audit retention is **time-based with five fixed presets**, chosen by the admin in **Settings → General** (the existing `UpdateSettings` path — admin-only at the service and wire level):
+
+| Preset | Window (days) |
+|---|---|
+| 7 days | 7 |
+| 1 month | 30 |
+| 3 months (**default**) | 90 |
+| 6 months | 180 |
+| 1 year | 365 |
+
+- **Storage**: the existing `settings` key/value table, key `audit_retention_days`, TEXT value holding one of the five integers. **No migration** — a missing row means the default (90), matching how the stack treats unset settings. Calendar-month semantics are deliberately reduced to 30 days: deterministic, no time-zone or month-length edge cases.
+- **Protocol**: `GetSettingsResponse.audit_retention_days` and `UpdateSettingsRequest.audit_retention_days`, `int32` field 3 on both. Get always returns the **effective** value (default when unset) so the UI shows what is actually enforced. Update validates server-side — any value outside the preset set is refused with `CodeInvalidArgument`; there is no "unlimited" mode (a busy log rolling its window is exactly what this knob exists to prevent, and unbounded growth is a foot-gun we chose not to expose).
+- **Trim mechanics**: `TrimAuditLogsBefore` deletes `WHERE created_at < ?` with the cutoff bound as a UTC string in the same `YYYY-MM-DD HH:MM:SS` shape `CURRENT_TIMESTAMP` writes — string comparison over that format is chronologically correct, and it sidesteps driver time-binding ambiguity entirely. The `idx_audit_logs_created_at` index already exists (migration 00006). The trim stays opportunistic (after each successful insert) — lowering the window deletes the excess on the next recorded action, with no background job to schedule or miss.
+- **`Recorder` change**: `NewRecorder(queries, logger)` drops the fixed cap; at trim time it reads `audit_retention_days` (missing → default, invalid → default + warning), so the policy is honored without a restart and a corrupt value cannot disable trimming.
+- **Settings UI**: Settings → General grows an **Audit Log Retention** select with the five presets below the Gotify fields, loaded from `GetSettings` and saved with the existing Save button (always included in every save — the form is the full settings object).
