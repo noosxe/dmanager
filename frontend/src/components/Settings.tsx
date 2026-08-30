@@ -285,6 +285,33 @@ export function Settings({ initialTab }: SettingsProps = {}) {
     }
   };
 
+  // Retention is a closed preset select — apply on change instead of asking
+  // for a separate save click. The wire update is the full settings object,
+  // so the loaded Gotify values ride along unchanged. On failure the select
+  // reverts to the previously effective window.
+  const handleRetentionChange = async (days: number) => {
+    const previous = auditRetentionDays;
+    setAuditRetentionDays(days);
+    setIsSaving(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      await settingsClient.updateSettings({
+        gotifyUrl: gotifyUrl.trim(),
+        gotifyToken: gotifyToken.trim(),
+        auditRetentionDays: days,
+      });
+      toast.success("Audit log retention updated.");
+    } catch (err: unknown) {
+      setAuditRetentionDays(previous);
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg);
+      toast.error(`Failed to update audit log retention: ${msg}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleTestConnection = async () => {
     setError(null);
     setSuccess(null);
@@ -658,42 +685,6 @@ export function Settings({ initialTab }: SettingsProps = {}) {
                 </p>
               </div>
 
-              <div className="form-group">
-                <label
-                  htmlFor="audit-retention"
-                  style={{
-                    fontWeight: "600",
-                    fontSize: "14px",
-                    display: "block",
-                    marginBottom: "8px",
-                    color: "var(--text-h)",
-                  }}
-                >
-                  Audit Log Retention
-                </label>
-                <div className="input-wrapper">
-                  <select
-                    id="audit-retention"
-                    aria-label="Audit log retention"
-                    className="logs-select-filter"
-                    style={{ width: "100%" }}
-                    value={auditRetentionDays}
-                    onChange={(e) => setAuditRetentionDays(Number(e.target.value))}
-                    disabled={isSaving || isTesting}
-                  >
-                    {AUDIT_RETENTION_PRESETS.map((preset) => (
-                      <option key={preset.value} value={preset.value}>
-                        {preset.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <p style={{ fontSize: "12px", opacity: 0.6, margin: "4px 0 0 0" }}>
-                  Audit entries older than the selected window are deleted when the next entry is
-                  recorded.
-                </p>
-              </div>
-
               {testResult && (
                 <div
                   className="auth-error-banner"
@@ -743,6 +734,60 @@ export function Settings({ initialTab }: SettingsProps = {}) {
                 </button>
               </div>
             </form>
+          </div>
+
+          <div className="logs-viewer-card">
+            <div>
+              <h2
+                style={{
+                  fontSize: "18px",
+                  fontWeight: "600",
+                  color: "var(--text-h)",
+                  margin: "0 0 8px 0",
+                }}
+              >
+                Audit Logs
+              </h2>
+              <p style={{ fontSize: "14px", opacity: 0.8, margin: "0 0 24px 0" }}>
+                How long the mutation and system-action history is kept in the local database.
+                Entries older than the window are deleted when the next entry is recorded.
+              </p>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label
+                htmlFor="audit-retention"
+                style={{
+                  fontWeight: "600",
+                  fontSize: "14px",
+                  display: "block",
+                  marginBottom: "8px",
+                  color: "var(--text-h)",
+                }}
+              >
+                Audit Log Retention
+              </label>
+              <div className="input-wrapper">
+                <select
+                  id="audit-retention"
+                  aria-label="Audit log retention"
+                  className="logs-select-filter"
+                  style={{ width: "100%" }}
+                  value={auditRetentionDays}
+                  onChange={(e) => handleRetentionChange(Number(e.target.value))}
+                  disabled={loading || isSaving || isTesting}
+                >
+                  {AUDIT_RETENTION_PRESETS.map((preset) => (
+                    <option key={preset.value} value={preset.value}>
+                      {preset.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p style={{ fontSize: "12px", opacity: 0.6, margin: "4px 0 0 0" }}>
+                Applied immediately. Presets: 7 days, 1 month, 3 months, 6 months, 1 year.
+              </p>
+            </div>
           </div>
 
           <div className="logs-viewer-card">

@@ -199,7 +199,7 @@ describe("Settings Component", () => {
     expect(screen.getByText("Audit Log Retention")).toBeInTheDocument();
   });
 
-  it("saves the audit retention window with the form", async () => {
+  it("applies the audit retention window immediately on change", async () => {
     const user = userEvent.setup();
     render(
       <ToastProvider>
@@ -208,17 +208,46 @@ describe("Settings Component", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByLabelText("Audit log retention")).toBeInTheDocument();
+      expect(screen.getByLabelText("Audit log retention")).toHaveValue("180");
     });
 
+    // Closed preset select: no save click — changing it persists at once.
     await user.selectOptions(screen.getByLabelText("Audit log retention"), "7");
-    await user.click(screen.getByRole("button", { name: /save/i }));
 
     await waitFor(() => {
       expect(settingsClient.updateSettings).toHaveBeenCalledWith(
         expect.objectContaining({ auditRetentionDays: 7 }),
       );
     });
+    // The select keeps the new window (toasts render in DashboardLayout,
+    // outside this harness — the persisted call above is the assertion).
+    expect(screen.getByLabelText("Audit log retention")).toHaveValue("7");
+  });
+
+  it("renders the Audit Logs card separately from notifications", async () => {
+    render(
+      <ToastProvider>
+        <Settings />
+      </ToastProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Audit Logs" })).toBeInTheDocument();
+    });
+    expect(
+      screen.getByRole("heading", { name: "Notification Configurations" }),
+    ).toBeInTheDocument();
+
+    // The retention select must live in the Audit Logs card, not beside the
+    // Gotify fields: its own card heading appears between the two.
+    const auditHeading = screen.getByRole("heading", { name: "Audit Logs" });
+    const notifHeading = screen.getByRole("heading", { name: "Notification Configurations" });
+    expect(
+      auditHeading.compareDocumentPosition(notifHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBe(0);
+    expect(
+      notifHeading.compareDocumentPosition(auditHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("renders exactly the five retention presets", async () => {
