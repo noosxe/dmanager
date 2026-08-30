@@ -303,6 +303,10 @@ service AdminService {
   // role). Pre-defined (bridge/host/none), swarm-ingress and in-use networks
   // are daemon-protected.
   rpc PruneNetworks(PruneNetworksRequest) returns (PruneNetworksResponse);
+  // Review the audit trail (Authenticated, admin role): recorded mutations
+  // by users and system-originated automatic updates, filtered and paginated
+  // server-side. Read-only — entries are written by the server, never by RPC.
+  rpc ListAuditLogs(ListAuditLogsRequest) returns (ListAuditLogsResponse);
   // Report whether the Docker Engine is reachable (Authenticated, read-only).
   rpc CheckEngine(CheckEngineRequest) returns (CheckEngineResponse);
 }
@@ -358,6 +362,43 @@ message PruneNetworksResponse {
   uint64 networks_deleted = 1;   // count of removed networks (daemon-protected ones are absent)
   repeated string names = 2;     // removed networks' names, for the success toast
 }
+
+// Audit trail (issue #219). One row per recorded mutation: every RoleAdmin
+// RPC outcome plus scheduler-initiated automatic upgrades (source SYSTEM).
+enum AuditSource {
+  AUDIT_SOURCE_UNSPECIFIED = 0;
+  AUDIT_SOURCE_USER = 1;
+  AUDIT_SOURCE_SYSTEM = 2;
+}
+enum AuditOutcome {
+  AUDIT_OUTCOME_UNSPECIFIED = 0;
+  AUDIT_OUTCOME_SUCCESS = 1;
+  AUDIT_OUTCOME_FAILURE = 2;
+  AUDIT_OUTCOME_DENIED = 3;      // authenticated non-admin attempted an admin mutation
+}
+message AuditLogEntry {
+  uint64 id = 1;                 // monotonic row id
+  google.protobuf.Timestamp created_at = 2;
+  string actor = 3;              // username; "system" when source = SYSTEM
+  string actor_role = 4;         // admin|viewer; empty for system entries
+  AuditSource source = 5;
+  string action = 6;             // dotted verb: image.delete, container.upgrade, network.prune, …
+  string resource_type = 7;      // container|image|volume|network|builder|settings
+  string resource_id = 8;        // daemon id where one exists, else empty
+  AuditOutcome outcome = 9;
+  string detail = 10;            // human summary (prune counts, names); error message on failure
+}
+message ListAuditLogsRequest {
+  string query = 1;              // substring match over actor, action, resource_id, detail (server-side)
+  AuditSource source = 2;        // UNSPECIFIED = all sources
+  AuditOutcome outcome = 3;      // UNSPECIFIED = all outcomes
+  uint32 limit = 4;              // default 50, clamped to <= 200
+  uint64 offset = 5;
+}
+message ListAuditLogsResponse {
+  repeated AuditLogEntry entries = 1; // created_at DESC, id DESC — newest first, fixed order
+  uint64 total = 2;                   // rows matching the filter, for n–m-of-T pagination
+}
 message DeleteImageRequest {
   string id = 1;    // image ID (sha256:...) exactly as returned by ListImages
   bool force = 2;   // bypass tag-conflict errors; the daemon still refuses in-use images
@@ -407,6 +448,8 @@ Images carry the mutation surface since #196: per-image `DeleteImage` and bulk `
 `GetVolumeUsage` (issue #212) is **authenticated, any role** (read convention, `ListImages` precedent — a viewer may list volumes, so a viewer may measure them) and issues one `GET /system/df?type=volume` daemon call. The daemon walks every local volume's directory tree **serially and uncached** (singleflight only deduplicates concurrent calls) to compute sizes — a seconds-scale operation on hosts with large volumes — so the response must only ever be requested by an explicit user action, never by an automatic fetch. It maps to `VolumeUsage{name, size_bytes, ref_count}` per volume, where `size_bytes: -1` is the daemon's per-volume walk-failure signal (passed through verbatim; the client renders it as unknown) and `ref_count` counts container config references including stopped containers. Aggregate fields (`total_size_bytes`, `reclaimable_bytes` = sizes where `ref_count == 0`, `unused_count` = that set's cardinality) are computed server-side so clients never re-derive them. Only `local`-driver volumes without mount options appear, matching the daemon's df and prune scopes.
 
 `PruneVolumes` (issue #212) is **authenticated, admin role** and issues one `POST /volumes/prune` with no filters — the daemon's unused scope is fixed: a volume is removable only when **no container, running or stopped, references it at prune time** (local driver, no mount options; references are re-evaluated by the daemon, so a stale client preview can never cause a wrong deletion — protected volumes are simply absent from the report). The response maps the daemon report honestly: `volumes_deleted` (count), `names` (the removed volumes' names, for the success toast), and `space_reclaimed`. Daemon-down follows the `CodeUnavailable` convention.
+
+`ListAuditLogs` (issue #219) is **authenticated, admin role** and reads the audit trail written by the server itself — no RPC writes entries. The interceptor records every `RoleAdmin` mutation outcome (`success`/`failure`/`denied`) and the container-upgrade path additionally records scheduler-initiated automatic upgrades with `AUDIT_SOURCE_SYSTEM` (actor `"system"`); auth events keep living in their own table and are out of scope here. `query` filters server-side over actor, action, resource id and detail; `source`/`outcome` narrow with `UNSPECIFIED` meaning all; `limit` defaults to 50 and clamps to 200. The response is newest-first with a fixed ordering and carries `total` for pagination. A non-admin receives `CodePermissionDenied`; there is no daemon interaction, so no `CodeUnavailable` case exists.
 
 `ListNetworks` is enriched in issue #215 with per-network usage data. The daemon's list endpoint (`GET /networks`) carries **no attachment data on API ≥ 1.28** — the detailed mode that populates `Containers` is served only to legacy clients (`Detailed: versions.LessThan(ctx, "1.28")` in the daemon router) — so the handler issues one `NetworkInspect` per listed network after the cheap list call. Unlike volume sizing this is an **in-memory** libnetwork store read with no filesystem walk, so the enrichment stays well under the list round-trip's own cost and needs no opt-in gating. `containers_count` counts attachments from `Inspect.Containers` — a **stopped** container still counts, because its endpoint persists until the container is removed, matching the volume `ref_count` semantics. A per-network inspect failure degrades gracefully: that network's `containers_count` is `-1` (unknown, like the image usage convention) while the rest of the list still succeeds. `predefined` mirrors the daemon's `isPreDefined` (Linux: `bridge`, `host`, `none`) so clients can hide deletion affordances for networks the daemon will always refuse.
 

@@ -75,6 +75,7 @@ graph TD
     A67 --> A68["STORY-068: Builder Records Drill-Down — Table & Per-Record Prune (#209) (DONE)"]
     A68 --> A69["STORY-069: Volume Usage On Demand — Sizes, Reclaim & Count (#212) (DONE)"]
     A69 --> A70["STORY-070: Networks Tab — In-Use Visibility, Deletion & Reclaim (#215) (DONE)"]
+    A70 --> A71["STORY-071: Audit Logs — Mutation & System-Action Trail (#219)"]
 ```
 
 
@@ -1510,3 +1511,26 @@ graph TD
   - `go test ./...`, `go vet ./...` pass; interceptor reflection test green.
   - `pnpm check`, `pnpm test`, `pnpm build` pass.
   - Manual: In Use column reflects live attachments (stop a container — its network still shows in use); viewer sees no enabled delete/prune controls; deleting an unused network asks once and refreshes; Prune Unused names what it removed and never touches `bridge`/`host`/`none`.
+
+### STORY-071: Audit Logs — Mutation & System-Action Trail (issue #219) [PLANNED]
+
+**Goal:** Record every mutation action by any user and every automatic update to the local database, and give admins an admin-only review UI: a new sidebar item between Administration and Settings leading to an Audit Logs page — a searchable, filterable, paginated table. The interceptor's existing RoleAdmin procedure map is the single recording seam; the scheduler's background container upgrades record as system-source entries; the existing auth-events trail stays untouched in Settings → Security.
+
+**Tasks:**
+  1. `internal/db/migrations/00006_audit_logs.sql`: `audit_logs` table (actor, actor_role, source, action, resource_type, resource_id, outcome, detail, created_at) + indexes on created_at and action; `internal/db/queries/audit_logs.sql`: CreateAuditLog, ListAuditLogs (filter + limit/offset, created_at DESC, id DESC), CountAuditLogs, TrimAuditLogs; `sqlc generate`; goose up/down migration test.
+  2. `internal/audit/audit.go`: Entry struct + Recorder (best-effort Record with warn-and-continue, retention trim at 10,000 rows) wired in server bootstrap.
+  3. `proto/dmanager/v1/admin.proto`: `ListAuditLogs(ListAuditLogsRequest{query, source, outcome, limit, offset}) → ListAuditLogsResponse{entries, total}`, `AuditLogEntry`, `AuditSource`/`AuditOutcome` enums; `buf generate`; `internal/auth/interceptor.go`: `AdminServiceListAuditLogsProcedure` → `RoleAdmin`.
+  4. `internal/admin/service.go`: ListAuditLogs handler over the sqlc queries (query LIKE, enum filters, clamp limit ≤ 200, total) + tests (filter matrix, clamping, ordering, empty).
+  5. `internal/auth/interceptor.go`: record RoleAdmin mutations post-authorization — success (response-derived detail), failure (error message), denied for authenticated non-admins; static procedure → (action, resource, extractor) mapping; reads and unauthenticated procedures never recorded; UpgradeContainer skipped (no double-record); recorder failure leaves responses untouched. Tests per outcome.
+  6. `internal/container/upgrade.go` + `scheduler.go`: upgradeContainerInternal grows an origin param — RPC handler records source=user, scheduler records source=system (actor "system"), detail = old → new digest transition, failure detail carries the error. Tests for both paths.
+  7. Frontend nav + route: `DashboardLayout.tsx` Audit Logs item (ScrollText, admin-only, between Administration and Settings); `routes/router.tsx` `/audit-logs` with admin beforeLoad redirect; `useAuditLogs` hook (debounced query, source/outcome filters, page, one call per committed change, manual refresh).
+  8. `frontend/src/components/AuditLogsPage.tsx`: search input (containers-page pattern), source/outcome selects, table Time | Actor | Action | Resource | Outcome | Details (badges, truncation tooltips), Prev/Next with n–m of T, empty + error states; tests (admin-only nav, route guard, render matrix, debounce, filters, pagination).
+- **Files Affected:**
+  - `internal/db/migrations/00006_audit_logs.sql`, `internal/db/queries/audit_logs.sql`, `internal/db/*.sql.go` (generated)
+  - `internal/audit/audit.go` (+ test), `internal/auth/interceptor.go` (+ test), `internal/admin/service.go` (+ test), `internal/container/upgrade.go`, `internal/container/scheduler.go` (+ tests)
+  - `proto/dmanager/v1/admin.proto`, `internal/gen/**`, `frontend/src/gen/**` (generated)
+  - `frontend/src/hooks/useAuditLogs.ts`, `frontend/src/components/AuditLogsPage.tsx` (+ tests), `frontend/src/components/DashboardLayout.tsx`, `frontend/src/routes/router.tsx`
+- **Validation Check:**
+  - `go test ./...`, `go vet ./...`, `golangci-lint run ./...` pass.
+  - `pnpm check`, `pnpm test`, `pnpm build` pass.
+  - Manual: perform a delete/prune as admin → entry appears with actor, action and daemon-truth detail; a viewer poking an admin URL → redirect; triggering a denied attempt or an auto-upgrade shows the corresponding source/outcome; search and filters hit the server, not the current page.
