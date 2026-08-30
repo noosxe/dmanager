@@ -76,6 +76,7 @@ graph TD
     A68 --> A69["STORY-069: Volume Usage On Demand — Sizes, Reclaim & Count (#212) (DONE)"]
     A69 --> A70["STORY-070: Networks Tab — In-Use Visibility, Deletion & Reclaim (#215) (DONE)"]
     A70 --> A71["STORY-071: Audit Logs — Mutation & System-Action Trail (#219) (DONE)"]
+    A71 --> A72["STORY-072: Audit Retention — Days-Based, Admin-Configurable (#222)"]
 ```
 
 
@@ -1534,3 +1535,23 @@ graph TD
   - `go test ./...`, `go vet ./...`, `golangci-lint run ./...` pass.
   - `pnpm check`, `pnpm test`, `pnpm build` pass.
   - Manual: perform a delete/prune as admin → entry appears with actor, action and daemon-truth detail; a viewer poking an admin URL → redirect; triggering a denied attempt or an auto-upgrade shows the corresponding source/outcome; search and filters hit the server, not the current page.
+
+### STORY-072: Audit Retention — Days-Based, Admin-Configurable (issue #222) [PLANNED]
+
+**Goal:** Replace the audit trail's fixed 10k-row cap with a time-based retention policy the admin picks in Settings → General — five windows (7d, 1M = 30d, 3M = 90d default, 6M = 180d, 1Y = 365d), stored in the settings table, enforced by an age-based trim that reads the window at trim time (no restart needed). Closes #222.
+
+**Tasks:**
+  1. `proto/dmanager/v1/settings.proto`: `audit_retention_days` int32 (field 3) on `GetSettingsResponse` and `UpdateSettingsRequest`, documented presets 7|30|90|180|365; `buf generate`.
+  2. `internal/db/queries/audit_logs.sql`: `TrimAuditLogs` → `TrimAuditLogsBefore` (`DELETE ... WHERE created_at < ?`); `sqlc generate`.
+  3. `internal/audit/audit.go`: drop `RetentionRows`/`retention` param — `NewRecorder(queries, logger)`; at trim time read `audit_retention_days` (missing → 90, invalid → 90 + warn), cutoff bound as UTC `YYYY-MM-DD HH:MM:SS`; `cmd/serve.go` updated. Tests: age trim (old seeded rows deleted), default, invalid fallback, best-effort intact.
+  4. `internal/settings/service.go`: `UpdateSettings` validates the value against the preset set (`CodeInvalidArgument` otherwise) and persists; `GetSettings` returns the effective value (default when the row is missing). Tests: accept each preset, reject 42, default read.
+  5. `frontend/src/components/Settings.tsx` General tab: **Audit Log Retention** select (7 days / 1 month / 3 months / 6 months / 1 year) below the Gotify fields, loaded from `GetSettings`, saved with the form. Tests: renders five options, loads effective value, includes the field on save.
+- **Files Affected:**
+  - `proto/dmanager/v1/settings.proto`, `internal/gen/**`, `frontend/src/gen/**` (generated)
+  - `internal/db/queries/audit_logs.sql`, `internal/db/audit_logs.sql.go` (generated)
+  - `internal/audit/audit.go` (+ test), `cmd/serve.go`, `internal/settings/service.go` (+ test)
+  - `frontend/src/components/Settings.tsx` (+ test)
+- **Validation Check:**
+  - `go test ./...`, `go vet ./...`, `golangci-lint run ./...` pass.
+  - `pnpm check`, `pnpm test`, `pnpm build` pass.
+  - Manual: set 7 days in Settings → General, seed an older entry, record a new action → the old entry disappears; the Audit Logs page total reflects the trim; a non-admin cannot read the setting.
