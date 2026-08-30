@@ -20,14 +20,22 @@ service SettingsService {
 
 message GetSettingsRequest {}
 
+// Audit retention is days-based with five fixed presets (issue #222):
+// audit_retention_days ∈ {7, 30, 90, 180, 365} — 7d / 1M / 3M (default) /
+// 6M / 1Y. Get always reports the effective value (default when unset);
+// Update rejects any other value with CodeInvalidArgument. Kept as a
+// documented int32 rather than an enum: generated TS enums violate the
+// app erasableSyntaxOnly TS config.
 message GetSettingsResponse {
   string gotify_url = 1;
   string gotify_token = 2;
+  int32 audit_retention_days = 3;
 }
 
 message UpdateSettingsRequest {
   string gotify_url = 1;
   string gotify_token = 2;
+  int32 audit_retention_days = 3;
 }
 
 message UpdateSettingsResponse {}

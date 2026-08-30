@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { authClient, settingsClient } from "../client";
@@ -104,6 +105,7 @@ describe("Settings Component", () => {
     vi.mocked(settingsClient.getSettings).mockResolvedValue({
       gotifyUrl: "https://gotify.example.com",
       gotifyToken: "token123",
+      auditRetentionDays: 180,
       $typeName: "dmanager.v1.GetSettingsResponse",
     } as unknown as GetSettingsResponse);
 
@@ -189,6 +191,54 @@ describe("Settings Component", () => {
 
     expect(screen.getByText("docker.io")).toBeInTheDocument();
     expect(screen.getByText("Healthy")).toBeInTheDocument();
+
+    // Audit retention select shows the effective server value.
+    expect(vi.mocked(settingsClient.getSettings).mock.calls.length).toBeGreaterThan(0);
+    const retentionSelect = screen.getByLabelText("Audit log retention") as HTMLSelectElement;
+    expect(retentionSelect).toHaveValue("180");
+    expect(screen.getByText("Audit Log Retention")).toBeInTheDocument();
+  });
+
+  it("saves the audit retention window with the form", async () => {
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <Settings />
+      </ToastProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Audit log retention")).toBeInTheDocument();
+    });
+
+    await user.selectOptions(screen.getByLabelText("Audit log retention"), "7");
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(settingsClient.updateSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ auditRetentionDays: 7 }),
+      );
+    });
+  });
+
+  it("renders exactly the five retention presets", async () => {
+    render(
+      <ToastProvider>
+        <Settings />
+      </ToastProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Audit log retention")).toBeInTheDocument();
+    });
+    const options = within(screen.getByLabelText("Audit log retention")).getAllByRole("option");
+    expect(options.map((o) => o.textContent)).toEqual([
+      "7 days",
+      "1 month",
+      "3 months",
+      "6 months",
+      "1 year",
+    ]);
   });
 
   it("switches to Security tab and renders active sessions and auth events", async () => {

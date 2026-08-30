@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"strconv"
 	"net/http"
 	"strings"
 	"time"
@@ -16,6 +17,7 @@ import (
 	connect "connectrpc.com/connect"
 	"github.com/moby/moby/client"
 
+	"dmanager/internal/audit"
 	"dmanager/internal/auth"
 	"dmanager/internal/config"
 	"dmanager/internal/db"
@@ -67,13 +69,21 @@ func (s *Service) GetSettings(ctx context.Context, req *connect.Request[v1.GetSe
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to retrieve settings: %w", err))
 	}
 
-	res := &v1.GetSettingsResponse{}
+	res := &v1.GetSettingsResponse{
+		// Effective value: the default window until an admin picks one,
+		// so the UI always shows what is actually enforced.
+		AuditRetentionDays: int32(audit.DefaultRetentionDays),
+	}
 	for _, setting := range settingsList {
 		switch setting.Key {
 		case "gotify_url":
 			res.GotifyUrl = setting.Value
 		case "gotify_token":
 			res.GotifyToken = setting.Value
+		case audit.RetentionSettingKey:
+			if days, parseErr := strconv.Atoi(setting.Value); parseErr == nil && audit.IsValidRetentionDays(days) {
+				res.AuditRetentionDays = int32(days) //nolint:gosec // G115: the preset check bounds days to ≤ 365
+			}
 		}
 	}
 
@@ -84,6 +94,11 @@ func (s *Service) GetSettings(ctx context.Context, req *connect.Request[v1.GetSe
 func (s *Service) UpdateSettings(ctx context.Context, req *connect.Request[v1.UpdateSettingsRequest]) (*connect.Response[v1.UpdateSettingsResponse], error) {
 	if err := s.checkAdmin(ctx); err != nil {
 		return nil, err
+	}
+
+	if !audit.IsValidRetentionDays(int(req.Msg.AuditRetentionDays)) {
+		return nil, connect.NewError(connect.CodeInvalidArgument,
+			fmt.Errorf("audit_retention_days must be one of %v", audit.ValidRetentionDayList()))
 	}
 
 	queries := db.New(s.db)
@@ -104,7 +119,15 @@ func (s *Service) UpdateSettings(ctx context.Context, req *connect.Request[v1.Up
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to save gotify_token: %w", err))
 	}
 
-	s.logger.Info("System settings updated successfully", "gotify_url", req.Msg.GotifyUrl)
+	err = queries.UpdateSetting(ctx, db.UpdateSettingParams{
+		Key:   audit.RetentionSettingKey,
+		Value: strconv.Itoa(int(req.Msg.AuditRetentionDays)),
+	})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to save audit_retention_days: %w", err))
+	}
+
+	s.logger.Info("System settings updated successfully", "gotify_url", req.Msg.GotifyUrl, "audit_retention_days", req.Msg.AuditRetentionDays)
 
 	return connect.NewResponse(&v1.UpdateSettingsResponse{}), nil
 }

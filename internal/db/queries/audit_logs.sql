@@ -34,5 +34,9 @@ WHERE
   AND (COALESCE(?, '') = '' OR source = COALESCE(?, ''))
   AND (COALESCE(?, '') = '' OR outcome = COALESCE(?, ''));
 
--- name: TrimAuditLogs :exec
-DELETE FROM audit_logs WHERE id NOT IN (SELECT id FROM audit_logs ORDER BY id DESC LIMIT ?);
+-- Age-based retention (issue #222): delete every entry older than the
+-- cutoff. The cutoff is bound as a UTC string in the same
+-- shape CURRENT_TIMESTAMP writes; string comparison
+-- over that format is chronologically correct and driver time-binding is moot.
+-- name: TrimAuditLogsBefore :exec
+DELETE FROM audit_logs WHERE created_at < datetime(?);

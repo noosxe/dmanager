@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file proto/dmanager/v1/settings.proto.
  */
 export const file_proto_dmanager_v1_settings: GenFile = /*@__PURE__*/
-  fileDesc("CiBwcm90by9kbWFuYWdlci92MS9zZXR0aW5ncy5wcm90bxILZG1hbmFnZXIudjEiFAoSR2V0U2V0dGluZ3NSZXF1ZXN0Ij8KE0dldFNldHRpbmdzUmVzcG9uc2USEgoKZ290aWZ5X3VybBgBIAEoCRIUCgxnb3RpZnlfdG9rZW4YAiABKAkiQQoVVXBkYXRlU2V0dGluZ3NSZXF1ZXN0EhIKCmdvdGlmeV91cmwYASABKAkSFAoMZ290aWZ5X3Rva2VuGAIgASgJIhgKFlVwZGF0ZVNldHRpbmdzUmVzcG9uc2UiSQodVGVzdEdvdGlmeU5vdGlmaWNhdGlvblJlcXVlc3QSEgoKZ290aWZ5X3VybBgBIAEoCRIUCgxnb3RpZnlfdG9rZW4YAiABKAkiSAoeVGVzdEdvdGlmeU5vdGlmaWNhdGlvblJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSFQoNZXJyb3JfbWVzc2FnZRgCIAEoCSIaChhHZXRSZWdpc3RyeVN0YXR1c1JlcXVlc3QicgoOUmVnaXN0cnlTdGF0dXMSDAoEaG9zdBgBIAEoCRIQCgh1c2VybmFtZRgCIAEoCRIVCg1pc19jb25maWd1cmVkGAMgASgIEhIKCmlzX2hlYWx0aHkYBCABKAgSFQoNZXJyb3JfbWVzc2FnZRgFIAEoCSJMChlHZXRSZWdpc3RyeVN0YXR1c1Jlc3BvbnNlEi8KCnJlZ2lzdHJpZXMYASADKAsyGy5kbWFuYWdlci52MS5SZWdpc3RyeVN0YXR1czKVAwoPU2V0dGluZ3NTZXJ2aWNlElAKC0dldFNldHRpbmdzEh8uZG1hbmFnZXIudjEuR2V0U2V0dGluZ3NSZXF1ZXN0GiAuZG1hbmFnZXIudjEuR2V0U2V0dGluZ3NSZXNwb25zZRJZCg5VcGRhdGVTZXR0aW5ncxIiLmRtYW5hZ2VyLnYxLlVwZGF0ZVNldHRpbmdzUmVxdWVzdBojLmRtYW5hZ2VyLnYxLlVwZGF0ZVNldHRpbmdzUmVzcG9uc2UScQoWVGVzdEdvdGlmeU5vdGlmaWNhdGlvbhIqLmRtYW5hZ2VyLnYxLlRlc3RHb3RpZnlOb3RpZmljYXRpb25SZXF1ZXN0GisuZG1hbmFnZXIudjEuVGVzdEdvdGlmeU5vdGlmaWNhdGlvblJlc3BvbnNlEmIKEUdldFJlZ2lzdHJ5U3RhdHVzEiUuZG1hbmFnZXIudjEuR2V0UmVnaXN0cnlTdGF0dXNSZXF1ZXN0GiYuZG1hbmFnZXIudjEuR2V0UmVnaXN0cnlTdGF0dXNSZXNwb25zZUI0WjJkbWFuYWdlci9pbnRlcm5hbC9nZW4vcHJvdG8vZG1hbmFnZXIvdjE7ZG1hbmFnZXJ2MWIGcHJvdG8z");
+  fileDesc("CiBwcm90by9kbWFuYWdlci92MS9zZXR0aW5ncy5wcm90bxILZG1hbmFnZXIudjEiFAoSR2V0U2V0dGluZ3NSZXF1ZXN0Il0KE0dldFNldHRpbmdzUmVzcG9uc2USEgoKZ290aWZ5X3VybBgBIAEoCRIUCgxnb3RpZnlfdG9rZW4YAiABKAkSHAoUYXVkaXRfcmV0ZW50aW9uX2RheXMYAyABKAUiXwoVVXBkYXRlU2V0dGluZ3NSZXF1ZXN0EhIKCmdvdGlmeV91cmwYASABKAkSFAoMZ290aWZ5X3Rva2VuGAIgASgJEhwKFGF1ZGl0X3JldGVudGlvbl9kYXlzGAMgASgFIhgKFlVwZGF0ZVNldHRpbmdzUmVzcG9uc2UiSQodVGVzdEdvdGlmeU5vdGlmaWNhdGlvblJlcXVlc3QSEgoKZ290aWZ5X3VybBgBIAEoCRIUCgxnb3RpZnlfdG9rZW4YAiABKAkiSAoeVGVzdEdvdGlmeU5vdGlmaWNhdGlvblJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSFQoNZXJyb3JfbWVzc2FnZRgCIAEoCSIaChhHZXRSZWdpc3RyeVN0YXR1c1JlcXVlc3QicgoOUmVnaXN0cnlTdGF0dXMSDAoEaG9zdBgBIAEoCRIQCgh1c2VybmFtZRgCIAEoCRIVCg1pc19jb25maWd1cmVkGAMgASgIEhIKCmlzX2hlYWx0aHkYBCABKAgSFQoNZXJyb3JfbWVzc2FnZRgFIAEoCSJMChlHZXRSZWdpc3RyeVN0YXR1c1Jlc3BvbnNlEi8KCnJlZ2lzdHJpZXMYASADKAsyGy5kbWFuYWdlci52MS5SZWdpc3RyeVN0YXR1czKVAwoPU2V0dGluZ3NTZXJ2aWNlElAKC0dldFNldHRpbmdzEh8uZG1hbmFnZXIudjEuR2V0U2V0dGluZ3NSZXF1ZXN0GiAuZG1hbmFnZXIudjEuR2V0U2V0dGluZ3NSZXNwb25zZRJZCg5VcGRhdGVTZXR0aW5ncxIiLmRtYW5hZ2VyLnYxLlVwZGF0ZVNldHRpbmdzUmVxdWVzdBojLmRtYW5hZ2VyLnYxLlVwZGF0ZVNldHRpbmdzUmVzcG9uc2UScQoWVGVzdEdvdGlmeU5vdGlmaWNhdGlvbhIqLmRtYW5hZ2VyLnYxLlRlc3RHb3RpZnlOb3RpZmljYXRpb25SZXF1ZXN0GisuZG1hbmFnZXIudjEuVGVzdEdvdGlmeU5vdGlmaWNhdGlvblJlc3BvbnNlEmIKEUdldFJlZ2lzdHJ5U3RhdHVzEiUuZG1hbmFnZXIudjEuR2V0UmVnaXN0cnlTdGF0dXNSZXF1ZXN0GiYuZG1hbmFnZXIudjEuR2V0UmVnaXN0cnlTdGF0dXNSZXNwb25zZUI0WjJkbWFuYWdlci9pbnRlcm5hbC9nZW4vcHJvdG8vZG1hbmFnZXIvdjE7ZG1hbmFnZXJ2MWIGcHJvdG8z");
 
 /**
  * @generated from message dmanager.v1.GetSettingsRequest
@@ -26,6 +26,13 @@ export const GetSettingsRequestSchema: GenMessage<GetSettingsRequest> = /*@__PUR
   messageDesc(file_proto_dmanager_v1_settings, 0);
 
 /**
+ * Audit retention is days-based with five fixed presets (issue #222):
+ * audit_retention_days ∈ {7, 30, 90, 180, 365} — 7d / 1M / 3M (default) /
+ * 6M / 1Y. Get always reports the effective value (default when unset);
+ * Update rejects any other value with CodeInvalidArgument. Kept as a
+ * documented int32 rather than an enum: generated TS enums violate the
+ * app erasableSyntaxOnly TS config.
+ *
  * @generated from message dmanager.v1.GetSettingsResponse
  */
 export type GetSettingsResponse = Message<"dmanager.v1.GetSettingsResponse"> & {
@@ -38,6 +45,11 @@ export type GetSettingsResponse = Message<"dmanager.v1.GetSettingsResponse"> & {
    * @generated from field: string gotify_token = 2;
    */
   gotifyToken: string;
+
+  /**
+   * @generated from field: int32 audit_retention_days = 3;
+   */
+  auditRetentionDays: number;
 };
 
 /**
@@ -60,6 +72,11 @@ export type UpdateSettingsRequest = Message<"dmanager.v1.UpdateSettingsRequest">
    * @generated from field: string gotify_token = 2;
    */
   gotifyToken: string;
+
+  /**
+   * @generated from field: int32 audit_retention_days = 3;
+   */
+  auditRetentionDays: number;
 };
 
 /**

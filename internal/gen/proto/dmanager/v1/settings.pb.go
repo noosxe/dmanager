@@ -57,12 +57,19 @@ func (*GetSettingsRequest) Descriptor() ([]byte, []int) {
 	return file_proto_dmanager_v1_settings_proto_rawDescGZIP(), []int{0}
 }
 
+// Audit retention is days-based with five fixed presets (issue #222):
+// audit_retention_days ∈ {7, 30, 90, 180, 365} — 7d / 1M / 3M (default) /
+// 6M / 1Y. Get always reports the effective value (default when unset);
+// Update rejects any other value with CodeInvalidArgument. Kept as a
+// documented int32 rather than an enum: generated TS enums violate the
+// app erasableSyntaxOnly TS config.
 type GetSettingsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	GotifyUrl     string                 `protobuf:"bytes,1,opt,name=gotify_url,json=gotifyUrl,proto3" json:"gotify_url,omitempty"`
-	GotifyToken   string                 `protobuf:"bytes,2,opt,name=gotify_token,json=gotifyToken,proto3" json:"gotify_token,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	GotifyUrl          string                 `protobuf:"bytes,1,opt,name=gotify_url,json=gotifyUrl,proto3" json:"gotify_url,omitempty"`
+	GotifyToken        string                 `protobuf:"bytes,2,opt,name=gotify_token,json=gotifyToken,proto3" json:"gotify_token,omitempty"`
+	AuditRetentionDays int32                  `protobuf:"varint,3,opt,name=audit_retention_days,json=auditRetentionDays,proto3" json:"audit_retention_days,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *GetSettingsResponse) Reset() {
@@ -109,12 +116,20 @@ func (x *GetSettingsResponse) GetGotifyToken() string {
 	return ""
 }
 
+func (x *GetSettingsResponse) GetAuditRetentionDays() int32 {
+	if x != nil {
+		return x.AuditRetentionDays
+	}
+	return 0
+}
+
 type UpdateSettingsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	GotifyUrl     string                 `protobuf:"bytes,1,opt,name=gotify_url,json=gotifyUrl,proto3" json:"gotify_url,omitempty"`
-	GotifyToken   string                 `protobuf:"bytes,2,opt,name=gotify_token,json=gotifyToken,proto3" json:"gotify_token,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	GotifyUrl          string                 `protobuf:"bytes,1,opt,name=gotify_url,json=gotifyUrl,proto3" json:"gotify_url,omitempty"`
+	GotifyToken        string                 `protobuf:"bytes,2,opt,name=gotify_token,json=gotifyToken,proto3" json:"gotify_token,omitempty"`
+	AuditRetentionDays int32                  `protobuf:"varint,3,opt,name=audit_retention_days,json=auditRetentionDays,proto3" json:"audit_retention_days,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *UpdateSettingsRequest) Reset() {
@@ -159,6 +174,13 @@ func (x *UpdateSettingsRequest) GetGotifyToken() string {
 		return x.GotifyToken
 	}
 	return ""
+}
+
+func (x *UpdateSettingsRequest) GetAuditRetentionDays() int32 {
+	if x != nil {
+		return x.AuditRetentionDays
+	}
+	return 0
 }
 
 type UpdateSettingsResponse struct {
@@ -464,15 +486,17 @@ var File_proto_dmanager_v1_settings_proto protoreflect.FileDescriptor
 const file_proto_dmanager_v1_settings_proto_rawDesc = "" +
 	"\n" +
 	" proto/dmanager/v1/settings.proto\x12\vdmanager.v1\"\x14\n" +
-	"\x12GetSettingsRequest\"W\n" +
+	"\x12GetSettingsRequest\"\x89\x01\n" +
 	"\x13GetSettingsResponse\x12\x1d\n" +
 	"\n" +
 	"gotify_url\x18\x01 \x01(\tR\tgotifyUrl\x12!\n" +
-	"\fgotify_token\x18\x02 \x01(\tR\vgotifyToken\"Y\n" +
+	"\fgotify_token\x18\x02 \x01(\tR\vgotifyToken\x120\n" +
+	"\x14audit_retention_days\x18\x03 \x01(\x05R\x12auditRetentionDays\"\x8b\x01\n" +
 	"\x15UpdateSettingsRequest\x12\x1d\n" +
 	"\n" +
 	"gotify_url\x18\x01 \x01(\tR\tgotifyUrl\x12!\n" +
-	"\fgotify_token\x18\x02 \x01(\tR\vgotifyToken\"\x18\n" +
+	"\fgotify_token\x18\x02 \x01(\tR\vgotifyToken\x120\n" +
+	"\x14audit_retention_days\x18\x03 \x01(\x05R\x12auditRetentionDays\"\x18\n" +
 	"\x16UpdateSettingsResponse\"a\n" +
 	"\x1dTestGotifyNotificationRequest\x12\x1d\n" +
 	"\n" +

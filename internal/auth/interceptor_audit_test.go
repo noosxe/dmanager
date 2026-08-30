@@ -245,7 +245,7 @@ func TestInterceptorAuditFailureDoesNotBreakRequest(t *testing.T) {
 	queries := newTestDB(t)
 	adminSession, _ := seedAuditSessions(t, queries)
 	// A recorder whose storage is closed: audit writes fail, the mutation must not.
-	rec := audit.NewRecorder(queries, slog.New(slog.NewTextHandler(io.Discard, nil)), audit.RetentionRows)
+	rec := audit.NewRecorder(queries, slog.New(slog.NewTextHandler(io.Discard, nil)))
 
 	interceptor := NewInterceptor(queries, slog.New(slog.NewTextHandler(io.Discard, nil)), 168*time.Hour, rec)
 
