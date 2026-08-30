@@ -129,6 +129,19 @@ webauthn:
     - "https://dmanager.example.com"
   require_user_verification: preferred
 
+# System email (optional). Mail goes through an SMTP relay for system
+# purposes only — there is no user-facing send feature.
+smtp:
+  enabled: false
+  # host: "postfix.relay.internal"
+  # port: "25"
+  # username: ""
+  # password: ""
+  # from_email: "noreply@example.com"
+  # from_name: "dmanager"
+  # tls_mode: "none"          # none | starttls | tls
+  # timeout_seconds: 15
+
 registries: []
 ```
 
@@ -174,6 +187,21 @@ registries: []
 | `webauthn.rp_id` | `string` | `""` | Relying Party ID for passkeys (effective domain without port, e.g. `"dmanager.example.com"` or `"localhost"`). |
 | `webauthn.origins` | `string[]` | `[]` | Fully-qualified origins allowed for passkey ceremonies (e.g. `["https://dmanager.example.com"]`). |
 | `webauthn.require_user_verification` | `string` | `"preferred"` | User verification requirement (`"preferred"`, `"required"`, or `"discouraged"`). |
+
+#### `smtp` — system email relay (optional)
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `smtp.enabled` | `bool` | `false` | Master switch. When `false`, the whole section is inert — email-consuming features degrade to logged no-ops. |
+| `smtp.host` | `string` | `""` | SMTP relay host (e.g. a postfix container on the Docker network). Required when enabled. |
+| `smtp.port` | `string` | `"25"` | Relay port. Use `"587"` for submission-style relays. |
+| `smtp.username` / `smtp.password` | `string` | `""` | Optional SMTP AUTH (PLAIN). Leave empty for relays that trust the internal network. Prefer `DMANAGER_SMTP_PASSWORD` env for the secret. |
+| `smtp.from_email` | `string` | `""` | Sender address, required when enabled. Must sit on the upstream provider’s verified domain (e.g. Resend) or upstream delivery fails. |
+| `smtp.from_name` | `string` | `""` | Optional display name, rendered as `From: "dmanager" <noreply@example.com>`. |
+| `smtp.tls_mode` | `string` | `"none"` | `none` (plaintext — internal networks only, the relay must be restricted to them), `starttls`, or `tls` (implicit TLS, port 465 style). |
+| `smtp.timeout_seconds` | `int` | `15` | Dial + send budget per message (1–120). |
+
+Email is sent by system flows only; there is no API or UI send path. Verify the setup from the deployment with `dmanager smtp test --to=you@example.com`.
 
 #### `registries` — Private registry credentials
 

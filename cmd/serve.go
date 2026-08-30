@@ -24,6 +24,7 @@ import (
 	"dmanager/internal/container"
 	"dmanager/internal/db"
 	"dmanager/internal/docker"
+	"dmanager/internal/mailer"
 	dmanagerv1 "dmanager/internal/gen/proto/dmanager/v1"
 	"dmanager/internal/gen/proto/dmanager/v1/dmanagerv1connect"
 	"dmanager/internal/logging"
@@ -126,6 +127,19 @@ var serveCmd = &cobra.Command{
 				})
 			}
 		})
+
+		// System mail (issue #226): constructed once here; consumer services
+		// land with their own stories. Disabled config yields the no-op mailer.
+		emailer := mailer.New(cfg.SMTP, logger.With("module", "mailer"))
+		if emailer.Enabled() {
+			cmdLogger.Info("smtp enabled",
+				slog.String("host", cfg.SMTP.Host),
+				slog.String("port", cfg.SMTP.Port),
+				slog.String("tls_mode", cfg.SMTP.TLSMode),
+				slog.String("from", cfg.SMTP.FromEmail))
+		} else {
+			cmdLogger.Debug("smtp disabled")
+		}
 
 		authSvc := auth.NewService(queries, logger.With("module", "auth"), cfg.Auth, cfg.WebAuthn, cfg.Server.TrustedProxy)
 		auditor := audit.NewRecorder(queries, logger.With("module", "audit"))

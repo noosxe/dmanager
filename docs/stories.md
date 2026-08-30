@@ -77,7 +77,7 @@ graph TD
     A69 --> A70["STORY-070: Networks Tab — In-Use Visibility, Deletion & Reclaim (#215) (DONE)"]
     A70 --> A71["STORY-071: Audit Logs — Mutation & System-Action Trail (#219) (DONE)"]
     A71 --> A72["STORY-072: Audit Retention — Days-Based, Admin-Configurable (#222) (DONE)"]
-    A72 --> A73["STORY-073: SMTP Email Delivery — Relay Config, Mailer Package, Test CLI (#226)"]
+    A72 --> A73["STORY-073: SMTP Email Delivery — Relay Config, Mailer Package, Test CLI (#226) (DONE)"]
 ```
 
 
@@ -1557,7 +1557,7 @@ graph TD
   - `pnpm check`, `pnpm test`, `pnpm build` pass.
   - Manual: set 7 days in Settings → General, seed an older entry, record a new action → the old entry disappears; the Audit Logs page total reflects the trim; a non-admin cannot read the setting.
 
-### STORY-073: SMTP Email Delivery — Relay Config, Mailer Package, Test CLI (issue #226) [PLANNED]
+### STORY-073: SMTP Email Delivery — Relay Config, Mailer Package, Test CLI (issue #226) [DONE]
 
 **Goal:** Give dmanager system-only outbound email through an admin-configured SMTP relay (postfix container forwarding upstream, e.g. Resend): an `[smtp]` config section (file + `DMANAGER_SMTP_*` env) with sender identity and TLS mode, an `internal/mailer` package with a no-op mode when unconfigured, startup wiring, and an ops-only `dmanager smtp test --to=...` verification subcommand. No user-facing or RPC send path. Closes #226.
 
