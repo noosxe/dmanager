@@ -37,6 +37,18 @@ func TestConfigDefaults(t *testing.T) {
 	if cfg.Server.TrustedProxy {
 		t.Errorf("expected default trusted_proxy false, got true")
 	}
+	if cfg.SMTP.Enabled {
+		t.Errorf("expected default smtp.enabled false, got true")
+	}
+	if cfg.SMTP.Port != "25" {
+		t.Errorf("expected default smtp.port 25, got %q", cfg.SMTP.Port)
+	}
+	if cfg.SMTP.TLSMode != TLSModeNone {
+		t.Errorf("expected default smtp.tls_mode none, got %q", cfg.SMTP.TLSMode)
+	}
+	if cfg.SMTP.TimeoutSeconds != 15 {
+		t.Errorf("expected default smtp.timeout_seconds 15, got %d", cfg.SMTP.TimeoutSeconds)
+	}
 	if cfg.Auth.BreachedPasswordCheck {
 		t.Errorf("expected default breached_password_check false, got true")
 	}
@@ -253,5 +265,175 @@ func TestConfigValidation(t *testing.T) {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestConfigSMTPYAMLAndEnv(t *testing.T) {
+	tempDir := t.TempDir()
+	yamlPath := filepath.Join(tempDir, "config.yaml")
+	content := `
+smtp:
+  enabled: true
+  host: "postfix.relay.internal"
+  port: "587"
+  from_email: "noreply@example.com"
+  from_name: "dmanager"
+  tls_mode: "starttls"
+`
+	if err := os.WriteFile(yamlPath, []byte(content), 0o600); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	cfg, err := Load(yamlPath)
+	if err != nil {
+		t.Fatalf("failed to load smtp yaml config: %v", err)
+	}
+	if !cfg.SMTP.Enabled || cfg.SMTP.Host != "postfix.relay.internal" || cfg.SMTP.Port != "587" {
+		t.Fatalf("unexpected smtp config from yaml: %+v", cfg.SMTP)
+	}
+	if cfg.SMTP.TLSMode != TLSModeStartTLS || cfg.SMTP.FromEmail != "noreply@example.com" {
+		t.Fatalf("unexpected smtp config from yaml: %+v", cfg.SMTP)
+	}
+	if cfg.SMTP.TimeoutSeconds != 15 {
+		t.Errorf("expected default timeout to survive, got %d", cfg.SMTP.TimeoutSeconds)
+	}
+
+	t.Setenv("DMANAGER_SMTP_HOST", "other.relay.internal")
+	t.Setenv("DMANAGER_SMTP_PASSWORD", "relay-secret")
+	cfg, err = Load(yamlPath)
+	if err != nil {
+		t.Fatalf("failed to load smtp env config: %v", err)
+	}
+	if cfg.SMTP.Host != "other.relay.internal" {
+		t.Errorf("expected env host override, got %q", cfg.SMTP.Host)
+	}
+	if cfg.SMTP.Password != "relay-secret" {
+		t.Errorf("expected env password, got %q", cfg.SMTP.Password)
+	}
+}
+
+const invalidModeValue = "sometimes"
+
+func TestConfigSMTPValidation(t *testing.T) {
+	tests := []struct {
+		name    string
+		mutate  func(c *SMTPConfig)
+		wantErr bool
+	}{
+		{
+			name: "missing host",
+			mutate: func(c *SMTPConfig) {
+				c.Host = ""
+			},
+			wantErr: true,
+		},
+		{
+			name: "missing port",
+			mutate: func(c *SMTPConfig) {
+				c.Port = ""
+			},
+			wantErr: true,
+		},
+		{
+			name: "non-numeric port",
+			mutate: func(c *SMTPConfig) {
+				c.Port = "smtp"
+			},
+			wantErr: true,
+		},
+		{
+			name: "missing from_email",
+			mutate: func(c *SMTPConfig) {
+				c.FromEmail = ""
+			},
+			wantErr: true,
+		},
+		{
+			name: "malformed from_email",
+			mutate: func(c *SMTPConfig) {
+				c.FromEmail = "noreply"
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid tls_mode",
+			mutate: func(c *SMTPConfig) {
+				c.TLSMode = invalidModeValue
+			},
+			wantErr: true,
+		},
+		{
+			name: "timeout over range",
+			mutate: func(c *SMTPConfig) {
+				c.TimeoutSeconds = 121
+			},
+			wantErr: true,
+		},
+		{
+			name: "timeout negative",
+			mutate: func(c *SMTPConfig) {
+				c.TimeoutSeconds = -5
+			},
+			wantErr: true,
+		},
+		{
+			name: "zero timeout falls back to default",
+			mutate: func(c *SMTPConfig) {
+				c.TimeoutSeconds = 0
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid full section",
+			mutate: func(c *SMTPConfig) {
+				c.Username = "relay-user"
+				c.Password = "relay-secret"
+				c.TLSMode = TLSModeTLS
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			c := &SMTPConfig{
+				Enabled:   true,
+				Host:      "postfix.relay.internal",
+				Port:      "25",
+				FromEmail: "noreply@example.com",
+				FromName:  "dmanager",
+				TLSMode:   TLSModeNone,
+			}
+			tc.mutate(c)
+			err := c.Validate()
+			if tc.wantErr && err == nil {
+				t.Errorf("expected error, got nil")
+			}
+			if !tc.wantErr && err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+func TestConfigSMTPDisabledInert(t *testing.T) {
+	cfg := &Config{
+		Auth: AuthConfig{
+			SessionIdleTimeout:        168 * time.Hour,
+			SessionAbsoluteTimeout:    720 * time.Hour,
+			RememberMeIdleTimeout:     720 * time.Hour,
+			RememberMeAbsoluteTimeout: 2160 * time.Hour,
+			SecureCookies:             SecureCookiesAuto,
+			BcryptCost:                12,
+		},
+		SMTP: SMTPConfig{
+			Enabled:  false,
+			TLSMode:  invalidModeValue,
+			Port:     "not-a-port",
+			FromName: "x",
+		},
+	}
+	if err := cfg.Validate(); err != nil {
+		t.Errorf("disabled smtp section must be inert, got: %v", err)
 	}
 }

@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -35,6 +36,10 @@ const (
 	SecureCookiesAlways = "always"
 	SecureCookiesNever  = "never"
 
+	TLSModeNone     = "none"
+	TLSModeStartTLS = "starttls"
+	TLSModeTLS      = "tls"
+
 	UserVerificationPreferred   = "preferred"
 	UserVerificationRequired    = "required"
 	UserVerificationDiscouraged = "discouraged"
@@ -54,6 +59,18 @@ type AuthConfig struct {
 	BreachedPasswordCheck     bool          `koanf:"breached_password_check"`
 }
 
+type SMTPConfig struct {
+	Enabled        bool   `koanf:"enabled"`
+	Host           string `koanf:"host"`
+	Port           string `koanf:"port"`
+	Username       string `koanf:"username"`
+	Password       string `koanf:"password"`
+	FromEmail      string `koanf:"from_email"`
+	FromName       string `koanf:"from_name"`
+	TLSMode        string `koanf:"tls_mode"`
+	TimeoutSeconds int    `koanf:"timeout_seconds"`
+}
+
 type WebAuthnConfig struct {
 	RPID                    string   `koanf:"rp_id"`
 	Origins                 []string `koanf:"origins"`
@@ -66,6 +83,7 @@ type Config struct {
 	Scheduler  SchedulerConfig `koanf:"scheduler"`
 	Auth       AuthConfig      `koanf:"auth"`
 	WebAuthn   WebAuthnConfig  `koanf:"webauthn"`
+	SMTP       SMTPConfig      `koanf:"smtp"`
 	Registries []Registry      `koanf:"registries"`
 }
 
@@ -105,6 +123,41 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("webauthn.origins cannot be empty when webauthn.rp_id is set")
 	}
 
+	// The whole SMTP section is inert while disabled: partial or commented-out
+	// relay details in the compose file must not break startup.
+	if c.SMTP.Enabled {
+		return c.SMTP.Validate()
+	}
+
+	return nil
+}
+
+// Validate checks the SMTP section itself; only called when Enabled is true.
+func (c *SMTPConfig) Validate() error {
+	if strings.TrimSpace(c.Host) == "" {
+		return fmt.Errorf("smtp.host is required when smtp.enabled is true")
+	}
+	if strings.TrimSpace(c.Port) == "" {
+		return fmt.Errorf("smtp.port is required when smtp.enabled is true")
+	}
+	port, err := strconv.Atoi(c.Port)
+	if err != nil || port < 1 || port > 65535 {
+		return fmt.Errorf("smtp.port must be a valid port number, got %q", c.Port)
+	}
+	if !strings.Contains(c.FromEmail, "@") {
+		return fmt.Errorf("smtp.from_email must be a valid address, got %q", c.FromEmail)
+	}
+	switch c.TLSMode {
+	case TLSModeNone, TLSModeStartTLS, TLSModeTLS:
+	default:
+		return fmt.Errorf("smtp.tls_mode must be one of 'none', 'starttls', 'tls', got %q", c.TLSMode)
+	}
+	if c.TimeoutSeconds == 0 {
+		c.TimeoutSeconds = 15
+	}
+	if c.TimeoutSeconds < 1 || c.TimeoutSeconds > 120 {
+		return fmt.Errorf("smtp.timeout_seconds must be between 1 and 120, got %d", c.TimeoutSeconds)
+	}
 	return nil
 }
 
@@ -127,6 +180,10 @@ func Load(configPath string) (*Config, error) {
 		"auth.bcrypt_cost":                   12,
 		"auth.breached_password_check":       false,
 		"webauthn.require_user_verification": "preferred",
+		"smtp.enabled":                       false,
+		"smtp.port":                          "25",
+		"smtp.tls_mode":                      TLSModeNone,
+		"smtp.timeout_seconds":               15,
 	}
 	if err := k.Load(confmap.Provider(defaults, "."), nil); err != nil {
 		return nil, fmt.Errorf("failed to load default configuration: %w", err)
@@ -202,6 +259,10 @@ func Load(configPath string) (*Config, error) {
 					return "webauthn.origins", origins
 				}
 				return "webauthn." + sub, v
+			}
+			if strings.HasPrefix(key, "smtp_") {
+				sub := strings.TrimPrefix(key, "smtp_")
+				return "smtp." + sub, v
 			}
 			// Registries are handled in manual post-processing
 			return "", nil
