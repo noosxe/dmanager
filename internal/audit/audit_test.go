@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"log/slog"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -12,7 +13,7 @@ import (
 	"dmanager/internal/db"
 )
 
-func newTestRecorder(t *testing.T, retention int) (*Recorder, *db.Queries, *sql.DB) {
+func newTestRecorder(t *testing.T) (*Recorder, *db.Queries, *sql.DB) {
 	t.Helper()
 	dbConn, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
@@ -25,12 +26,15 @@ func newTestRecorder(t *testing.T, retention int) (*Recorder, *db.Queries, *sql.
 		t.Fatalf("failed to run migrations: %v", err)
 	}
 	queries := db.New(dbConn)
-	return NewRecorder(queries, slog.New(slog.NewTextHandler(testWriter{}, nil)), retention), queries, dbConn
+	return NewRecorder(queries, slog.New(slog.NewTextHandler(testWriter{}, nil))), queries, dbConn
 }
 
 const (
 	testActorAdmin = "admin"
 	testActionDel  = "image.delete"
+
+	auditTestDetailAged  = "aged"
+	auditTestDetailFresh = "fresh"
 )
 
 type testWriter struct{}
@@ -38,7 +42,7 @@ type testWriter struct{}
 func (testWriter) Write(p []byte) (int, error) { return len(p), nil }
 
 func TestRecordAndListRoundTrip(t *testing.T) {
-	recorder, queries, _ := newTestRecorder(t, RetentionRows)
+	recorder, queries, _ := newTestRecorder(t)
 
 	recorder.Record(context.Background(), Entry{
 		Actor:        testActorAdmin,
@@ -79,38 +83,103 @@ func TestRecordAndListRoundTrip(t *testing.T) {
 	}
 }
 
-func TestRecordTrimsToRetention(t *testing.T) {
-	recorder, queries, _ := newTestRecorder(t, 3)
-
-	for i := 0; i < 5; i++ {
-		recorder.Record(context.Background(), Entry{
-			Actor:  "admin",
-			Source: SourceUser,
-			Action: "image.delete",
-			Detail: strings.Repeat("x", i),
-		})
+// backdate rewrites an entry's created_at to now minus the given days,
+// simulating an entry that has aged past the retention window.
+func backdate(t *testing.T, dbConn *sql.DB, days int) {
+	t.Helper()
+	if _, err := dbConn.Exec(
+		`UPDATE audit_logs SET created_at = datetime('now', ?) WHERE id = 1`,
+		"-" + strconv.Itoa(days) + " days",
+	); err != nil {
+		t.Fatalf("failed to backdate entry: %v", err)
 	}
+}
 
-	count, err := queries.CountAuditLogs(context.Background(), db.CountAuditLogsParams{})
-	if err != nil {
-		t.Fatalf("failed to count: %v", err)
+func setRetention(t *testing.T, queries *db.Queries, value string) {
+	t.Helper()
+	if err := queries.UpdateSetting(context.Background(), db.UpdateSettingParams{
+		Key: RetentionSettingKey, Value: value,
+	}); err != nil {
+		t.Fatalf("failed to set retention: %v", err)
 	}
-	if count != 3 {
-		t.Fatalf("expected retention cap of 3, got %d entries", count)
-	}
+}
 
-	// The kept rows must be the newest (highest ids).
+func TestRecordTrimsOlderThanWindow(t *testing.T) {
+	recorder, queries, dbConn := newTestRecorder(t)
+
+	recorder.Record(context.Background(), Entry{Actor: testActorAdmin, Source: SourceUser, Action: testActionDel, Detail: "old"})
+	setRetention(t, queries, "7")
+	backdate(t, dbConn, 10) // older than the 7-day window
+
+	// A fresh insert trims the aged-out entry on the next record.
+	recorder.Record(context.Background(), Entry{Actor: testActorAdmin, Source: SourceUser, Action: testActionDel, Detail: "new"})
+
 	rows, err := queries.ListAuditLogs(context.Background(), db.ListAuditLogsParams{Column1: "", Limit: 10})
 	if err != nil {
 		t.Fatalf("failed to list: %v", err)
 	}
-	if len(rows) != 3 || rows[len(rows)-1].Detail != strings.Repeat("x", 2) {
-		t.Errorf("expected the three newest entries retained, got %+v", rows)
+	if len(rows) != 1 || rows[0].Detail != "new" {
+		t.Errorf("expected only the fresh entry after age trim, got %+v", rows)
+	}
+}
+
+func TestRetentionDefaultsWhenUnset(t *testing.T) {
+	recorder, queries, dbConn := newTestRecorder(t)
+
+	recorder.Record(context.Background(), Entry{Actor: testActorAdmin, Source: SourceUser, Action: testActionDel, Detail: auditTestDetailAged})
+	// No setting row exists: the default window (90 days) applies. An entry
+	// aged 100 days must be trimmed by the next insert — proving the default
+	// is 90, not 365.
+	backdate(t, dbConn, 100)
+	recorder.Record(context.Background(), Entry{Actor: testActorAdmin, Source: SourceUser, Action: testActionDel, Detail: auditTestDetailFresh})
+
+	rows, err := queries.ListAuditLogs(context.Background(), db.ListAuditLogsParams{Column1: "", Limit: 10})
+	if err != nil {
+		t.Fatalf("failed to list: %v", err)
+	}
+	if len(rows) != 1 || rows[0].Detail != "fresh" {
+		t.Errorf("expected default 90-day window applied, got %+v", rows)
+	}
+}
+
+func TestRetentionFallsBackOnInvalidValue(t *testing.T) {
+	recorder, queries, dbConn := newTestRecorder(t)
+
+	// A corrupt setting must fall back to the default window, never disable
+	// trimming.
+	setRetention(t, queries, "bogus")
+	recorder.Record(context.Background(), Entry{Actor: testActorAdmin, Source: SourceUser, Action: testActionDel, Detail: auditTestDetailAged})
+	backdate(t, dbConn, 100)
+	recorder.Record(context.Background(), Entry{Actor: testActorAdmin, Source: SourceUser, Action: testActionDel, Detail: auditTestDetailFresh})
+
+	rows, err := queries.ListAuditLogs(context.Background(), db.ListAuditLogsParams{Column1: "", Limit: 10})
+	if err != nil {
+		t.Fatalf("failed to list: %v", err)
+	}
+	if len(rows) != 1 || rows[0].Detail != "fresh" {
+		t.Errorf("expected invalid setting to fall back to the default window, got %+v", rows)
+	}
+}
+
+func TestRetentionHonorsConfiguredWindow(t *testing.T) {
+	recorder, queries, dbConn := newTestRecorder(t)
+
+	setRetention(t, queries, "365")
+	recorder.Record(context.Background(), Entry{Actor: testActorAdmin, Source: SourceUser, Action: testActionDel, Detail: auditTestDetailAged})
+	backdate(t, dbConn, 100) // 100 days old — well inside a 1-year window
+	recorder.Record(context.Background(), Entry{Actor: testActorAdmin, Source: SourceUser, Action: testActionDel, Detail: auditTestDetailFresh})
+
+	rows, err := queries.ListAuditLogs(context.Background(), db.ListAuditLogsParams{Column1: "", Limit: 10})
+	if err != nil {
+		t.Fatalf("failed to list: %v", err)
+	}
+	if len(rows) != 2 {
+		t.Errorf("expected both entries kept inside the 365-day window, got %d", len(rows))
 	}
 }
 
 func TestRecordTruncatesDetail(t *testing.T) {
-	recorder, queries, _ := newTestRecorder(t, RetentionRows)
+	recorder, queries, _ := newTestRecorder(t)
 
 	huge := strings.Repeat("e", maxDetailLen+500)
 	recorder.Record(context.Background(), Entry{Action: "settings.update", Detail: huge})
@@ -125,17 +194,10 @@ func TestRecordTruncatesDetail(t *testing.T) {
 }
 
 func TestRecordSurvivesBrokenStorage(t *testing.T) {
-	recorder, _, dbConn := newTestRecorder(t, RetentionRows)
+	recorder, _, dbConn := newTestRecorder(t)
 	// Close the underlying storage: Record must warn-and-continue, not panic.
 	if err := dbConn.Close(); err != nil {
 		t.Fatalf("failed to close db: %v", err)
 	}
 	recorder.Record(context.Background(), Entry{Action: testActionDel}) // must not panic
-}
-
-func TestNewRecorderDefaultsRetention(t *testing.T) {
-	recorder := NewRecorder(nil, slog.Default(), 0)
-	if recorder.retention != RetentionRows {
-		t.Errorf("expected default retention %d, got %d", RetentionRows, recorder.retention)
-	}
 }

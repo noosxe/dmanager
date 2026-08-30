@@ -76,7 +76,7 @@ graph TD
     A68 --> A69["STORY-069: Volume Usage On Demand — Sizes, Reclaim & Count (#212) (DONE)"]
     A69 --> A70["STORY-070: Networks Tab — In-Use Visibility, Deletion & Reclaim (#215) (DONE)"]
     A70 --> A71["STORY-071: Audit Logs — Mutation & System-Action Trail (#219) (DONE)"]
-    A71 --> A72["STORY-072: Audit Retention — Days-Based, Admin-Configurable (#222)"]
+    A71 --> A72["STORY-072: Audit Retention — Days-Based, Admin-Configurable (#222) (DONE)"]
 ```
 
 
@@ -1536,7 +1536,7 @@ graph TD
   - `pnpm check`, `pnpm test`, `pnpm build` pass.
   - Manual: perform a delete/prune as admin → entry appears with actor, action and daemon-truth detail; a viewer poking an admin URL → redirect; triggering a denied attempt or an auto-upgrade shows the corresponding source/outcome; search and filters hit the server, not the current page.
 
-### STORY-072: Audit Retention — Days-Based, Admin-Configurable (issue #222) [PLANNED]
+### STORY-072: Audit Retention — Days-Based, Admin-Configurable (issue #222) [DONE]
 
 **Goal:** Replace the audit trail's fixed 10k-row cap with a time-based retention policy the admin picks in Settings → General — five windows (7d, 1M = 30d, 3M = 90d default, 6M = 180d, 1Y = 365d), stored in the settings table, enforced by an age-based trim that reads the window at trim time (no restart needed). Closes #222.
 

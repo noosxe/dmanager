@@ -13,6 +13,7 @@ import (
 	connect "connectrpc.com/connect"
 	_ "github.com/ncruces/go-sqlite3/driver"
 
+	"dmanager/internal/audit"
 	"dmanager/internal/auth"
 	"dmanager/internal/config"
 	"dmanager/internal/db"
@@ -22,6 +23,9 @@ import (
 const (
 	adminVal = "admin"
 	ghcrHost = "ghcr.io"
+
+	testGotifyURL   = "http://localhost:8080"
+	testGotifyToken = "tok123"
 )
 
 func newTestDBConn(t *testing.T) *sql.DB {
@@ -86,8 +90,9 @@ func TestUpdateSettings(t *testing.T) {
 
 	// Update settings
 	_, err := svc.UpdateSettings(ctx, connect.NewRequest(&v1.UpdateSettingsRequest{
-		GotifyUrl:   "http://localhost:8080",
-		GotifyToken: "tok123",
+		GotifyUrl:          testGotifyURL,
+		GotifyToken:        testGotifyToken,
+		AuditRetentionDays: 90,
 	}))
 	if err != nil {
 		t.Fatalf("unexpected error updating settings: %v", err)
@@ -100,6 +105,76 @@ func TestUpdateSettings(t *testing.T) {
 	}
 	if getResp.Msg.GotifyUrl != "http://localhost:8080" || getResp.Msg.GotifyToken != "tok123" {
 		t.Errorf("unexpected settings values: %+v", getResp.Msg)
+	}
+	if getResp.Msg.AuditRetentionDays != 90 {
+		t.Errorf("expected saved retention 90, got %d", getResp.Msg.AuditRetentionDays)
+	}
+}
+
+func TestGetSettingsDefaultRetention(t *testing.T) {
+	dbConn := newTestDBConn(t)
+	svc := NewService(dbConn, slog.Default(), nil, nil)
+	ctx := auth.WithUser(context.Background(), db.User{Username: adminVal, Role: adminVal})
+
+	// No audit_retention_days row: the effective default is reported so the
+	// UI always shows what is enforced.
+	getResp, err := svc.GetSettings(ctx, connect.NewRequest(&v1.GetSettingsRequest{}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if getResp.Msg.AuditRetentionDays != int32(audit.DefaultRetentionDays) {
+		t.Errorf("expected default retention %d, got %d", audit.DefaultRetentionDays, getResp.Msg.AuditRetentionDays)
+	}
+}
+
+func TestUpdateSettingsRejectsInvalidRetention(t *testing.T) {
+	dbConn := newTestDBConn(t)
+	svc := NewService(dbConn, slog.Default(), nil, nil)
+	ctx := auth.WithUser(context.Background(), db.User{Username: adminVal, Role: adminVal})
+
+	_, err := svc.UpdateSettings(ctx, connect.NewRequest(&v1.UpdateSettingsRequest{
+		GotifyUrl:          testGotifyURL,
+		GotifyToken:        testGotifyToken,
+		AuditRetentionDays: 42,
+	}))
+	if connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("expected CodeInvalidArgument, got %v", err)
+	}
+
+	// Validation precedes persistence: nothing half-applied.
+	getResp, err := svc.GetSettings(ctx, connect.NewRequest(&v1.GetSettingsRequest{}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if getResp.Msg.GotifyUrl != "" {
+		t.Errorf("expected gotify_url untouched after rejected update, got %q", getResp.Msg.GotifyUrl)
+	}
+	if getResp.Msg.AuditRetentionDays != int32(audit.DefaultRetentionDays) {
+		t.Errorf("expected default retention after rejected update, got %d", getResp.Msg.AuditRetentionDays)
+	}
+}
+
+func TestUpdateSettingsAcceptsEachRetentionPreset(t *testing.T) {
+	dbConn := newTestDBConn(t)
+	svc := NewService(dbConn, slog.Default(), nil, nil)
+	ctx := auth.WithUser(context.Background(), db.User{Username: adminVal, Role: adminVal})
+
+	for _, days := range audit.ValidRetentionDayList() {
+		_, err := svc.UpdateSettings(ctx, connect.NewRequest(&v1.UpdateSettingsRequest{
+			GotifyUrl:          testGotifyURL,
+			GotifyToken:        testGotifyToken,
+			AuditRetentionDays: int32(days), //nolint:gosec // G115: loop ranges over the bounded preset list
+		}))
+		if err != nil {
+			t.Fatalf("preset %d rejected: %v", days, err)
+		}
+		getResp, err := svc.GetSettings(ctx, connect.NewRequest(&v1.GetSettingsRequest{}))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if getResp.Msg.AuditRetentionDays != int32(days) { //nolint:gosec // G115: bounded preset value
+			t.Errorf("expected readback %d, got %d", days, getResp.Msg.AuditRetentionDays)
+		}
 	}
 }
 
@@ -154,8 +229,9 @@ func TestTestGotifyNotification(t *testing.T) {
 
 	// 2. Save settings and test with empty/default parameters fallback
 	_, err = svc.UpdateSettings(ctx, connect.NewRequest(&v1.UpdateSettingsRequest{
-		GotifyUrl:   mockGotify.URL,
-		GotifyToken: "saved-token",
+		GotifyUrl:          mockGotify.URL,
+		GotifyToken:        "saved-token",
+		AuditRetentionDays: int32(audit.DefaultRetentionDays),
 	}))
 	if err != nil {
 		t.Fatalf("unexpected error saving: %v", err)

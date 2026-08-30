@@ -176,11 +176,15 @@ func (q *Queries) ListAuditLogs(ctx context.Context, arg ListAuditLogsParams) ([
 	return items, nil
 }
 
-const trimAuditLogs = `-- name: TrimAuditLogs :exec
-DELETE FROM audit_logs WHERE id NOT IN (SELECT id FROM audit_logs ORDER BY id DESC LIMIT ?)
+const trimAuditLogsBefore = `-- name: TrimAuditLogsBefore :exec
+DELETE FROM audit_logs WHERE created_at < datetime(?)
 `
 
-func (q *Queries) TrimAuditLogs(ctx context.Context, limit int64) error {
-	_, err := q.db.ExecContext(ctx, trimAuditLogs, limit)
+// Age-based retention (issue #222): delete every entry older than the
+// cutoff. The cutoff is bound as a UTC string in the same
+// shape CURRENT_TIMESTAMP writes; string comparison
+// over that format is chronologically correct and driver time-binding is moot.
+func (q *Queries) TrimAuditLogsBefore(ctx context.Context, datetime interface{}) error {
+	_, err := q.db.ExecContext(ctx, trimAuditLogsBefore, datetime)
 	return err
 }

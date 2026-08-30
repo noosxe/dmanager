@@ -89,6 +89,15 @@ export function Settings({ initialTab }: SettingsProps = {}) {
   // General Settings State
   const [gotifyUrl, setGotifyUrl] = useState("");
   const [gotifyToken, setGotifyToken] = useState("");
+  // Audit retention presets (issue #222) — int32 wire values, days.
+  const AUDIT_RETENTION_PRESETS = [
+    { value: 7, label: "7 days" },
+    { value: 30, label: "1 month" },
+    { value: 90, label: "3 months" },
+    { value: 180, label: "6 months" },
+    { value: 365, label: "1 year" },
+  ] as const;
+  const [auditRetentionDays, setAuditRetentionDays] = useState<number>(90);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
@@ -152,6 +161,7 @@ export function Settings({ initialTab }: SettingsProps = {}) {
         const resp = await settingsClient.getSettings({});
         setGotifyUrl(resp.gotifyUrl);
         setGotifyToken(resp.gotifyToken);
+        setAuditRetentionDays(resp.auditRetentionDays);
       } catch (err: unknown) {
         console.error("Failed to load settings:", err);
         setError(err instanceof Error ? err.message : String(err));
@@ -261,6 +271,7 @@ export function Settings({ initialTab }: SettingsProps = {}) {
       await settingsClient.updateSettings({
         gotifyUrl: gotifyUrl.trim(),
         gotifyToken: gotifyToken.trim(),
+        auditRetentionDays,
       });
       setSuccess("Settings saved successfully.");
       toast.success("Settings saved successfully.");
@@ -644,6 +655,42 @@ export function Settings({ initialTab }: SettingsProps = {}) {
                 </div>
                 <p style={{ fontSize: "12px", opacity: 0.6, margin: "4px 0 0 0" }}>
                   The secret application token generated inside your Gotify server panel.
+                </p>
+              </div>
+
+              <div className="form-group">
+                <label
+                  htmlFor="audit-retention"
+                  style={{
+                    fontWeight: "600",
+                    fontSize: "14px",
+                    display: "block",
+                    marginBottom: "8px",
+                    color: "var(--text-h)",
+                  }}
+                >
+                  Audit Log Retention
+                </label>
+                <div className="input-wrapper">
+                  <select
+                    id="audit-retention"
+                    aria-label="Audit log retention"
+                    className="logs-select-filter"
+                    style={{ width: "100%" }}
+                    value={auditRetentionDays}
+                    onChange={(e) => setAuditRetentionDays(Number(e.target.value))}
+                    disabled={isSaving || isTesting}
+                  >
+                    {AUDIT_RETENTION_PRESETS.map((preset) => (
+                      <option key={preset.value} value={preset.value}>
+                        {preset.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <p style={{ fontSize: "12px", opacity: 0.6, margin: "4px 0 0 0" }}>
+                  Audit entries older than the selected window are deleted when the next entry is
+                  recorded.
                 </p>
               </div>
 
