@@ -14,6 +14,7 @@ import (
 	"github.com/moby/moby/api/types/network"
 	"github.com/moby/moby/client"
 
+	"dmanager/internal/audit"
 	"dmanager/internal/auth"
 	"dmanager/internal/db"
 	v1 "dmanager/internal/gen/proto/dmanager/v1"
@@ -36,6 +37,7 @@ func (s *Service) UpgradeContainer(ctx context.Context, req *connect.Request[v1.
 	}
 
 	resp, err := s.upgradeContainerInternal(ctx, containerID)
+	s.auditUpgrade(ctx, audit.SourceUser, user.Username, user.Role, containerID, resp, err)
 	if err != nil {
 		return nil, err
 	}
@@ -269,4 +271,43 @@ func (s *Service) upgradeContainerInternal(ctx context.Context, containerID stri
 		PreviousImageId: inspect.Container.Image,
 		CurrentImageId:  newImageID,
 	}, nil
+}
+
+// auditUpgrade records one audit entry per container upgrade (design.md
+// §12.3): user-originated via the RPC, system-originated via the scheduler.
+// The interceptor deliberately skips this procedure — this is the single
+// recording point, carrying the old → new image digest transition.
+func (s *Service) auditUpgrade(ctx context.Context, source, actor, actorRole, containerID string, resp *v1.UpgradeContainerResponse, upgradeErr error) {
+	if s.auditor == nil {
+		return
+	}
+	e := audit.Entry{
+		Actor:        actor,
+		ActorRole:    actorRole,
+		Source:       source,
+		Action:       "container.upgrade",
+		ResourceType: "container",
+		ResourceID:   containerID,
+	}
+	if upgradeErr != nil {
+		e.Outcome = audit.OutcomeFailure
+		e.Detail = upgradeErr.Error()
+		var cerr *connect.Error
+		if errors.As(upgradeErr, &cerr) {
+			e.Detail = cerr.Message()
+		}
+	} else {
+		e.Outcome = audit.OutcomeSuccess
+		e.Detail = fmt.Sprintf("upgraded %s → %s", shortDigest(resp.PreviousImageId), shortDigest(resp.CurrentImageId))
+	}
+	s.auditor.Record(ctx, e)
+}
+
+// shortDigest renders a full image ID as sha256:<12 hex> for audit detail.
+func shortDigest(id string) string {
+	const prefix = "sha256:"
+	if len(id) > len(prefix)+12 && id[:len(prefix)] == prefix {
+		return id[:len(prefix)+12] + "…"
+	}
+	return id
 }

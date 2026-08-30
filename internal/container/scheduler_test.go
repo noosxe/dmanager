@@ -193,7 +193,7 @@ func TestSchedulerCheckAllContainers(t *testing.T) {
 		t.Fatalf("failed to create docker client: %v", err)
 	}
 
-	svc := NewService(dbConn, broker, dockerClient, slog.Default(), nil)
+	svc := NewService(dbConn, broker, dockerClient, slog.Default(), nil, nil)
 
 	// 3. Trigger scheduler check loop manually via checkAllContainers
 	svc.checkAllContainers(context.Background())

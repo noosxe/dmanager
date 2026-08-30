@@ -8,6 +8,7 @@ import (
 	connect "connectrpc.com/connect"
 	"github.com/moby/moby/client"
 
+	"dmanager/internal/audit"
 	"dmanager/internal/config"
 	"dmanager/internal/db"
 	dmanagerv1 "dmanager/internal/gen/proto/dmanager/v1"
@@ -29,10 +30,11 @@ type Service struct {
 	logger       *slog.Logger
 	registries   []config.Registry
 	notifier     *notification.Dispatcher
+	auditor      audit.Auditor // nil disables audit recording
 }
 
 // NewService creates a new Container service.
-func NewService(dbConn db.DBTX, broker *Broker, dockerClient *client.Client, logger *slog.Logger, registries []config.Registry) *Service {
+func NewService(dbConn db.DBTX, broker *Broker, dockerClient *client.Client, logger *slog.Logger, registries []config.Registry, auditor audit.Auditor) *Service {
 	return &Service{
 		db:           dbConn,
 		broker:       broker,
@@ -40,6 +42,7 @@ func NewService(dbConn db.DBTX, broker *Broker, dockerClient *client.Client, log
 		logger:       logger,
 		registries:   registries,
 		notifier:     notification.NewDispatcher(dbConn, logger.With("module", "notification")),
+		auditor:      auditor,
 	}
 }
 

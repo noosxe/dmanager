@@ -38,7 +38,7 @@ func TestInterceptorAuthenticateTwoClocks(t *testing.T) {
 	}
 
 	idleTimeout := 10 * time.Minute
-	interceptor := NewInterceptor(queries, slog.Default(), idleTimeout)
+	interceptor := NewInterceptor(queries, slog.Default(), idleTimeout, nil)
 
 	t.Run("valid session before half-idle window does not touch DB", func(t *testing.T) {
 		sessionID := "session-no-touch"
@@ -314,7 +314,7 @@ func TestInterceptorRBACEnforcement(t *testing.T) {
 		t.Fatalf("failed to create admin session: %v", err)
 	}
 
-	interceptor := NewInterceptor(queries, slog.Default(), 168*time.Hour)
+	interceptor := NewInterceptor(queries, slog.Default(), 168*time.Hour, nil)
 
 	tests := []struct {
 		name         string

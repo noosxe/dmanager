@@ -6,6 +6,7 @@ package admin
 import (
 	"cmp"
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -20,6 +21,8 @@ import (
 	"github.com/moby/moby/client"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"dmanager/internal/audit"
+	"dmanager/internal/db"
 	dmanagerv1 "dmanager/internal/gen/proto/dmanager/v1"
 	"dmanager/internal/gen/proto/dmanager/v1/dmanagerv1connect"
 )
@@ -28,13 +31,15 @@ import (
 type Service struct {
 	dmanagerv1connect.UnimplementedAdminServiceHandler
 	dockerClient *client.Client
+	queries      *db.Queries // audit-trail storage; nil disables ListAuditLogs
 	logger       *slog.Logger
 }
 
 // NewService creates a new Admin service.
-func NewService(dockerClient *client.Client, logger *slog.Logger) *Service {
+func NewService(dockerClient *client.Client, queries *db.Queries, logger *slog.Logger) *Service {
 	return &Service{
 		dockerClient: dockerClient,
+		queries:      queries,
 		logger:       logger,
 	}
 }
@@ -448,4 +453,141 @@ func (s *Service) CheckEngine(ctx context.Context, req *connect.Request[dmanager
 		Connected:  true,
 		ApiVersion: ping.APIVersion,
 	}), nil
+}
+
+// ListAuditLogs returns recorded audit entries (mutation outcomes and
+// system-originated actions), filtered and paginated server-side
+// (design.md §12, issue #219).
+func (s *Service) ListAuditLogs(ctx context.Context, req *connect.Request[dmanagerv1.ListAuditLogsRequest]) (*connect.Response[dmanagerv1.ListAuditLogsResponse], error) {
+	if s.queries == nil {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("audit storage unavailable"))
+	}
+
+	limit := int(req.Msg.Limit)
+	if limit <= 0 {
+		limit = defaultAuditLimit
+	}
+	if limit > maxAuditLimit {
+		limit = maxAuditLimit
+	}
+
+	source := auditSourceToString(req.Msg.Source)
+	outcome := auditOutcomeToString(req.Msg.Outcome)
+
+	listParams := db.ListAuditLogsParams{
+		Column1: req.Msg.Query,
+		Column2: sql.NullString{String: req.Msg.Query, Valid: true},
+		Column3: sql.NullString{String: req.Msg.Query, Valid: true},
+		Column4: sql.NullString{String: req.Msg.Query, Valid: true},
+		Column5: sql.NullString{String: req.Msg.Query, Valid: true},
+		Column6: source,
+		Source:  source,
+		Column8: outcome,
+		Outcome: outcome,
+		Limit:   int64(limit),
+		Offset:  int64(min(req.Msg.Offset, uint64(maxAuditOffset))), //nolint:gosec // bounded by maxAuditOffset
+	}
+	rows, err := s.queries.ListAuditLogs(ctx, listParams)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list audit logs: %w", err))
+	}
+
+	total, err := s.queries.CountAuditLogs(ctx, db.CountAuditLogsParams{
+		Column1: req.Msg.Query,
+		Column2: sql.NullString{String: req.Msg.Query, Valid: true},
+		Column3: sql.NullString{String: req.Msg.Query, Valid: true},
+		Column4: sql.NullString{String: req.Msg.Query, Valid: true},
+		Column5: sql.NullString{String: req.Msg.Query, Valid: true},
+		Column6: source,
+		Source:  source,
+		Column8: outcome,
+		Outcome: outcome,
+	})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to count audit logs: %w", err))
+	}
+
+	entries := make([]*dmanagerv1.AuditLogEntry, len(rows))
+	for i, row := range rows {
+		entries[i] = &dmanagerv1.AuditLogEntry{
+			Id:           uint64(max(row.ID, 0)), //nolint:gosec // clamped non-negative
+			CreatedAt:    timestamppb.New(row.CreatedAt),
+			Actor:        row.Actor,
+			ActorRole:    row.ActorRole,
+			Source:       auditSourceToProto(row.Source),
+			Action:       row.Action,
+			ResourceType: row.ResourceType,
+			ResourceId:   row.ResourceID,
+			Outcome:      auditOutcomeToProto(row.Outcome),
+			Detail:       row.Detail,
+		}
+	}
+
+	return connect.NewResponse(&dmanagerv1.ListAuditLogsResponse{Entries: entries, Total: uint64(max(total, 0))}), nil //nolint:gosec // clamped non-negative
+}
+
+const (
+	defaultAuditLimit = 50
+	maxAuditLimit     = 200
+	maxAuditOffset    = 1 << 40 // far beyond any real table; guards the uint64→int64 conversion
+)
+
+// Wire values for the documented int32 source/outcome fields (see
+// admin.proto — proto enums are avoided so generated TS stays compatible
+// with erasableSyntaxOnly).
+const (
+	auditSourceUser   int32 = 1
+	auditSourceSystem int32 = 2
+
+	auditOutcomeSuccess int32 = 1
+	auditOutcomeFailure int32 = 2
+	auditOutcomeDenied  int32 = 3
+)
+
+func auditSourceToString(src int32) string {
+	switch src {
+	case auditSourceUser:
+		return audit.SourceUser
+	case auditSourceSystem:
+		return audit.SourceSystem
+	default:
+		return ""
+	}
+}
+
+func auditOutcomeToString(outcome int32) string {
+	switch outcome {
+	case auditOutcomeSuccess:
+		return audit.OutcomeSuccess
+	case auditOutcomeFailure:
+		return audit.OutcomeFailure
+	case auditOutcomeDenied:
+		return audit.OutcomeDenied
+	default:
+		return ""
+	}
+}
+
+func auditSourceToProto(src string) int32 {
+	switch src {
+	case audit.SourceUser:
+		return auditSourceUser
+	case audit.SourceSystem:
+		return auditSourceSystem
+	default:
+		return 0
+	}
+}
+
+func auditOutcomeToProto(outcome string) int32 {
+	switch outcome {
+	case audit.OutcomeSuccess:
+		return auditOutcomeSuccess
+	case audit.OutcomeFailure:
+		return auditOutcomeFailure
+	case audit.OutcomeDenied:
+		return auditOutcomeDenied
+	default:
+		return 0
+	}
 }

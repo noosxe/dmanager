@@ -1824,6 +1824,251 @@ func (x *PruneVolumesResponse) GetSpaceReclaimed() uint64 {
 	return 0
 }
 
+type AuditLogEntry struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            uint64                 `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"` // monotonic row id
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Actor         string                 `protobuf:"bytes,3,opt,name=actor,proto3" json:"actor,omitempty"`                                   // username; "system" when source = SYSTEM
+	ActorRole     string                 `protobuf:"bytes,4,opt,name=actor_role,json=actorRole,proto3" json:"actor_role,omitempty"`          // admin|viewer; empty for system entries
+	Source        int32                  `protobuf:"varint,5,opt,name=source,proto3" json:"source,omitempty"`                                // 1 = user, 2 = system
+	Action        string                 `protobuf:"bytes,6,opt,name=action,proto3" json:"action,omitempty"`                                 // dotted verb: image.delete, container.upgrade, network.prune, …
+	ResourceType  string                 `protobuf:"bytes,7,opt,name=resource_type,json=resourceType,proto3" json:"resource_type,omitempty"` // container|image|volume|network|builder|settings
+	ResourceId    string                 `protobuf:"bytes,8,opt,name=resource_id,json=resourceId,proto3" json:"resource_id,omitempty"`       // daemon id where one exists, else empty
+	Outcome       int32                  `protobuf:"varint,9,opt,name=outcome,proto3" json:"outcome,omitempty"`                              // 1 = success, 2 = failure, 3 = denied
+	Detail        string                 `protobuf:"bytes,10,opt,name=detail,proto3" json:"detail,omitempty"`                                // human summary (prune counts, names); error message on failure
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuditLogEntry) Reset() {
+	*x = AuditLogEntry{}
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuditLogEntry) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuditLogEntry) ProtoMessage() {}
+
+func (x *AuditLogEntry) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuditLogEntry.ProtoReflect.Descriptor instead.
+func (*AuditLogEntry) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *AuditLogEntry) GetId() uint64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *AuditLogEntry) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *AuditLogEntry) GetActor() string {
+	if x != nil {
+		return x.Actor
+	}
+	return ""
+}
+
+func (x *AuditLogEntry) GetActorRole() string {
+	if x != nil {
+		return x.ActorRole
+	}
+	return ""
+}
+
+func (x *AuditLogEntry) GetSource() int32 {
+	if x != nil {
+		return x.Source
+	}
+	return 0
+}
+
+func (x *AuditLogEntry) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
+func (x *AuditLogEntry) GetResourceType() string {
+	if x != nil {
+		return x.ResourceType
+	}
+	return ""
+}
+
+func (x *AuditLogEntry) GetResourceId() string {
+	if x != nil {
+		return x.ResourceId
+	}
+	return ""
+}
+
+func (x *AuditLogEntry) GetOutcome() int32 {
+	if x != nil {
+		return x.Outcome
+	}
+	return 0
+}
+
+func (x *AuditLogEntry) GetDetail() string {
+	if x != nil {
+		return x.Detail
+	}
+	return ""
+}
+
+type ListAuditLogsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Substring match over actor, action, resource_id and detail (server-side).
+	Query         string `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
+	Source        int32  `protobuf:"varint,2,opt,name=source,proto3" json:"source,omitempty"`   // 0 = all, 1 = user, 2 = system
+	Outcome       int32  `protobuf:"varint,3,opt,name=outcome,proto3" json:"outcome,omitempty"` // 0 = all, 1 = success, 2 = failure, 3 = denied
+	Limit         uint32 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`     // default 50, clamped to <= 200
+	Offset        uint64 `protobuf:"varint,5,opt,name=offset,proto3" json:"offset,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAuditLogsRequest) Reset() {
+	*x = ListAuditLogsRequest{}
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAuditLogsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAuditLogsRequest) ProtoMessage() {}
+
+func (x *ListAuditLogsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAuditLogsRequest.ProtoReflect.Descriptor instead.
+func (*ListAuditLogsRequest) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *ListAuditLogsRequest) GetQuery() string {
+	if x != nil {
+		return x.Query
+	}
+	return ""
+}
+
+func (x *ListAuditLogsRequest) GetSource() int32 {
+	if x != nil {
+		return x.Source
+	}
+	return 0
+}
+
+func (x *ListAuditLogsRequest) GetOutcome() int32 {
+	if x != nil {
+		return x.Outcome
+	}
+	return 0
+}
+
+func (x *ListAuditLogsRequest) GetLimit() uint32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListAuditLogsRequest) GetOffset() uint64 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+type ListAuditLogsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Entries       []*AuditLogEntry       `protobuf:"bytes,1,rep,name=entries,proto3" json:"entries,omitempty"` // created_at DESC, id DESC — newest first, fixed order
+	Total         uint64                 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`    // rows matching the filter, for n–m-of-T pagination
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAuditLogsResponse) Reset() {
+	*x = ListAuditLogsResponse{}
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAuditLogsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAuditLogsResponse) ProtoMessage() {}
+
+func (x *ListAuditLogsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAuditLogsResponse.ProtoReflect.Descriptor instead.
+func (*ListAuditLogsResponse) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *ListAuditLogsResponse) GetEntries() []*AuditLogEntry {
+	if x != nil {
+		return x.Entries
+	}
+	return nil
+}
+
+func (x *ListAuditLogsResponse) GetTotal() uint64 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
 var File_proto_dmanager_v1_admin_proto protoreflect.FileDescriptor
 
 const file_proto_dmanager_v1_admin_proto_rawDesc = "" +
@@ -1944,7 +2189,32 @@ const file_proto_dmanager_v1_admin_proto_rawDesc = "" +
 	"\x14PruneVolumesResponse\x12'\n" +
 	"\x0fvolumes_deleted\x18\x01 \x01(\rR\x0evolumesDeleted\x12\x14\n" +
 	"\x05names\x18\x02 \x03(\tR\x05names\x12'\n" +
-	"\x0fspace_reclaimed\x18\x03 \x01(\x04R\x0espaceReclaimed2\xff\t\n" +
+	"\x0fspace_reclaimed\x18\x03 \x01(\x04R\x0espaceReclaimed\"\xb7\x02\n" +
+	"\rAuditLogEntry\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x04R\x02id\x129\n" +
+	"\n" +
+	"created_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12\x14\n" +
+	"\x05actor\x18\x03 \x01(\tR\x05actor\x12\x1d\n" +
+	"\n" +
+	"actor_role\x18\x04 \x01(\tR\tactorRole\x12\x16\n" +
+	"\x06source\x18\x05 \x01(\x05R\x06source\x12\x16\n" +
+	"\x06action\x18\x06 \x01(\tR\x06action\x12#\n" +
+	"\rresource_type\x18\a \x01(\tR\fresourceType\x12\x1f\n" +
+	"\vresource_id\x18\b \x01(\tR\n" +
+	"resourceId\x12\x18\n" +
+	"\aoutcome\x18\t \x01(\x05R\aoutcome\x12\x16\n" +
+	"\x06detail\x18\n" +
+	" \x01(\tR\x06detail\"\x8c\x01\n" +
+	"\x14ListAuditLogsRequest\x12\x14\n" +
+	"\x05query\x18\x01 \x01(\tR\x05query\x12\x16\n" +
+	"\x06source\x18\x02 \x01(\x05R\x06source\x12\x18\n" +
+	"\aoutcome\x18\x03 \x01(\x05R\aoutcome\x12\x14\n" +
+	"\x05limit\x18\x04 \x01(\rR\x05limit\x12\x16\n" +
+	"\x06offset\x18\x05 \x01(\x04R\x06offset\"c\n" +
+	"\x15ListAuditLogsResponse\x124\n" +
+	"\aentries\x18\x01 \x03(\v2\x1a.dmanager.v1.AuditLogEntryR\aentries\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x04R\x05total2\xd7\n" +
+	"\n" +
 	"\fAdminService\x12M\n" +
 	"\n" +
 	"ListImages\x12\x1e.dmanager.v1.ListImagesRequest\x1a\x1f.dmanager.v1.ListImagesResponse\x12P\n" +
@@ -1960,7 +2230,8 @@ const file_proto_dmanager_v1_admin_proto_rawDesc = "" +
 	"\x0fPruneBuildCache\x12#.dmanager.v1.PruneBuildCacheRequest\x1a$.dmanager.v1.PruneBuildCacheResponse\x12n\n" +
 	"\x15ListBuildCacheRecords\x12).dmanager.v1.ListBuildCacheRecordsRequest\x1a*.dmanager.v1.ListBuildCacheRecordsResponse\x12n\n" +
 	"\x15PruneBuildCacheRecord\x12).dmanager.v1.PruneBuildCacheRecordRequest\x1a*.dmanager.v1.PruneBuildCacheRecordResponse\x12P\n" +
-	"\vCheckEngine\x12\x1f.dmanager.v1.CheckEngineRequest\x1a .dmanager.v1.CheckEngineResponseB4Z2dmanager/internal/gen/proto/dmanager/v1;dmanagerv1b\x06proto3"
+	"\vCheckEngine\x12\x1f.dmanager.v1.CheckEngineRequest\x1a .dmanager.v1.CheckEngineResponse\x12V\n" +
+	"\rListAuditLogs\x12!.dmanager.v1.ListAuditLogsRequest\x1a\".dmanager.v1.ListAuditLogsResponseB4Z2dmanager/internal/gen/proto/dmanager/v1;dmanagerv1b\x06proto3"
 
 var (
 	file_proto_dmanager_v1_admin_proto_rawDescOnce sync.Once
@@ -1974,7 +2245,7 @@ func file_proto_dmanager_v1_admin_proto_rawDescGZIP() []byte {
 	return file_proto_dmanager_v1_admin_proto_rawDescData
 }
 
-var file_proto_dmanager_v1_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 35)
+var file_proto_dmanager_v1_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
 var file_proto_dmanager_v1_admin_proto_goTypes = []any{
 	(*ListImagesRequest)(nil),             // 0: dmanager.v1.ListImagesRequest
 	(*ListImagesResponse)(nil),            // 1: dmanager.v1.ListImagesResponse
@@ -2010,54 +2281,61 @@ var file_proto_dmanager_v1_admin_proto_goTypes = []any{
 	(*GetVolumeUsageResponse)(nil),        // 31: dmanager.v1.GetVolumeUsageResponse
 	(*PruneVolumesRequest)(nil),           // 32: dmanager.v1.PruneVolumesRequest
 	(*PruneVolumesResponse)(nil),          // 33: dmanager.v1.PruneVolumesResponse
-	nil,                                   // 34: dmanager.v1.Volume.LabelsEntry
-	(*timestamppb.Timestamp)(nil),         // 35: google.protobuf.Timestamp
+	(*AuditLogEntry)(nil),                 // 34: dmanager.v1.AuditLogEntry
+	(*ListAuditLogsRequest)(nil),          // 35: dmanager.v1.ListAuditLogsRequest
+	(*ListAuditLogsResponse)(nil),         // 36: dmanager.v1.ListAuditLogsResponse
+	nil,                                   // 37: dmanager.v1.Volume.LabelsEntry
+	(*timestamppb.Timestamp)(nil),         // 38: google.protobuf.Timestamp
 }
 var file_proto_dmanager_v1_admin_proto_depIdxs = []int32{
 	2,  // 0: dmanager.v1.ListImagesResponse.images:type_name -> dmanager.v1.Image
 	5,  // 1: dmanager.v1.ListVolumesResponse.volumes:type_name -> dmanager.v1.Volume
-	35, // 2: dmanager.v1.Volume.created_at:type_name -> google.protobuf.Timestamp
-	34, // 3: dmanager.v1.Volume.labels:type_name -> dmanager.v1.Volume.LabelsEntry
+	38, // 2: dmanager.v1.Volume.created_at:type_name -> google.protobuf.Timestamp
+	37, // 3: dmanager.v1.Volume.labels:type_name -> dmanager.v1.Volume.LabelsEntry
 	8,  // 4: dmanager.v1.ListNetworksResponse.networks:type_name -> dmanager.v1.Network
-	35, // 5: dmanager.v1.Network.created_at:type_name -> google.protobuf.Timestamp
+	38, // 5: dmanager.v1.Network.created_at:type_name -> google.protobuf.Timestamp
 	16, // 6: dmanager.v1.PruneImagesResponse.images_deleted:type_name -> dmanager.v1.PrunedImage
-	35, // 7: dmanager.v1.BuildCacheRecord.created_at:type_name -> google.protobuf.Timestamp
-	35, // 8: dmanager.v1.BuildCacheRecord.last_used_at:type_name -> google.protobuf.Timestamp
+	38, // 7: dmanager.v1.BuildCacheRecord.created_at:type_name -> google.protobuf.Timestamp
+	38, // 8: dmanager.v1.BuildCacheRecord.last_used_at:type_name -> google.protobuf.Timestamp
 	22, // 9: dmanager.v1.ListBuildCacheRecordsResponse.records:type_name -> dmanager.v1.BuildCacheRecord
 	30, // 10: dmanager.v1.GetVolumeUsageResponse.volumes:type_name -> dmanager.v1.VolumeUsage
-	0,  // 11: dmanager.v1.AdminService.ListImages:input_type -> dmanager.v1.ListImagesRequest
-	3,  // 12: dmanager.v1.AdminService.ListVolumes:input_type -> dmanager.v1.ListVolumesRequest
-	29, // 13: dmanager.v1.AdminService.GetVolumeUsage:input_type -> dmanager.v1.GetVolumeUsageRequest
-	6,  // 14: dmanager.v1.AdminService.ListNetworks:input_type -> dmanager.v1.ListNetworksRequest
-	13, // 15: dmanager.v1.AdminService.DeleteImage:input_type -> dmanager.v1.DeleteImageRequest
-	15, // 16: dmanager.v1.AdminService.PruneImages:input_type -> dmanager.v1.PruneImagesRequest
-	32, // 17: dmanager.v1.AdminService.PruneVolumes:input_type -> dmanager.v1.PruneVolumesRequest
-	9,  // 18: dmanager.v1.AdminService.DeleteNetwork:input_type -> dmanager.v1.DeleteNetworkRequest
-	11, // 19: dmanager.v1.AdminService.PruneNetworks:input_type -> dmanager.v1.PruneNetworksRequest
-	18, // 20: dmanager.v1.AdminService.GetBuildCacheStats:input_type -> dmanager.v1.GetBuildCacheStatsRequest
-	20, // 21: dmanager.v1.AdminService.PruneBuildCache:input_type -> dmanager.v1.PruneBuildCacheRequest
-	23, // 22: dmanager.v1.AdminService.ListBuildCacheRecords:input_type -> dmanager.v1.ListBuildCacheRecordsRequest
-	25, // 23: dmanager.v1.AdminService.PruneBuildCacheRecord:input_type -> dmanager.v1.PruneBuildCacheRecordRequest
-	27, // 24: dmanager.v1.AdminService.CheckEngine:input_type -> dmanager.v1.CheckEngineRequest
-	1,  // 25: dmanager.v1.AdminService.ListImages:output_type -> dmanager.v1.ListImagesResponse
-	4,  // 26: dmanager.v1.AdminService.ListVolumes:output_type -> dmanager.v1.ListVolumesResponse
-	31, // 27: dmanager.v1.AdminService.GetVolumeUsage:output_type -> dmanager.v1.GetVolumeUsageResponse
-	7,  // 28: dmanager.v1.AdminService.ListNetworks:output_type -> dmanager.v1.ListNetworksResponse
-	14, // 29: dmanager.v1.AdminService.DeleteImage:output_type -> dmanager.v1.DeleteImageResponse
-	17, // 30: dmanager.v1.AdminService.PruneImages:output_type -> dmanager.v1.PruneImagesResponse
-	33, // 31: dmanager.v1.AdminService.PruneVolumes:output_type -> dmanager.v1.PruneVolumesResponse
-	10, // 32: dmanager.v1.AdminService.DeleteNetwork:output_type -> dmanager.v1.DeleteNetworkResponse
-	12, // 33: dmanager.v1.AdminService.PruneNetworks:output_type -> dmanager.v1.PruneNetworksResponse
-	19, // 34: dmanager.v1.AdminService.GetBuildCacheStats:output_type -> dmanager.v1.GetBuildCacheStatsResponse
-	21, // 35: dmanager.v1.AdminService.PruneBuildCache:output_type -> dmanager.v1.PruneBuildCacheResponse
-	24, // 36: dmanager.v1.AdminService.ListBuildCacheRecords:output_type -> dmanager.v1.ListBuildCacheRecordsResponse
-	26, // 37: dmanager.v1.AdminService.PruneBuildCacheRecord:output_type -> dmanager.v1.PruneBuildCacheRecordResponse
-	28, // 38: dmanager.v1.AdminService.CheckEngine:output_type -> dmanager.v1.CheckEngineResponse
-	25, // [25:39] is the sub-list for method output_type
-	11, // [11:25] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	38, // 11: dmanager.v1.AuditLogEntry.created_at:type_name -> google.protobuf.Timestamp
+	34, // 12: dmanager.v1.ListAuditLogsResponse.entries:type_name -> dmanager.v1.AuditLogEntry
+	0,  // 13: dmanager.v1.AdminService.ListImages:input_type -> dmanager.v1.ListImagesRequest
+	3,  // 14: dmanager.v1.AdminService.ListVolumes:input_type -> dmanager.v1.ListVolumesRequest
+	29, // 15: dmanager.v1.AdminService.GetVolumeUsage:input_type -> dmanager.v1.GetVolumeUsageRequest
+	6,  // 16: dmanager.v1.AdminService.ListNetworks:input_type -> dmanager.v1.ListNetworksRequest
+	13, // 17: dmanager.v1.AdminService.DeleteImage:input_type -> dmanager.v1.DeleteImageRequest
+	15, // 18: dmanager.v1.AdminService.PruneImages:input_type -> dmanager.v1.PruneImagesRequest
+	32, // 19: dmanager.v1.AdminService.PruneVolumes:input_type -> dmanager.v1.PruneVolumesRequest
+	9,  // 20: dmanager.v1.AdminService.DeleteNetwork:input_type -> dmanager.v1.DeleteNetworkRequest
+	11, // 21: dmanager.v1.AdminService.PruneNetworks:input_type -> dmanager.v1.PruneNetworksRequest
+	18, // 22: dmanager.v1.AdminService.GetBuildCacheStats:input_type -> dmanager.v1.GetBuildCacheStatsRequest
+	20, // 23: dmanager.v1.AdminService.PruneBuildCache:input_type -> dmanager.v1.PruneBuildCacheRequest
+	23, // 24: dmanager.v1.AdminService.ListBuildCacheRecords:input_type -> dmanager.v1.ListBuildCacheRecordsRequest
+	25, // 25: dmanager.v1.AdminService.PruneBuildCacheRecord:input_type -> dmanager.v1.PruneBuildCacheRecordRequest
+	27, // 26: dmanager.v1.AdminService.CheckEngine:input_type -> dmanager.v1.CheckEngineRequest
+	35, // 27: dmanager.v1.AdminService.ListAuditLogs:input_type -> dmanager.v1.ListAuditLogsRequest
+	1,  // 28: dmanager.v1.AdminService.ListImages:output_type -> dmanager.v1.ListImagesResponse
+	4,  // 29: dmanager.v1.AdminService.ListVolumes:output_type -> dmanager.v1.ListVolumesResponse
+	31, // 30: dmanager.v1.AdminService.GetVolumeUsage:output_type -> dmanager.v1.GetVolumeUsageResponse
+	7,  // 31: dmanager.v1.AdminService.ListNetworks:output_type -> dmanager.v1.ListNetworksResponse
+	14, // 32: dmanager.v1.AdminService.DeleteImage:output_type -> dmanager.v1.DeleteImageResponse
+	17, // 33: dmanager.v1.AdminService.PruneImages:output_type -> dmanager.v1.PruneImagesResponse
+	33, // 34: dmanager.v1.AdminService.PruneVolumes:output_type -> dmanager.v1.PruneVolumesResponse
+	10, // 35: dmanager.v1.AdminService.DeleteNetwork:output_type -> dmanager.v1.DeleteNetworkResponse
+	12, // 36: dmanager.v1.AdminService.PruneNetworks:output_type -> dmanager.v1.PruneNetworksResponse
+	19, // 37: dmanager.v1.AdminService.GetBuildCacheStats:output_type -> dmanager.v1.GetBuildCacheStatsResponse
+	21, // 38: dmanager.v1.AdminService.PruneBuildCache:output_type -> dmanager.v1.PruneBuildCacheResponse
+	24, // 39: dmanager.v1.AdminService.ListBuildCacheRecords:output_type -> dmanager.v1.ListBuildCacheRecordsResponse
+	26, // 40: dmanager.v1.AdminService.PruneBuildCacheRecord:output_type -> dmanager.v1.PruneBuildCacheRecordResponse
+	28, // 41: dmanager.v1.AdminService.CheckEngine:output_type -> dmanager.v1.CheckEngineResponse
+	36, // 42: dmanager.v1.AdminService.ListAuditLogs:output_type -> dmanager.v1.ListAuditLogsResponse
+	28, // [28:43] is the sub-list for method output_type
+	13, // [13:28] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_proto_dmanager_v1_admin_proto_init() }
@@ -2072,7 +2350,7 @@ func file_proto_dmanager_v1_admin_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_dmanager_v1_admin_proto_rawDesc), len(file_proto_dmanager_v1_admin_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   35,
+			NumMessages:   38,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

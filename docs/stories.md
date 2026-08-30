@@ -75,7 +75,7 @@ graph TD
     A67 --> A68["STORY-068: Builder Records Drill-Down — Table & Per-Record Prune (#209) (DONE)"]
     A68 --> A69["STORY-069: Volume Usage On Demand — Sizes, Reclaim & Count (#212) (DONE)"]
     A69 --> A70["STORY-070: Networks Tab — In-Use Visibility, Deletion & Reclaim (#215) (DONE)"]
-    A70 --> A71["STORY-071: Audit Logs — Mutation & System-Action Trail (#219)"]
+    A70 --> A71["STORY-071: Audit Logs — Mutation & System-Action Trail (#219) (DONE)"]
 ```
 
 
@@ -1512,7 +1512,7 @@ graph TD
   - `pnpm check`, `pnpm test`, `pnpm build` pass.
   - Manual: In Use column reflects live attachments (stop a container — its network still shows in use); viewer sees no enabled delete/prune controls; deleting an unused network asks once and refreshes; Prune Unused names what it removed and never touches `bridge`/`host`/`none`.
 
-### STORY-071: Audit Logs — Mutation & System-Action Trail (issue #219) [PLANNED]
+### STORY-071: Audit Logs — Mutation & System-Action Trail (issue #219) [DONE]
 
 **Goal:** Record every mutation action by any user and every automatic update to the local database, and give admins an admin-only review UI: a new sidebar item between Administration and Settings leading to an Audit Logs page — a searchable, filterable, paginated table. The interceptor's existing RoleAdmin procedure map is the single recording seam; the scheduler's background container upgrades record as system-source entries; the existing auth-events trail stays untouched in Settings → Security.
 

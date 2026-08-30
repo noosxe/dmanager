@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-router";
 
 import { Administration } from "../components/Administration";
+import { AuditLogsPage } from "../components/AuditLogsPage";
 import { ContainerGrid } from "../components/ContainerGrid";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { Login } from "../components/Login";
@@ -97,6 +98,28 @@ const logsRoute = createRoute({
   ),
 });
 
+// 6b. Audit Logs route — admin-only (defense in depth under the RPC's RoleAdmin)
+const auditLogsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/audit-logs",
+  beforeLoad: ({ context }) => {
+    if (context.auth.needsSetup) {
+      throw redirect({ to: "/setup" });
+    }
+    if (!context.auth.isAuthenticated) {
+      throw redirect({ to: "/login" });
+    }
+    if (context.auth.user?.role !== "admin") {
+      throw redirect({ to: "/" });
+    }
+  },
+  component: () => (
+    <DashboardLayout>
+      <AuditLogsPage />
+    </DashboardLayout>
+  ),
+});
+
 // 7. Administration routes (read-only Docker resource inventories)
 const administrationIndexRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -180,6 +203,7 @@ const routeTree = rootRoute.addChildren([
   loginRoute,
   setupRoute,
   logsRoute,
+  auditLogsRoute,
   administrationIndexRoute,
   administrationTabRoute,
   settingsIndexRoute,

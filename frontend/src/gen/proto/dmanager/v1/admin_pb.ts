@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file proto/dmanager/v1/admin.proto.
  */
 export const file_proto_dmanager_v1_admin: GenFile = /*@__PURE__*/
-  fileDesc("Ch1wcm90by9kbWFuYWdlci92MS9hZG1pbi5wcm90bxILZG1hbmFnZXIudjEiEwoRTGlzdEltYWdlc1JlcXVlc3QiOAoSTGlzdEltYWdlc1Jlc3BvbnNlEiIKBmltYWdlcxgBIAMoCzISLmRtYW5hZ2VyLnYxLkltYWdlImoKBUltYWdlEgoKAmlkGAEgASgJEhEKCXJlcG9fdGFncxgCIAMoCRIUCgxjcmVhdGVkX3VuaXgYAyABKAMSEgoKc2l6ZV9ieXRlcxgEIAEoAxIYChBjb250YWluZXJzX2NvdW50GAUgASgDIhQKEkxpc3RWb2x1bWVzUmVxdWVzdCI7ChNMaXN0Vm9sdW1lc1Jlc3BvbnNlEiQKB3ZvbHVtZXMYASADKAsyEy5kbWFuYWdlci52MS5Wb2x1bWUiygEKBlZvbHVtZRIMCgRuYW1lGAEgASgJEg4KBmRyaXZlchgCIAEoCRISCgptb3VudHBvaW50GAMgASgJEi4KCmNyZWF0ZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi8KBmxhYmVscxgFIAMoCzIfLmRtYW5hZ2VyLnYxLlZvbHVtZS5MYWJlbHNFbnRyeRotCgtMYWJlbHNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIhUKE0xpc3ROZXR3b3Jrc1JlcXVlc3QiPgoUTGlzdE5ldHdvcmtzUmVzcG9uc2USJgoIbmV0d29ya3MYASADKAsyFC5kbWFuYWdlci52MS5OZXR3b3JrIrIBCgdOZXR3b3JrEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSDgoGZHJpdmVyGAMgASgJEg0KBXNjb3BlGAQgASgJEhAKCGludGVybmFsGAUgASgIEi4KCmNyZWF0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhgKEGNvbnRhaW5lcnNfY291bnQYByABKAMSEgoKcHJlZGVmaW5lZBgIIAEoCCIiChREZWxldGVOZXR3b3JrUmVxdWVzdBIKCgJpZBgBIAEoCSIXChVEZWxldGVOZXR3b3JrUmVzcG9uc2UiFgoUUHJ1bmVOZXR3b3Jrc1JlcXVlc3QiQAoVUHJ1bmVOZXR3b3Jrc1Jlc3BvbnNlEhgKEG5ldHdvcmtzX2RlbGV0ZWQYASABKAQSDQoFbmFtZXMYAiADKAkiLwoSRGVsZXRlSW1hZ2VSZXF1ZXN0EgoKAmlkGAEgASgJEg0KBWZvcmNlGAIgASgIIhUKE0RlbGV0ZUltYWdlUmVzcG9uc2UiKwoSUHJ1bmVJbWFnZXNSZXF1ZXN0EhUKDWRhbmdsaW5nX29ubHkYASABKAgiMAoLUHJ1bmVkSW1hZ2USDwoHZGVsZXRlZBgBIAEoCRIQCgh1bnRhZ2dlZBgCIAEoCSJgChNQcnVuZUltYWdlc1Jlc3BvbnNlEjAKDmltYWdlc19kZWxldGVkGAEgAygLMhguZG1hbmFnZXIudjEuUHJ1bmVkSW1hZ2USFwoPc3BhY2VfcmVjbGFpbWVkGAIgASgEIhsKGUdldEJ1aWxkQ2FjaGVTdGF0c1JlcXVlc3QieAoaR2V0QnVpbGRDYWNoZVN0YXRzUmVzcG9uc2USEwoLdG90YWxfYnl0ZXMYASABKAQSGQoRcmVjbGFpbWFibGVfYnl0ZXMYAiABKAQSFAoMcmVjb3JkX2NvdW50GAMgASgNEhQKDGFjdGl2ZV9jb3VudBgEIAEoDSIlChZQcnVuZUJ1aWxkQ2FjaGVSZXF1ZXN0EgsKA2FsbBgBIAEoCCJKChdQcnVuZUJ1aWxkQ2FjaGVSZXNwb25zZRIWCg5jYWNoZXNfZGVsZXRlZBgBIAEoDRIXCg9zcGFjZV9yZWNsYWltZWQYAiABKAQiggIKEEJ1aWxkQ2FjaGVSZWNvcmQSCgoCaWQYASABKAkSDAoEdHlwZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRISCgpzaXplX2J5dGVzGAQgASgEEg4KBmluX3VzZRgFIAEoCBIOCgZzaGFyZWQYBiABKAgSEwoLdXNhZ2VfY291bnQYByABKAQSLgoKY3JlYXRlZF9hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASNQoMbGFzdF91c2VkX2F0GAkgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgAiAEBQg8KDV9sYXN0X3VzZWRfYXQiHgocTGlzdEJ1aWxkQ2FjaGVSZWNvcmRzUmVxdWVzdCJPCh1MaXN0QnVpbGRDYWNoZVJlY29yZHNSZXNwb25zZRIuCgdyZWNvcmRzGAEgAygLMh0uZG1hbmFnZXIudjEuQnVpbGRDYWNoZVJlY29yZCIqChxQcnVuZUJ1aWxkQ2FjaGVSZWNvcmRSZXF1ZXN0EgoKAmlkGAEgASgJIlAKHVBydW5lQnVpbGRDYWNoZVJlY29yZFJlc3BvbnNlEhYKDmNhY2hlc19kZWxldGVkGAEgASgNEhcKD3NwYWNlX3JlY2xhaW1lZBgCIAEoBCIUChJDaGVja0VuZ2luZVJlcXVlc3QiTAoTQ2hlY2tFbmdpbmVSZXNwb25zZRIRCgljb25uZWN0ZWQYASABKAgSEwoLYXBpX3ZlcnNpb24YAiABKAkSDQoFZXJyb3IYAyABKAkiFwoVR2V0Vm9sdW1lVXNhZ2VSZXF1ZXN0IkIKC1ZvbHVtZVVzYWdlEgwKBG5hbWUYASABKAkSEgoKc2l6ZV9ieXRlcxgCIAEoAxIRCglyZWZfY291bnQYAyABKAMijgEKFkdldFZvbHVtZVVzYWdlUmVzcG9uc2USKQoHdm9sdW1lcxgBIAMoCzIYLmRtYW5hZ2VyLnYxLlZvbHVtZVVzYWdlEhgKEHRvdGFsX3NpemVfYnl0ZXMYAiABKAMSGQoRcmVjbGFpbWFibGVfYnl0ZXMYAyABKAMSFAoMdW51c2VkX2NvdW50GAQgASgNIhUKE1BydW5lVm9sdW1lc1JlcXVlc3QiVwoUUHJ1bmVWb2x1bWVzUmVzcG9uc2USFwoPdm9sdW1lc19kZWxldGVkGAEgASgNEg0KBW5hbWVzGAIgAygJEhcKD3NwYWNlX3JlY2xhaW1lZBgDIAEoBDL/CQoMQWRtaW5TZXJ2aWNlEk0KCkxpc3RJbWFnZXMSHi5kbWFuYWdlci52MS5MaXN0SW1hZ2VzUmVxdWVzdBofLmRtYW5hZ2VyLnYxLkxpc3RJbWFnZXNSZXNwb25zZRJQCgtMaXN0Vm9sdW1lcxIfLmRtYW5hZ2VyLnYxLkxpc3RWb2x1bWVzUmVxdWVzdBogLmRtYW5hZ2VyLnYxLkxpc3RWb2x1bWVzUmVzcG9uc2USWQoOR2V0Vm9sdW1lVXNhZ2USIi5kbWFuYWdlci52MS5HZXRWb2x1bWVVc2FnZVJlcXVlc3QaIy5kbWFuYWdlci52MS5HZXRWb2x1bWVVc2FnZVJlc3BvbnNlElMKDExpc3ROZXR3b3JrcxIgLmRtYW5hZ2VyLnYxLkxpc3ROZXR3b3Jrc1JlcXVlc3QaIS5kbWFuYWdlci52MS5MaXN0TmV0d29ya3NSZXNwb25zZRJQCgtEZWxldGVJbWFnZRIfLmRtYW5hZ2VyLnYxLkRlbGV0ZUltYWdlUmVxdWVzdBogLmRtYW5hZ2VyLnYxLkRlbGV0ZUltYWdlUmVzcG9uc2USUAoLUHJ1bmVJbWFnZXMSHy5kbWFuYWdlci52MS5QcnVuZUltYWdlc1JlcXVlc3QaIC5kbWFuYWdlci52MS5QcnVuZUltYWdlc1Jlc3BvbnNlElMKDFBydW5lVm9sdW1lcxIgLmRtYW5hZ2VyLnYxLlBydW5lVm9sdW1lc1JlcXVlc3QaIS5kbWFuYWdlci52MS5QcnVuZVZvbHVtZXNSZXNwb25zZRJWCg1EZWxldGVOZXR3b3JrEiEuZG1hbmFnZXIudjEuRGVsZXRlTmV0d29ya1JlcXVlc3QaIi5kbWFuYWdlci52MS5EZWxldGVOZXR3b3JrUmVzcG9uc2USVgoNUHJ1bmVOZXR3b3JrcxIhLmRtYW5hZ2VyLnYxLlBydW5lTmV0d29ya3NSZXF1ZXN0GiIuZG1hbmFnZXIudjEuUHJ1bmVOZXR3b3Jrc1Jlc3BvbnNlEmUKEkdldEJ1aWxkQ2FjaGVTdGF0cxImLmRtYW5hZ2VyLnYxLkdldEJ1aWxkQ2FjaGVTdGF0c1JlcXVlc3QaJy5kbWFuYWdlci52MS5HZXRCdWlsZENhY2hlU3RhdHNSZXNwb25zZRJcCg9QcnVuZUJ1aWxkQ2FjaGUSIy5kbWFuYWdlci52MS5QcnVuZUJ1aWxkQ2FjaGVSZXF1ZXN0GiQuZG1hbmFnZXIudjEuUHJ1bmVCdWlsZENhY2hlUmVzcG9uc2USbgoVTGlzdEJ1aWxkQ2FjaGVSZWNvcmRzEikuZG1hbmFnZXIudjEuTGlzdEJ1aWxkQ2FjaGVSZWNvcmRzUmVxdWVzdBoqLmRtYW5hZ2VyLnYxLkxpc3RCdWlsZENhY2hlUmVjb3Jkc1Jlc3BvbnNlEm4KFVBydW5lQnVpbGRDYWNoZVJlY29yZBIpLmRtYW5hZ2VyLnYxLlBydW5lQnVpbGRDYWNoZVJlY29yZFJlcXVlc3QaKi5kbWFuYWdlci52MS5QcnVuZUJ1aWxkQ2FjaGVSZWNvcmRSZXNwb25zZRJQCgtDaGVja0VuZ2luZRIfLmRtYW5hZ2VyLnYxLkNoZWNrRW5naW5lUmVxdWVzdBogLmRtYW5hZ2VyLnYxLkNoZWNrRW5naW5lUmVzcG9uc2VCNFoyZG1hbmFnZXIvaW50ZXJuYWwvZ2VuL3Byb3RvL2RtYW5hZ2VyL3YxO2RtYW5hZ2VydjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
+  fileDesc("Ch1wcm90by9kbWFuYWdlci92MS9hZG1pbi5wcm90bxILZG1hbmFnZXIudjEiEwoRTGlzdEltYWdlc1JlcXVlc3QiOAoSTGlzdEltYWdlc1Jlc3BvbnNlEiIKBmltYWdlcxgBIAMoCzISLmRtYW5hZ2VyLnYxLkltYWdlImoKBUltYWdlEgoKAmlkGAEgASgJEhEKCXJlcG9fdGFncxgCIAMoCRIUCgxjcmVhdGVkX3VuaXgYAyABKAMSEgoKc2l6ZV9ieXRlcxgEIAEoAxIYChBjb250YWluZXJzX2NvdW50GAUgASgDIhQKEkxpc3RWb2x1bWVzUmVxdWVzdCI7ChNMaXN0Vm9sdW1lc1Jlc3BvbnNlEiQKB3ZvbHVtZXMYASADKAsyEy5kbWFuYWdlci52MS5Wb2x1bWUiygEKBlZvbHVtZRIMCgRuYW1lGAEgASgJEg4KBmRyaXZlchgCIAEoCRISCgptb3VudHBvaW50GAMgASgJEi4KCmNyZWF0ZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi8KBmxhYmVscxgFIAMoCzIfLmRtYW5hZ2VyLnYxLlZvbHVtZS5MYWJlbHNFbnRyeRotCgtMYWJlbHNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIhUKE0xpc3ROZXR3b3Jrc1JlcXVlc3QiPgoUTGlzdE5ldHdvcmtzUmVzcG9uc2USJgoIbmV0d29ya3MYASADKAsyFC5kbWFuYWdlci52MS5OZXR3b3JrIrIBCgdOZXR3b3JrEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSDgoGZHJpdmVyGAMgASgJEg0KBXNjb3BlGAQgASgJEhAKCGludGVybmFsGAUgASgIEi4KCmNyZWF0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhgKEGNvbnRhaW5lcnNfY291bnQYByABKAMSEgoKcHJlZGVmaW5lZBgIIAEoCCIiChREZWxldGVOZXR3b3JrUmVxdWVzdBIKCgJpZBgBIAEoCSIXChVEZWxldGVOZXR3b3JrUmVzcG9uc2UiFgoUUHJ1bmVOZXR3b3Jrc1JlcXVlc3QiQAoVUHJ1bmVOZXR3b3Jrc1Jlc3BvbnNlEhgKEG5ldHdvcmtzX2RlbGV0ZWQYASABKAQSDQoFbmFtZXMYAiADKAkiLwoSRGVsZXRlSW1hZ2VSZXF1ZXN0EgoKAmlkGAEgASgJEg0KBWZvcmNlGAIgASgIIhUKE0RlbGV0ZUltYWdlUmVzcG9uc2UiKwoSUHJ1bmVJbWFnZXNSZXF1ZXN0EhUKDWRhbmdsaW5nX29ubHkYASABKAgiMAoLUHJ1bmVkSW1hZ2USDwoHZGVsZXRlZBgBIAEoCRIQCgh1bnRhZ2dlZBgCIAEoCSJgChNQcnVuZUltYWdlc1Jlc3BvbnNlEjAKDmltYWdlc19kZWxldGVkGAEgAygLMhguZG1hbmFnZXIudjEuUHJ1bmVkSW1hZ2USFwoPc3BhY2VfcmVjbGFpbWVkGAIgASgEIhsKGUdldEJ1aWxkQ2FjaGVTdGF0c1JlcXVlc3QieAoaR2V0QnVpbGRDYWNoZVN0YXRzUmVzcG9uc2USEwoLdG90YWxfYnl0ZXMYASABKAQSGQoRcmVjbGFpbWFibGVfYnl0ZXMYAiABKAQSFAoMcmVjb3JkX2NvdW50GAMgASgNEhQKDGFjdGl2ZV9jb3VudBgEIAEoDSIlChZQcnVuZUJ1aWxkQ2FjaGVSZXF1ZXN0EgsKA2FsbBgBIAEoCCJKChdQcnVuZUJ1aWxkQ2FjaGVSZXNwb25zZRIWCg5jYWNoZXNfZGVsZXRlZBgBIAEoDRIXCg9zcGFjZV9yZWNsYWltZWQYAiABKAQiggIKEEJ1aWxkQ2FjaGVSZWNvcmQSCgoCaWQYASABKAkSDAoEdHlwZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRISCgpzaXplX2J5dGVzGAQgASgEEg4KBmluX3VzZRgFIAEoCBIOCgZzaGFyZWQYBiABKAgSEwoLdXNhZ2VfY291bnQYByABKAQSLgoKY3JlYXRlZF9hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASNQoMbGFzdF91c2VkX2F0GAkgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgAiAEBQg8KDV9sYXN0X3VzZWRfYXQiHgocTGlzdEJ1aWxkQ2FjaGVSZWNvcmRzUmVxdWVzdCJPCh1MaXN0QnVpbGRDYWNoZVJlY29yZHNSZXNwb25zZRIuCgdyZWNvcmRzGAEgAygLMh0uZG1hbmFnZXIudjEuQnVpbGRDYWNoZVJlY29yZCIqChxQcnVuZUJ1aWxkQ2FjaGVSZWNvcmRSZXF1ZXN0EgoKAmlkGAEgASgJIlAKHVBydW5lQnVpbGRDYWNoZVJlY29yZFJlc3BvbnNlEhYKDmNhY2hlc19kZWxldGVkGAEgASgNEhcKD3NwYWNlX3JlY2xhaW1lZBgCIAEoBCIUChJDaGVja0VuZ2luZVJlcXVlc3QiTAoTQ2hlY2tFbmdpbmVSZXNwb25zZRIRCgljb25uZWN0ZWQYASABKAgSEwoLYXBpX3ZlcnNpb24YAiABKAkSDQoFZXJyb3IYAyABKAkiFwoVR2V0Vm9sdW1lVXNhZ2VSZXF1ZXN0IkIKC1ZvbHVtZVVzYWdlEgwKBG5hbWUYASABKAkSEgoKc2l6ZV9ieXRlcxgCIAEoAxIRCglyZWZfY291bnQYAyABKAMijgEKFkdldFZvbHVtZVVzYWdlUmVzcG9uc2USKQoHdm9sdW1lcxgBIAMoCzIYLmRtYW5hZ2VyLnYxLlZvbHVtZVVzYWdlEhgKEHRvdGFsX3NpemVfYnl0ZXMYAiABKAMSGQoRcmVjbGFpbWFibGVfYnl0ZXMYAyABKAMSFAoMdW51c2VkX2NvdW50GAQgASgNIhUKE1BydW5lVm9sdW1lc1JlcXVlc3QiVwoUUHJ1bmVWb2x1bWVzUmVzcG9uc2USFwoPdm9sdW1lc19kZWxldGVkGAEgASgNEg0KBW5hbWVzGAIgAygJEhcKD3NwYWNlX3JlY2xhaW1lZBgDIAEoBCLbAQoNQXVkaXRMb2dFbnRyeRIKCgJpZBgBIAEoBBIuCgpjcmVhdGVkX2F0GAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBINCgVhY3RvchgDIAEoCRISCgphY3Rvcl9yb2xlGAQgASgJEg4KBnNvdXJjZRgFIAEoBRIOCgZhY3Rpb24YBiABKAkSFQoNcmVzb3VyY2VfdHlwZRgHIAEoCRITCgtyZXNvdXJjZV9pZBgIIAEoCRIPCgdvdXRjb21lGAkgASgFEg4KBmRldGFpbBgKIAEoCSJlChRMaXN0QXVkaXRMb2dzUmVxdWVzdBINCgVxdWVyeRgBIAEoCRIOCgZzb3VyY2UYAiABKAUSDwoHb3V0Y29tZRgDIAEoBRINCgVsaW1pdBgEIAEoDRIOCgZvZmZzZXQYBSABKAQiUwoVTGlzdEF1ZGl0TG9nc1Jlc3BvbnNlEisKB2VudHJpZXMYASADKAsyGi5kbWFuYWdlci52MS5BdWRpdExvZ0VudHJ5Eg0KBXRvdGFsGAIgASgEMtcKCgxBZG1pblNlcnZpY2USTQoKTGlzdEltYWdlcxIeLmRtYW5hZ2VyLnYxLkxpc3RJbWFnZXNSZXF1ZXN0Gh8uZG1hbmFnZXIudjEuTGlzdEltYWdlc1Jlc3BvbnNlElAKC0xpc3RWb2x1bWVzEh8uZG1hbmFnZXIudjEuTGlzdFZvbHVtZXNSZXF1ZXN0GiAuZG1hbmFnZXIudjEuTGlzdFZvbHVtZXNSZXNwb25zZRJZCg5HZXRWb2x1bWVVc2FnZRIiLmRtYW5hZ2VyLnYxLkdldFZvbHVtZVVzYWdlUmVxdWVzdBojLmRtYW5hZ2VyLnYxLkdldFZvbHVtZVVzYWdlUmVzcG9uc2USUwoMTGlzdE5ldHdvcmtzEiAuZG1hbmFnZXIudjEuTGlzdE5ldHdvcmtzUmVxdWVzdBohLmRtYW5hZ2VyLnYxLkxpc3ROZXR3b3Jrc1Jlc3BvbnNlElAKC0RlbGV0ZUltYWdlEh8uZG1hbmFnZXIudjEuRGVsZXRlSW1hZ2VSZXF1ZXN0GiAuZG1hbmFnZXIudjEuRGVsZXRlSW1hZ2VSZXNwb25zZRJQCgtQcnVuZUltYWdlcxIfLmRtYW5hZ2VyLnYxLlBydW5lSW1hZ2VzUmVxdWVzdBogLmRtYW5hZ2VyLnYxLlBydW5lSW1hZ2VzUmVzcG9uc2USUwoMUHJ1bmVWb2x1bWVzEiAuZG1hbmFnZXIudjEuUHJ1bmVWb2x1bWVzUmVxdWVzdBohLmRtYW5hZ2VyLnYxLlBydW5lVm9sdW1lc1Jlc3BvbnNlElYKDURlbGV0ZU5ldHdvcmsSIS5kbWFuYWdlci52MS5EZWxldGVOZXR3b3JrUmVxdWVzdBoiLmRtYW5hZ2VyLnYxLkRlbGV0ZU5ldHdvcmtSZXNwb25zZRJWCg1QcnVuZU5ldHdvcmtzEiEuZG1hbmFnZXIudjEuUHJ1bmVOZXR3b3Jrc1JlcXVlc3QaIi5kbWFuYWdlci52MS5QcnVuZU5ldHdvcmtzUmVzcG9uc2USZQoSR2V0QnVpbGRDYWNoZVN0YXRzEiYuZG1hbmFnZXIudjEuR2V0QnVpbGRDYWNoZVN0YXRzUmVxdWVzdBonLmRtYW5hZ2VyLnYxLkdldEJ1aWxkQ2FjaGVTdGF0c1Jlc3BvbnNlElwKD1BydW5lQnVpbGRDYWNoZRIjLmRtYW5hZ2VyLnYxLlBydW5lQnVpbGRDYWNoZVJlcXVlc3QaJC5kbWFuYWdlci52MS5QcnVuZUJ1aWxkQ2FjaGVSZXNwb25zZRJuChVMaXN0QnVpbGRDYWNoZVJlY29yZHMSKS5kbWFuYWdlci52MS5MaXN0QnVpbGRDYWNoZVJlY29yZHNSZXF1ZXN0GiouZG1hbmFnZXIudjEuTGlzdEJ1aWxkQ2FjaGVSZWNvcmRzUmVzcG9uc2USbgoVUHJ1bmVCdWlsZENhY2hlUmVjb3JkEikuZG1hbmFnZXIudjEuUHJ1bmVCdWlsZENhY2hlUmVjb3JkUmVxdWVzdBoqLmRtYW5hZ2VyLnYxLlBydW5lQnVpbGRDYWNoZVJlY29yZFJlc3BvbnNlElAKC0NoZWNrRW5naW5lEh8uZG1hbmFnZXIudjEuQ2hlY2tFbmdpbmVSZXF1ZXN0GiAuZG1hbmFnZXIudjEuQ2hlY2tFbmdpbmVSZXNwb25zZRJWCg1MaXN0QXVkaXRMb2dzEiEuZG1hbmFnZXIudjEuTGlzdEF1ZGl0TG9nc1JlcXVlc3QaIi5kbWFuYWdlci52MS5MaXN0QXVkaXRMb2dzUmVzcG9uc2VCNFoyZG1hbmFnZXIvaW50ZXJuYWwvZ2VuL3Byb3RvL2RtYW5hZ2VyL3YxO2RtYW5hZ2VydjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message dmanager.v1.ListImagesRequest
@@ -880,6 +880,157 @@ export const PruneVolumesResponseSchema: GenMessage<PruneVolumesResponse> = /*@_
   messageDesc(file_proto_dmanager_v1_admin, 33);
 
 /**
+ * @generated from message dmanager.v1.AuditLogEntry
+ */
+export type AuditLogEntry = Message<"dmanager.v1.AuditLogEntry"> & {
+  /**
+   * monotonic row id
+   *
+   * @generated from field: uint64 id = 1;
+   */
+  id: bigint;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 2;
+   */
+  createdAt?: Timestamp | undefined;
+
+  /**
+   * username; "system" when source = SYSTEM
+   *
+   * @generated from field: string actor = 3;
+   */
+  actor: string;
+
+  /**
+   * admin|viewer; empty for system entries
+   *
+   * @generated from field: string actor_role = 4;
+   */
+  actorRole: string;
+
+  /**
+   * 1 = user, 2 = system
+   *
+   * @generated from field: int32 source = 5;
+   */
+  source: number;
+
+  /**
+   * dotted verb: image.delete, container.upgrade, network.prune, …
+   *
+   * @generated from field: string action = 6;
+   */
+  action: string;
+
+  /**
+   * container|image|volume|network|builder|settings
+   *
+   * @generated from field: string resource_type = 7;
+   */
+  resourceType: string;
+
+  /**
+   * daemon id where one exists, else empty
+   *
+   * @generated from field: string resource_id = 8;
+   */
+  resourceId: string;
+
+  /**
+   * 1 = success, 2 = failure, 3 = denied
+   *
+   * @generated from field: int32 outcome = 9;
+   */
+  outcome: number;
+
+  /**
+   * human summary (prune counts, names); error message on failure
+   *
+   * @generated from field: string detail = 10;
+   */
+  detail: string;
+};
+
+/**
+ * Describes the message dmanager.v1.AuditLogEntry.
+ * Use `create(AuditLogEntrySchema)` to create a new message.
+ */
+export const AuditLogEntrySchema: GenMessage<AuditLogEntry> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_admin, 34);
+
+/**
+ * @generated from message dmanager.v1.ListAuditLogsRequest
+ */
+export type ListAuditLogsRequest = Message<"dmanager.v1.ListAuditLogsRequest"> & {
+  /**
+   * Substring match over actor, action, resource_id and detail (server-side).
+   *
+   * @generated from field: string query = 1;
+   */
+  query: string;
+
+  /**
+   * 0 = all, 1 = user, 2 = system
+   *
+   * @generated from field: int32 source = 2;
+   */
+  source: number;
+
+  /**
+   * 0 = all, 1 = success, 2 = failure, 3 = denied
+   *
+   * @generated from field: int32 outcome = 3;
+   */
+  outcome: number;
+
+  /**
+   * default 50, clamped to <= 200
+   *
+   * @generated from field: uint32 limit = 4;
+   */
+  limit: number;
+
+  /**
+   * @generated from field: uint64 offset = 5;
+   */
+  offset: bigint;
+};
+
+/**
+ * Describes the message dmanager.v1.ListAuditLogsRequest.
+ * Use `create(ListAuditLogsRequestSchema)` to create a new message.
+ */
+export const ListAuditLogsRequestSchema: GenMessage<ListAuditLogsRequest> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_admin, 35);
+
+/**
+ * @generated from message dmanager.v1.ListAuditLogsResponse
+ */
+export type ListAuditLogsResponse = Message<"dmanager.v1.ListAuditLogsResponse"> & {
+  /**
+   * created_at DESC, id DESC — newest first, fixed order
+   *
+   * @generated from field: repeated dmanager.v1.AuditLogEntry entries = 1;
+   */
+  entries: AuditLogEntry[];
+
+  /**
+   * rows matching the filter, for n–m-of-T pagination
+   *
+   * @generated from field: uint64 total = 2;
+   */
+  total: bigint;
+};
+
+/**
+ * Describes the message dmanager.v1.ListAuditLogsResponse.
+ * Use `create(ListAuditLogsResponseSchema)` to create a new message.
+ */
+export const ListAuditLogsResponseSchema: GenMessage<ListAuditLogsResponse> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_admin, 36);
+
+/**
  * AdminService exposes Docker host resources (images, volumes, networks)
  * for the Administration page. Lists are read-only for every role;
  * destructive procedures (image deletion, prunes) are admin-gated.
@@ -1054,6 +1205,18 @@ export const AdminService: GenService<{
     methodKind: "unary";
     input: typeof CheckEngineRequestSchema;
     output: typeof CheckEngineResponseSchema;
+  },
+  /**
+   * Review the audit trail (Authenticated, admin role): recorded mutation
+   * outcomes by users and system-originated automatic updates, filtered and
+   * paginated server-side. Entries are written by the server, never by RPC.
+   *
+   * @generated from rpc dmanager.v1.AdminService.ListAuditLogs
+   */
+  listAuditLogs: {
+    methodKind: "unary";
+    input: typeof ListAuditLogsRequestSchema;
+    output: typeof ListAuditLogsResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_proto_dmanager_v1_admin, 0);

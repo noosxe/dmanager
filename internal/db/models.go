@@ -9,6 +9,19 @@ import (
 	"time"
 )
 
+type AuditLog struct {
+	ID           int64
+	CreatedAt    time.Time
+	Actor        string
+	ActorRole    string
+	Source       string
+	Action       string
+	ResourceType string
+	ResourceID   string
+	Outcome      string
+	Detail       string
+}
+
 type AuthEvent struct {
 	ID        int64
 	UserID    sql.NullInt64

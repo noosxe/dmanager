@@ -18,6 +18,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"dmanager/internal/admin"
+	"dmanager/internal/audit"
 	"dmanager/internal/auth"
 	"dmanager/internal/config"
 	"dmanager/internal/container"
@@ -127,7 +128,9 @@ var serveCmd = &cobra.Command{
 		})
 
 		authSvc := auth.NewService(queries, logger.With("module", "auth"), cfg.Auth, cfg.WebAuthn, cfg.Server.TrustedProxy)
-		authInterceptor := auth.NewInterceptor(queries, logger.With("module", "auth"), cfg.Auth.SessionIdleTimeout)
+		auditor := audit.NewRecorder(queries, logger.With("module", "audit"), audit.RetentionRows)
+
+		authInterceptor := auth.NewInterceptor(queries, logger.With("module", "auth"), cfg.Auth.SessionIdleTimeout, auditor)
 
 		// Start background purge jobs (expired sessions, 90-day auth events, webauthn challenges)
 		auth.StartPurgeJob(srvCtx, logger.With("module", "auth"), time.Hour,
@@ -147,7 +150,7 @@ var serveCmd = &cobra.Command{
 		mux.Handle(authPath, authHandler)
 
 		// Register ContainerService
-		containerSvc := container.NewService(dbConn, containerBroker, dockerClient, logger.With("module", "container"), cfg.Registries)
+		containerSvc := container.NewService(dbConn, containerBroker, dockerClient, logger.With("module", "container"), cfg.Registries, auditor)
 		containerPath, containerHandler := dmanagerv1connect.NewContainerServiceHandler(
 			containerSvc,
 			connect.WithInterceptors(authInterceptor),
@@ -171,7 +174,7 @@ var serveCmd = &cobra.Command{
 		mux.Handle(settingsPath, settingsHandler)
 
 		// Register AdminService (read-only Docker resource inventories)
-		adminSvc := admin.NewService(dockerClient, logger.With("module", "admin"))
+		adminSvc := admin.NewService(dockerClient, queries, logger.With("module", "admin"))
 		adminPath, adminHandler := dmanagerv1connect.NewAdminServiceHandler(
 			adminSvc,
 			connect.WithInterceptors(authInterceptor),
