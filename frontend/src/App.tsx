@@ -10,17 +10,24 @@ import { router } from "./routes/router";
 function AppContent() {
   const auth = useAuth();
 
-  // Re-run route guards (beforeLoad) whenever the auth-relevant state flips.
-  // TanStack Router does not re-evaluate beforeLoad on context-only updates
-  // (router.update merges context but does not invalidate matches), and the
-  // isLoading unmount/remount of RouterProvider skips router.load() for an
-  // already-resolved location — so without this, a successful login (password
-  // or passkey) leaves the user stuck on /login until a manual refresh.
+  // Re-run route guards (beforeLoad) whenever the auth-relevant state flips or
+  // a loading pass settles. TanStack Router does not re-evaluate beforeLoad on
+  // context-only updates (router.update merges context but does not invalidate
+  // matches), and the isLoading unmount/remount of RouterProvider skips
+  // router.load() for an already-resolved location — so without this, a
+  // successful login (password or passkey) leaves the user stuck on /login
+  // until a manual refresh. The isLoading gate matters for boots where
+  // localStorage already marks the user authenticated: isAuthenticated never
+  // flips, so the effect must re-fire when loading finishes and RouterProvider
+  // is mounted with the merged (fresh) context — an invalidate fired earlier
+  // would run against the router's default (logged-out) context.
   // See https://github.com/noosxe/dmanager/issues/235
   const authStateKey = `${auth.isAuthenticated}|${auth.needsSetup}`;
   useEffect(() => {
-    router.invalidate();
-  }, [authStateKey]);
+    if (!auth.isLoading) {
+      router.invalidate();
+    }
+  }, [auth.isLoading, authStateKey]);
   if (auth.isLoading) {
     return (
       <div className="auth-container">
