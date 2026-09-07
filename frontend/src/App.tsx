@@ -1,5 +1,6 @@
 import { RouterProvider } from "@tanstack/react-router";
 import { Loader2, Terminal } from "lucide-react";
+import { useEffect } from "react";
 
 import { ToastContainer } from "./components/ToastContainer";
 import { ToastProvider } from "./context/ToastContext";
@@ -9,6 +10,17 @@ import { router } from "./routes/router";
 function AppContent() {
   const auth = useAuth();
 
+  // Re-run route guards (beforeLoad) whenever the auth-relevant state flips.
+  // TanStack Router does not re-evaluate beforeLoad on context-only updates
+  // (router.update merges context but does not invalidate matches), and the
+  // isLoading unmount/remount of RouterProvider skips router.load() for an
+  // already-resolved location — so without this, a successful login (password
+  // or passkey) leaves the user stuck on /login until a manual refresh.
+  // See https://github.com/noosxe/dmanager/issues/235
+  const authStateKey = `${auth.isAuthenticated}|${auth.needsSetup}`;
+  useEffect(() => {
+    router.invalidate();
+  }, [authStateKey]);
   if (auth.isLoading) {
     return (
       <div className="auth-container">
