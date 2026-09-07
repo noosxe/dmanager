@@ -140,4 +140,22 @@ describe("login auto-navigates to dashboard (#235)", () => {
     });
     expect(finishPasskeyMock).toHaveBeenCalledTimes(1);
   });
+
+  // Regression: after a successful passkey login the localStorage token is
+  // already set, so on the next page load isAuthenticated never flips and the
+  // invalidate must fire when isLoading settles instead. Without the
+  // isLoading gate the app boots and stays on /login forever (#235).
+  it("cold boot with a stored session navigates to / without a refresh", async () => {
+    memStore.setItem("dmanager_token", "session_active");
+    memStore.setItem("dmanager_user", JSON.stringify(okUser));
+    getMeMock.mockResolvedValue(okUser);
+
+    const { router, App } = await freshApp();
+    window.history.replaceState(null, "", "/login");
+    render(<App />);
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/");
+    });
+  });
 });
