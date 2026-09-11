@@ -8,7 +8,7 @@ on:
 jobs:
   release:
     name: Build & Release
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, amd64]
     timeout-minutes: 30
     permissions:
       contents: write
