@@ -25,7 +25,7 @@ defaults:
 jobs:
   ci:
     name: Lint, Format & Build
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, amd64]
     timeout-minutes: 30
     steps:
       - name: Checkout repository
