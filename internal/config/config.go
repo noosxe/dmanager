@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -77,6 +78,15 @@ type WebAuthnConfig struct {
 	RequireUserVerification string   `koanf:"require_user_verification"`
 }
 
+// TailscaleConfig configures the embedded tsnet node (see docs/tailscale.md).
+// The whole section is inert while AuthKey is empty.
+type TailscaleConfig struct {
+	AuthKey  string `koanf:"auth_key"`
+	Hostname string `koanf:"hostname"`
+	StateDir string `koanf:"state_dir"`
+	Port     int    `koanf:"port"`
+}
+
 type Config struct {
 	Server     ServerConfig    `koanf:"server"`
 	Docker     DockerConfig    `koanf:"docker"`
@@ -84,6 +94,7 @@ type Config struct {
 	Auth       AuthConfig      `koanf:"auth"`
 	WebAuthn   WebAuthnConfig  `koanf:"webauthn"`
 	SMTP       SMTPConfig      `koanf:"smtp"`
+	Tailscale  TailscaleConfig `koanf:"tailscale"`
 	Registries []Registry      `koanf:"registries"`
 }
 
@@ -126,7 +137,16 @@ func (c *Config) Validate() error {
 	// The whole SMTP section is inert while disabled: partial or commented-out
 	// relay details in the compose file must not break startup.
 	if c.SMTP.Enabled {
-		return c.SMTP.Validate()
+		if err := c.SMTP.Validate(); err != nil {
+			return err
+		}
+	}
+
+	// The tailscale section is inert while no auth key is configured.
+	if c.Tailscale.AuthKey != "" {
+		if err := c.Tailscale.Validate(filepath.Dir(c.Server.DBPath)); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -161,6 +181,46 @@ func (c *SMTPConfig) Validate() error {
 	return nil
 }
 
+// Validate checks the tailscale section itself; only called when an auth key
+// is set. dbDir is the directory holding the SQLite database, used to reject
+// state directories that would collide with it.
+func (c *TailscaleConfig) Validate(dbDir string) error {
+	if !isValidTailscaleHostname(c.Hostname) {
+		return fmt.Errorf("tailscale.hostname must use lowercase letters, digits and hyphens, start and end with a letter or digit, and be at most 63 characters, got %q", c.Hostname)
+	}
+	if c.Port < 1 || c.Port > 65535 {
+		return fmt.Errorf("tailscale.port must be between 1 and 65535, got %d", c.Port)
+	}
+	if strings.TrimSpace(c.StateDir) == "" {
+		return fmt.Errorf("tailscale.state_dir must not be empty when tailscale.auth_key is set")
+	}
+	cleanDir := filepath.Clean(c.StateDir)
+	if cleanDir == "/" || cleanDir == filepath.Clean(dbDir) {
+		return fmt.Errorf("tailscale.state_dir %q must be a dedicated directory, not the database directory or root", c.StateDir)
+	}
+	return nil
+}
+
+// isValidTailscaleHostname reports whether s is acceptable as a Tailscale
+// MagicDNS hostname: lowercase letters, digits and hyphens; starts and ends
+// with a letter or digit; at most 63 characters.
+func isValidTailscaleHostname(s string) bool {
+	if s == "" || len(s) > 63 {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') {
+			continue
+		}
+		if c == '-' && i > 0 && i < len(s)-1 {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
 // Load loads configuration from the specified path, default paths, and environment variables.
 func Load(configPath string) (*Config, error) {
 	k := koanf.New(".")
@@ -184,6 +244,8 @@ func Load(configPath string) (*Config, error) {
 		"smtp.port":                          "25",
 		"smtp.tls_mode":                      TLSModeNone,
 		"smtp.timeout_seconds":               15,
+		"tailscale.hostname":                 "dmanager",
+		"tailscale.port":                     80,
 	}
 	if err := k.Load(confmap.Provider(defaults, "."), nil); err != nil {
 		return nil, fmt.Errorf("failed to load default configuration: %w", err)
@@ -264,6 +326,14 @@ func Load(configPath string) (*Config, error) {
 				sub := strings.TrimPrefix(key, "smtp_")
 				return "smtp." + sub, v
 			}
+			if strings.HasPrefix(key, "tailscale_") {
+				sub := strings.TrimPrefix(key, "tailscale_")
+				if sub == "authkey" {
+					// TAILSCALE_AUTHKEY (per feature spec) maps to the auth_key YAML key.
+					sub = "auth_key"
+				}
+				return "tailscale." + sub, v
+			}
 			// Registries are handled in manual post-processing
 			return "", nil
 		},
@@ -276,6 +346,18 @@ func Load(configPath string) (*Config, error) {
 	var cfg Config
 	if err := k.Unmarshal("", &cfg); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal configuration: %w", err)
+	}
+
+	// Apply bare TAILSCALE_* environment aliases; the DMANAGER_TAILSCALE_*
+	// variables were already merged by the env provider above and win here.
+	if err := applyTailscaleEnvAliases(&cfg); err != nil {
+		return nil, fmt.Errorf("invalid environment: %w", err)
+	}
+
+	// Default the node state directory to a sibling of the SQLite database so
+	// container and bare-metal deployments persist it on the same volume.
+	if cfg.Tailscale.StateDir == "" {
+		cfg.Tailscale.StateDir = filepath.Join(filepath.Dir(cfg.Server.DBPath), "tailscale")
 	}
 
 	if err := cfg.Validate(); err != nil {
@@ -323,4 +405,28 @@ func Load(configPath string) (*Config, error) {
 	}
 
 	return &cfg, nil
+}
+
+// applyTailscaleEnvAliases maps the bare TAILSCALE_* variable names onto the
+// tailscale config section. A bare alias only applies when its
+// DMANAGER_-prefixed counterpart is unset; bare aliases still override YAML
+// values, giving the precedence: prefixed > bare > YAML > defaults.
+func applyTailscaleEnvAliases(cfg *Config) error {
+	if v := os.Getenv("TAILSCALE_AUTHKEY"); v != "" && os.Getenv("DMANAGER_TAILSCALE_AUTHKEY") == "" {
+		cfg.Tailscale.AuthKey = v
+	}
+	if v := os.Getenv("TAILSCALE_HOSTNAME"); v != "" && os.Getenv("DMANAGER_TAILSCALE_HOSTNAME") == "" {
+		cfg.Tailscale.Hostname = v
+	}
+	if v := os.Getenv("TAILSCALE_STATE_DIR"); v != "" && os.Getenv("DMANAGER_TAILSCALE_STATE_DIR") == "" {
+		cfg.Tailscale.StateDir = v
+	}
+	if v := strings.TrimSpace(os.Getenv("TAILSCALE_PORT")); v != "" && os.Getenv("DMANAGER_TAILSCALE_PORT") == "" {
+		p, err := strconv.Atoi(v)
+		if err != nil {
+			return fmt.Errorf("invalid TAILSCALE_PORT value %q: must be a port number", v)
+		}
+		cfg.Tailscale.Port = p
+	}
+	return nil
 }
