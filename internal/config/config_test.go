@@ -3,9 +3,14 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
+
+// testTailscaleStateDir is the canonical persistent state directory used in
+// state-dir derivation and validation tests.
+const testTailscaleStateDir = "/var/lib/dmanager/tailscale"
 
 func TestConfigDefaults(t *testing.T) {
 	cfg, err := Load("")
@@ -435,5 +440,248 @@ func TestConfigSMTPDisabledInert(t *testing.T) {
 	}
 	if err := cfg.Validate(); err != nil {
 		t.Errorf("disabled smtp section must be inert, got: %v", err)
+	}
+}
+
+func TestConfigTailscaleDefaults(t *testing.T) {
+	cfg, err := Load("")
+	if err != nil {
+		t.Fatalf("failed to load default config: %v", err)
+	}
+	if cfg.Tailscale.AuthKey != "" {
+		t.Errorf("expected default empty tailscale.auth_key, got %q", cfg.Tailscale.AuthKey)
+	}
+	if cfg.Tailscale.Hostname != "dmanager" {
+		t.Errorf("expected default tailscale.hostname dmanager, got %q", cfg.Tailscale.Hostname)
+	}
+	if cfg.Tailscale.Port != 80 {
+		t.Errorf("expected default tailscale.port 80, got %d", cfg.Tailscale.Port)
+	}
+	// The state dir derives from the default db_path ("dmanager.db") whose
+	// directory is the working directory.
+	if cfg.Tailscale.StateDir != "tailscale" {
+		t.Errorf("expected derived tailscale.state_dir %q, got %q", "tailscale", cfg.Tailscale.StateDir)
+	}
+}
+
+func TestConfigTailscaleYAML(t *testing.T) {
+	tempDir := t.TempDir()
+	yamlPath := filepath.Join(tempDir, "config.yaml")
+	content := `
+server:
+  db_path: "/var/lib/dmanager/dmanager.db"
+tailscale:
+  auth_key: "tskey-auth-yaml"
+  hostname: "dm-yaml"
+  state_dir: "/var/lib/tsnet-state"
+  port: 9283
+`
+	if err := os.WriteFile(yamlPath, []byte(content), 0600); err != nil {
+		t.Fatalf("failed to write test yaml: %v", err)
+	}
+
+	cfg, err := Load(yamlPath)
+	if err != nil {
+		t.Fatalf("failed to load yaml config: %v", err)
+	}
+
+	if cfg.Tailscale.AuthKey != "tskey-auth-yaml" {
+		t.Errorf("expected tailscale.auth_key tskey-auth-yaml, got %q", cfg.Tailscale.AuthKey)
+	}
+	if cfg.Tailscale.Hostname != "dm-yaml" {
+		t.Errorf("expected tailscale.hostname dm-yaml, got %q", cfg.Tailscale.Hostname)
+	}
+	if cfg.Tailscale.StateDir != "/var/lib/tsnet-state" {
+		t.Errorf("expected tailscale.state_dir /var/lib/tsnet-state, got %q", cfg.Tailscale.StateDir)
+	}
+	if cfg.Tailscale.Port != 9283 {
+		t.Errorf("expected tailscale.port 9283, got %d", cfg.Tailscale.Port)
+	}
+}
+
+func TestConfigTailscaleBareEnvAliases(t *testing.T) {
+	t.Setenv("TAILSCALE_AUTHKEY", "tskey-auth-bare")
+	t.Setenv("TAILSCALE_HOSTNAME", "dm-bare")
+	t.Setenv("TAILSCALE_STATE_DIR", "/tmp/dm-bare-state")
+	t.Setenv("TAILSCALE_PORT", "9000")
+
+	cfg, err := Load("")
+	if err != nil {
+		t.Fatalf("failed to load env config: %v", err)
+	}
+
+	if cfg.Tailscale.AuthKey != "tskey-auth-bare" {
+		t.Errorf("expected bare-env auth key, got %q", cfg.Tailscale.AuthKey)
+	}
+	if cfg.Tailscale.Hostname != "dm-bare" {
+		t.Errorf("expected bare-env hostname, got %q", cfg.Tailscale.Hostname)
+	}
+	if cfg.Tailscale.StateDir != "/tmp/dm-bare-state" {
+		t.Errorf("expected bare-env state dir, got %q", cfg.Tailscale.StateDir)
+	}
+	if cfg.Tailscale.Port != 9000 {
+		t.Errorf("expected bare-env port 9000, got %d", cfg.Tailscale.Port)
+	}
+}
+
+func TestConfigTailscalePrefixedEnvBeatsBare(t *testing.T) {
+	t.Setenv("DMANAGER_TAILSCALE_AUTHKEY", "tskey-auth-prefixed")
+	t.Setenv("DMANAGER_TAILSCALE_HOSTNAME", "dm-prefixed")
+	t.Setenv("TAILSCALE_AUTHKEY", "tskey-auth-bare")
+	t.Setenv("TAILSCALE_HOSTNAME", "dm-bare")
+
+	cfg, err := Load("")
+	if err != nil {
+		t.Fatalf("failed to load env config: %v", err)
+	}
+
+	if cfg.Tailscale.AuthKey != "tskey-auth-prefixed" {
+		t.Errorf("expected prefixed auth key to win, got %q", cfg.Tailscale.AuthKey)
+	}
+	if cfg.Tailscale.Hostname != "dm-prefixed" {
+		t.Errorf("expected prefixed hostname to win, got %q", cfg.Tailscale.Hostname)
+	}
+}
+
+func TestConfigTailscaleStateDirDerivedFromDBPath(t *testing.T) {
+	tempDir := t.TempDir()
+	yamlPath := filepath.Join(tempDir, "config.yaml")
+	content := `
+server:
+  db_path: "/var/lib/dmanager/dmanager.db"
+tailscale:
+  auth_key: "tskey-auth-yaml"
+`
+	if err := os.WriteFile(yamlPath, []byte(content), 0600); err != nil {
+		t.Fatalf("failed to write test yaml: %v", err)
+	}
+
+	cfg, err := Load(yamlPath)
+	if err != nil {
+		t.Fatalf("failed to load yaml config: %v", err)
+	}
+
+	want := testTailscaleStateDir
+	if cfg.Tailscale.StateDir != want {
+		t.Errorf("expected derived tailscale.state_dir %q, got %q", want, cfg.Tailscale.StateDir)
+	}
+}
+
+func TestConfigTailscaleInvalidBarePort(t *testing.T) {
+	t.Setenv("TAILSCALE_AUTHKEY", "tskey-auth-bare")
+	t.Setenv("TAILSCALE_PORT", "not-a-port")
+
+	if _, err := Load(""); err == nil || !strings.Contains(err.Error(), "TAILSCALE_PORT") {
+		t.Errorf("expected TAILSCALE_PORT parse error, got %v", err)
+	}
+}
+
+func TestConfigTailscaleValidation(t *testing.T) {
+	const validTailscaleAuthKey = "tskey-auth-valid"
+
+	tests := []struct {
+		name    string
+		mutate  func(c *Config)
+		wantErr bool
+	}{
+		{
+			name: "valid enabled section",
+			mutate: func(c *Config) {
+				c.Tailscale.AuthKey = validTailscaleAuthKey
+				c.Tailscale.StateDir = testTailscaleStateDir
+			},
+		},
+		{
+			name: "uppercase hostname",
+			mutate: func(c *Config) {
+				c.Tailscale.AuthKey = validTailscaleAuthKey
+				c.Tailscale.Hostname = "Dmanager"
+			},
+			wantErr: true,
+		},
+		{
+			name: "leading hyphen hostname",
+			mutate: func(c *Config) {
+				c.Tailscale.AuthKey = validTailscaleAuthKey
+				c.Tailscale.Hostname = "-dmanager"
+			},
+			wantErr: true,
+		},
+		{
+			name: "trailing hyphen hostname",
+			mutate: func(c *Config) {
+				c.Tailscale.AuthKey = validTailscaleAuthKey
+				c.Tailscale.Hostname = "dmanager-"
+			},
+			wantErr: true,
+		},
+		{
+			name: "hostname too long",
+			mutate: func(c *Config) {
+				c.Tailscale.AuthKey = validTailscaleAuthKey
+				c.Tailscale.Hostname = strings.Repeat("a", 64)
+			},
+			wantErr: true,
+		},
+		{
+			name: "port zero",
+			mutate: func(c *Config) {
+				c.Tailscale.AuthKey = validTailscaleAuthKey
+				c.Tailscale.Port = 0
+			},
+			wantErr: true,
+		},
+		{
+			name: "port too high",
+			mutate: func(c *Config) {
+				c.Tailscale.AuthKey = validTailscaleAuthKey
+				c.Tailscale.Port = 65536
+			},
+			wantErr: true,
+		},
+		{
+			name: "state dir equals database directory",
+			mutate: func(c *Config) {
+				c.Tailscale.AuthKey = validTailscaleAuthKey
+				// Default db_path is "dmanager.db" so its directory is ".".
+				c.Tailscale.StateDir = "."
+			},
+			wantErr: true,
+		},
+		{
+			name: "state dir root",
+			mutate: func(c *Config) {
+				c.Tailscale.AuthKey = validTailscaleAuthKey
+				c.Tailscale.StateDir = "/"
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid hostname ignored while disabled",
+			mutate: func(c *Config) {
+				c.Tailscale.AuthKey = ""
+				c.Tailscale.Hostname = "Dmanager!"
+				c.Tailscale.Port = 99999
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg, err := Load("")
+			if err != nil {
+				t.Fatalf("failed to load base config: %v", err)
+			}
+			// Load derives the state dir; simulate an explicit one for tests
+			// that do not set it so the derivation cannot mask collisions.
+			if cfg.Tailscale.StateDir == "" {
+				cfg.Tailscale.StateDir = testTailscaleStateDir
+			}
+			tt.mutate(cfg)
+			err = cfg.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
 }
