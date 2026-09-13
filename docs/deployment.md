@@ -40,6 +40,7 @@ This document details the procedure and requirements to deploy the `dmanager` ap
 | `tailscale.hostname` | `DMANAGER_TAILSCALE_HOSTNAME` / `TAILSCALE_HOSTNAME` | `dmanager` | MagicDNS hostname on the tailnet. |
 | `tailscale.state_dir` | `DMANAGER_TAILSCALE_STATE_DIR` / `TAILSCALE_STATE_DIR` | `<dirname of server.db_path>/tailscale` | Persistent node state directory (created `0700`). |
 | `tailscale.port` | `DMANAGER_TAILSCALE_PORT` / `TAILSCALE_PORT` | `80` | Tailnet-side port the web app is served on. |
+| `tailscale.https_enabled` | `DMANAGER_TAILSCALE_HTTPS_ENABLED` / `TAILSCALE_HTTPS_ENABLED` | `false` | Also serve HTTPS on tailnet port 443 with an automatic `*.ts.net` certificate. Requires HTTPS Certificates + MagicDNS on the tailnet (see §2.3). |
 
 ### 2.2. Private Registry Configuration
 
@@ -72,6 +73,7 @@ TAILSCALE_AUTHKEY=tskey-auth-xxxxxxxxxxxx-xxxxxxxxxxxxx
 # optional:
 TAILSCALE_HOSTNAME=dmanager
 TAILSCALE_STATE_DIR=/var/lib/dmanager/tailscale
+TAILSCALE_HTTPS_ENABLED=true
 ```
 
 Operational notes:
@@ -86,11 +88,45 @@ Operational notes:
   dmanager logs an error and keeps serving on the LAN — tailnet problems never block local access.
 - **Network requirements:** outbound HTTPS (control plane/DERP) and outbound UDP for direct
   connections. No inbound ports, no `/dev/net/tun`, no extra container capabilities.
-- **Passkeys:** the tailnet listener serves plain HTTP in v1, so passkey registration/use from
-  tailnet clients is unavailable (browsers require a secure context); password login works normally.
-  HTTPS on the tailnet (`*.ts.net` certificates) is planned as a follow-up.
+- **HTTPS on the tailnet (optional):** set `tailscale.https_enabled: true` (or
+  `TAILSCALE_HTTPS_ENABLED=1`) to also serve HTTPS on tailnet port 443 with an automatic
+  Let's Encrypt certificate for `<hostname>.<tailnet>.ts.net` — see below. The plain-HTTP
+  tailnet listener keeps running; use the `https://` URL in browsers for passkey support.
 - The state directory holds the node's private keys: treat it like the database (mounted volume,
   `0700`).
+
+**HTTPS on the tailnet** (`https_enabled`):
+
+Prerequisites (tailnet-side, in the Tailscale admin console):
+
+1. **MagicDNS** enabled on the tailnet (so the node has a `<hostname>.<tailnet>.ts.net` DNS name).
+2. **HTTPS Certificates** enabled on the tailnet (provisions Let's Encrypt certificates for
+   `*.ts.net` names).
+
+Find your node's DNS name in the startup log (`module=tailscale ... dns_name=<name>`) or via
+`tailscale status` on any node. With both prerequisites met, `https_enabled: true` serves
+dmanager at `https://<hostname>.<tailnet>.ts.net`. The first request may pause briefly while
+the certificate is provisioned. Without the prerequisites, TLS handshakes fail while the plain
+HTTP listeners (LAN and tailnet) keep working.
+
+Effects:
+
+- **Secure session cookies:** the HTTPS listener injects `X-Forwarded-Proto: https`
+  in-process, so `auth.secure_cookies: auto` sets the `Secure` cookie attribute there.
+  The header is forced server-side and cannot be spoofed by tailnet peers.
+- **Passkeys over the tailnet:** `https://<hostname>.<tailnet>.ts.net` is a secure context, so
+  WebAuthn works. Configure the webauthn section so the tailnet origin is accepted:
+
+  ```yaml
+  webauthn:
+    rp_id: "<tailnet>.ts.net"        # e.g. tail1234.ts.net — must be a suffix of the origin host
+    origins:
+      - "https://<hostname>.<tailnet>.ts.net"
+      # add any other origins you use (e.g. an https LAN reverse proxy)
+  ```
+
+  Note: changing `webauthn.rp_id` invalidates passkeys registered under a previous RPID —
+  existing users may need to re-register their passkeys.
 ---
 
 ## 3. Deployment Methods

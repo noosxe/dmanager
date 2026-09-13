@@ -1,0 +1,110 @@
+time=2026-09-13T18:33:29.190+04:00 level=INFO msg="OK   00001_init.sql (360.84µs)"
+time=2026-09-13T18:33:29.191+04:00 level=INFO msg="OK   00002_add_settings.sql (98.59µs)"
+time=2026-09-13T18:33:29.191+04:00 level=INFO msg="OK   00003_session_clocks.sql (275.29µs)"
+time=2026-09-13T18:33:29.191+04:00 level=INFO msg="OK   00004_auth_audit_and_sessions.sql (193.49µs)"
+time=2026-09-13T18:33:29.191+04:00 level=INFO msg="OK   00005_webauthn.sql (179.56µs)"
+time=2026-09-13T18:33:29.191+04:00 level=INFO msg="OK   00006_audit_logs.sql (117.42µs)"
+time=2026-09-13T18:33:29.191+04:00 level=INFO msg="goose: successfully migrated database to version: 6"
+time=2026-09-13T18:33:29.192+04:00 level=DEBUG msg="smtp disabled" module=cmd
+time=2026-09-13T18:33:29.344+04:00 level=INFO msg="WebAuthn / Passkeys not configured (RPID and Origins required)" module=auth rp_id="" origins=[]
+time=2026-09-13T18:33:29.345+04:00 level=INFO msg="Starting periodic registry update checker scheduler" module=container interval_minutes=60
+time=2026-09-13T18:33:29.345+04:00 level=INFO msg="Starting dmanager server" module=cmd port=9399
+time=2026-09-13T18:33:29.346+04:00 level=DEBUG msg="[v1] using fake (no-op) tun device" module=tailscale
+time=2026-09-13T18:33:29.346+04:00 level=DEBUG msg="[v1] using fake (no-op) OS network configurator" module=tailscale
+time=2026-09-13T18:33:29.346+04:00 level=DEBUG msg="[v1] using fake (no-op) DNS configurator" module=tailscale
+time=2026-09-13T18:33:29.346+04:00 level=DEBUG msg="dns: using dns.noopManager" module=tailscale
+time=2026-09-13T18:33:29.346+04:00 level=DEBUG msg="link state: interfaces.State{defaultRoute=eno1 ifs={br-36e3aaff233b:[172.21.0.1/16 llu6] br-9cdc20fe4481:[172.18.0.1/16] br-d042ec7b8a29:[172.20.0.1/16 llu6] br-f2dc41552b49:[172.19.0.1/16 llu6] docker0:[172.17.0.1/16 llu6] eno1:[192.168.1.7/24 llu6] tailscale0:[100.67.193.35/32 fd7a:115c:a1e0::393b:c124/128 llu6] wg-proton:[10.2.0.2/32] ztdiywduhy:[10.153.100.238/24 llu6]} v4=true v6=false}" module=tailscale
+time=2026-09-13T18:33:29.346+04:00 level=DEBUG msg="magicsock: [warning] failed to force-set UDP read buffer size to 7340032: operation not permitted; using kernel default values (impacts throughput only)" module=tailscale
+time=2026-09-13T18:33:29.346+04:00 level=DEBUG msg="magicsock: [warning] failed to force-set UDP write buffer size to 7340032: operation not permitted; using kernel default values (impacts throughput only)" module=tailscale
+time=2026-09-13T18:33:29.346+04:00 level=DEBUG msg="magicsock: [warning] failed to force-set UDP read buffer size to 7340032: operation not permitted; using kernel default values (impacts throughput only)" module=tailscale
+time=2026-09-13T18:33:29.346+04:00 level=DEBUG msg="magicsock: [warning] failed to force-set UDP write buffer size to 7340032: operation not permitted; using kernel default values (impacts throughput only)" module=tailscale
+time=2026-09-13T18:33:29.346+04:00 level=DEBUG msg="[v1] magicsock: peermtu: peer MTU status is false" module=tailscale
+time=2026-09-13T18:33:29.347+04:00 level=DEBUG msg="magicsock: disco key = d:959d7869f25a7ab1" module=tailscale
+time=2026-09-13T18:33:29.347+04:00 level=DEBUG msg="Creating WireGuard device..." module=tailscale
+time=2026-09-13T18:33:29.347+04:00 level=DEBUG msg="Bringing WireGuard device up..." module=tailscale
+time=2026-09-13T18:33:29.347+04:00 level=DEBUG msg="wg: [v2] UDP bind has been updated" module=tailscale
+time=2026-09-13T18:33:29.347+04:00 level=DEBUG msg="wg: [v2] Interface state was Down, requested Up, now Up" module=tailscale
+time=2026-09-13T18:33:29.347+04:00 level=DEBUG msg="Bringing router up..." module=tailscale
+time=2026-09-13T18:33:29.347+04:00 level=DEBUG msg="[v1] warning: fakeRouter.Up: not implemented." module=tailscale
+time=2026-09-13T18:33:29.347+04:00 level=DEBUG msg="Clearing router settings..." module=tailscale
+time=2026-09-13T18:33:29.347+04:00 level=DEBUG msg="[v1] warning: fakeRouter.Set: not implemented." module=tailscale
+time=2026-09-13T18:33:29.347+04:00 level=DEBUG msg="Starting network monitor..." module=tailscale
+time=2026-09-13T18:33:29.347+04:00 level=DEBUG msg="Engine created." module=tailscale
+time=2026-09-13T18:33:29.347+04:00 level=DEBUG msg="wg: [v2] Routine: receive incoming mkReceiveFunc - started" module=tailscale
+time=2026-09-13T18:33:29.347+04:00 level=DEBUG msg="wg: [v2] Routine: receive incoming mkReceiveFunc - started" module=tailscale
+time=2026-09-13T18:33:29.347+04:00 level=DEBUG msg="wg: [v2] Routine: receive incoming receiveDERP - started" module=tailscale
+time=2026-09-13T18:33:29.347+04:00 level=INFO msg="tsnet running state path /tmp/dm-smoke3/tailscale/tailscaled.state" module=tailscale
+time=2026-09-13T18:33:29.347+04:00 level=DEBUG msg="pm: migrating \"_daemon\" profile to new format" module=tailscale
+time=2026-09-13T18:33:29.347+04:00 level=DEBUG msg="logpolicy: using system state directory \"/home/mechsoull/.local/share/tailscale\"" module=tailscale
+time=2026-09-13T18:33:29.347+04:00 level=DEBUG msg="linkChange: in state NoState; PAC or proxyConfig changed; updating routes" module=tailscale
+time=2026-09-13T18:33:29.347+04:00 level=DEBUG msg="[v1] netmap packet filter: (not ready yet)" module=tailscale
+time=2026-09-13T18:33:29.347+04:00 level=INFO msg="tsnet starting with hostname \"dmanager\", varRoot \"/tmp/dm-smoke3/tailscale\"" module=tailscale
+time=2026-09-13T18:33:29.347+04:00 level=DEBUG msg=Start module=tailscale
+time=2026-09-13T18:33:29.347+04:00 level=DEBUG msg="ipnext: active extensions: acme" module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=DEBUG msg="[v\x00JSON]1{\"Hostinfo\":{\"IPNVersion\":\"1.102.4-dev20260913-tb2404f07b-dirty\",\"BackendLogID\":\"66f9469bfbd054e6a934abc6ff9c29d089b5027f0984a807ee998719e2a5646b\",\"OS\":\"linux\",\"OSVersion\":\"7.2.3-zen1\",\"Container\":false,\"Distro\":\"nixos\",\"DistroVersion\":\"26.11\",\"DistroCodeName\":\"zokor\",\"Desktop\":true,\"Package\":\"tsnet\",\"Hostname\":\"kraken\",\"Machine\":\"x86_64\",\"GoArch\":\"amd64\",\"GoArchVar\":\"v1\",\"GoVersion\":\"go1.27.0\",\"Userspace\":true,\"UserspaceRouter\":true,\"AppConnector\":false,\"StateEncrypted\":false}}" module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=DEBUG msg="Start: updated prefs: Prefs{ra=false dns=true want=true routes=[] statefulFiltering=false nf=on host=\"dmanager\" update=check Persist=nil}, reason: [opts.UpdatePrefs]" module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=DEBUG msg="generating new machine key" module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=DEBUG msg="machine key written to store" module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=DEBUG msg="profile data directory: profile not found" module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=DEBUG msg="control: [v1] HostInfo: {\"IPNVersion\":\"1.102.4-dev20260913-tb2404f07b-dirty\",\"BackendLogID\":\"66f9469bfbd054e6a934abc6ff9c29d089b5027f0984a807ee998719e2a5646b\",\"OS\":\"linux\",\"OSVersion\":\"7.2.3-zen1\",\"Container\":false,\"Distro\":\"nixos\",\"DistroVersion\":\"26.11\",\"DistroCodeName\":\"zokor\",\"Desktop\":true,\"Package\":\"tsnet\",\"Hostname\":\"dmanager\",\"Machine\":\"x86_64\",\"GoArch\":\"amd64\",\"GoArchVar\":\"v1\",\"GoVersion\":\"go1.27.0\",\"Services\":[{\"Proto\":\"peerapi-dns-proxy\",\"Port\":1}],\"Userspace\":true,\"UserspaceRouter\":true,\"AppConnector\":false,\"StateEncrypted\":false}" module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=DEBUG msg="Backend: logs: be:66f9469bfbd054e6a934abc6ff9c29d089b5027f0984a807ee998719e2a5646b fe:" module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=DEBUG msg="Switching ipn state NoState -> NeedsLogin (WantRunning=true, nm=false)" module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=DEBUG msg=blockEngineUpdates(true) module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=DEBUG msg="[v1] magicsock: peermtu: peer MTU status is false" module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=DEBUG msg="wgengine: Reconfig: configuring router" module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=DEBUG msg="[v1] warning: fakeRouter.Set: not implemented." module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=DEBUG msg="wgengine: Reconfig: user dialer" module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=DEBUG msg="wgengine: Reconfig: configuring DNS" module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=DEBUG msg="dns: Set: {DefaultResolvers:[] Routes:{} SearchDomains:[] Hosts:0}" module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=DEBUG msg="dns: Resolvercfg: {Routes:{} Hosts:0 LocalDomains:[]}" module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=DEBUG msg="dns: OScfg: {}" module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=DEBUG msg="[v1] wgengine: Reconfig done" module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=DEBUG msg="control: [v1] authRoutine: loggedIn=false; goal=nil paused=false" module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=INFO msg="LocalBackend state is NeedsLogin; running StartLoginInteractive..." module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=DEBUG msg="StartLoginInteractiveAs(\"\"): url=false" module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=DEBUG msg="control: client.Login(10)" module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=DEBUG msg="control: [v1] mapRoutine: loggedIn=false" module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=DEBUG msg="health(warnable=warming-up): error: Tailscale is starting. Please wait." module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=DEBUG msg="control: [v1] mapRoutine: context done." module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=DEBUG msg="control: [v1] mapRoutine: loggedIn=false" module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=DEBUG msg="control: [v1] authRoutine: context done." module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=DEBUG msg="control: [v1] authRoutine: loggedIn=false; wantLoggedIn=true" module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=DEBUG msg="control: [v1] direct.TryLogin(flags=10)" module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=DEBUG msg="control: LoginInteractive -> regen=true" module=tailscale
+time=2026-09-13T18:33:29.348+04:00 level=DEBUG msg="control: doLogin(regen=true, hasUrl=false)" module=tailscale
+time=2026-09-13T18:33:29.673+04:00 level=DEBUG msg="control: control server key from https://controlplane.tailscale.com: ts2021=[fSeS+], legacy=[nlFWp]" module=tailscale
+time=2026-09-13T18:33:29.673+04:00 level=DEBUG msg="control: Generating a new nodekey." module=tailscale
+time=2026-09-13T18:33:29.674+04:00 level=DEBUG msg="control: RegisterReq: onode= node=[bE/J9] fup=false nks=false" module=tailscale
+time=2026-09-13T18:33:29.674+04:00 level=DEBUG msg="control: [v1] creating new noise client" module=tailscale
+time=2026-09-13T18:33:29.866+04:00 level=DEBUG msg="control: RegisterReq: got response; nodeKeyExpired=false, machineAuthorized=false; authURL=false" module=tailscale
+time=2026-09-13T18:33:29.866+04:00 level=DEBUG msg="control: [v1] TryLogin: invalid key: unable to validate API key" module=tailscale
+time=2026-09-13T18:33:29.866+04:00 level=DEBUG msg="control: [v1] sendStatus: authRoutine-report: loggedIn=false inMapPoll=false" module=tailscale
+time=2026-09-13T18:33:29.866+04:00 level=DEBUG msg="control: authRoutine: [v1] backoff: 12 msec" module=tailscale
+time=2026-09-13T18:33:29.866+04:00 level=DEBUG msg="Received error: invalid key: unable to validate API key" module=tailscale
+time=2026-09-13T18:33:29.866+04:00 level=DEBUG msg="health(warnable=login-state): error: You are logged out. The last login error was: invalid key: unable to validate API key" module=tailscale
+time=2026-09-13T18:33:29.866+04:00 level=ERROR msg="tailscale node failed to start; tailnet access disabled" module=cmd error="tailscale node failed to connect: tsnet.Up: backend: invalid key: unable to validate API key"
+time=2026-09-13T18:33:29.879+04:00 level=DEBUG msg="control: [v1] authRoutine: loggedIn=false; wantLoggedIn=true" module=tailscale
+time=2026-09-13T18:33:29.879+04:00 level=DEBUG msg="control: [v1] direct.TryLogin(flags=10)" module=tailscale
+time=2026-09-13T18:33:29.879+04:00 level=DEBUG msg="control: LoginInteractive -> regen=true" module=tailscale
+time=2026-09-13T18:33:29.879+04:00 level=DEBUG msg="control: doLogin(regen=true, hasUrl=false)" module=tailscale
+time=2026-09-13T18:33:29.879+04:00 level=DEBUG msg="control: Generating a new nodekey." module=tailscale
+time=2026-09-13T18:33:29.879+04:00 level=DEBUG msg="control: RegisterReq: onode= node=[FnkFI] fup=false nks=false" module=tailscale
+time=2026-09-13T18:33:34.349+04:00 level=DEBUG msg="health(warnable=warming-up): ok" module=tailscale
+time=2026-09-13T18:33:35.193+04:00 level=INFO msg="Shutting down backend server..." module=cmd
+time=2026-09-13T18:33:35.193+04:00 level=INFO msg="Periodic registry update checker scheduler shutting down" module=container reason="context cancelled"
+time=2026-09-13T18:33:35.193+04:00 level=INFO msg="Server stopped gracefully" module=cmd
+time=2026-09-13T18:33:35.193+04:00 level=INFO msg="Docker event monitor shutting down" module=docker reason="context cancelled"
+time=2026-09-13T18:33:35.193+04:00 level=DEBUG msg="control: client.Shutdown ..." module=tailscale
+time=2026-09-13T18:33:35.193+04:00 level=DEBUG msg="control: updateRoutine: exiting" module=tailscale
+time=2026-09-13T18:33:35.193+04:00 level=DEBUG msg="control: [v1] mapRoutine: context done." module=tailscale
+time=2026-09-13T18:33:35.193+04:00 level=DEBUG msg="control: [v1] TryLogin: register request: Post \"https://controlplane.tailscale.com/machine/register\": context canceled" module=tailscale
+time=2026-09-13T18:33:35.193+04:00 level=DEBUG msg="control: authRoutine: exiting" module=tailscale
+time=2026-09-13T18:33:35.193+04:00 level=DEBUG msg="control: mapRoutine: exiting" module=tailscale
+time=2026-09-13T18:33:35.193+04:00 level=DEBUG msg="control: Client.Shutdown done." module=tailscale
+time=2026-09-13T18:33:35.193+04:00 level=DEBUG msg="ipnext: work queue shutdown failed: execqueue shut down" module=tailscale
+time=2026-09-13T18:33:35.194+04:00 level=DEBUG msg="[v1] warning: fakeRouter.Close: not implemented." module=tailscale
+time=2026-09-13T18:33:35.194+04:00 level=DEBUG msg="wg: [v2] Device closing" module=tailscale
+time=2026-09-13T18:33:35.194+04:00 level=DEBUG msg="wg: [v2] Routine: receive incoming receiveDERP - stopped" module=tailscale
+time=2026-09-13T18:33:35.194+04:00 level=DEBUG msg="wg: [v2] Routine: receive incoming mkReceiveFunc - stopped" module=tailscale
+time=2026-09-13T18:33:35.194+04:00 level=DEBUG msg="wg: [v2] Routine: receive incoming mkReceiveFunc - stopped" module=tailscale
+time=2026-09-13T18:33:35.194+04:00 level=DEBUG msg="wg: [v2] Device closed" module=tailscale

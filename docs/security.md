@@ -141,6 +141,11 @@ application trusts:
 - **Funnel is not wired.** No code path exposes the tailnet listener to the public internet.
 - **Failure containment.** A node that cannot start degrades to LAN-only operation with an error
   log; tailnet outages cannot render the manager unreachable.
+- **Tailnet HTTPS (optional).** With `tailscale.https_enabled`, tsnet terminates TLS in-process
+  (Let's Encrypt certificate for `<hostname>.<tailnet>.ts.net`). The HTTPS listener injects
+  `X-Forwarded-Proto: https` server-side via middleware — `Set`, never `Add` — so tailnet peers
+  cannot spoof the header to influence `secure_cookies: auto`; on that listener https is the
+  only truth. Tailnet-scoped TLS keys live in `state_dir` alongside the node identity.
 
 ---
 

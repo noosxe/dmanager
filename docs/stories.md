@@ -81,6 +81,7 @@ graph TD
     A73 --> A74["STORY-074: Tailscale Config Plumbing — Struct, Env Aliases, Validation (DONE)"]
     A74 --> A75["STORY-075: Embedded Node Lifecycle — internal/tailscale, Serve Wiring (DONE)"]
     A75 --> A76["STORY-076: Tailscale Deployment & Security Docs (DONE)"]
+    A76 --> A77["STORY-077: Tailnet HTTPS — ListenTLS, X-Forwarded-Proto, Passkey Support (DONE)"]
 ```
 
 
@@ -1623,3 +1624,22 @@ graph TD
 - **Decisions:**
   - **Passkey limitation documented, not solved:** plain HTTP on the tailnet blocks passkey use from tailnet clients; HTTPS via `ListenTLS` stays a separate follow-up story (STORY-077) so v1 ships small.
   - **Key lifecycle is the operator footgun:** the docs emphasize that the auth key is only needed for first registration and that state-dir loss re-triggers registration.
+
+### STORY-077: Tailnet HTTPS — ListenTLS, X-Forwarded-Proto, Passkey Support [DONE]
+
+**Goal:** Serve dmanager over HTTPS on the tailnet (`https://<hostname>.<tailnet>.ts.net`) with an automatic Let's Encrypt certificate, making the origin a browser secure context so passkeys work for tailnet clients and `auth.secure_cookies: auto` sets `Secure` cookies on that path (docs/tailscale.md §9 Q4).
+
+**Tasks:**
+  1. `internal/config`: `tailscale.https_enabled` bool (default `false`), `DMANAGER_TAILSCALE_HTTPS_ENABLED` env via the existing transform, bare `TAILSCALE_HTTPS_ENABLED` alias with `ParseBool` validation.
+  2. `internal/tailscale`: `ServeHTTPS` — `ListenTLS("tcp", ":443")` + `http.Server` with the LAN listener's timeout posture, handler wrapped in `forwardedProtoHTTPS` middleware that forces `X-Forwarded-Proto: https` via `Set` (server-side truth; client-supplied values are overwritten).
+  3. `cmd/serve.go`: second background goroutine (spawned before the blocking plain `Serve`) when `https_enabled`; plain tailnet HTTP and LAN listeners unchanged.
+  4. Tests: https default/YAML/bare-alias/prefixed-beats-bare/invalid-bare-value in config; middleware forcing + overwrite behavior in tailscale.
+  5. Docs: deployment.md config row + HTTPS subsection (MagicDNS/HTTPS-cert prerequisites, DNS-name discovery, secure-cookie effect, webauthn `rp_id`/`origins` example for `*.ts.net`), security.md §5 paragraph, rootfs config comment.
+- **Files Affected:** `internal/config/config.go` (+ test), `internal/tailscale/tailscale.go` (+ test), `cmd/serve.go`, `docs/deployment.md`, `docs/security.md`, `docs/tailscale.md`, `rootfs/etc/dmanager/config.yaml`.
+- **Validation Check:** `go build ./...`, `go test ./...` pass; `golangci-lint` clean; full flow against a real tailnet (cert provisioning + secure cookie + passkey) requires the operator checklist above.
+- **Decisions:**
+  - **Opt-in, not default:** ListenTLS requires tailnet-side prerequisites (MagicDNS + HTTPS Certificates in the admin console); without them TLS handshakes fail — operators must consciously enable.
+  - **Both listeners, no redirect:** plain tailnet HTTP keeps running alongside 443 so existing `http://` bookmarks never break; browsers get passkeys via the `https://` URL. A redirect handler is pure surface for now.
+  - **Fixed port 443:** tsnet convention; certificate provisioning and `*.ts.net` origins assume the standard port.
+  - **Middleware inside the wrapper, not in serve.go:** `X-Forwarded-Proto` forcing is intrinsic to the TLS listener; callers cannot forget it.
+  - **`Set`, never `Add`:** on this listener https is the truth — a tailnet peer must not be able to influence `secure_cookies: auto` via a spoofed header.
