@@ -74,6 +74,9 @@ const (
 	// AdminServiceCheckEngineProcedure is the fully-qualified name of the AdminService's CheckEngine
 	// RPC.
 	AdminServiceCheckEngineProcedure = "/dmanager.v1.AdminService/CheckEngine"
+	// AdminServiceGetTailscaleStatusProcedure is the fully-qualified name of the AdminService's
+	// GetTailscaleStatus RPC.
+	AdminServiceGetTailscaleStatusProcedure = "/dmanager.v1.AdminService/GetTailscaleStatus"
 	// AdminServiceListAuditLogsProcedure is the fully-qualified name of the AdminService's
 	// ListAuditLogs RPC.
 	AdminServiceListAuditLogsProcedure = "/dmanager.v1.AdminService/ListAuditLogs"
@@ -135,6 +138,13 @@ type AdminServiceClient interface {
 	// Daemon unreachability is a successful response with connected=false —
 	// the outage is the answer, not an RPC failure (design.md §10.2).
 	CheckEngine(context.Context, *connect.Request[v1.CheckEngineRequest]) (*connect.Response[v1.CheckEngineResponse], error)
+	// Report the embedded Tailscale node's status (Authenticated, any role):
+	// lifecycle state, tailnet identity (DNS name, IPs, cert domains) and
+	// node key expiry, so operators can see tailnet health and key-expiry
+	// warnings without reading server logs (docs/tailscale.md §9 Q8/Q11).
+	// Outage-not-error semantics mirror CheckEngine: when the feature is
+	// disabled the response says enabled=false instead of failing.
+	GetTailscaleStatus(context.Context, *connect.Request[v1.GetTailscaleStatusRequest]) (*connect.Response[v1.GetTailscaleStatusResponse], error)
 	// Review the audit trail (Authenticated, admin role): recorded mutation
 	// outcomes by users and system-originated automatic updates, filtered and
 	// paginated server-side. Entries are written by the server, never by RPC.
@@ -236,6 +246,12 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("CheckEngine")),
 			connect.WithClientOptions(opts...),
 		),
+		getTailscaleStatus: connect.NewClient[v1.GetTailscaleStatusRequest, v1.GetTailscaleStatusResponse](
+			httpClient,
+			baseURL+AdminServiceGetTailscaleStatusProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("GetTailscaleStatus")),
+			connect.WithClientOptions(opts...),
+		),
 		listAuditLogs: connect.NewClient[v1.ListAuditLogsRequest, v1.ListAuditLogsResponse](
 			httpClient,
 			baseURL+AdminServiceListAuditLogsProcedure,
@@ -261,6 +277,7 @@ type adminServiceClient struct {
 	listBuildCacheRecords *connect.Client[v1.ListBuildCacheRecordsRequest, v1.ListBuildCacheRecordsResponse]
 	pruneBuildCacheRecord *connect.Client[v1.PruneBuildCacheRecordRequest, v1.PruneBuildCacheRecordResponse]
 	checkEngine           *connect.Client[v1.CheckEngineRequest, v1.CheckEngineResponse]
+	getTailscaleStatus    *connect.Client[v1.GetTailscaleStatusRequest, v1.GetTailscaleStatusResponse]
 	listAuditLogs         *connect.Client[v1.ListAuditLogsRequest, v1.ListAuditLogsResponse]
 }
 
@@ -334,6 +351,11 @@ func (c *adminServiceClient) CheckEngine(ctx context.Context, req *connect.Reque
 	return c.checkEngine.CallUnary(ctx, req)
 }
 
+// GetTailscaleStatus calls dmanager.v1.AdminService.GetTailscaleStatus.
+func (c *adminServiceClient) GetTailscaleStatus(ctx context.Context, req *connect.Request[v1.GetTailscaleStatusRequest]) (*connect.Response[v1.GetTailscaleStatusResponse], error) {
+	return c.getTailscaleStatus.CallUnary(ctx, req)
+}
+
 // ListAuditLogs calls dmanager.v1.AdminService.ListAuditLogs.
 func (c *adminServiceClient) ListAuditLogs(ctx context.Context, req *connect.Request[v1.ListAuditLogsRequest]) (*connect.Response[v1.ListAuditLogsResponse], error) {
 	return c.listAuditLogs.CallUnary(ctx, req)
@@ -395,6 +417,13 @@ type AdminServiceHandler interface {
 	// Daemon unreachability is a successful response with connected=false —
 	// the outage is the answer, not an RPC failure (design.md §10.2).
 	CheckEngine(context.Context, *connect.Request[v1.CheckEngineRequest]) (*connect.Response[v1.CheckEngineResponse], error)
+	// Report the embedded Tailscale node's status (Authenticated, any role):
+	// lifecycle state, tailnet identity (DNS name, IPs, cert domains) and
+	// node key expiry, so operators can see tailnet health and key-expiry
+	// warnings without reading server logs (docs/tailscale.md §9 Q8/Q11).
+	// Outage-not-error semantics mirror CheckEngine: when the feature is
+	// disabled the response says enabled=false instead of failing.
+	GetTailscaleStatus(context.Context, *connect.Request[v1.GetTailscaleStatusRequest]) (*connect.Response[v1.GetTailscaleStatusResponse], error)
 	// Review the audit trail (Authenticated, admin role): recorded mutation
 	// outcomes by users and system-originated automatic updates, filtered and
 	// paginated server-side. Entries are written by the server, never by RPC.
@@ -492,6 +521,12 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("CheckEngine")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceGetTailscaleStatusHandler := connect.NewUnaryHandler(
+		AdminServiceGetTailscaleStatusProcedure,
+		svc.GetTailscaleStatus,
+		connect.WithSchema(adminServiceMethods.ByName("GetTailscaleStatus")),
+		connect.WithHandlerOptions(opts...),
+	)
 	adminServiceListAuditLogsHandler := connect.NewUnaryHandler(
 		AdminServiceListAuditLogsProcedure,
 		svc.ListAuditLogs,
@@ -528,6 +563,8 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServicePruneBuildCacheRecordHandler.ServeHTTP(w, r)
 		case AdminServiceCheckEngineProcedure:
 			adminServiceCheckEngineHandler.ServeHTTP(w, r)
+		case AdminServiceGetTailscaleStatusProcedure:
+			adminServiceGetTailscaleStatusHandler.ServeHTTP(w, r)
 		case AdminServiceListAuditLogsProcedure:
 			adminServiceListAuditLogsHandler.ServeHTTP(w, r)
 		default:
@@ -593,6 +630,10 @@ func (UnimplementedAdminServiceHandler) PruneBuildCacheRecord(context.Context, *
 
 func (UnimplementedAdminServiceHandler) CheckEngine(context.Context, *connect.Request[v1.CheckEngineRequest]) (*connect.Response[v1.CheckEngineResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AdminService.CheckEngine is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) GetTailscaleStatus(context.Context, *connect.Request[v1.GetTailscaleStatusRequest]) (*connect.Response[v1.GetTailscaleStatusResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dmanager.v1.AdminService.GetTailscaleStatus is not implemented"))
 }
 
 func (UnimplementedAdminServiceHandler) ListAuditLogs(context.Context, *connect.Request[v1.ListAuditLogsRequest]) (*connect.Response[v1.ListAuditLogsResponse], error) {

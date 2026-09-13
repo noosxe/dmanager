@@ -17,6 +17,7 @@ import (
 	"github.com/moby/moby/client"
 
 	"dmanager/internal/db"
+	"dmanager/internal/tailscale"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	v1 "dmanager/internal/gen/proto/dmanager/v1"
@@ -25,6 +26,7 @@ import (
 // newTestService starts a fake Docker API server backed by handler and
 // returns an admin Service wired to it via the moby client.
 const testImageID = "sha256:abc123def456"
+const testTailnetDNSName = "dmanager.tail1234.ts.net"
 
 func newTestService(t *testing.T, handler http.HandlerFunc) *Service {
 	t.Helper()
@@ -38,7 +40,7 @@ func newTestService(t *testing.T, handler http.HandlerFunc) *Service {
 	if err != nil {
 		t.Fatalf("failed to create docker client: %v", err)
 	}
-	return NewService(dockerClient, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	return NewService(dockerClient, nil, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 }
 
 // pingHandler responds to the client's API version negotiation probe.
@@ -558,7 +560,7 @@ func TestCheckEngineDaemonDown(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create docker client: %v", err)
 	}
-	svc := NewService(dockerClient, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	svc := NewService(dockerClient, nil, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 
 	resp, err := svc.CheckEngine(context.Background(), connect.NewRequest(&v1.CheckEngineRequest{}))
 	if err != nil {
@@ -1327,7 +1329,7 @@ func TestDeleteNetworkDaemonDown(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create docker client: %v", err)
 	}
-	svc := NewService(dockerClient, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	svc := NewService(dockerClient, nil, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 
 	_, err = svc.DeleteNetwork(context.Background(), connect.NewRequest(&v1.DeleteNetworkRequest{Id: testNetworkID}))
 	if err == nil {
@@ -1402,7 +1404,7 @@ func TestPruneNetworksDaemonDown(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create docker client: %v", err)
 	}
-	svc := NewService(dockerClient, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	svc := NewService(dockerClient, nil, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 
 	_, err = svc.PruneNetworks(context.Background(), connect.NewRequest(&v1.PruneNetworksRequest{}))
 	if err == nil {
@@ -1434,7 +1436,7 @@ func newAuditTestService(t *testing.T) *Service {
 	if err := db.RunMigrations(dbConn); err != nil {
 		t.Fatalf("failed to run migrations: %v", err)
 	}
-	return NewService(nil, db.New(dbConn), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	return NewService(nil, db.New(dbConn), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 }
 
 func seedAuditEntries(t *testing.T, queries *db.Queries) {
@@ -1587,7 +1589,7 @@ func TestListAuditLogsPagination(t *testing.T) {
 }
 
 func TestListAuditLogsWithoutStorageReturnsInternal(t *testing.T) {
-	svc := NewService(nil, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	svc := NewService(nil, nil, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 
 	_, err := svc.ListAuditLogs(context.Background(), connect.NewRequest(&v1.ListAuditLogsRequest{}))
 	if err == nil {
@@ -1596,5 +1598,105 @@ func TestListAuditLogsWithoutStorageReturnsInternal(t *testing.T) {
 	var cerr *connect.Error
 	if !errors.As(err, &cerr) || cerr.Code() != connect.CodeInternal {
 		t.Fatalf("expected CodeInternal, got: %v", err)
+	}
+}
+
+// stubTailscaleSource stubs the TailscaleStatusSource seam for status tests.
+type stubTailscaleSource struct {
+	snap tailscale.Snapshot
+}
+
+func (s stubTailscaleSource) Snapshot(context.Context) tailscale.Snapshot { return s.snap }
+
+func TestGetTailscaleStatusDisabled(t *testing.T) {
+	// No tsNode wired (feature off in serve.go): status-not-error semantics.
+	svc := NewService(nil, nil, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+
+	resp, err := svc.GetTailscaleStatus(context.Background(), connect.NewRequest(&v1.GetTailscaleStatusRequest{}))
+	if err != nil {
+		t.Fatalf("GetTailscaleStatus returned an error: %v", err)
+	}
+	if resp.Msg.Enabled {
+		t.Error("Enabled = true, want false")
+	}
+	if resp.Msg.State != tailscale.StateDisabled {
+		t.Errorf("State = %q, want %q", resp.Msg.State, tailscale.StateDisabled)
+	}
+}
+
+func TestGetTailscaleStatusNilNodeThroughInterface(t *testing.T) {
+	// serve.go passes the nil *tailscale.Node as the interface value; the
+	// typed-nil path must report disabled rather than panic.
+	var node *tailscale.Node
+	svc := NewService(nil, nil, node, slog.New(slog.NewTextHandler(io.Discard, nil)))
+
+	resp, err := svc.GetTailscaleStatus(context.Background(), connect.NewRequest(&v1.GetTailscaleStatusRequest{}))
+	if err != nil {
+		t.Fatalf("GetTailscaleStatus returned an error: %v", err)
+	}
+	if resp.Msg.Enabled {
+		t.Error("Enabled = true, want false for nil node")
+	}
+	if resp.Msg.State != tailscale.StateDisabled {
+		t.Errorf("State = %q, want %q", resp.Msg.State, tailscale.StateDisabled)
+	}
+}
+
+func TestGetTailscaleStatusRunning(t *testing.T) {
+	expiry := time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)
+	svc := NewService(nil, nil, stubTailscaleSource{snap: tailscale.Snapshot{
+		Enabled:      true,
+		State:        tailscale.StateRunning,
+		BackendState: "Running",
+		Hostname:     "dmanager",
+		DNSName:      testTailnetDNSName,
+		IPs:          []string{"100.64.0.1", "fd7a:115c:a1e0::1"},
+		Port:         80,
+		HTTPSEnabled: true,
+		CertDomains:  []string{testTailnetDNSName},
+		KeyExpiry:    expiry,
+	}}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+
+	resp, err := svc.GetTailscaleStatus(context.Background(), connect.NewRequest(&v1.GetTailscaleStatusRequest{}))
+	if err != nil {
+		t.Fatalf("GetTailscaleStatus returned an error: %v", err)
+	}
+	msg := resp.Msg
+	if !msg.Enabled || msg.State != tailscale.StateRunning || msg.BackendState != "Running" {
+		t.Errorf("unexpected state fields: %+v", msg)
+	}
+	if msg.DnsName != testTailnetDNSName {
+		t.Errorf("DnsName = %q", msg.DnsName)
+	}
+	if len(msg.Ips) != 2 || msg.Ips[0] != "100.64.0.1" {
+		t.Errorf("Ips = %v", msg.Ips)
+	}
+	if msg.Port != 80 || !msg.HttpsEnabled {
+		t.Errorf("Port/HttpsEnabled = %d/%v", msg.Port, msg.HttpsEnabled)
+	}
+	if len(msg.CertDomains) != 1 {
+		t.Errorf("CertDomains = %v", msg.CertDomains)
+	}
+	if msg.KeyExpiry == nil || !msg.KeyExpiry.AsTime().Equal(expiry) {
+		t.Errorf("KeyExpiry = %v, want %v", msg.KeyExpiry, expiry)
+	}
+	if msg.Error != "" {
+		t.Errorf("Error = %q, want empty", msg.Error)
+	}
+}
+
+func TestGetTailscaleStatusDegraded(t *testing.T) {
+	svc := NewService(nil, nil, stubTailscaleSource{snap: tailscale.Snapshot{
+		Enabled: true,
+		State:   tailscale.StateFailed,
+		Err:     "tailscale node failed to connect: invalid key",
+	}}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+
+	resp, err := svc.GetTailscaleStatus(context.Background(), connect.NewRequest(&v1.GetTailscaleStatusRequest{}))
+	if err != nil {
+		t.Fatalf("GetTailscaleStatus returned an error: %v", err)
+	}
+	if resp.Msg.State != tailscale.StateFailed || resp.Msg.Error == "" {
+		t.Errorf("expected failed state with error detail, got %+v", resp.Msg)
 	}
 }

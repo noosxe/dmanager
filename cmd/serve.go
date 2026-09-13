@@ -24,10 +24,10 @@ import (
 	"dmanager/internal/container"
 	"dmanager/internal/db"
 	"dmanager/internal/docker"
-	"dmanager/internal/mailer"
 	dmanagerv1 "dmanager/internal/gen/proto/dmanager/v1"
 	"dmanager/internal/gen/proto/dmanager/v1/dmanagerv1connect"
 	"dmanager/internal/logging"
+	"dmanager/internal/mailer"
 	"dmanager/internal/settings"
 	"dmanager/internal/tailscale"
 )
@@ -188,8 +188,14 @@ var serveCmd = &cobra.Command{
 		)
 		mux.Handle(settingsPath, settingsHandler)
 
+		// tsNode stays nil when the tailscale feature is disabled (no auth
+		// key); the status RPC reports the disabled snapshot in that case.
+		// Declared before the admin service registration and constructed in the
+		// listener section below, so both share the same instance.
+		var tsNode *tailscale.Node
+
 		// Register AdminService (read-only Docker resource inventories)
-		adminSvc := admin.NewService(dockerClient, queries, logger.With("module", "admin"))
+		adminSvc := admin.NewService(dockerClient, queries, tsNode, logger.With("module", "admin"))
 		adminPath, adminHandler := dmanagerv1connect.NewAdminServiceHandler(
 			adminSvc,
 			connect.WithInterceptors(authInterceptor),
@@ -240,7 +246,7 @@ var serveCmd = &cobra.Command{
 		// auth key must not take down local (LAN) availability.
 
 		if cfg.Tailscale.AuthKey != "" {
-			tsNode := tailscale.New(cfg.Tailscale, logger.With("module", "tailscale"))
+			tsNode = tailscale.New(cfg.Tailscale, logger.With("module", "tailscale"))
 			defer func() { _ = tsNode.Close() }() // after the HTTP drain below
 			go func() {
 				upCtx, cancel := context.WithTimeout(srvCtx, 60*time.Second)

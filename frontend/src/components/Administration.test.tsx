@@ -80,6 +80,7 @@ vi.mock("../client", () => ({
     pruneVolumes: vi.fn(),
     deleteNetwork: vi.fn(),
     pruneNetworks: vi.fn(),
+    getTailscaleStatus: vi.fn(),
   },
 }));
 

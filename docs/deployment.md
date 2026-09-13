@@ -109,6 +109,10 @@ dmanager at `https://<hostname>.<tailnet>.ts.net`. The first request may pause b
 the certificate is provisioned. Without the prerequisites, TLS handshakes fail while the plain
 HTTP listeners (LAN and tailnet) keep working.
 
+The node's live status — state, DNS name, tailnet IPs, access URLs, and key-expiry warnings —
+is also visible in the web UI (Administration page, top card) via `AdminService.GetTailscaleStatus`,
+so day-to-day checks do not require reading server logs.
+
 Effects:
 
 - **Secure session cookies:** the HTTPS listener injects `X-Forwarded-Proto: https`

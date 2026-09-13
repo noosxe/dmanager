@@ -1557,6 +1557,187 @@ func (x *CheckEngineResponse) GetError() string {
 	return ""
 }
 
+type GetTailscaleStatusRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetTailscaleStatusRequest) Reset() {
+	*x = GetTailscaleStatusRequest{}
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTailscaleStatusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTailscaleStatusRequest) ProtoMessage() {}
+
+func (x *GetTailscaleStatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTailscaleStatusRequest.ProtoReflect.Descriptor instead.
+func (*GetTailscaleStatusRequest) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{29}
+}
+
+type GetTailscaleStatusResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// false when no auth key is configured — the whole feature is inert.
+	Enabled bool `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	// Lifecycle state of the embedded node:
+	//
+	//	"starting" — connecting to the tailnet (or not yet attempted)
+	//	"running"  — connected; backend_state carries the live ipn state
+	//	"failed"   — startup failed (invalid/expired key, control plane
+	//	             unreachable); LAN operation continues (degraded mode)
+	State string `protobuf:"bytes,2,opt,name=state,proto3" json:"state,omitempty"`
+	// Live backend state from the node's local API when reachable
+	// (e.g. "Running", "NeedsLogin"); empty when it could not be probed.
+	BackendState string `protobuf:"bytes,3,opt,name=backend_state,json=backendState,proto3" json:"backend_state,omitempty"`
+	// Configured MagicDNS hostname (tailscale.hostname).
+	Hostname string `protobuf:"bytes,4,opt,name=hostname,proto3" json:"hostname,omitempty"`
+	// Full MagicDNS name on the tailnet (e.g. "dmanager.tail1234.ts.net");
+	// empty until the node has connected at least once.
+	DnsName string `protobuf:"bytes,5,opt,name=dns_name,json=dnsName,proto3" json:"dns_name,omitempty"`
+	// Tailnet IP addresses assigned to the node (100.x.y.z and/or fd7a:...).
+	Ips []string `protobuf:"bytes,6,rep,name=ips,proto3" json:"ips,omitempty"`
+	// Port the plain-HTTP tailnet listener serves on (tailscale.port).
+	Port int32 `protobuf:"varint,7,opt,name=port,proto3" json:"port,omitempty"`
+	// Whether the HTTPS listener (tailnet port 443) is enabled.
+	HttpsEnabled bool `protobuf:"varint,8,opt,name=https_enabled,json=httpsEnabled,proto3" json:"https_enabled,omitempty"`
+	// Certificate domains provisioned for the node ("<name>.ts.net") —
+	// present when HTTPS certificates are enabled on the tailnet.
+	CertDomains []string `protobuf:"bytes,9,rep,name=cert_domains,json=certDomains,proto3" json:"cert_domains,omitempty"`
+	// When the node's key expires (key re-registration needed); unset
+	// when the key does not expire.
+	KeyExpiry *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=key_expiry,json=keyExpiry,proto3" json:"key_expiry,omitempty"`
+	// Short reason detail when state is "failed", or when the live status
+	// probe failed and the reported values are the last known ones.
+	Error         string `protobuf:"bytes,11,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetTailscaleStatusResponse) Reset() {
+	*x = GetTailscaleStatusResponse{}
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTailscaleStatusResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTailscaleStatusResponse) ProtoMessage() {}
+
+func (x *GetTailscaleStatusResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTailscaleStatusResponse.ProtoReflect.Descriptor instead.
+func (*GetTailscaleStatusResponse) Descriptor() ([]byte, []int) {
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *GetTailscaleStatusResponse) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+func (x *GetTailscaleStatusResponse) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+func (x *GetTailscaleStatusResponse) GetBackendState() string {
+	if x != nil {
+		return x.BackendState
+	}
+	return ""
+}
+
+func (x *GetTailscaleStatusResponse) GetHostname() string {
+	if x != nil {
+		return x.Hostname
+	}
+	return ""
+}
+
+func (x *GetTailscaleStatusResponse) GetDnsName() string {
+	if x != nil {
+		return x.DnsName
+	}
+	return ""
+}
+
+func (x *GetTailscaleStatusResponse) GetIps() []string {
+	if x != nil {
+		return x.Ips
+	}
+	return nil
+}
+
+func (x *GetTailscaleStatusResponse) GetPort() int32 {
+	if x != nil {
+		return x.Port
+	}
+	return 0
+}
+
+func (x *GetTailscaleStatusResponse) GetHttpsEnabled() bool {
+	if x != nil {
+		return x.HttpsEnabled
+	}
+	return false
+}
+
+func (x *GetTailscaleStatusResponse) GetCertDomains() []string {
+	if x != nil {
+		return x.CertDomains
+	}
+	return nil
+}
+
+func (x *GetTailscaleStatusResponse) GetKeyExpiry() *timestamppb.Timestamp {
+	if x != nil {
+		return x.KeyExpiry
+	}
+	return nil
+}
+
+func (x *GetTailscaleStatusResponse) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
 type GetVolumeUsageRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -1565,7 +1746,7 @@ type GetVolumeUsageRequest struct {
 
 func (x *GetVolumeUsageRequest) Reset() {
 	*x = GetVolumeUsageRequest{}
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[29]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1577,7 +1758,7 @@ func (x *GetVolumeUsageRequest) String() string {
 func (*GetVolumeUsageRequest) ProtoMessage() {}
 
 func (x *GetVolumeUsageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[29]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1590,7 +1771,7 @@ func (x *GetVolumeUsageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetVolumeUsageRequest.ProtoReflect.Descriptor instead.
 func (*GetVolumeUsageRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{29}
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{31}
 }
 
 type VolumeUsage struct {
@@ -1607,7 +1788,7 @@ type VolumeUsage struct {
 
 func (x *VolumeUsage) Reset() {
 	*x = VolumeUsage{}
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[30]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1619,7 +1800,7 @@ func (x *VolumeUsage) String() string {
 func (*VolumeUsage) ProtoMessage() {}
 
 func (x *VolumeUsage) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[30]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1632,7 +1813,7 @@ func (x *VolumeUsage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VolumeUsage.ProtoReflect.Descriptor instead.
 func (*VolumeUsage) Descriptor() ([]byte, []int) {
-	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{30}
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *VolumeUsage) GetName() string {
@@ -1671,7 +1852,7 @@ type GetVolumeUsageResponse struct {
 
 func (x *GetVolumeUsageResponse) Reset() {
 	*x = GetVolumeUsageResponse{}
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[31]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1683,7 +1864,7 @@ func (x *GetVolumeUsageResponse) String() string {
 func (*GetVolumeUsageResponse) ProtoMessage() {}
 
 func (x *GetVolumeUsageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[31]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1696,7 +1877,7 @@ func (x *GetVolumeUsageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetVolumeUsageResponse.ProtoReflect.Descriptor instead.
 func (*GetVolumeUsageResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{31}
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *GetVolumeUsageResponse) GetVolumes() []*VolumeUsage {
@@ -1735,7 +1916,7 @@ type PruneVolumesRequest struct {
 
 func (x *PruneVolumesRequest) Reset() {
 	*x = PruneVolumesRequest{}
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[32]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1747,7 +1928,7 @@ func (x *PruneVolumesRequest) String() string {
 func (*PruneVolumesRequest) ProtoMessage() {}
 
 func (x *PruneVolumesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[32]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1760,7 +1941,7 @@ func (x *PruneVolumesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PruneVolumesRequest.ProtoReflect.Descriptor instead.
 func (*PruneVolumesRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{32}
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{34}
 }
 
 type PruneVolumesResponse struct {
@@ -1775,7 +1956,7 @@ type PruneVolumesResponse struct {
 
 func (x *PruneVolumesResponse) Reset() {
 	*x = PruneVolumesResponse{}
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[33]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1787,7 +1968,7 @@ func (x *PruneVolumesResponse) String() string {
 func (*PruneVolumesResponse) ProtoMessage() {}
 
 func (x *PruneVolumesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[33]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1800,7 +1981,7 @@ func (x *PruneVolumesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PruneVolumesResponse.ProtoReflect.Descriptor instead.
 func (*PruneVolumesResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{33}
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *PruneVolumesResponse) GetVolumesDeleted() uint32 {
@@ -1842,7 +2023,7 @@ type AuditLogEntry struct {
 
 func (x *AuditLogEntry) Reset() {
 	*x = AuditLogEntry{}
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[34]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1854,7 +2035,7 @@ func (x *AuditLogEntry) String() string {
 func (*AuditLogEntry) ProtoMessage() {}
 
 func (x *AuditLogEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[34]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1867,7 +2048,7 @@ func (x *AuditLogEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AuditLogEntry.ProtoReflect.Descriptor instead.
 func (*AuditLogEntry) Descriptor() ([]byte, []int) {
-	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{34}
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *AuditLogEntry) GetId() uint64 {
@@ -1954,7 +2135,7 @@ type ListAuditLogsRequest struct {
 
 func (x *ListAuditLogsRequest) Reset() {
 	*x = ListAuditLogsRequest{}
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[35]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1966,7 +2147,7 @@ func (x *ListAuditLogsRequest) String() string {
 func (*ListAuditLogsRequest) ProtoMessage() {}
 
 func (x *ListAuditLogsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[35]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1979,7 +2160,7 @@ func (x *ListAuditLogsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAuditLogsRequest.ProtoReflect.Descriptor instead.
 func (*ListAuditLogsRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{35}
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *ListAuditLogsRequest) GetQuery() string {
@@ -2027,7 +2208,7 @@ type ListAuditLogsResponse struct {
 
 func (x *ListAuditLogsResponse) Reset() {
 	*x = ListAuditLogsResponse{}
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[36]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2039,7 +2220,7 @@ func (x *ListAuditLogsResponse) String() string {
 func (*ListAuditLogsResponse) ProtoMessage() {}
 
 func (x *ListAuditLogsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[36]
+	mi := &file_proto_dmanager_v1_admin_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2052,7 +2233,7 @@ func (x *ListAuditLogsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAuditLogsResponse.ProtoReflect.Descriptor instead.
 func (*ListAuditLogsResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{36}
+	return file_proto_dmanager_v1_admin_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *ListAuditLogsResponse) GetEntries() []*AuditLogEntry {
@@ -2173,7 +2354,22 @@ const file_proto_dmanager_v1_admin_proto_rawDesc = "" +
 	"\tconnected\x18\x01 \x01(\bR\tconnected\x12\x1f\n" +
 	"\vapi_version\x18\x02 \x01(\tR\n" +
 	"apiVersion\x12\x14\n" +
-	"\x05error\x18\x03 \x01(\tR\x05error\"\x17\n" +
+	"\x05error\x18\x03 \x01(\tR\x05error\"\x1b\n" +
+	"\x19GetTailscaleStatusRequest\"\xe7\x02\n" +
+	"\x1aGetTailscaleStatusResponse\x12\x18\n" +
+	"\aenabled\x18\x01 \x01(\bR\aenabled\x12\x14\n" +
+	"\x05state\x18\x02 \x01(\tR\x05state\x12#\n" +
+	"\rbackend_state\x18\x03 \x01(\tR\fbackendState\x12\x1a\n" +
+	"\bhostname\x18\x04 \x01(\tR\bhostname\x12\x19\n" +
+	"\bdns_name\x18\x05 \x01(\tR\adnsName\x12\x10\n" +
+	"\x03ips\x18\x06 \x03(\tR\x03ips\x12\x12\n" +
+	"\x04port\x18\a \x01(\x05R\x04port\x12#\n" +
+	"\rhttps_enabled\x18\b \x01(\bR\fhttpsEnabled\x12!\n" +
+	"\fcert_domains\x18\t \x03(\tR\vcertDomains\x129\n" +
+	"\n" +
+	"key_expiry\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\tkeyExpiry\x12\x14\n" +
+	"\x05error\x18\v \x01(\tR\x05error\"\x17\n" +
 	"\x15GetVolumeUsageRequest\"]\n" +
 	"\vVolumeUsage\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1d\n" +
@@ -2213,8 +2409,7 @@ const file_proto_dmanager_v1_admin_proto_rawDesc = "" +
 	"\x06offset\x18\x05 \x01(\x04R\x06offset\"c\n" +
 	"\x15ListAuditLogsResponse\x124\n" +
 	"\aentries\x18\x01 \x03(\v2\x1a.dmanager.v1.AuditLogEntryR\aentries\x12\x14\n" +
-	"\x05total\x18\x02 \x01(\x04R\x05total2\xd7\n" +
-	"\n" +
+	"\x05total\x18\x02 \x01(\x04R\x05total2\xbe\v\n" +
 	"\fAdminService\x12M\n" +
 	"\n" +
 	"ListImages\x12\x1e.dmanager.v1.ListImagesRequest\x1a\x1f.dmanager.v1.ListImagesResponse\x12P\n" +
@@ -2230,7 +2425,8 @@ const file_proto_dmanager_v1_admin_proto_rawDesc = "" +
 	"\x0fPruneBuildCache\x12#.dmanager.v1.PruneBuildCacheRequest\x1a$.dmanager.v1.PruneBuildCacheResponse\x12n\n" +
 	"\x15ListBuildCacheRecords\x12).dmanager.v1.ListBuildCacheRecordsRequest\x1a*.dmanager.v1.ListBuildCacheRecordsResponse\x12n\n" +
 	"\x15PruneBuildCacheRecord\x12).dmanager.v1.PruneBuildCacheRecordRequest\x1a*.dmanager.v1.PruneBuildCacheRecordResponse\x12P\n" +
-	"\vCheckEngine\x12\x1f.dmanager.v1.CheckEngineRequest\x1a .dmanager.v1.CheckEngineResponse\x12V\n" +
+	"\vCheckEngine\x12\x1f.dmanager.v1.CheckEngineRequest\x1a .dmanager.v1.CheckEngineResponse\x12e\n" +
+	"\x12GetTailscaleStatus\x12&.dmanager.v1.GetTailscaleStatusRequest\x1a'.dmanager.v1.GetTailscaleStatusResponse\x12V\n" +
 	"\rListAuditLogs\x12!.dmanager.v1.ListAuditLogsRequest\x1a\".dmanager.v1.ListAuditLogsResponseB4Z2dmanager/internal/gen/proto/dmanager/v1;dmanagerv1b\x06proto3"
 
 var (
@@ -2245,7 +2441,7 @@ func file_proto_dmanager_v1_admin_proto_rawDescGZIP() []byte {
 	return file_proto_dmanager_v1_admin_proto_rawDescData
 }
 
-var file_proto_dmanager_v1_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
+var file_proto_dmanager_v1_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 40)
 var file_proto_dmanager_v1_admin_proto_goTypes = []any{
 	(*ListImagesRequest)(nil),             // 0: dmanager.v1.ListImagesRequest
 	(*ListImagesResponse)(nil),            // 1: dmanager.v1.ListImagesResponse
@@ -2276,66 +2472,71 @@ var file_proto_dmanager_v1_admin_proto_goTypes = []any{
 	(*PruneBuildCacheRecordResponse)(nil), // 26: dmanager.v1.PruneBuildCacheRecordResponse
 	(*CheckEngineRequest)(nil),            // 27: dmanager.v1.CheckEngineRequest
 	(*CheckEngineResponse)(nil),           // 28: dmanager.v1.CheckEngineResponse
-	(*GetVolumeUsageRequest)(nil),         // 29: dmanager.v1.GetVolumeUsageRequest
-	(*VolumeUsage)(nil),                   // 30: dmanager.v1.VolumeUsage
-	(*GetVolumeUsageResponse)(nil),        // 31: dmanager.v1.GetVolumeUsageResponse
-	(*PruneVolumesRequest)(nil),           // 32: dmanager.v1.PruneVolumesRequest
-	(*PruneVolumesResponse)(nil),          // 33: dmanager.v1.PruneVolumesResponse
-	(*AuditLogEntry)(nil),                 // 34: dmanager.v1.AuditLogEntry
-	(*ListAuditLogsRequest)(nil),          // 35: dmanager.v1.ListAuditLogsRequest
-	(*ListAuditLogsResponse)(nil),         // 36: dmanager.v1.ListAuditLogsResponse
-	nil,                                   // 37: dmanager.v1.Volume.LabelsEntry
-	(*timestamppb.Timestamp)(nil),         // 38: google.protobuf.Timestamp
+	(*GetTailscaleStatusRequest)(nil),     // 29: dmanager.v1.GetTailscaleStatusRequest
+	(*GetTailscaleStatusResponse)(nil),    // 30: dmanager.v1.GetTailscaleStatusResponse
+	(*GetVolumeUsageRequest)(nil),         // 31: dmanager.v1.GetVolumeUsageRequest
+	(*VolumeUsage)(nil),                   // 32: dmanager.v1.VolumeUsage
+	(*GetVolumeUsageResponse)(nil),        // 33: dmanager.v1.GetVolumeUsageResponse
+	(*PruneVolumesRequest)(nil),           // 34: dmanager.v1.PruneVolumesRequest
+	(*PruneVolumesResponse)(nil),          // 35: dmanager.v1.PruneVolumesResponse
+	(*AuditLogEntry)(nil),                 // 36: dmanager.v1.AuditLogEntry
+	(*ListAuditLogsRequest)(nil),          // 37: dmanager.v1.ListAuditLogsRequest
+	(*ListAuditLogsResponse)(nil),         // 38: dmanager.v1.ListAuditLogsResponse
+	nil,                                   // 39: dmanager.v1.Volume.LabelsEntry
+	(*timestamppb.Timestamp)(nil),         // 40: google.protobuf.Timestamp
 }
 var file_proto_dmanager_v1_admin_proto_depIdxs = []int32{
 	2,  // 0: dmanager.v1.ListImagesResponse.images:type_name -> dmanager.v1.Image
 	5,  // 1: dmanager.v1.ListVolumesResponse.volumes:type_name -> dmanager.v1.Volume
-	38, // 2: dmanager.v1.Volume.created_at:type_name -> google.protobuf.Timestamp
-	37, // 3: dmanager.v1.Volume.labels:type_name -> dmanager.v1.Volume.LabelsEntry
+	40, // 2: dmanager.v1.Volume.created_at:type_name -> google.protobuf.Timestamp
+	39, // 3: dmanager.v1.Volume.labels:type_name -> dmanager.v1.Volume.LabelsEntry
 	8,  // 4: dmanager.v1.ListNetworksResponse.networks:type_name -> dmanager.v1.Network
-	38, // 5: dmanager.v1.Network.created_at:type_name -> google.protobuf.Timestamp
+	40, // 5: dmanager.v1.Network.created_at:type_name -> google.protobuf.Timestamp
 	16, // 6: dmanager.v1.PruneImagesResponse.images_deleted:type_name -> dmanager.v1.PrunedImage
-	38, // 7: dmanager.v1.BuildCacheRecord.created_at:type_name -> google.protobuf.Timestamp
-	38, // 8: dmanager.v1.BuildCacheRecord.last_used_at:type_name -> google.protobuf.Timestamp
+	40, // 7: dmanager.v1.BuildCacheRecord.created_at:type_name -> google.protobuf.Timestamp
+	40, // 8: dmanager.v1.BuildCacheRecord.last_used_at:type_name -> google.protobuf.Timestamp
 	22, // 9: dmanager.v1.ListBuildCacheRecordsResponse.records:type_name -> dmanager.v1.BuildCacheRecord
-	30, // 10: dmanager.v1.GetVolumeUsageResponse.volumes:type_name -> dmanager.v1.VolumeUsage
-	38, // 11: dmanager.v1.AuditLogEntry.created_at:type_name -> google.protobuf.Timestamp
-	34, // 12: dmanager.v1.ListAuditLogsResponse.entries:type_name -> dmanager.v1.AuditLogEntry
-	0,  // 13: dmanager.v1.AdminService.ListImages:input_type -> dmanager.v1.ListImagesRequest
-	3,  // 14: dmanager.v1.AdminService.ListVolumes:input_type -> dmanager.v1.ListVolumesRequest
-	29, // 15: dmanager.v1.AdminService.GetVolumeUsage:input_type -> dmanager.v1.GetVolumeUsageRequest
-	6,  // 16: dmanager.v1.AdminService.ListNetworks:input_type -> dmanager.v1.ListNetworksRequest
-	13, // 17: dmanager.v1.AdminService.DeleteImage:input_type -> dmanager.v1.DeleteImageRequest
-	15, // 18: dmanager.v1.AdminService.PruneImages:input_type -> dmanager.v1.PruneImagesRequest
-	32, // 19: dmanager.v1.AdminService.PruneVolumes:input_type -> dmanager.v1.PruneVolumesRequest
-	9,  // 20: dmanager.v1.AdminService.DeleteNetwork:input_type -> dmanager.v1.DeleteNetworkRequest
-	11, // 21: dmanager.v1.AdminService.PruneNetworks:input_type -> dmanager.v1.PruneNetworksRequest
-	18, // 22: dmanager.v1.AdminService.GetBuildCacheStats:input_type -> dmanager.v1.GetBuildCacheStatsRequest
-	20, // 23: dmanager.v1.AdminService.PruneBuildCache:input_type -> dmanager.v1.PruneBuildCacheRequest
-	23, // 24: dmanager.v1.AdminService.ListBuildCacheRecords:input_type -> dmanager.v1.ListBuildCacheRecordsRequest
-	25, // 25: dmanager.v1.AdminService.PruneBuildCacheRecord:input_type -> dmanager.v1.PruneBuildCacheRecordRequest
-	27, // 26: dmanager.v1.AdminService.CheckEngine:input_type -> dmanager.v1.CheckEngineRequest
-	35, // 27: dmanager.v1.AdminService.ListAuditLogs:input_type -> dmanager.v1.ListAuditLogsRequest
-	1,  // 28: dmanager.v1.AdminService.ListImages:output_type -> dmanager.v1.ListImagesResponse
-	4,  // 29: dmanager.v1.AdminService.ListVolumes:output_type -> dmanager.v1.ListVolumesResponse
-	31, // 30: dmanager.v1.AdminService.GetVolumeUsage:output_type -> dmanager.v1.GetVolumeUsageResponse
-	7,  // 31: dmanager.v1.AdminService.ListNetworks:output_type -> dmanager.v1.ListNetworksResponse
-	14, // 32: dmanager.v1.AdminService.DeleteImage:output_type -> dmanager.v1.DeleteImageResponse
-	17, // 33: dmanager.v1.AdminService.PruneImages:output_type -> dmanager.v1.PruneImagesResponse
-	33, // 34: dmanager.v1.AdminService.PruneVolumes:output_type -> dmanager.v1.PruneVolumesResponse
-	10, // 35: dmanager.v1.AdminService.DeleteNetwork:output_type -> dmanager.v1.DeleteNetworkResponse
-	12, // 36: dmanager.v1.AdminService.PruneNetworks:output_type -> dmanager.v1.PruneNetworksResponse
-	19, // 37: dmanager.v1.AdminService.GetBuildCacheStats:output_type -> dmanager.v1.GetBuildCacheStatsResponse
-	21, // 38: dmanager.v1.AdminService.PruneBuildCache:output_type -> dmanager.v1.PruneBuildCacheResponse
-	24, // 39: dmanager.v1.AdminService.ListBuildCacheRecords:output_type -> dmanager.v1.ListBuildCacheRecordsResponse
-	26, // 40: dmanager.v1.AdminService.PruneBuildCacheRecord:output_type -> dmanager.v1.PruneBuildCacheRecordResponse
-	28, // 41: dmanager.v1.AdminService.CheckEngine:output_type -> dmanager.v1.CheckEngineResponse
-	36, // 42: dmanager.v1.AdminService.ListAuditLogs:output_type -> dmanager.v1.ListAuditLogsResponse
-	28, // [28:43] is the sub-list for method output_type
-	13, // [13:28] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	40, // 10: dmanager.v1.GetTailscaleStatusResponse.key_expiry:type_name -> google.protobuf.Timestamp
+	32, // 11: dmanager.v1.GetVolumeUsageResponse.volumes:type_name -> dmanager.v1.VolumeUsage
+	40, // 12: dmanager.v1.AuditLogEntry.created_at:type_name -> google.protobuf.Timestamp
+	36, // 13: dmanager.v1.ListAuditLogsResponse.entries:type_name -> dmanager.v1.AuditLogEntry
+	0,  // 14: dmanager.v1.AdminService.ListImages:input_type -> dmanager.v1.ListImagesRequest
+	3,  // 15: dmanager.v1.AdminService.ListVolumes:input_type -> dmanager.v1.ListVolumesRequest
+	31, // 16: dmanager.v1.AdminService.GetVolumeUsage:input_type -> dmanager.v1.GetVolumeUsageRequest
+	6,  // 17: dmanager.v1.AdminService.ListNetworks:input_type -> dmanager.v1.ListNetworksRequest
+	13, // 18: dmanager.v1.AdminService.DeleteImage:input_type -> dmanager.v1.DeleteImageRequest
+	15, // 19: dmanager.v1.AdminService.PruneImages:input_type -> dmanager.v1.PruneImagesRequest
+	34, // 20: dmanager.v1.AdminService.PruneVolumes:input_type -> dmanager.v1.PruneVolumesRequest
+	9,  // 21: dmanager.v1.AdminService.DeleteNetwork:input_type -> dmanager.v1.DeleteNetworkRequest
+	11, // 22: dmanager.v1.AdminService.PruneNetworks:input_type -> dmanager.v1.PruneNetworksRequest
+	18, // 23: dmanager.v1.AdminService.GetBuildCacheStats:input_type -> dmanager.v1.GetBuildCacheStatsRequest
+	20, // 24: dmanager.v1.AdminService.PruneBuildCache:input_type -> dmanager.v1.PruneBuildCacheRequest
+	23, // 25: dmanager.v1.AdminService.ListBuildCacheRecords:input_type -> dmanager.v1.ListBuildCacheRecordsRequest
+	25, // 26: dmanager.v1.AdminService.PruneBuildCacheRecord:input_type -> dmanager.v1.PruneBuildCacheRecordRequest
+	27, // 27: dmanager.v1.AdminService.CheckEngine:input_type -> dmanager.v1.CheckEngineRequest
+	29, // 28: dmanager.v1.AdminService.GetTailscaleStatus:input_type -> dmanager.v1.GetTailscaleStatusRequest
+	37, // 29: dmanager.v1.AdminService.ListAuditLogs:input_type -> dmanager.v1.ListAuditLogsRequest
+	1,  // 30: dmanager.v1.AdminService.ListImages:output_type -> dmanager.v1.ListImagesResponse
+	4,  // 31: dmanager.v1.AdminService.ListVolumes:output_type -> dmanager.v1.ListVolumesResponse
+	33, // 32: dmanager.v1.AdminService.GetVolumeUsage:output_type -> dmanager.v1.GetVolumeUsageResponse
+	7,  // 33: dmanager.v1.AdminService.ListNetworks:output_type -> dmanager.v1.ListNetworksResponse
+	14, // 34: dmanager.v1.AdminService.DeleteImage:output_type -> dmanager.v1.DeleteImageResponse
+	17, // 35: dmanager.v1.AdminService.PruneImages:output_type -> dmanager.v1.PruneImagesResponse
+	35, // 36: dmanager.v1.AdminService.PruneVolumes:output_type -> dmanager.v1.PruneVolumesResponse
+	10, // 37: dmanager.v1.AdminService.DeleteNetwork:output_type -> dmanager.v1.DeleteNetworkResponse
+	12, // 38: dmanager.v1.AdminService.PruneNetworks:output_type -> dmanager.v1.PruneNetworksResponse
+	19, // 39: dmanager.v1.AdminService.GetBuildCacheStats:output_type -> dmanager.v1.GetBuildCacheStatsResponse
+	21, // 40: dmanager.v1.AdminService.PruneBuildCache:output_type -> dmanager.v1.PruneBuildCacheResponse
+	24, // 41: dmanager.v1.AdminService.ListBuildCacheRecords:output_type -> dmanager.v1.ListBuildCacheRecordsResponse
+	26, // 42: dmanager.v1.AdminService.PruneBuildCacheRecord:output_type -> dmanager.v1.PruneBuildCacheRecordResponse
+	28, // 43: dmanager.v1.AdminService.CheckEngine:output_type -> dmanager.v1.CheckEngineResponse
+	30, // 44: dmanager.v1.AdminService.GetTailscaleStatus:output_type -> dmanager.v1.GetTailscaleStatusResponse
+	38, // 45: dmanager.v1.AdminService.ListAuditLogs:output_type -> dmanager.v1.ListAuditLogsResponse
+	30, // [30:46] is the sub-list for method output_type
+	14, // [14:30] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_proto_dmanager_v1_admin_proto_init() }
@@ -2350,7 +2551,7 @@ func file_proto_dmanager_v1_admin_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_dmanager_v1_admin_proto_rawDesc), len(file_proto_dmanager_v1_admin_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   38,
+			NumMessages:   40,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

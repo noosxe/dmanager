@@ -25,21 +25,32 @@ import (
 	"dmanager/internal/db"
 	dmanagerv1 "dmanager/internal/gen/proto/dmanager/v1"
 	"dmanager/internal/gen/proto/dmanager/v1/dmanagerv1connect"
+	"dmanager/internal/tailscale"
 )
+
+// TailscaleStatusSource is the tailnet status dependency of the service:
+// satisfied by *tailscale.Node; a nil-valued interface (feature disabled)
+// reports the disabled snapshot. Declared here so the admin package owns
+// its seam and tests can stub it.
+type TailscaleStatusSource interface {
+	Snapshot(ctx context.Context) tailscale.Snapshot
+}
 
 // Service implements the dmanagerv1connect.AdminServiceHandler interface.
 type Service struct {
 	dmanagerv1connect.UnimplementedAdminServiceHandler
 	dockerClient *client.Client
-	queries      *db.Queries // audit-trail storage; nil disables ListAuditLogs
+	queries      *db.Queries           // audit-trail storage; nil disables ListAuditLogs
+	tsNode       TailscaleStatusSource // nil when the embedded node is disabled
 	logger       *slog.Logger
 }
 
 // NewService creates a new Admin service.
-func NewService(dockerClient *client.Client, queries *db.Queries, logger *slog.Logger) *Service {
+func NewService(dockerClient *client.Client, queries *db.Queries, tsNode TailscaleStatusSource, logger *slog.Logger) *Service {
 	return &Service{
 		dockerClient: dockerClient,
 		queries:      queries,
+		tsNode:       tsNode,
 		logger:       logger,
 	}
 }
@@ -453,6 +464,41 @@ func (s *Service) CheckEngine(ctx context.Context, req *connect.Request[dmanager
 		Connected:  true,
 		ApiVersion: ping.APIVersion,
 	}), nil
+}
+
+// GetTailscaleStatus reports the embedded Tailscale node's state and tailnet
+// identity (Authenticated, any role). Status-not-error semantics mirror
+// CheckEngine: a disabled or degraded node is a successful response whose
+// fields say so — only a broken transport is an RPC failure. The snapshot
+// never contains key material (docs/tailscale.md §9 Q8/Q11).
+func (s *Service) GetTailscaleStatus(ctx context.Context, req *connect.Request[dmanagerv1.GetTailscaleStatusRequest]) (*connect.Response[dmanagerv1.GetTailscaleStatusResponse], error) {
+	// Bound the node's local-API probe so a hung pipe cannot pile up
+	// goroutines under UI polling (mirrors CheckEngine's ping bound).
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	var snap tailscale.Snapshot
+	if s.tsNode != nil {
+		snap = s.tsNode.Snapshot(ctx)
+	} else {
+		snap = tailscale.Snapshot{Enabled: false, State: tailscale.StateDisabled}
+	}
+	resp := &dmanagerv1.GetTailscaleStatusResponse{
+		Enabled:      snap.Enabled,
+		State:        snap.State,
+		BackendState: snap.BackendState,
+		Hostname:     snap.Hostname,
+		DnsName:      snap.DNSName,
+		Ips:          snap.IPs,
+		Port:         int32(snap.Port), //nolint:gosec // G115: config validation bounds the port to 1-65535
+		HttpsEnabled: snap.HTTPSEnabled,
+		CertDomains:  snap.CertDomains,
+		Error:        snap.Err,
+	}
+	if !snap.KeyExpiry.IsZero() {
+		resp.KeyExpiry = timestamppb.New(snap.KeyExpiry)
+	}
+	return connect.NewResponse(resp), nil
 }
 
 // ListAuditLogs returns recorded audit entries (mutation outcomes and
