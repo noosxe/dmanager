@@ -29,6 +29,7 @@ import (
 	"dmanager/internal/gen/proto/dmanager/v1/dmanagerv1connect"
 	"dmanager/internal/logging"
 	"dmanager/internal/settings"
+	"dmanager/internal/tailscale"
 )
 
 var (
@@ -232,6 +233,27 @@ var serveCmd = &cobra.Command{
 		// Apply CORS middleware
 		handler := withCORS(cfg.Server.AllowedOrigins, mux)
 
+		// Embedded Tailscale node (docs/tailscale.md): when an auth key is
+		// configured, the identical handler tree is served on a tailnet listener.
+
+		// Startup is deliberately non-fatal: a tailnet outage or an invalid
+		// auth key must not take down local (LAN) availability.
+
+		if cfg.Tailscale.AuthKey != "" {
+			tsNode := tailscale.New(cfg.Tailscale, logger.With("module", "tailscale"))
+			defer func() { _ = tsNode.Close() }() // after the HTTP drain below
+			go func() {
+				upCtx, cancel := context.WithTimeout(srvCtx, 60*time.Second)
+				defer cancel()
+				if err := tsNode.Start(upCtx); err != nil {
+					cmdLogger.Error("tailscale node failed to start; tailnet access disabled", "error", err)
+					return
+				}
+				if err := tsNode.Serve(handler); err != nil {
+					cmdLogger.Error("tailscale serve loop exited", "error", err)
+				}
+			}()
+		}
 		// 5. Create HTTP Server
 		server := &http.Server{
 			Addr:              ":" + listenPort,
