@@ -36,6 +36,10 @@ This document details the procedure and requirements to deploy the `dmanager` ap
 | `webauthn.rp_id` | `DMANAGER_WEBAUTHN_RP_ID` | `""` | Relying Party ID for passkeys (domain without port). |
 | `webauthn.origins` | `DMANAGER_WEBAUTHN_ORIGINS` | `[]` | Allowed origins (scheme+host+port) authorized for passkeys. |
 | `webauthn.require_user_verification` | `DMANAGER_WEBAUTHN_REQUIRE_USER_VERIFICATION` | `preferred` | User verification policy (`preferred` or `required`). |
+| `tailscale.auth_key` | `DMANAGER_TAILSCALE_AUTHKEY` / `TAILSCALE_AUTHKEY` | `""` | Tailscale auth key. The embedded tailnet node is enabled iff non-empty. |
+| `tailscale.hostname` | `DMANAGER_TAILSCALE_HOSTNAME` / `TAILSCALE_HOSTNAME` | `dmanager` | MagicDNS hostname on the tailnet. |
+| `tailscale.state_dir` | `DMANAGER_TAILSCALE_STATE_DIR` / `TAILSCALE_STATE_DIR` | `<dirname of server.db_path>/tailscale` | Persistent node state directory (created `0700`). |
+| `tailscale.port` | `DMANAGER_TAILSCALE_PORT` / `TAILSCALE_PORT` | `80` | Tailnet-side port the web app is served on. |
 
 ### 2.2. Private Registry Configuration
 
@@ -56,6 +60,37 @@ DMANAGER_REGISTRIES_0_USERNAME=my-github-user
 DMANAGER_REGISTRIES_0_PASSWORD=ghp_securepersonaltoken
 ```
 
+### 2.3. Embedded Tailscale Node
+
+dmanager can embed a [Tailscale](https://tailscale.com) node (via `tsnet`) directly in the
+server process, making the web app reachable from your tailnet without published ports or a
+sidecar container. The feature is inert unless an auth key is configured. Full design:
+[docs/tailscale.md](file:///home/mechsoull/Projects/dmanager/docs/tailscale.md).
+
+```bash
+TAILSCALE_AUTHKEY=tskey-auth-xxxxxxxxxxxx-xxxxxxxxxxxxx
+# optional:
+TAILSCALE_HOSTNAME=dmanager
+TAILSCALE_STATE_DIR=/var/lib/dmanager/tailscale
+```
+
+Operational notes:
+
+- **Auth key lifecycle:** the key is consumed only on first registration. Once node state exists
+  in `state_dir`, restarts authenticate from persisted state — the env var may be removed after a
+  successful first start. Losing the state directory re-triggers registration and requires a
+  fresh key. An expired key plus existing state still boots.
+- **Persistence:** keep `state_dir` on the same volume as the SQLite database (the default derives it
+  from `server.db_path`, landing under `/var/lib/dmanager` in the standard Docker setup).
+- **Failure behavior:** if the node cannot start (invalid/expired key, control plane unreachable),
+  dmanager logs an error and keeps serving on the LAN — tailnet problems never block local access.
+- **Network requirements:** outbound HTTPS (control plane/DERP) and outbound UDP for direct
+  connections. No inbound ports, no `/dev/net/tun`, no extra container capabilities.
+- **Passkeys:** the tailnet listener serves plain HTTP in v1, so passkey registration/use from
+  tailnet clients is unavailable (browsers require a secure context); password login works normally.
+  HTTPS on the tailnet (`*.ts.net` certificates) is planned as a follow-up.
+- The state directory holds the node's private keys: treat it like the database (mounted volume,
+  `0700`).
 ---
 
 ## 3. Deployment Methods

@@ -6,4 +6,12 @@ docker:
   host: "unix:///var/run/docker.sock"
 scheduler:
   interval_minutes: 60
+# Embedded Tailscale node — enabled iff auth_key is set (docs/tailscale.md).
+# The state dir defaults to /var/lib/dmanager/tailscale (beside db_path).
+tailscale: {}
+# tailscale:
+#   auth_key: "tskey-auth-..."
+#   hostname: "dmanager"
+#   state_dir: "/var/lib/dmanager/tailscale"
+#   port: 80
 registries: []

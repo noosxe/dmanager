@@ -78,6 +78,9 @@ graph TD
     A70 --> A71["STORY-071: Audit Logs — Mutation & System-Action Trail (#219) (DONE)"]
     A71 --> A72["STORY-072: Audit Retention — Days-Based, Admin-Configurable (#222) (DONE)"]
     A72 --> A73["STORY-073: SMTP Email Delivery — Relay Config, Mailer Package, Test CLI (#226) (DONE)"]
+    A73 --> A74["STORY-074: Tailscale Config Plumbing — Struct, Env Aliases, Validation (DONE)"]
+    A74 --> A75["STORY-075: Embedded Node Lifecycle — internal/tailscale, Serve Wiring (DONE)"]
+    A75 --> A76["STORY-076: Tailscale Deployment & Security Docs (DONE)"]
 ```
 
 
@@ -1576,3 +1579,47 @@ graph TD
   - **No-op mailer over nil**: `Mailer.Enabled()` + `NoopMailer` let consumer stories skip expensive work and degrade to debug logs without branching on configuration.
   - **Single synchronous attempt, no queue/retry**: failure policy is per-consumer; queue/retry infra is only worth building once a real consumer needs it.
   - **Library over stdlib `net/smtp`**: wneessen/go-mail handles MIME, UTF-8, header encoding, AUTH and all TLS modes; hand-rolling headers is the classic injection hole.
+
+### STORY-074: Tailscale Config Plumbing — Struct, Env Aliases, Validation [DONE]
+
+**Goal:** Introduce the `tailscale` configuration section that gates the embedded tailnet node: a `TailscaleConfig` struct with koanf defaults, `DMANAGER_TAILSCALE_*` env support plus bare `TAILSCALE_AUTHKEY` / `TAILSCALE_HOSTNAME` / `TAILSCALE_STATE_DIR` / `TAILSCALE_PORT` aliases, state-dir derivation from `db_path`, and validation that stays inert while no auth key is set (docs/tailscale.md §9 decisions Q1/Q3/Q9/Q10).
+
+**Tasks:**
+  1. `internal/config`: `TailscaleConfig` struct (`auth_key`, `hostname`, `state_dir`, `port`), defaults (`dmanager`, derived state dir, port 80), `tailscale_` branch in the koanf env transform with the `authkey → auth_key` key mapping, `applyTailscaleEnvAliases` post-processing (prefixed > bare > YAML), state-dir defaulting to `<dirname(db_path)>/tailscale`, `TailscaleConfig.Validate` (MagicDNS hostname rules, port range, dedicated non-root state dir).
+  2. Tests: defaults incl. derived state dir, YAML section, bare env aliases, prefixed-beats-bare precedence, state-dir derivation from `db_path`, invalid bare port error, validation matrix (hostname/port/state-dir rules, inert-while-disabled).
+- **Files Affected:** `internal/config/config.go` (+ test), `docs/deployment.md` (config table rows).
+- **Validation Check:** `go test ./internal/config/...` passes; `gofmt` clean.
+- **Decisions:**
+  - **Auth key as the single gate** (no `enabled` flag): mirrors how the section's emptiness is itself the switch, like SMTP's inverted inertness rule.
+  - **Both env spellings:** `DMANAGER_TAILSCALE_AUTHKEY` (project convention) wins over the spec's bare `TAILSCALE_AUTHKEY`; `TS_AUTHKEY` deliberately unsupported so tsnet never reads env implicitly.
+  - **Derived state dir:** sibling of `db_path` puts node state on the same volume as the database in every standard deployment without new config surface.
+
+### STORY-075: Embedded Node Lifecycle — internal/tailscale, Serve Wiring [DONE]
+
+**Goal:** Embed a tsnet node in the serve process: a thin `internal/tailscale.Node` wrapper owning `Up`/`Listen`/`Close`, wired into `cmd/serve.go` so the identical handler tree (CORS + auth interceptors + SPA) is served on a tailnet listener alongside the LAN listener, with degraded-mode failure handling and ordered graceful shutdown (docs/tailscale.md §3, decision Q2).
+
+**Tasks:**
+  1. `internal/tailscale`: `New` (explicit `AuthKey`/`Hostname`/`Dir`, `UserLogf → Info`, `Logf → Debug`), `Start` (0700 state dir, `Up` with identity logging: IPs/DNS name/cert domains), `Serve` (tailnet `Listen` + `http.Serve`, shutdown-caused errors swallowed), idempotent `Close` guarded against tsnet's panic on never-started servers.
+  2. `cmd/serve.go`: gate on non-empty auth key, background goroutine with 60s `Up` timeout, error log + LAN continues on failure, `defer Close` ordered after the HTTP drain; `tailscale.com` v1.102.4 dependency added.
+  3. Tests: tsnet field wiring, unusable-state-dir failure, idempotent Close.
+- **Files Affected:** `internal/tailscale/tailscale.go` (+ test), `cmd/serve.go`, `go.mod` / `go.sum`.
+- **Validation Check:** `go build ./...`, `go test ./...` pass; CGO-free static build succeeds; manual smoke test — bogus auth key yields `tailscale node failed to start; tailnet access disabled` error log while LAN keeps serving HTTP 200, state dir created 0700, SIGTERM drains WireGuard cleanly.
+- **Decisions:**
+  - **Degraded, single-attempt startup:** tailnet/control-plane failure must never block local management; retry-with-backoff deferred until a real flapping scenario demands it.
+  - **Serve the shared handler, not a proxy:** the tailnet listener runs the exact same `http.Handler` value as the LAN server — zero drift between network paths.
+  - **Defensive Close:** tsnet panics closing a never-started server; the wrapper treats never-started close as a no-op and recovers panics from half-built backends so shutdown can never crash the process.
+  - **`status.Self.DNSName` for the identity log:** `ipnstate.Status` no longer carries a top-level DNS name in current tsnet.
+
+### STORY-076: Tailscale Deployment & Security Docs [DONE]
+
+**Goal:** Document the feature end to end: config reference rows, an operational Tailscale section in the deployment guide, compose/rootfs examples, security-model additions, README feature bullet, and story records.
+
+**Tasks:**
+  1. `docs/deployment.md`: four config table rows (both env spellings) + §2.3 operational notes (key lifecycle, persistence, failure behavior, network requirements, passkey limitation, state-dir sensitivity).
+  2. `rootfs/etc/dmanager/config.yaml`: `tailscale: {}` section with commented keys; `docker-compose.yml`: commented `TAILSCALE_AUTHKEY` example.
+  3. `docs/security.md`: new §5 (network exposure model: no auth bypass, key handling, state dir, no funnel, failure containment), checklist renumbered to §6 with a secrets-never-logged item; `README.md` feature bullet; `docs/tailscale.md` status + story markers.
+- **Files Affected:** `docs/deployment.md`, `docs/security.md`, `docs/stories.md`, `docs/tailscale.md`, `README.md`, `docker-compose.yml`, `rootfs/etc/dmanager/config.yaml`.
+- **Validation Check:** doc-only story — links resolve, env names match `internal/config` implementation.
+- **Decisions:**
+  - **Passkey limitation documented, not solved:** plain HTTP on the tailnet blocks passkey use from tailnet clients; HTTPS via `ListenTLS` stays a separate follow-up story (STORY-077) so v1 ships small.
+  - **Key lifecycle is the operator footgun:** the docs emphasize that the auth key is only needed for first registration and that state-dir loss re-triggers registration.

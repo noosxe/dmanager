@@ -123,7 +123,28 @@ The system supports two user roles:
 
 ---
 
-## 5. Security Checklists for Code Review
+## 5. Network Exposure & Embedded Tailscale Node
+
+The optional embedded Tailscale node (`tsnet`, see docs/tailscale.md) adds a second network path
+to the identical HTTP handler tree. It changes **where** packets can arrive, never **who** the
+application trusts:
+
+- **No auth bypass.** Tailnet requests traverse the same session-cookie auth interceptor, RBAC
+  (admin/viewer), rate limiting, and audit logging as LAN requests. Tailnet identity restricts
+  reachability at the network layer only.
+- **Auth key handling.** The key is read from env/YAML, held in memory, never logged, and never
+  exposed via RPC or the settings service. Treat it as equivalent to a node invitation; env vars
+  are recommended over YAML for compose deployments.
+- **State directory.** `tailscale.state_dir` (default `/var/lib/dmanager/tailscale`) stores the
+  node's WireGuard private key and machine identity with `0700` permissions — same sensitivity
+  class as the SQLite database.
+- **Funnel is not wired.** No code path exposes the tailnet listener to the public internet.
+- **Failure containment.** A node that cannot start degrades to LAN-only operation with an error
+  log; tailnet outages cannot render the manager unreachable.
+
+---
+
+## 6. Security Checklists for Code Review
 
 Before committing any feature branch, verify the following checks:
 
@@ -135,6 +156,7 @@ Before committing any feature branch, verify the following checks:
 - [ ] Admin actions explicitly check that `User.Role == "admin"` and reject unauthorized users with `PermissionDenied`.
 - [ ] SetupAdmin checks `CountUsers` first.
 - [ ] Static security checks pass: `golangci-lint run` (specifically runs `gosec`).
+- [ ] Secrets (passwords, registry tokens, SMTP credentials, Tailscale auth key) are never written to logs or returned in RPC responses.
 
 ### Frontend (Security Checklist)
 - [ ] Cookies are managed entirely via backend `HttpOnly` flags (no manual token reads in client javascript).
