@@ -26,6 +26,12 @@ services:
       # - DMANAGER_REGISTRIES_0_HOST=ghcr.io
       # - DMANAGER_REGISTRIES_0_USERNAME=myuser
       # - DMANAGER_REGISTRIES_0_PASSWORD=mypassword
+      # Embedded Tailscale node (docs/tailscale.md): set an auth key to serve
+      # dmanager directly on your tailnet — no published ports needed.
+      # Node state persists under /var/lib/dmanager/tailscale (same volume
+      # as the database), so the key is only needed for the first start.
+      # - TAILSCALE_AUTHKEY=tskey-auth-xxxxxxxxxxxx-xxxxxxxxxxxxx
+      # - TAILSCALE_HOSTNAME=dmanager
 
 volumes:
   dmanager-data:

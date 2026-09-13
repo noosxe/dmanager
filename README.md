@@ -14,6 +14,7 @@ Written by AI, tested and used by humans.
 - **Auto-Update** — optional per-container automatic re-deployment preserving all configuration
 - **Private Registry Support** — authenticate against private registries (GHCR, Docker Hub, etc.)
 - **Gotify Notifications** — receive push notifications for update events and failures
+- **Embedded Tailscale Node** — optional built-in tailnet access (`TAILSCALE_AUTHKEY`): manage dmanager from anywhere in your tailnet with no published ports and no sidecar container
 - **System Logs** — browse structured backend logs directly in the UI
 - **Authentication & Passkeys** — secure session-based authentication with role-based access control (admin / viewer), discoverable WebAuthn passkeys (Touch ID, Windows Hello, Face ID, hardware security keys), NIST password policy, login rate limiting, session management, and auth audit logging
 
