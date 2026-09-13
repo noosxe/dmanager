@@ -81,10 +81,11 @@ type WebAuthnConfig struct {
 // TailscaleConfig configures the embedded tsnet node (see docs/tailscale.md).
 // The whole section is inert while AuthKey is empty.
 type TailscaleConfig struct {
-	AuthKey  string `koanf:"auth_key"`
-	Hostname string `koanf:"hostname"`
-	StateDir string `koanf:"state_dir"`
-	Port     int    `koanf:"port"`
+	AuthKey      string `koanf:"auth_key"`
+	Hostname     string `koanf:"hostname"`
+	StateDir     string `koanf:"state_dir"`
+	Port         int    `koanf:"port"`
+	HTTPSEnabled bool   `koanf:"https_enabled"`
 }
 
 type Config struct {
@@ -246,6 +247,7 @@ func Load(configPath string) (*Config, error) {
 		"smtp.timeout_seconds":               15,
 		"tailscale.hostname":                 "dmanager",
 		"tailscale.port":                     80,
+		"tailscale.https_enabled":            false,
 	}
 	if err := k.Load(confmap.Provider(defaults, "."), nil); err != nil {
 		return nil, fmt.Errorf("failed to load default configuration: %w", err)
@@ -427,6 +429,13 @@ func applyTailscaleEnvAliases(cfg *Config) error {
 			return fmt.Errorf("invalid TAILSCALE_PORT value %q: must be a port number", v)
 		}
 		cfg.Tailscale.Port = p
+	}
+	if v := strings.TrimSpace(os.Getenv("TAILSCALE_HTTPS_ENABLED")); v != "" && os.Getenv("DMANAGER_TAILSCALE_HTTPS_ENABLED") == "" {
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			return fmt.Errorf("invalid TAILSCALE_HTTPS_ENABLED value %q: must be a boolean", v)
+		}
+		cfg.Tailscale.HTTPSEnabled = b
 	}
 	return nil
 }

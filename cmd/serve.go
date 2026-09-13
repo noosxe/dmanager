@@ -249,6 +249,13 @@ var serveCmd = &cobra.Command{
 					cmdLogger.Error("tailscale node failed to start; tailnet access disabled", "error", err)
 					return
 				}
+				if cfg.Tailscale.HTTPSEnabled {
+					go func() {
+						if err := tsNode.ServeHTTPS(handler); err != nil {
+							cmdLogger.Error("tailscale HTTPS serve loop exited", "error", err)
+						}
+					}()
+				}
 				if err := tsNode.Serve(handler); err != nil {
 					cmdLogger.Error("tailscale serve loop exited", "error", err)
 				}

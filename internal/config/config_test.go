@@ -457,6 +457,9 @@ func TestConfigTailscaleDefaults(t *testing.T) {
 	if cfg.Tailscale.Port != 80 {
 		t.Errorf("expected default tailscale.port 80, got %d", cfg.Tailscale.Port)
 	}
+	if cfg.Tailscale.HTTPSEnabled {
+		t.Error("expected default tailscale.https_enabled false")
+	}
 	// The state dir derives from the default db_path ("dmanager.db") whose
 	// directory is the working directory.
 	if cfg.Tailscale.StateDir != "tailscale" {
@@ -475,6 +478,7 @@ tailscale:
   hostname: "dm-yaml"
   state_dir: "/var/lib/tsnet-state"
   port: 9283
+  https_enabled: true
 `
 	if err := os.WriteFile(yamlPath, []byte(content), 0600); err != nil {
 		t.Fatalf("failed to write test yaml: %v", err)
@@ -497,6 +501,9 @@ tailscale:
 	if cfg.Tailscale.Port != 9283 {
 		t.Errorf("expected tailscale.port 9283, got %d", cfg.Tailscale.Port)
 	}
+	if !cfg.Tailscale.HTTPSEnabled {
+		t.Error("expected tailscale.https_enabled true")
+	}
 }
 
 func TestConfigTailscaleBareEnvAliases(t *testing.T) {
@@ -504,6 +511,7 @@ func TestConfigTailscaleBareEnvAliases(t *testing.T) {
 	t.Setenv("TAILSCALE_HOSTNAME", "dm-bare")
 	t.Setenv("TAILSCALE_STATE_DIR", "/tmp/dm-bare-state")
 	t.Setenv("TAILSCALE_PORT", "9000")
+	t.Setenv("TAILSCALE_HTTPS_ENABLED", "true")
 
 	cfg, err := Load("")
 	if err != nil {
@@ -522,13 +530,18 @@ func TestConfigTailscaleBareEnvAliases(t *testing.T) {
 	if cfg.Tailscale.Port != 9000 {
 		t.Errorf("expected bare-env port 9000, got %d", cfg.Tailscale.Port)
 	}
+	if !cfg.Tailscale.HTTPSEnabled {
+		t.Error("expected bare-env https_enabled true")
+	}
 }
 
 func TestConfigTailscalePrefixedEnvBeatsBare(t *testing.T) {
 	t.Setenv("DMANAGER_TAILSCALE_AUTHKEY", "tskey-auth-prefixed")
 	t.Setenv("DMANAGER_TAILSCALE_HOSTNAME", "dm-prefixed")
+	t.Setenv("DMANAGER_TAILSCALE_HTTPS_ENABLED", "true")
 	t.Setenv("TAILSCALE_AUTHKEY", "tskey-auth-bare")
 	t.Setenv("TAILSCALE_HOSTNAME", "dm-bare")
+	t.Setenv("TAILSCALE_HTTPS_ENABLED", "false")
 
 	cfg, err := Load("")
 	if err != nil {
@@ -540,6 +553,9 @@ func TestConfigTailscalePrefixedEnvBeatsBare(t *testing.T) {
 	}
 	if cfg.Tailscale.Hostname != "dm-prefixed" {
 		t.Errorf("expected prefixed hostname to win, got %q", cfg.Tailscale.Hostname)
+	}
+	if !cfg.Tailscale.HTTPSEnabled {
+		t.Error("expected prefixed https_enabled true to win over bare false")
 	}
 }
 
@@ -573,6 +589,15 @@ func TestConfigTailscaleInvalidBarePort(t *testing.T) {
 
 	if _, err := Load(""); err == nil || !strings.Contains(err.Error(), "TAILSCALE_PORT") {
 		t.Errorf("expected TAILSCALE_PORT parse error, got %v", err)
+	}
+}
+
+func TestConfigTailscaleInvalidBareHTTPSEnabled(t *testing.T) {
+	t.Setenv("TAILSCALE_AUTHKEY", "tskey-auth-bare")
+	t.Setenv("TAILSCALE_HTTPS_ENABLED", "yes-please")
+
+	if _, err := Load(""); err == nil || !strings.Contains(err.Error(), "TAILSCALE_HTTPS_ENABLED") {
+		t.Errorf("expected TAILSCALE_HTTPS_ENABLED parse error, got %v", err)
 	}
 }
 

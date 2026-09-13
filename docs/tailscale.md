@@ -273,8 +273,9 @@ Following the repo's bite-sized story convention (next free number: 074):
   serve.go wiring, degraded-mode logging, shutdown ordering, unit tests, `go.mod` addition.
 - **STORY-076 — Deployment & security docs (DONE).** Compose example, rootfs config section, security doc
   additions (§5), README feature bullet, manual validation checklist.
-- **STORY-077 (follow-up, gated on §9 Q4) — Tailnet HTTPS.** `ListenTLS` listener,
-  `X-Forwarded-Proto` middleware, webauthn origins guidance.
+- **STORY-077 — Tailnet HTTPS (DONE).** `ListenTLS` listener (`tailscale.https_enabled`, opt-in,
+  plain HTTP keeps running), `X-Forwarded-Proto` middleware (forced server-side, `Set` not `Add`),
+  webauthn origins guidance in `docs/deployment.md` §2.3.
 - **STORY-078 (follow-up, gated on §9 Q8) — Node status in Admin API/UI.** Surface IPs, DNS name,
   connection state via AdminService.
 
@@ -289,7 +290,7 @@ All open questions from the initial draft have been resolved; recommendations ad
 | Q1 | Env var naming | `DMANAGER_TAILSCALE_*` canonical; bare `TAILSCALE_AUTHKEY` / `TAILSCALE_HOSTNAME` / `TAILSCALE_STATE_DIR` / `TAILSCALE_PORT` accepted as aliases. Prefixed wins over bare, bare wins over YAML. |
 | Q2 | Startup failure policy | Degraded mode: single attempt, error log, LAN-only operation continues. No retry loop in v1. |
 | Q3 | Tailnet listen port | Default `80`, configurable via `tailscale.port`. |
-| Q4 | HTTPS on tailnet | Follow-up (STORY-077), not v1. Plain HTTP on tailnet; passkey limitation documented. |
+| Q4 | HTTPS on tailnet | Shipped as STORY-077: opt-in `tailscale.https_enabled` serves HTTPS on 443 next to plain HTTP; passkeys work over the `https://*.ts.net` origin. |
 | Q5 | Ephemeral node mode | Not supported in v1. |
 | Q6 | Headscale support | Defer; no `control_url` in v1. |
 | Q7 | Tailnet-only hardening | Defer; operators unpublish the Docker port if desired. |

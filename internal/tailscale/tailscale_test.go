@@ -4,6 +4,8 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -80,5 +82,29 @@ func TestCloseIsIdempotent(t *testing.T) {
 	}
 	if err := node.Close(); err != nil {
 		t.Errorf("second Close must not report an error, got %v", err)
+	}
+}
+
+func TestForwardedProtoHTTPSForcesHeader(t *testing.T) {
+	var seen string
+	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		seen = r.Header.Get("X-Forwarded-Proto")
+		w.WriteHeader(http.StatusOK)
+	})
+
+	// A spoofed inbound value must not survive: on the TLS listener https
+	// is the truth, so Set overwrites whatever the client sent.
+	h := forwardedProtoHTTPS(inner)
+	req := httptest.NewRequest(http.MethodGet, "http://dmanager.example/v1/whoami", nil)
+	req.Header.Set("X-Forwarded-Proto", "http")
+	w := httptest.NewRecorder()
+
+	h.ServeHTTP(w, req)
+
+	if seen != "https" {
+		t.Errorf("expected X-Forwarded-Proto forced to https, got %q", seen)
+	}
+	if w.Code != http.StatusOK {
+		t.Errorf("expected inner handler to run, got status %d", w.Code)
 	}
 }

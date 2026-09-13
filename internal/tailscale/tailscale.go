@@ -119,6 +119,45 @@ func (n *Node) Serve(h http.Handler) error {
 	return nil
 }
 
+// forwardedProtoHTTPS forces X-Forwarded-Proto: https on requests that
+// arrived over the tailnet TLS listener. tsnet terminates TLS in-process,
+// so requests reach the handler stack without the header; auth.secure_cookies
+// in auto mode keys off it to set the Secure cookie attribute. Set (not Add)
+// overwrites any client-supplied value — on this listener https is the truth.
+func forwardedProtoHTTPS(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.Header.Set("X-Forwarded-Proto", "https")
+		h.ServeHTTP(w, r)
+	})
+}
+
+// ServeHTTPS listens on the tailnet's TLS port (443) and serves h wrapped
+// in the X-Forwarded-Proto middleware until the listener closes. It
+// requires HTTPS certificates and MagicDNS to be enabled on the tailnet;
+// without them, certificate provisioning fails and TLS handshakes time out.
+// It is intended to run in its own goroutine. Errors caused by a concurrent
+// Close are not reported.
+func (n *Node) ServeHTTPS(h http.Handler) error {
+	ln, err := n.srv.ListenTLS("tcp", ":443")
+	if err != nil {
+		if n.closing.Load() {
+			return nil
+		}
+		return fmt.Errorf("tailscale TLS listen failed: %w", err)
+	}
+	n.logger.Info("serving dmanager on tailnet over HTTPS", "port", 443)
+
+	srv := &http.Server{
+		Handler:           forwardedProtoHTTPS(h),
+		ReadHeaderTimeout: 10 * time.Second,
+		IdleTimeout:       30 * time.Second,
+	}
+	if err := srv.Serve(ln); err != nil && !n.closing.Load() {
+		return fmt.Errorf("tailscale HTTPS serve loop failed: %w", err)
+	}
+	return nil
+}
+
 // Close stops the node and releases all of its resources. It is idempotent;
 // repeated calls return nil (unlike the underlying tsnet server, which
 // reports net.ErrClosed on double close). Closing a node that never started
