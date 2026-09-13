@@ -20,6 +20,7 @@ import type { BuildCacheRecord } from "../gen/proto/dmanager/v1/admin_pb";
 import type { AdminResourceKind } from "../hooks/useAdminResources";
 import { useAdminResources } from "../hooks/useAdminResources";
 import { useAuth } from "../hooks/useAuth";
+import { useTailscaleStatus } from "../hooks/useTailscaleStatus";
 import { deriveImageStats, formatBytes, formatShortId } from "./adminFormat";
 import { Builder } from "./Builder";
 import { BuilderRecords } from "./BuilderRecords";
@@ -27,6 +28,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { ImageTable } from "./ImageTable";
 import { NetworkTable } from "./NetworkTable";
 import { PageTabs, type PageTabItem } from "./PageTabs";
+import { TailscaleStatusCard } from "./TailscaleStatusCard";
 import { VolumeTable } from "./VolumeTable";
 
 // Administration page: Docker host resource inventories (images,
@@ -68,6 +70,7 @@ export function Administration() {
     deleteNetwork,
     deletingNetworkId,
   } = useAdminResources(tab);
+  const tailscaleStatus = useTailscaleStatus();
   // Derived Images-tab summary (design.md §9.6); null on other tabs or
 
   // The prune confirmation is armed by the actions-row buttons (#196/#203); the
@@ -160,6 +163,7 @@ export function Administration() {
         </button>
       </div>
 
+      <TailscaleStatusCard status={tailscaleStatus} />
       <PageTabs tabs={adminTabs} />
 
       {tab === "images" && (

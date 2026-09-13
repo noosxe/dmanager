@@ -146,6 +146,9 @@ application trusts:
   `X-Forwarded-Proto: https` server-side via middleware — `Set`, never `Add` — so tailnet peers
   cannot spoof the header to influence `secure_cookies: auto`; on that listener https is the
   only truth. Tailnet-scoped TLS keys live in `state_dir` alongside the node identity.
+- **Status exposure is identity-only.** `AdminService.GetTailscaleStatus` (any authenticated role)
+  reports lifecycle state, DNS name, IPs, ports, and key expiry — data already printed to startup
+  logs. It never returns the auth key, node private keys, or peer lists.
 
 ---
 

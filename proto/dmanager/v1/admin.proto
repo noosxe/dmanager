@@ -80,6 +80,14 @@ service AdminService {
   // the outage is the answer, not an RPC failure (design.md §10.2).
   rpc CheckEngine(CheckEngineRequest) returns (CheckEngineResponse);
 
+
+  // Report the embedded Tailscale node's status (Authenticated, any role):
+  // lifecycle state, tailnet identity (DNS name, IPs, cert domains) and
+  // node key expiry, so operators can see tailnet health and key-expiry
+  // warnings without reading server logs (docs/tailscale.md §9 Q8/Q11).
+  // Outage-not-error semantics mirror CheckEngine: when the feature is
+  // disabled the response says enabled=false instead of failing.
+  rpc GetTailscaleStatus(GetTailscaleStatusRequest) returns (GetTailscaleStatusResponse);
   // Review the audit trail (Authenticated, admin role): recorded mutation
   // outcomes by users and system-originated automatic updates, filtered and
   // paginated server-side. Entries are written by the server, never by RPC.
@@ -307,6 +315,52 @@ message CheckEngineResponse {
   bool connected = 1;    // true when the daemon answered the ping
   string api_version = 2; // daemon API version, e.g. "1.51"
   string error = 3;       // short reason when connected is false, empty otherwise
+}
+
+message GetTailscaleStatusRequest {}
+
+message GetTailscaleStatusResponse {
+  // false when no auth key is configured — the whole feature is inert.
+  bool enabled = 1;
+
+  // Lifecycle state of the embedded node:
+  //   "starting" — connecting to the tailnet (or not yet attempted)
+  //   "running"  — connected; backend_state carries the live ipn state
+  //   "failed"   — startup failed (invalid/expired key, control plane
+  //                unreachable); LAN operation continues (degraded mode)
+  string state = 2;
+
+  // Live backend state from the node's local API when reachable
+  // (e.g. "Running", "NeedsLogin"); empty when it could not be probed.
+  string backend_state = 3;
+
+  // Configured MagicDNS hostname (tailscale.hostname).
+  string hostname = 4;
+
+  // Full MagicDNS name on the tailnet (e.g. "dmanager.tail1234.ts.net");
+  // empty until the node has connected at least once.
+  string dns_name = 5;
+
+  // Tailnet IP addresses assigned to the node (100.x.y.z and/or fd7a:...).
+  repeated string ips = 6;
+
+  // Port the plain-HTTP tailnet listener serves on (tailscale.port).
+  int32 port = 7;
+
+  // Whether the HTTPS listener (tailnet port 443) is enabled.
+  bool https_enabled = 8;
+
+  // Certificate domains provisioned for the node ("<name>.ts.net") —
+  // present when HTTPS certificates are enabled on the tailnet.
+  repeated string cert_domains = 9;
+
+  // When the node's key expires (key re-registration needed); unset
+  // when the key does not expire.
+  google.protobuf.Timestamp key_expiry = 10;
+
+  // Short reason detail when state is "failed", or when the live status
+  // probe failed and the reported values are the last known ones.
+  string error = 11;
 }
 
 message GetVolumeUsageRequest {}

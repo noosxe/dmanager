@@ -9,14 +9,15 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"tailscale.com/tsnet"
-
 	"dmanager/internal/config"
+	"tailscale.com/ipn/ipnstate"
+	"tailscale.com/tsnet"
 )
 
 // Node owns the embedded tsnet lifecycle for one dmanager process.
@@ -25,10 +26,23 @@ type Node struct {
 	port   int
 	logger *slog.Logger
 
+	hostname     string
+	httpsEnabled bool
+
 	closing   atomic.Bool
 	started   atomic.Bool
 	closeOnce sync.Once
 	closeErr  error
+
+	// mu guards the status fields below, written by the Start goroutine
+	// and the Snapshot probe, read by Snapshot from RPC handlers.
+	mu           sync.Mutex
+	startErr     error
+	backendState string
+	dnsName      string
+	ips          []string
+	certDomains  []string
+	keyExpiry    time.Time // zero = no expiry known
 }
 
 // New constructs an unstarted node from the resolved configuration. All
@@ -50,9 +64,11 @@ func New(cfg config.TailscaleConfig, logger *slog.Logger) *Node {
 		logger.Debug(fmt.Sprintf(format, args...))
 	}
 	return &Node{
-		srv:    srv,
-		port:   cfg.Port,
-		logger: logger,
+		srv:          srv,
+		port:         cfg.Port,
+		logger:       logger,
+		hostname:     cfg.Hostname,
+		httpsEnabled: cfg.HTTPSEnabled,
 	}
 }
 
@@ -74,13 +90,15 @@ func (n *Node) Start(ctx context.Context) error {
 
 	status, err := n.srv.Up(ctx)
 	if err != nil {
-		return fmt.Errorf("tailscale node failed to connect: %w", err)
+		err = fmt.Errorf("tailscale node failed to connect: %w", err)
+		n.mu.Lock()
+		n.startErr = err
+		n.mu.Unlock()
+		return err
 	}
+	n.cacheStatus(status)
 
-	ips := make([]string, 0, len(status.TailscaleIPs))
-	for _, ip := range status.TailscaleIPs {
-		ips = append(ips, ip.String())
-	}
+	ips := statusIPs(status)
 	attrs := []any{"ips", ips, "state", status.BackendState}
 	if status.Self != nil {
 		if dnsName := strings.TrimSuffix(status.Self.DNSName, "."); dnsName != "" {
@@ -92,6 +110,118 @@ func (n *Node) Start(ctx context.Context) error {
 	}
 	n.logger.Info("tailscale node online", attrs...)
 	return nil
+}
+
+// Node lifecycle states reported by Snapshot.
+const (
+	// StateDisabled is reported by a nil Node — feature inert (no auth key).
+	StateDisabled = "disabled"
+	// StateStarting covers a constructed node whose Start has not returned yet.
+	StateStarting = "starting"
+	// StateRunning marks a node that connected; BackendState carries live detail.
+	StateRunning = "running"
+	// StateFailed marks a node whose Start returned an error (degraded mode).
+	StateFailed = "failed"
+)
+
+// Snapshot is a point-in-time status of the embedded node, shaped for the
+// AdminService status RPC (docs/tailscale.md §9 Q8/Q11). It never contains
+// key material — only identity and health data already exposed in logs.
+type Snapshot struct {
+	Enabled      bool
+	State        string // one of the State* constants
+	BackendState string // live ipn state, e.g. "Running"; empty when unprobed
+	Hostname     string
+	DNSName      string // full MagicDNS name, no trailing dot; empty pre-connect
+	IPs          []string
+	Port         int
+	HTTPSEnabled bool
+	CertDomains  []string
+	KeyExpiry    time.Time // zero = no expiry known
+	Err          string    // failure detail; empty when healthy
+}
+
+// Snapshot returns the node's current status. It is safe to call on a nil
+// Node (reports the disabled state), concurrently from RPC handlers, and at
+// any lifecycle stage. A live probe via the node's local API refreshes the
+// cached identity fields when reachable; on probe failure the last known
+// values are returned with Err set. Callers bound the probe via ctx.
+func (n *Node) Snapshot(ctx context.Context) Snapshot {
+	if n == nil {
+		return Snapshot{Enabled: false, State: StateDisabled}
+	}
+	snap := Snapshot{
+		Enabled:      true,
+		Hostname:     n.hostname,
+		Port:         n.port,
+		HTTPSEnabled: n.httpsEnabled,
+	}
+	if !n.started.Load() {
+		snap.State = StateStarting
+		return snap
+	}
+
+	n.mu.Lock()
+	if n.startErr != nil {
+		err := n.startErr.Error()
+		n.mu.Unlock()
+		snap.State = StateFailed
+		snap.Err = err
+		return snap
+	}
+	n.mu.Unlock()
+	snap.State = StateRunning
+
+	// Best-effort live refresh; falls back to the values cached at Start.
+	st, probeErr := n.probeStatus(ctx)
+	if probeErr == nil {
+		n.cacheStatus(st)
+	} else {
+		snap.Err = "live status unavailable: " + probeErr.Error()
+	}
+
+	n.mu.Lock()
+	snap.BackendState = n.backendState
+	snap.DNSName = n.dnsName
+	snap.IPs = slices.Clone(n.ips)
+	snap.CertDomains = slices.Clone(n.certDomains)
+	snap.KeyExpiry = n.keyExpiry
+	n.mu.Unlock()
+	return snap
+}
+
+func statusIPs(st *ipnstate.Status) []string {
+	ips := make([]string, 0, len(st.TailscaleIPs))
+	for _, ip := range st.TailscaleIPs {
+		ips = append(ips, ip.String())
+	}
+	return ips
+}
+
+// cacheStatus refreshes the identity fields cached for Snapshot from a
+// status result obtained via Up or the live local-API probe.
+func (n *Node) cacheStatus(st *ipnstate.Status) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	n.backendState = st.BackendState
+	n.ips = statusIPs(st)
+	if st.Self != nil {
+		n.dnsName = strings.TrimSuffix(st.Self.DNSName, ".")
+		if st.Self.KeyExpiry != nil {
+			n.keyExpiry = *st.Self.KeyExpiry
+		}
+	}
+	n.certDomains = st.CertDomains
+}
+
+// probeStatus queries the node's local API for the live backend state.
+// It fails when the node never fully initialized or is being torn down.
+func (n *Node) probeStatus(ctx context.Context) (*ipnstate.Status, error) {
+	lc, err := n.srv.LocalClient()
+	if err != nil {
+		return nil, err
+	}
+	return lc.Status(ctx)
 }
 
 // Serve listens on the tailnet-side port and serves h until the listener

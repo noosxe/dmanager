@@ -108,3 +108,70 @@ func TestForwardedProtoHTTPSForcesHeader(t *testing.T) {
 		t.Errorf("expected inner handler to run, got status %d", w.Code)
 	}
 }
+
+func TestSnapshotNilNode(t *testing.T) {
+	// The disabled-feature case: serve.go passes the nil *Node straight
+	// through the admin status source interface.
+	var node *Node
+	snap := node.Snapshot(context.Background())
+	if snap.Enabled {
+		t.Error("expected nil node to report disabled")
+	}
+	if snap.State != StateDisabled {
+		t.Errorf("expected state %q, got %q", StateDisabled, snap.State)
+	}
+}
+
+func TestSnapshotUnstartedNode(t *testing.T) {
+	node := New(config.TailscaleConfig{
+		AuthKey:      testAuthKey,
+		Hostname:     testHostname,
+		Port:         8080,
+		HTTPSEnabled: true,
+	}, testLogger())
+
+	snap := node.Snapshot(context.Background())
+	if !snap.Enabled {
+		t.Error("expected constructed node to report enabled")
+	}
+	if snap.State != StateStarting {
+		t.Errorf("expected state %q before Start returns, got %q", StateStarting, snap.State)
+	}
+	if snap.Hostname != testHostname {
+		t.Errorf("expected hostname %q, got %q", testHostname, snap.Hostname)
+	}
+	if snap.Port != 8080 {
+		t.Errorf("expected port 8080, got %d", snap.Port)
+	}
+	if !snap.HTTPSEnabled {
+		t.Error("expected https_enabled true")
+	}
+}
+
+func TestSnapshotFailedStart(t *testing.T) {
+	node := New(config.TailscaleConfig{
+		AuthKey:      testAuthKey,
+		Hostname:     testHostname,
+		StateDir:     filepath.Join(t.TempDir(), "state"),
+		HTTPSEnabled: false,
+	}, testLogger())
+
+	// A pre-cancelled context makes Up fail immediately (degraded mode)
+	// without contacting any control plane.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := node.Start(ctx); err == nil {
+		t.Fatal("expected Start with cancelled context to fail")
+	}
+
+	snap := node.Snapshot(context.Background())
+	if snap.State != StateFailed {
+		t.Errorf("expected state %q, got %q", StateFailed, snap.State)
+	}
+	if snap.Err == "" {
+		t.Error("expected failure detail in Err")
+	}
+	if snap.Enabled != true {
+		t.Error("expected enabled true (auth key configured)")
+	}
+}

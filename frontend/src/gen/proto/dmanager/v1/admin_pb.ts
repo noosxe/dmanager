@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file proto/dmanager/v1/admin.proto.
  */
 export const file_proto_dmanager_v1_admin: GenFile = /*@__PURE__*/
-  fileDesc("Ch1wcm90by9kbWFuYWdlci92MS9hZG1pbi5wcm90bxILZG1hbmFnZXIudjEiEwoRTGlzdEltYWdlc1JlcXVlc3QiOAoSTGlzdEltYWdlc1Jlc3BvbnNlEiIKBmltYWdlcxgBIAMoCzISLmRtYW5hZ2VyLnYxLkltYWdlImoKBUltYWdlEgoKAmlkGAEgASgJEhEKCXJlcG9fdGFncxgCIAMoCRIUCgxjcmVhdGVkX3VuaXgYAyABKAMSEgoKc2l6ZV9ieXRlcxgEIAEoAxIYChBjb250YWluZXJzX2NvdW50GAUgASgDIhQKEkxpc3RWb2x1bWVzUmVxdWVzdCI7ChNMaXN0Vm9sdW1lc1Jlc3BvbnNlEiQKB3ZvbHVtZXMYASADKAsyEy5kbWFuYWdlci52MS5Wb2x1bWUiygEKBlZvbHVtZRIMCgRuYW1lGAEgASgJEg4KBmRyaXZlchgCIAEoCRISCgptb3VudHBvaW50GAMgASgJEi4KCmNyZWF0ZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi8KBmxhYmVscxgFIAMoCzIfLmRtYW5hZ2VyLnYxLlZvbHVtZS5MYWJlbHNFbnRyeRotCgtMYWJlbHNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIhUKE0xpc3ROZXR3b3Jrc1JlcXVlc3QiPgoUTGlzdE5ldHdvcmtzUmVzcG9uc2USJgoIbmV0d29ya3MYASADKAsyFC5kbWFuYWdlci52MS5OZXR3b3JrIrIBCgdOZXR3b3JrEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSDgoGZHJpdmVyGAMgASgJEg0KBXNjb3BlGAQgASgJEhAKCGludGVybmFsGAUgASgIEi4KCmNyZWF0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhgKEGNvbnRhaW5lcnNfY291bnQYByABKAMSEgoKcHJlZGVmaW5lZBgIIAEoCCIiChREZWxldGVOZXR3b3JrUmVxdWVzdBIKCgJpZBgBIAEoCSIXChVEZWxldGVOZXR3b3JrUmVzcG9uc2UiFgoUUHJ1bmVOZXR3b3Jrc1JlcXVlc3QiQAoVUHJ1bmVOZXR3b3Jrc1Jlc3BvbnNlEhgKEG5ldHdvcmtzX2RlbGV0ZWQYASABKAQSDQoFbmFtZXMYAiADKAkiLwoSRGVsZXRlSW1hZ2VSZXF1ZXN0EgoKAmlkGAEgASgJEg0KBWZvcmNlGAIgASgIIhUKE0RlbGV0ZUltYWdlUmVzcG9uc2UiKwoSUHJ1bmVJbWFnZXNSZXF1ZXN0EhUKDWRhbmdsaW5nX29ubHkYASABKAgiMAoLUHJ1bmVkSW1hZ2USDwoHZGVsZXRlZBgBIAEoCRIQCgh1bnRhZ2dlZBgCIAEoCSJgChNQcnVuZUltYWdlc1Jlc3BvbnNlEjAKDmltYWdlc19kZWxldGVkGAEgAygLMhguZG1hbmFnZXIudjEuUHJ1bmVkSW1hZ2USFwoPc3BhY2VfcmVjbGFpbWVkGAIgASgEIhsKGUdldEJ1aWxkQ2FjaGVTdGF0c1JlcXVlc3QieAoaR2V0QnVpbGRDYWNoZVN0YXRzUmVzcG9uc2USEwoLdG90YWxfYnl0ZXMYASABKAQSGQoRcmVjbGFpbWFibGVfYnl0ZXMYAiABKAQSFAoMcmVjb3JkX2NvdW50GAMgASgNEhQKDGFjdGl2ZV9jb3VudBgEIAEoDSIlChZQcnVuZUJ1aWxkQ2FjaGVSZXF1ZXN0EgsKA2FsbBgBIAEoCCJKChdQcnVuZUJ1aWxkQ2FjaGVSZXNwb25zZRIWCg5jYWNoZXNfZGVsZXRlZBgBIAEoDRIXCg9zcGFjZV9yZWNsYWltZWQYAiABKAQiggIKEEJ1aWxkQ2FjaGVSZWNvcmQSCgoCaWQYASABKAkSDAoEdHlwZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRISCgpzaXplX2J5dGVzGAQgASgEEg4KBmluX3VzZRgFIAEoCBIOCgZzaGFyZWQYBiABKAgSEwoLdXNhZ2VfY291bnQYByABKAQSLgoKY3JlYXRlZF9hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASNQoMbGFzdF91c2VkX2F0GAkgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgAiAEBQg8KDV9sYXN0X3VzZWRfYXQiHgocTGlzdEJ1aWxkQ2FjaGVSZWNvcmRzUmVxdWVzdCJPCh1MaXN0QnVpbGRDYWNoZVJlY29yZHNSZXNwb25zZRIuCgdyZWNvcmRzGAEgAygLMh0uZG1hbmFnZXIudjEuQnVpbGRDYWNoZVJlY29yZCIqChxQcnVuZUJ1aWxkQ2FjaGVSZWNvcmRSZXF1ZXN0EgoKAmlkGAEgASgJIlAKHVBydW5lQnVpbGRDYWNoZVJlY29yZFJlc3BvbnNlEhYKDmNhY2hlc19kZWxldGVkGAEgASgNEhcKD3NwYWNlX3JlY2xhaW1lZBgCIAEoBCIUChJDaGVja0VuZ2luZVJlcXVlc3QiTAoTQ2hlY2tFbmdpbmVSZXNwb25zZRIRCgljb25uZWN0ZWQYASABKAgSEwoLYXBpX3ZlcnNpb24YAiABKAkSDQoFZXJyb3IYAyABKAkiFwoVR2V0Vm9sdW1lVXNhZ2VSZXF1ZXN0IkIKC1ZvbHVtZVVzYWdlEgwKBG5hbWUYASABKAkSEgoKc2l6ZV9ieXRlcxgCIAEoAxIRCglyZWZfY291bnQYAyABKAMijgEKFkdldFZvbHVtZVVzYWdlUmVzcG9uc2USKQoHdm9sdW1lcxgBIAMoCzIYLmRtYW5hZ2VyLnYxLlZvbHVtZVVzYWdlEhgKEHRvdGFsX3NpemVfYnl0ZXMYAiABKAMSGQoRcmVjbGFpbWFibGVfYnl0ZXMYAyABKAMSFAoMdW51c2VkX2NvdW50GAQgASgNIhUKE1BydW5lVm9sdW1lc1JlcXVlc3QiVwoUUHJ1bmVWb2x1bWVzUmVzcG9uc2USFwoPdm9sdW1lc19kZWxldGVkGAEgASgNEg0KBW5hbWVzGAIgAygJEhcKD3NwYWNlX3JlY2xhaW1lZBgDIAEoBCLbAQoNQXVkaXRMb2dFbnRyeRIKCgJpZBgBIAEoBBIuCgpjcmVhdGVkX2F0GAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBINCgVhY3RvchgDIAEoCRISCgphY3Rvcl9yb2xlGAQgASgJEg4KBnNvdXJjZRgFIAEoBRIOCgZhY3Rpb24YBiABKAkSFQoNcmVzb3VyY2VfdHlwZRgHIAEoCRITCgtyZXNvdXJjZV9pZBgIIAEoCRIPCgdvdXRjb21lGAkgASgFEg4KBmRldGFpbBgKIAEoCSJlChRMaXN0QXVkaXRMb2dzUmVxdWVzdBINCgVxdWVyeRgBIAEoCRIOCgZzb3VyY2UYAiABKAUSDwoHb3V0Y29tZRgDIAEoBRINCgVsaW1pdBgEIAEoDRIOCgZvZmZzZXQYBSABKAQiUwoVTGlzdEF1ZGl0TG9nc1Jlc3BvbnNlEisKB2VudHJpZXMYASADKAsyGi5kbWFuYWdlci52MS5BdWRpdExvZ0VudHJ5Eg0KBXRvdGFsGAIgASgEMtcKCgxBZG1pblNlcnZpY2USTQoKTGlzdEltYWdlcxIeLmRtYW5hZ2VyLnYxLkxpc3RJbWFnZXNSZXF1ZXN0Gh8uZG1hbmFnZXIudjEuTGlzdEltYWdlc1Jlc3BvbnNlElAKC0xpc3RWb2x1bWVzEh8uZG1hbmFnZXIudjEuTGlzdFZvbHVtZXNSZXF1ZXN0GiAuZG1hbmFnZXIudjEuTGlzdFZvbHVtZXNSZXNwb25zZRJZCg5HZXRWb2x1bWVVc2FnZRIiLmRtYW5hZ2VyLnYxLkdldFZvbHVtZVVzYWdlUmVxdWVzdBojLmRtYW5hZ2VyLnYxLkdldFZvbHVtZVVzYWdlUmVzcG9uc2USUwoMTGlzdE5ldHdvcmtzEiAuZG1hbmFnZXIudjEuTGlzdE5ldHdvcmtzUmVxdWVzdBohLmRtYW5hZ2VyLnYxLkxpc3ROZXR3b3Jrc1Jlc3BvbnNlElAKC0RlbGV0ZUltYWdlEh8uZG1hbmFnZXIudjEuRGVsZXRlSW1hZ2VSZXF1ZXN0GiAuZG1hbmFnZXIudjEuRGVsZXRlSW1hZ2VSZXNwb25zZRJQCgtQcnVuZUltYWdlcxIfLmRtYW5hZ2VyLnYxLlBydW5lSW1hZ2VzUmVxdWVzdBogLmRtYW5hZ2VyLnYxLlBydW5lSW1hZ2VzUmVzcG9uc2USUwoMUHJ1bmVWb2x1bWVzEiAuZG1hbmFnZXIudjEuUHJ1bmVWb2x1bWVzUmVxdWVzdBohLmRtYW5hZ2VyLnYxLlBydW5lVm9sdW1lc1Jlc3BvbnNlElYKDURlbGV0ZU5ldHdvcmsSIS5kbWFuYWdlci52MS5EZWxldGVOZXR3b3JrUmVxdWVzdBoiLmRtYW5hZ2VyLnYxLkRlbGV0ZU5ldHdvcmtSZXNwb25zZRJWCg1QcnVuZU5ldHdvcmtzEiEuZG1hbmFnZXIudjEuUHJ1bmVOZXR3b3Jrc1JlcXVlc3QaIi5kbWFuYWdlci52MS5QcnVuZU5ldHdvcmtzUmVzcG9uc2USZQoSR2V0QnVpbGRDYWNoZVN0YXRzEiYuZG1hbmFnZXIudjEuR2V0QnVpbGRDYWNoZVN0YXRzUmVxdWVzdBonLmRtYW5hZ2VyLnYxLkdldEJ1aWxkQ2FjaGVTdGF0c1Jlc3BvbnNlElwKD1BydW5lQnVpbGRDYWNoZRIjLmRtYW5hZ2VyLnYxLlBydW5lQnVpbGRDYWNoZVJlcXVlc3QaJC5kbWFuYWdlci52MS5QcnVuZUJ1aWxkQ2FjaGVSZXNwb25zZRJuChVMaXN0QnVpbGRDYWNoZVJlY29yZHMSKS5kbWFuYWdlci52MS5MaXN0QnVpbGRDYWNoZVJlY29yZHNSZXF1ZXN0GiouZG1hbmFnZXIudjEuTGlzdEJ1aWxkQ2FjaGVSZWNvcmRzUmVzcG9uc2USbgoVUHJ1bmVCdWlsZENhY2hlUmVjb3JkEikuZG1hbmFnZXIudjEuUHJ1bmVCdWlsZENhY2hlUmVjb3JkUmVxdWVzdBoqLmRtYW5hZ2VyLnYxLlBydW5lQnVpbGRDYWNoZVJlY29yZFJlc3BvbnNlElAKC0NoZWNrRW5naW5lEh8uZG1hbmFnZXIudjEuQ2hlY2tFbmdpbmVSZXF1ZXN0GiAuZG1hbmFnZXIudjEuQ2hlY2tFbmdpbmVSZXNwb25zZRJWCg1MaXN0QXVkaXRMb2dzEiEuZG1hbmFnZXIudjEuTGlzdEF1ZGl0TG9nc1JlcXVlc3QaIi5kbWFuYWdlci52MS5MaXN0QXVkaXRMb2dzUmVzcG9uc2VCNFoyZG1hbmFnZXIvaW50ZXJuYWwvZ2VuL3Byb3RvL2RtYW5hZ2VyL3YxO2RtYW5hZ2VydjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
+  fileDesc("Ch1wcm90by9kbWFuYWdlci92MS9hZG1pbi5wcm90bxILZG1hbmFnZXIudjEiEwoRTGlzdEltYWdlc1JlcXVlc3QiOAoSTGlzdEltYWdlc1Jlc3BvbnNlEiIKBmltYWdlcxgBIAMoCzISLmRtYW5hZ2VyLnYxLkltYWdlImoKBUltYWdlEgoKAmlkGAEgASgJEhEKCXJlcG9fdGFncxgCIAMoCRIUCgxjcmVhdGVkX3VuaXgYAyABKAMSEgoKc2l6ZV9ieXRlcxgEIAEoAxIYChBjb250YWluZXJzX2NvdW50GAUgASgDIhQKEkxpc3RWb2x1bWVzUmVxdWVzdCI7ChNMaXN0Vm9sdW1lc1Jlc3BvbnNlEiQKB3ZvbHVtZXMYASADKAsyEy5kbWFuYWdlci52MS5Wb2x1bWUiygEKBlZvbHVtZRIMCgRuYW1lGAEgASgJEg4KBmRyaXZlchgCIAEoCRISCgptb3VudHBvaW50GAMgASgJEi4KCmNyZWF0ZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi8KBmxhYmVscxgFIAMoCzIfLmRtYW5hZ2VyLnYxLlZvbHVtZS5MYWJlbHNFbnRyeRotCgtMYWJlbHNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIhUKE0xpc3ROZXR3b3Jrc1JlcXVlc3QiPgoUTGlzdE5ldHdvcmtzUmVzcG9uc2USJgoIbmV0d29ya3MYASADKAsyFC5kbWFuYWdlci52MS5OZXR3b3JrIrIBCgdOZXR3b3JrEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSDgoGZHJpdmVyGAMgASgJEg0KBXNjb3BlGAQgASgJEhAKCGludGVybmFsGAUgASgIEi4KCmNyZWF0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhgKEGNvbnRhaW5lcnNfY291bnQYByABKAMSEgoKcHJlZGVmaW5lZBgIIAEoCCIiChREZWxldGVOZXR3b3JrUmVxdWVzdBIKCgJpZBgBIAEoCSIXChVEZWxldGVOZXR3b3JrUmVzcG9uc2UiFgoUUHJ1bmVOZXR3b3Jrc1JlcXVlc3QiQAoVUHJ1bmVOZXR3b3Jrc1Jlc3BvbnNlEhgKEG5ldHdvcmtzX2RlbGV0ZWQYASABKAQSDQoFbmFtZXMYAiADKAkiLwoSRGVsZXRlSW1hZ2VSZXF1ZXN0EgoKAmlkGAEgASgJEg0KBWZvcmNlGAIgASgIIhUKE0RlbGV0ZUltYWdlUmVzcG9uc2UiKwoSUHJ1bmVJbWFnZXNSZXF1ZXN0EhUKDWRhbmdsaW5nX29ubHkYASABKAgiMAoLUHJ1bmVkSW1hZ2USDwoHZGVsZXRlZBgBIAEoCRIQCgh1bnRhZ2dlZBgCIAEoCSJgChNQcnVuZUltYWdlc1Jlc3BvbnNlEjAKDmltYWdlc19kZWxldGVkGAEgAygLMhguZG1hbmFnZXIudjEuUHJ1bmVkSW1hZ2USFwoPc3BhY2VfcmVjbGFpbWVkGAIgASgEIhsKGUdldEJ1aWxkQ2FjaGVTdGF0c1JlcXVlc3QieAoaR2V0QnVpbGRDYWNoZVN0YXRzUmVzcG9uc2USEwoLdG90YWxfYnl0ZXMYASABKAQSGQoRcmVjbGFpbWFibGVfYnl0ZXMYAiABKAQSFAoMcmVjb3JkX2NvdW50GAMgASgNEhQKDGFjdGl2ZV9jb3VudBgEIAEoDSIlChZQcnVuZUJ1aWxkQ2FjaGVSZXF1ZXN0EgsKA2FsbBgBIAEoCCJKChdQcnVuZUJ1aWxkQ2FjaGVSZXNwb25zZRIWCg5jYWNoZXNfZGVsZXRlZBgBIAEoDRIXCg9zcGFjZV9yZWNsYWltZWQYAiABKAQiggIKEEJ1aWxkQ2FjaGVSZWNvcmQSCgoCaWQYASABKAkSDAoEdHlwZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRISCgpzaXplX2J5dGVzGAQgASgEEg4KBmluX3VzZRgFIAEoCBIOCgZzaGFyZWQYBiABKAgSEwoLdXNhZ2VfY291bnQYByABKAQSLgoKY3JlYXRlZF9hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASNQoMbGFzdF91c2VkX2F0GAkgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgAiAEBQg8KDV9sYXN0X3VzZWRfYXQiHgocTGlzdEJ1aWxkQ2FjaGVSZWNvcmRzUmVxdWVzdCJPCh1MaXN0QnVpbGRDYWNoZVJlY29yZHNSZXNwb25zZRIuCgdyZWNvcmRzGAEgAygLMh0uZG1hbmFnZXIudjEuQnVpbGRDYWNoZVJlY29yZCIqChxQcnVuZUJ1aWxkQ2FjaGVSZWNvcmRSZXF1ZXN0EgoKAmlkGAEgASgJIlAKHVBydW5lQnVpbGRDYWNoZVJlY29yZFJlc3BvbnNlEhYKDmNhY2hlc19kZWxldGVkGAEgASgNEhcKD3NwYWNlX3JlY2xhaW1lZBgCIAEoBCIUChJDaGVja0VuZ2luZVJlcXVlc3QiTAoTQ2hlY2tFbmdpbmVSZXNwb25zZRIRCgljb25uZWN0ZWQYASABKAgSEwoLYXBpX3ZlcnNpb24YAiABKAkSDQoFZXJyb3IYAyABKAkiGwoZR2V0VGFpbHNjYWxlU3RhdHVzUmVxdWVzdCL+AQoaR2V0VGFpbHNjYWxlU3RhdHVzUmVzcG9uc2USDwoHZW5hYmxlZBgBIAEoCBINCgVzdGF0ZRgCIAEoCRIVCg1iYWNrZW5kX3N0YXRlGAMgASgJEhAKCGhvc3RuYW1lGAQgASgJEhAKCGRuc19uYW1lGAUgASgJEgsKA2lwcxgGIAMoCRIMCgRwb3J0GAcgASgFEhUKDWh0dHBzX2VuYWJsZWQYCCABKAgSFAoMY2VydF9kb21haW5zGAkgAygJEi4KCmtleV9leHBpcnkYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEg0KBWVycm9yGAsgASgJIhcKFUdldFZvbHVtZVVzYWdlUmVxdWVzdCJCCgtWb2x1bWVVc2FnZRIMCgRuYW1lGAEgASgJEhIKCnNpemVfYnl0ZXMYAiABKAMSEQoJcmVmX2NvdW50GAMgASgDIo4BChZHZXRWb2x1bWVVc2FnZVJlc3BvbnNlEikKB3ZvbHVtZXMYASADKAsyGC5kbWFuYWdlci52MS5Wb2x1bWVVc2FnZRIYChB0b3RhbF9zaXplX2J5dGVzGAIgASgDEhkKEXJlY2xhaW1hYmxlX2J5dGVzGAMgASgDEhQKDHVudXNlZF9jb3VudBgEIAEoDSIVChNQcnVuZVZvbHVtZXNSZXF1ZXN0IlcKFFBydW5lVm9sdW1lc1Jlc3BvbnNlEhcKD3ZvbHVtZXNfZGVsZXRlZBgBIAEoDRINCgVuYW1lcxgCIAMoCRIXCg9zcGFjZV9yZWNsYWltZWQYAyABKAQi2wEKDUF1ZGl0TG9nRW50cnkSCgoCaWQYASABKAQSLgoKY3JlYXRlZF9hdBgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASDQoFYWN0b3IYAyABKAkSEgoKYWN0b3Jfcm9sZRgEIAEoCRIOCgZzb3VyY2UYBSABKAUSDgoGYWN0aW9uGAYgASgJEhUKDXJlc291cmNlX3R5cGUYByABKAkSEwoLcmVzb3VyY2VfaWQYCCABKAkSDwoHb3V0Y29tZRgJIAEoBRIOCgZkZXRhaWwYCiABKAkiZQoUTGlzdEF1ZGl0TG9nc1JlcXVlc3QSDQoFcXVlcnkYASABKAkSDgoGc291cmNlGAIgASgFEg8KB291dGNvbWUYAyABKAUSDQoFbGltaXQYBCABKA0SDgoGb2Zmc2V0GAUgASgEIlMKFUxpc3RBdWRpdExvZ3NSZXNwb25zZRIrCgdlbnRyaWVzGAEgAygLMhouZG1hbmFnZXIudjEuQXVkaXRMb2dFbnRyeRINCgV0b3RhbBgCIAEoBDK+CwoMQWRtaW5TZXJ2aWNlEk0KCkxpc3RJbWFnZXMSHi5kbWFuYWdlci52MS5MaXN0SW1hZ2VzUmVxdWVzdBofLmRtYW5hZ2VyLnYxLkxpc3RJbWFnZXNSZXNwb25zZRJQCgtMaXN0Vm9sdW1lcxIfLmRtYW5hZ2VyLnYxLkxpc3RWb2x1bWVzUmVxdWVzdBogLmRtYW5hZ2VyLnYxLkxpc3RWb2x1bWVzUmVzcG9uc2USWQoOR2V0Vm9sdW1lVXNhZ2USIi5kbWFuYWdlci52MS5HZXRWb2x1bWVVc2FnZVJlcXVlc3QaIy5kbWFuYWdlci52MS5HZXRWb2x1bWVVc2FnZVJlc3BvbnNlElMKDExpc3ROZXR3b3JrcxIgLmRtYW5hZ2VyLnYxLkxpc3ROZXR3b3Jrc1JlcXVlc3QaIS5kbWFuYWdlci52MS5MaXN0TmV0d29ya3NSZXNwb25zZRJQCgtEZWxldGVJbWFnZRIfLmRtYW5hZ2VyLnYxLkRlbGV0ZUltYWdlUmVxdWVzdBogLmRtYW5hZ2VyLnYxLkRlbGV0ZUltYWdlUmVzcG9uc2USUAoLUHJ1bmVJbWFnZXMSHy5kbWFuYWdlci52MS5QcnVuZUltYWdlc1JlcXVlc3QaIC5kbWFuYWdlci52MS5QcnVuZUltYWdlc1Jlc3BvbnNlElMKDFBydW5lVm9sdW1lcxIgLmRtYW5hZ2VyLnYxLlBydW5lVm9sdW1lc1JlcXVlc3QaIS5kbWFuYWdlci52MS5QcnVuZVZvbHVtZXNSZXNwb25zZRJWCg1EZWxldGVOZXR3b3JrEiEuZG1hbmFnZXIudjEuRGVsZXRlTmV0d29ya1JlcXVlc3QaIi5kbWFuYWdlci52MS5EZWxldGVOZXR3b3JrUmVzcG9uc2USVgoNUHJ1bmVOZXR3b3JrcxIhLmRtYW5hZ2VyLnYxLlBydW5lTmV0d29ya3NSZXF1ZXN0GiIuZG1hbmFnZXIudjEuUHJ1bmVOZXR3b3Jrc1Jlc3BvbnNlEmUKEkdldEJ1aWxkQ2FjaGVTdGF0cxImLmRtYW5hZ2VyLnYxLkdldEJ1aWxkQ2FjaGVTdGF0c1JlcXVlc3QaJy5kbWFuYWdlci52MS5HZXRCdWlsZENhY2hlU3RhdHNSZXNwb25zZRJcCg9QcnVuZUJ1aWxkQ2FjaGUSIy5kbWFuYWdlci52MS5QcnVuZUJ1aWxkQ2FjaGVSZXF1ZXN0GiQuZG1hbmFnZXIudjEuUHJ1bmVCdWlsZENhY2hlUmVzcG9uc2USbgoVTGlzdEJ1aWxkQ2FjaGVSZWNvcmRzEikuZG1hbmFnZXIudjEuTGlzdEJ1aWxkQ2FjaGVSZWNvcmRzUmVxdWVzdBoqLmRtYW5hZ2VyLnYxLkxpc3RCdWlsZENhY2hlUmVjb3Jkc1Jlc3BvbnNlEm4KFVBydW5lQnVpbGRDYWNoZVJlY29yZBIpLmRtYW5hZ2VyLnYxLlBydW5lQnVpbGRDYWNoZVJlY29yZFJlcXVlc3QaKi5kbWFuYWdlci52MS5QcnVuZUJ1aWxkQ2FjaGVSZWNvcmRSZXNwb25zZRJQCgtDaGVja0VuZ2luZRIfLmRtYW5hZ2VyLnYxLkNoZWNrRW5naW5lUmVxdWVzdBogLmRtYW5hZ2VyLnYxLkNoZWNrRW5naW5lUmVzcG9uc2USZQoSR2V0VGFpbHNjYWxlU3RhdHVzEiYuZG1hbmFnZXIudjEuR2V0VGFpbHNjYWxlU3RhdHVzUmVxdWVzdBonLmRtYW5hZ2VyLnYxLkdldFRhaWxzY2FsZVN0YXR1c1Jlc3BvbnNlElYKDUxpc3RBdWRpdExvZ3MSIS5kbWFuYWdlci52MS5MaXN0QXVkaXRMb2dzUmVxdWVzdBoiLmRtYW5hZ2VyLnYxLkxpc3RBdWRpdExvZ3NSZXNwb25zZUI0WjJkbWFuYWdlci9pbnRlcm5hbC9nZW4vcHJvdG8vZG1hbmFnZXIvdjE7ZG1hbmFnZXJ2MWIGcHJvdG8z", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message dmanager.v1.ListImagesRequest
@@ -752,6 +752,117 @@ export const CheckEngineResponseSchema: GenMessage<CheckEngineResponse> = /*@__P
   messageDesc(file_proto_dmanager_v1_admin, 28);
 
 /**
+ * @generated from message dmanager.v1.GetTailscaleStatusRequest
+ */
+export type GetTailscaleStatusRequest = Message<"dmanager.v1.GetTailscaleStatusRequest"> & {
+};
+
+/**
+ * Describes the message dmanager.v1.GetTailscaleStatusRequest.
+ * Use `create(GetTailscaleStatusRequestSchema)` to create a new message.
+ */
+export const GetTailscaleStatusRequestSchema: GenMessage<GetTailscaleStatusRequest> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_admin, 29);
+
+/**
+ * @generated from message dmanager.v1.GetTailscaleStatusResponse
+ */
+export type GetTailscaleStatusResponse = Message<"dmanager.v1.GetTailscaleStatusResponse"> & {
+  /**
+   * false when no auth key is configured — the whole feature is inert.
+   *
+   * @generated from field: bool enabled = 1;
+   */
+  enabled: boolean;
+
+  /**
+   * Lifecycle state of the embedded node:
+   *   "starting" — connecting to the tailnet (or not yet attempted)
+   *   "running"  — connected; backend_state carries the live ipn state
+   *   "failed"   — startup failed (invalid/expired key, control plane
+   *                unreachable); LAN operation continues (degraded mode)
+   *
+   * @generated from field: string state = 2;
+   */
+  state: string;
+
+  /**
+   * Live backend state from the node's local API when reachable
+   * (e.g. "Running", "NeedsLogin"); empty when it could not be probed.
+   *
+   * @generated from field: string backend_state = 3;
+   */
+  backendState: string;
+
+  /**
+   * Configured MagicDNS hostname (tailscale.hostname).
+   *
+   * @generated from field: string hostname = 4;
+   */
+  hostname: string;
+
+  /**
+   * Full MagicDNS name on the tailnet (e.g. "dmanager.tail1234.ts.net");
+   * empty until the node has connected at least once.
+   *
+   * @generated from field: string dns_name = 5;
+   */
+  dnsName: string;
+
+  /**
+   * Tailnet IP addresses assigned to the node (100.x.y.z and/or fd7a:...).
+   *
+   * @generated from field: repeated string ips = 6;
+   */
+  ips: string[];
+
+  /**
+   * Port the plain-HTTP tailnet listener serves on (tailscale.port).
+   *
+   * @generated from field: int32 port = 7;
+   */
+  port: number;
+
+  /**
+   * Whether the HTTPS listener (tailnet port 443) is enabled.
+   *
+   * @generated from field: bool https_enabled = 8;
+   */
+  httpsEnabled: boolean;
+
+  /**
+   * Certificate domains provisioned for the node ("<name>.ts.net") —
+   * present when HTTPS certificates are enabled on the tailnet.
+   *
+   * @generated from field: repeated string cert_domains = 9;
+   */
+  certDomains: string[];
+
+  /**
+   * When the node's key expires (key re-registration needed); unset
+   * when the key does not expire.
+   *
+   * @generated from field: google.protobuf.Timestamp key_expiry = 10;
+   */
+  keyExpiry?: Timestamp | undefined;
+
+  /**
+   * Short reason detail when state is "failed", or when the live status
+   * probe failed and the reported values are the last known ones.
+   *
+   * @generated from field: string error = 11;
+   */
+  error: string;
+};
+
+/**
+ * Describes the message dmanager.v1.GetTailscaleStatusResponse.
+ * Use `create(GetTailscaleStatusResponseSchema)` to create a new message.
+ */
+export const GetTailscaleStatusResponseSchema: GenMessage<GetTailscaleStatusResponse> = /*@__PURE__*/
+  messageDesc(file_proto_dmanager_v1_admin, 30);
+
+/**
  * @generated from message dmanager.v1.GetVolumeUsageRequest
  */
 export type GetVolumeUsageRequest = Message<"dmanager.v1.GetVolumeUsageRequest"> & {
@@ -762,7 +873,7 @@ export type GetVolumeUsageRequest = Message<"dmanager.v1.GetVolumeUsageRequest">
  * Use `create(GetVolumeUsageRequestSchema)` to create a new message.
  */
 export const GetVolumeUsageRequestSchema: GenMessage<GetVolumeUsageRequest> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 29);
+  messageDesc(file_proto_dmanager_v1_admin, 31);
 
 /**
  * @generated from message dmanager.v1.VolumeUsage
@@ -795,7 +906,7 @@ export type VolumeUsage = Message<"dmanager.v1.VolumeUsage"> & {
  * Use `create(VolumeUsageSchema)` to create a new message.
  */
 export const VolumeUsageSchema: GenMessage<VolumeUsage> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 30);
+  messageDesc(file_proto_dmanager_v1_admin, 32);
 
 /**
  * @generated from message dmanager.v1.GetVolumeUsageResponse
@@ -835,7 +946,7 @@ export type GetVolumeUsageResponse = Message<"dmanager.v1.GetVolumeUsageResponse
  * Use `create(GetVolumeUsageResponseSchema)` to create a new message.
  */
 export const GetVolumeUsageResponseSchema: GenMessage<GetVolumeUsageResponse> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 31);
+  messageDesc(file_proto_dmanager_v1_admin, 33);
 
 /**
  * @generated from message dmanager.v1.PruneVolumesRequest
@@ -848,7 +959,7 @@ export type PruneVolumesRequest = Message<"dmanager.v1.PruneVolumesRequest"> & {
  * Use `create(PruneVolumesRequestSchema)` to create a new message.
  */
 export const PruneVolumesRequestSchema: GenMessage<PruneVolumesRequest> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 32);
+  messageDesc(file_proto_dmanager_v1_admin, 34);
 
 /**
  * @generated from message dmanager.v1.PruneVolumesResponse
@@ -877,7 +988,7 @@ export type PruneVolumesResponse = Message<"dmanager.v1.PruneVolumesResponse"> &
  * Use `create(PruneVolumesResponseSchema)` to create a new message.
  */
 export const PruneVolumesResponseSchema: GenMessage<PruneVolumesResponse> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 33);
+  messageDesc(file_proto_dmanager_v1_admin, 35);
 
 /**
  * @generated from message dmanager.v1.AuditLogEntry
@@ -957,7 +1068,7 @@ export type AuditLogEntry = Message<"dmanager.v1.AuditLogEntry"> & {
  * Use `create(AuditLogEntrySchema)` to create a new message.
  */
 export const AuditLogEntrySchema: GenMessage<AuditLogEntry> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 34);
+  messageDesc(file_proto_dmanager_v1_admin, 36);
 
 /**
  * @generated from message dmanager.v1.ListAuditLogsRequest
@@ -1002,7 +1113,7 @@ export type ListAuditLogsRequest = Message<"dmanager.v1.ListAuditLogsRequest"> &
  * Use `create(ListAuditLogsRequestSchema)` to create a new message.
  */
 export const ListAuditLogsRequestSchema: GenMessage<ListAuditLogsRequest> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 35);
+  messageDesc(file_proto_dmanager_v1_admin, 37);
 
 /**
  * @generated from message dmanager.v1.ListAuditLogsResponse
@@ -1028,7 +1139,7 @@ export type ListAuditLogsResponse = Message<"dmanager.v1.ListAuditLogsResponse">
  * Use `create(ListAuditLogsResponseSchema)` to create a new message.
  */
 export const ListAuditLogsResponseSchema: GenMessage<ListAuditLogsResponse> = /*@__PURE__*/
-  messageDesc(file_proto_dmanager_v1_admin, 36);
+  messageDesc(file_proto_dmanager_v1_admin, 38);
 
 /**
  * AdminService exposes Docker host resources (images, volumes, networks)
@@ -1205,6 +1316,21 @@ export const AdminService: GenService<{
     methodKind: "unary";
     input: typeof CheckEngineRequestSchema;
     output: typeof CheckEngineResponseSchema;
+  },
+  /**
+   * Report the embedded Tailscale node's status (Authenticated, any role):
+   * lifecycle state, tailnet identity (DNS name, IPs, cert domains) and
+   * node key expiry, so operators can see tailnet health and key-expiry
+   * warnings without reading server logs (docs/tailscale.md §9 Q8/Q11).
+   * Outage-not-error semantics mirror CheckEngine: when the feature is
+   * disabled the response says enabled=false instead of failing.
+   *
+   * @generated from rpc dmanager.v1.AdminService.GetTailscaleStatus
+   */
+  getTailscaleStatus: {
+    methodKind: "unary";
+    input: typeof GetTailscaleStatusRequestSchema;
+    output: typeof GetTailscaleStatusResponseSchema;
   },
   /**
    * Review the audit trail (Authenticated, admin role): recorded mutation

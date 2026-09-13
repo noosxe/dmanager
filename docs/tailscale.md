@@ -276,8 +276,9 @@ Following the repo's bite-sized story convention (next free number: 074):
 - **STORY-077 — Tailnet HTTPS (DONE).** `ListenTLS` listener (`tailscale.https_enabled`, opt-in,
   plain HTTP keeps running), `X-Forwarded-Proto` middleware (forced server-side, `Set` not `Add`),
   webauthn origins guidance in `docs/deployment.md` §2.3.
-- **STORY-078 (follow-up, gated on §9 Q8) — Node status in Admin API/UI.** Surface IPs, DNS name,
-  connection state via AdminService.
+- **STORY-078 — Node status in Admin API/UI (DONE).** `AdminService.GetTailscaleStatus` RPC
+  (any role) + `Node.Snapshot` (nil-safe, live local-API probe with cached fallback);
+  Administration-page card shows state, DNS name, IPs, access URLs, and key-expiry warnings.
 
 ---
 
@@ -294,7 +295,7 @@ All open questions from the initial draft have been resolved; recommendations ad
 | Q5 | Ephemeral node mode | Not supported in v1. |
 | Q6 | Headscale support | Defer; no `control_url` in v1. |
 | Q7 | Tailnet-only hardening | Defer; operators unpublish the Docker port if desired. |
-| Q8 | Node status visibility | Startup logs only in v1; UI/Admin surface is STORY-078. |
+| Q8 | Node status visibility | Shipped as STORY-078: `GetTailscaleStatus` RPC (any role) + Administration-page card. |
 | Q9 | Default state dir | Derived from `db_path` dirname at config load time (`<dirname>/tailscale`). |
 | Q10 | `TS_AUTHKEY` alias | Not accepted; `AuthKey` set explicitly so tsnet never reads env implicitly. |
-| Q11 | Key-expiry warning UX | Folded into STORY-078. |
+| Q11 | Key-expiry warning UX | Shipped with STORY-078: expiry surfaces in the status response; the UI card warns within 7 days of expiry and once expired. |

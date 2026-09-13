@@ -82,6 +82,7 @@ graph TD
     A74 --> A75["STORY-075: Embedded Node Lifecycle — internal/tailscale, Serve Wiring (DONE)"]
     A75 --> A76["STORY-076: Tailscale Deployment & Security Docs (DONE)"]
     A76 --> A77["STORY-077: Tailnet HTTPS — ListenTLS, X-Forwarded-Proto, Passkey Support (DONE)"]
+    A77 --> A78["STORY-078: Tailscale Node Status in Admin API/UI (DONE)"]
 ```
 
 
@@ -1643,3 +1644,23 @@ graph TD
   - **Fixed port 443:** tsnet convention; certificate provisioning and `*.ts.net` origins assume the standard port.
   - **Middleware inside the wrapper, not in serve.go:** `X-Forwarded-Proto` forcing is intrinsic to the TLS listener; callers cannot forget it.
   - **`Set`, never `Add`:** on this listener https is the truth — a tailnet peer must not be able to influence `secure_cookies: auto` via a spoofed header.
+
+### STORY-078: Tailscale Node Status in Admin API/UI [DONE]
+
+**Goal:** Surface the embedded tailnet node's state and identity — plus key-expiry warnings — in the Administration page, so operators see tailnet health without reading server logs (docs/tailscale.md §9 Q8/Q11).
+
+**Tasks:**
+  1. `internal/tailscale`: `Node.Snapshot(ctx)` — nil-safe (disabled feature), lifecycle states (starting/running/failed/disabled), cached identity from `Up` (IPs, DNS name, cert domains, key expiry) refreshed by a best-effort live local-API probe with caller-bounded ctx and cached fallback.
+  2. `proto`: `AdminService.GetTailscaleStatus` (Authenticated, any role) — status-not-error semantics mirroring `CheckEngine`; response carries enabled/state/backend_state/hostname/dns_name/ips/port/https_enabled/cert_domains/key_expiry/error. Regenerated via buf (go, connect-go, es).
+  3. `internal/admin`: `TailscaleStatusSource` seam (satisfied by `*tailscale.Node`, nil when disabled), handler with 5s probe timeout; nil-interface and typed-nil paths both report disabled.
+  4. Frontend: `useTailscaleStatus` hook (60s visible-only poll, focus refetch, transport failures keep last known) + `TailscaleStatusCard` on the Administration page — state pill reusing engine-status dot classes, DNS/IP/access rows, degraded-mode error detail, key-expiry warning within 7 days and once expired; hidden entirely when disabled.
+  5. Tests: nil-node/unstarted/failed-start snapshots; disabled/typed-nil/running/degraded RPC mappings; card render matrix + `keyExpiryDays` (with day-boundary buffers to avoid flake).
+  6. Docs: deployment.md §2.3 status note, security.md §5 status-exposure scope, tailscale.md story + Q8/Q11 markers.
+- **Files Affected:** `proto/dmanager/v1/admin.proto` (+regen), `internal/tailscale/tailscale.go` (+test), `internal/admin/service.go` (+test), `internal/auth/interceptor.go`, `cmd/serve.go`, `frontend/src/hooks/useTailscaleStatus.ts`, `frontend/src/components/TailscaleStatusCard.tsx` (+test), `frontend/src/components/Administration.tsx` (+test mock), docs.
+- **Validation Check:** `go build/vet`, `golangci-lint` 0 issues, `go test ./...` green; frontend `pnpm test` (138 tests), `pnpm check`, `pnpm build` green; live-tailnet verification joins the operator checklist.
+- **Decisions:**
+  - **Any role, not admin-gated:** read-only identity/health data already exposed in startup logs; matches `CheckEngine` and the Administration lists' viewer tier. No key material in the response.
+  - **Nil-safe Node through the interface:** serve.go passes the nil `*tailscale.Node` as the seam value; the handler also guards a nil interface so both disabled-feature spellings are safe.
+  - **Probe, don't cache forever:** the live local-API refresh keeps `backend_state` and key expiry current (e.g. after control-plane reconnects); failures fall back to Start-time values with the error noted.
+  - **No separate key-expiry cron/alerting:** v1 surfaces expiry in status only; scheduled notifications remain outside the tailscale scope.
+  - **Included drive-by fix:** aligned `react-dom` to `^19.3.0` — commit ee95598 bumped `react` past `react-dom`, and React 19's exact-version check broke every local `vitest` run (invisible to CI because frontend.yml runs lint/format/build only).
