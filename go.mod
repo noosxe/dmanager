@@ -3,7 +3,7 @@ module dmanager
 go 1.27.0
 
 require (
-	connectrpc.com/connect v1.20.0
+	connectrpc.com/connect v1.21.0
 	github.com/containerd/errdefs v1.0.0
 	github.com/go-webauthn/webauthn v0.18.0
 	github.com/knadh/koanf/parsers/yaml v1.1.1
