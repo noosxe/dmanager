@@ -76,8 +76,8 @@ importers:
         specifier: ^19.2.4
         version: 19.2.4(@types/react@19.3.0)
       '@vite-pwa/assets-generator':
-        specifier: ^1.0.2
-        version: 1.0.2(@types/node@24.13.3)
+        specifier: ^1.0.4
+        version: 1.0.4(@types/node@24.13.3)
       '@vitejs/plugin-react':
         specifier: ^6.1.1
         version: 6.1.1(vite@8.2.2(@types/node@24.13.3)(jiti@2.7.0))
@@ -1014,8 +1014,8 @@ packages:
     peerDependencies:
       typescript: '*'
 
-  '@vite-pwa/assets-generator@1.0.2':
-    resolution: {integrity: sha512-MCbrb508JZHqe7bUibmZj/lyojdhLRnfkmyXnkrCM2zVrjTgL89U8UEfInpKTvPeTnxsw2hmyZxnhsdNR6yhwg==}
+  '@vite-pwa/assets-generator@1.0.4':
+    resolution: {integrity: sha512-LlYM5CEmFmdl7le4B0Pr9+NPipQgStFOslvfxEQ/1LW3wUquZ3s3ec2z132lzfVEYAiJAmfFhQ0EVs6ntO7RKw==}
     engines: {node: '>=16.14.0'}
     hasBin: true
 
@@ -2393,7 +2393,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@vite-pwa/assets-generator@1.0.2(@types/node@24.13.3)':
+  '@vite-pwa/assets-generator@1.0.4(@types/node@24.13.3)':
     dependencies:
       cac: 6.7.14
       colorette: 2.0.20
