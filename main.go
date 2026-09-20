@@ -14,3 +14,4 @@ func main() {
 	cmd.FrontendDist = frontendDist
 	cmd.Execute()
 }
+// regen-skip verification (#271) — Go-only comment change
