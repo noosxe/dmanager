@@ -90,3 +90,79 @@ jobs:
 
       - name: Compile dmanager binary
         run: CGO_ENABLED=0 GOOS=linux GOARCH=${{ matrix.arch }} go build -o dmanager .
+
+  proto-regen:
+    name: Proto Regen Check
+    runs-on: [self-hosted, linux, amd64]
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Detect proto/generation changes
+        id: filter
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.ref }}"
+            git fetch origin "$BASE"
+            RANGE="origin/$BASE...HEAD"
+          else
+            RANGE="HEAD~1"
+          fi
+          if git diff --name-only "$RANGE" -- proto/ buf.yaml buf.gen.yaml internal/gen/ frontend/src/gen/ | grep -q .; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Go
+        if: steps.filter.outputs.changed == 'true'
+        uses: actions/setup-go@v7
+        with:
+          go-version: 1.27.0
+          cache: true
+
+      # Version pins (keep in sync with the tree being checked):
+      # - protoc-gen-go: lockstep with go.mod's google.golang.org/protobuf
+      # - protoc-gen-connect-go: lockstep with go.mod's connectrpc.com/connect
+      # - protoc-gen-es: comes from frontend/pnpm-lock.yaml via the install step below
+      # - buf: pinned for deterministic generation output
+      - name: Install codegen toolchain
+        if: steps.filter.outputs.changed == 'true'
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.12
+          go install connectrpc.com/connect/cmd/protoc-gen-connect-go@v1.21.0
+          go install github.com/bufbuild/buf/cmd/buf@v1.71.0
+
+      - name: Setup PNPM
+        if: steps.filter.outputs.changed == 'true'
+        uses: pnpm/action-setup@v6
+        with:
+          version: 11.9.0
+
+      - name: Setup Node.js
+        if: steps.filter.outputs.changed == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24.16.0
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        if: steps.filter.outputs.changed == 'true'
+        run: pnpm --dir frontend install --frozen-lockfile
+
+      - name: Regenerate and verify no diff
+        if: steps.filter.outputs.changed == 'true'
+        run: |
+          export PATH="$(go env GOPATH)/bin:$PWD/frontend/node_modules/.bin:$PATH"
+          buf generate
+          CHANGES="$(git status --porcelain -- internal/gen frontend/src/gen)"
+          if [ -n "$CHANGES" ]; then
+            echo "::error::Committed stubs differ from 'buf generate' output. Regenerate locally and commit the result."
+            echo "$CHANGES"
+            git diff -- internal/gen frontend/src/gen
+            exit 1
+          fi
