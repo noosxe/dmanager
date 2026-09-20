@@ -8,6 +8,9 @@ on:
       - 'go.mod'
       - 'go.sum'
       - '.golangci.yml'
+      - 'proto/**'
+      - 'buf.yaml'
+      - 'buf.gen.yaml'
       - '.github/workflows/backend.yml'
   pull_request:
     branches: [ main ]
@@ -16,6 +19,9 @@ on:
       - 'go.mod'
       - 'go.sum'
       - '.golangci.yml'
+      - 'proto/**'
+      - 'buf.yaml'
+      - 'buf.gen.yaml'
       - '.github/workflows/backend.yml'
 
 concurrency:
