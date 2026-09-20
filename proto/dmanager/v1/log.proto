@@ -34,6 +34,7 @@ message LogEntry {
   string timestamp = 3;  // RFC3339 formatted log timestamp
   string component = 4;  // Log source component
   string metadata = 5;   // Serialized JSON log metadata
+  string trace_id = 6;   // Optional distributed tracing correlation ID (forgotten-regen CI verification, #271)
 }
 
 message GetSystemLogsRequest {
