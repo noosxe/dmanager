@@ -46,3 +46,5 @@ message GetSystemLogsResponse {
   repeated LogEntry entries = 1;
 }
 
+
+// CI trigger verification for #265 — proto-only path filter test. Safe to remove.
