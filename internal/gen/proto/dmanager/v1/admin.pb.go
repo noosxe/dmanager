@@ -1598,11 +1598,10 @@ type GetTailscaleStatusResponse struct {
 	// false when no auth key is configured — the whole feature is inert.
 	Enabled bool `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`
 	// Lifecycle state of the embedded node:
-	//
-	//	"starting" — connecting to the tailnet (or not yet attempted)
-	//	"running"  — connected; backend_state carries the live ipn state
-	//	"failed"   — startup failed (invalid/expired key, control plane
-	//	             unreachable); LAN operation continues (degraded mode)
+	//   "starting" — connecting to the tailnet (or not yet attempted)
+	//   "running"  — connected; backend_state carries the live ipn state
+	//   "failed"   — startup failed (invalid/expired key, control plane
+	//                unreachable); LAN operation continues (degraded mode)
 	State string `protobuf:"bytes,2,opt,name=state,proto3" json:"state,omitempty"`
 	// Live backend state from the node's local API when reachable
 	// (e.g. "Running", "NeedsLogin"); empty when it could not be probed.
