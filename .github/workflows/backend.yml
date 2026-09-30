@@ -31,7 +31,7 @@ concurrency:
 jobs:
   lint:
     name: Golangci-lint Check
-    runs-on: [self-hosted, linux, amd64]
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - name: Checkout repository
@@ -50,7 +50,7 @@ jobs:
 
   test:
     name: Unit Tests
-    runs-on: [self-hosted, linux, amd64]
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - name: Checkout repository
@@ -73,7 +73,7 @@ jobs:
 
   build:
     name: Cross-Compile (${{ matrix.arch }})
-    runs-on: [self-hosted, linux, amd64]
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       matrix:
@@ -93,7 +93,7 @@ jobs:
 
   proto-regen:
     name: Proto Regen Check
-    runs-on: [self-hosted, linux, amd64]
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Checkout repository
