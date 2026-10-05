@@ -15,9 +15,11 @@ Written by AI, tested and used by humans.
 - **Private Registry Support** — authenticate against private registries (GHCR, Docker Hub, etc.)
 - **Gotify Notifications** — receive push notifications for update events and failures
 - **Embedded Tailscale Node** — optional built-in tailnet access (`TAILSCALE_AUTHKEY`): manage dmanager from anywhere in your tailnet with no published ports and no sidecar container
+- **Embedded Tailscale Node** — optional built-in tailnet access (`TAILSCALE_AUTHKEY`): manage dmanager from anywhere in your tailnet with no published ports and no sidecar container; optional tailnet HTTPS (`:443`, Tailscale-issued certificates — passkeys included) served over HTTP/2, with node status visible in the Admin UI
 - **System Logs** — browse structured backend logs directly in the UI
 - **Authentication & Passkeys** — secure session-based authentication with role-based access control (admin / viewer), discoverable WebAuthn passkeys (Touch ID, Windows Hello, Face ID, hardware security keys), NIST password policy, login rate limiting, session management, and auth audit logging
-
+- **Audit Logs** — every mutation and system action is recorded to an audit trail with days-based retention, manageable from the Admin UI
+- **System Email** — optional SMTP delivery for system notifications via a relay (off and fully inert unless configured; verify with `dmanager smtp test`)
 ---
 
 ## Quick Start with Docker Compose
@@ -35,6 +37,12 @@ services:
     image: ghcr.io/noosxe/dmanager:latest
     container_name: dmanager
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9283/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     ports:
       - "${DMANAGER_PORT:-9283}:9283"
     volumes:
@@ -46,6 +54,11 @@ services:
       # Values interpolate from the environment or a .env file (see .env.example)
       - DMANAGER_SERVER_PORT=9283
       - DMANAGER_SCHEDULER_INTERVAL_MINUTES=${DMANAGER_SCHEDULER_INTERVAL_MINUTES:-60}
+      # Passkeys work on http://localhost:9283 out of the box; override both
+      # for a real domain (a stable hostname — browsers refuse WebAuthn on
+      # IP origins):
+      - DMANAGER_WEBAUTHN_RP_ID=${DMANAGER_WEBAUTHN_RP_ID:-localhost}
+      - DMANAGER_WEBAUTHN_ORIGINS=${DMANAGER_WEBAUTHN_ORIGINS:-http://localhost:9283}
 
 volumes:
   dmanager-data:
@@ -64,6 +77,8 @@ docker compose up -d
 Navigate to [http://localhost:9283](http://localhost:9283) in your browser.
 
 On first launch you will be prompted to create an administrator account.
+
+With the embedded Tailscale node enabled, the UI is also reachable from your tailnet at `http(s)://<hostname>.<tailnet>.ts.net` — no published ports required.
 
 ### Stopping the application
 
@@ -133,6 +148,14 @@ webauthn:
     - "https://dmanager.example.com"
   require_user_verification: preferred
 
+# Embedded Tailscale node (optional — inert without an auth key; see docs/tailscale.md)
+# tailscale:
+#   auth_key: "tskey-auth-..."   # tagged, reusable key; only needed on first start
+#   hostname: "dmanager"         # node name in the tailnet
+#   port: 80                     # tailnet serving port when HTTPS is disabled
+#   https_enabled: false         # true: HTTPS on tailnet :443 with Tailscale-issued certs
+#   state_dir: ""                # defaults to <db_dir>/tailscale
+
 # System email (optional). Mail goes through an SMTP relay for system
 # purposes only — there is no user-facing send feature.
 smtp:
@@ -192,6 +215,18 @@ registries: []
 | `webauthn.origins` | `string[]` | `[]` | Fully-qualified origins allowed for passkey ceremonies (e.g. `["https://dmanager.example.com"]`). |
 | `webauthn.require_user_verification` | `string` | `"preferred"` | User verification requirement (`"preferred"`, `"required"`, or `"discouraged"`). |
 
+#### `tailscale` — embedded tailnet node (optional)
+
+The section is inert until an auth key is configured. See [docs/tailscale.md](docs/tailscale.md) for the full setup walkthrough.
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `tailscale.auth_key` | `string` | `""` | Tailscale auth key (a tagged, reusable key is recommended). Node state persists in `tailscale.state_dir`, so the key is only needed on first start. |
+| `tailscale.hostname` | `string` | `"dmanager"` | Node name in the tailnet (lowercase letters, digits, hyphens; max 63 chars). Served at `<hostname>.<tailnet>.ts.net`. |
+| `tailscale.port` | `int` | `80` | Tailnet serving port when HTTPS is disabled. |
+| `tailscale.https_enabled` | `bool` | `false` | Serve HTTPS on tailnet `:443` using Tailscale-issued certificates — valid TLS that passkeys accept, served over HTTP/2. |
+| `tailscale.state_dir` | `string` | `<db_dir>/tailscale` | tsnet state directory; must be a dedicated directory when set explicitly. |
+
 #### `smtp` — system email relay (optional)
 
 | Key | Type | Default | Description |
@@ -206,7 +241,7 @@ registries: []
 | `smtp.timeout_seconds` | `int` | `15` | Dial + send budget per message (1–120). |
 
 Email is sent by system flows only; there is no API or UI send path. Verify the setup from the deployment with `dmanager smtp test --to=you@example.com`.
-
+Email is sent by system flows only; there is no API or UI send path. Verify the setup from the deployment with `dmanager smtp test --to=you@example.com`, or `make smtp-test TO=you@example.com` from a compose checkout.
 #### `registries` — Private registry credentials
 
 A list of registry credential entries. Each entry supports the following fields:
@@ -253,6 +288,18 @@ All configuration values can be overridden via environment variables prefixed wi
 | `DMANAGER_WEBAUTHN_RP_ID` | `webauthn.rp_id` | *(empty)* | Relying Party ID for passkey authentication. |
 | `DMANAGER_WEBAUTHN_ORIGINS` | `webauthn.origins` | *(empty)* | Comma-separated list of allowed WebAuthn origins. |
 | `DMANAGER_WEBAUTHN_REQUIRE_USER_VERIFICATION` | `webauthn.require_user_verification` | `preferred` | Passkey user verification policy (`preferred`, `required`, `discouraged`). |
+| `DMANAGER_TAILSCALE_AUTHKEY` | `tailscale.auth_key` | *(empty)* | Embedded Tailscale node auth key — the node is off unless set. |
+| `DMANAGER_TAILSCALE_HOSTNAME` | `tailscale.hostname` | `dmanager` | Node name in the tailnet. |
+| `DMANAGER_TAILSCALE_PORT` | `tailscale.port` | `80` | Tailnet serving port when HTTPS is disabled. |
+| `DMANAGER_TAILSCALE_HTTPS_ENABLED` | `tailscale.https_enabled` | `false` | Serve HTTPS on tailnet `:443` with Tailscale-issued certificates. |
+| `DMANAGER_TAILSCALE_STATE_DIR` | `tailscale.state_dir` | `<db_dir>/tailscale` | tsnet state directory. |
+| `TAILSCALE_AUTHKEY`, `TAILSCALE_HOSTNAME`, `TAILSCALE_PORT`, `TAILSCALE_HTTPS_ENABLED`, `TAILSCALE_STATE_DIR` | *(bare aliases)* | — | Tailscale-style aliases; apply only when the `DMANAGER_TAILSCALE_*` counterpart is unset (precedence: prefixed > bare > YAML > defaults). |
+| `DMANAGER_SMTP_ENABLED` | `smtp.enabled` | `false` | Master switch for system email. |
+| `DMANAGER_SMTP_HOST` / `DMANAGER_SMTP_PORT` | `smtp.host` / `smtp.port` | `""` / `25` | SMTP relay endpoint (both required when enabled). |
+| `DMANAGER_SMTP_USERNAME` / `DMANAGER_SMTP_PASSWORD` | `smtp.username` / `smtp.password` | *(empty)* | Optional SMTP AUTH (PLAIN); prefer the env var for the password. |
+| `DMANAGER_SMTP_FROM_EMAIL` / `DMANAGER_SMTP_FROM_NAME` | `smtp.from_email` / `smtp.from_name` | *(empty)* | Sender address (required when enabled) and optional display name. |
+| `DMANAGER_SMTP_TLS_MODE` | `smtp.tls_mode` | `none` | `none`, `starttls`, or `tls`. |
+| `DMANAGER_SMTP_TIMEOUT_SECONDS` | `smtp.timeout_seconds` | `15` | Dial + send budget per message (1–120). |
 | `DMANAGER_REGISTRIES_<N>_HOST` | `registries[N].host` | — | Hostname of the Nth registry (0-indexed). |
 | `DMANAGER_REGISTRIES_<N>_USERNAME` | `registries[N].username` | — | Username for the Nth registry. |
 | `DMANAGER_REGISTRIES_<N>_PASSWORD` | `registries[N].password` | — | Password / token for the Nth registry. |
@@ -278,7 +325,7 @@ environment:
 | Container path | Purpose |
 |----------------|---------|
 | `/var/run/docker.sock` | **Required.** Host Docker socket for container management. |
-| `/var/lib/dmanager` | Persistent storage for the SQLite database. |
+| `/var/lib/dmanager` | Persistent storage for the SQLite database and the embedded Tailscale node state (`tailscale/` subdirectory). |
 | `/etc/dmanager/config.yaml` | Optional custom configuration file (mount read-only). |
 
 ---
@@ -287,9 +334,32 @@ environment:
 
 | Container port | Protocol | Description |
 |----------------|----------|-------------|
-| `9283` | HTTP | Web UI and ConnectRPC API. |
+| `9283` | HTTP | Web UI and ConnectRPC API. Fixed internal container port — publish it on any host port (e.g. `${DMANAGER_PORT:-9283}:9283`). |
+| `80` / `443` | HTTP / HTTPS | Tailnet-only listeners when the embedded Tailscale node is enabled — reachable via MagicDNS (`<hostname>.<tailnet>.ts.net`), never published to the host. `443` serves HTTPS with Tailscale-issued certificates and HTTP/2 when `tailscale.https_enabled: true`. |
 
 ---
+
+## Make targets
+
+Working from a repository checkout, `make` wraps the common compose workflows (the stack is `docker-compose.yml` + optional `.env`):
+
+| Target | Action |
+|--------|--------|
+| `make launch` | Start the stack in the background |
+| `make stop` | Stop and remove the stack |
+| `make restart` | Stop, then launch |
+| `make build` | Build the local image (compose `build:` section) |
+| `make pull` | Pull the images referenced by the stack |
+| `make logs` | Follow stack logs |
+| `make status` | Show container status |
+| `make smtp-test TO=you@example.com` | Send a test email through the configured relay |
+
+## Documentation
+
+- [docs/tailscale.md](docs/tailscale.md) — embedded Tailscale node: setup, HTTPS, passkeys over the tailnet
+- [docs/deployment.md](docs/deployment.md) — deployment guide
+- [docs/security.md](docs/security.md) — security model
+- [docs/design.md](docs/design.md) — architecture and design decisions
 
 ## Security notes
 
