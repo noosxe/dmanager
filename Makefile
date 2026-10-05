@@ -2,6 +2,9 @@
 
 COMPOSE := docker compose -f docker-compose.yml
 
+
+# Recipient address for the smtp-test target (make smtp-test TO=you@example.com)
+TO ?=
 .PHONY: help
 help:
 	@echo "Targets:"
@@ -12,6 +15,7 @@ help:
 	@echo "  pull     pull the images referenced by the stack"
 	@echo "  logs     follow stack logs"
 	@echo "  status   show container status"
+	@echo "  smtp-test send a test email via the relay (requires TO=you@example.com)"
 
 .PHONY: launch
 launch:
@@ -40,3 +44,10 @@ logs:
 .PHONY: status
 status:
 	$(COMPOSE) ps
+
+.PHONY: smtp-test
+smtp-test:
+ifndef TO
+	$(error usage: make smtp-test TO=you@example.com)
+endif
+	$(COMPOSE) exec dmanager dmanager smtp test --to=$(TO)
