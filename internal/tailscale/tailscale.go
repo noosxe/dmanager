@@ -329,7 +329,11 @@ func (n *Node) ServeHTTPS(h http.Handler) error {
 	}
 	// Registers TLSNextProto["h2"]; together with the ALPN advertisement in
 	// the TLS config this is what switches negotiated connections to HTTP/2.
-	http2.ConfigureServer(srv, &http2.Server{})
+	// ConfigureServer only errors for a srv.TLSConfig that excludes h2; ours
+	// lives on the listener instead, so srv.TLSConfig is nil here.
+	if err := http2.ConfigureServer(srv, &http2.Server{}); err != nil {
+		return fmt.Errorf("configure HTTP/2: %w", err)
+	}
 	if err := srv.Serve(tlsLn); err != nil && !n.closing.Load() {
 		return fmt.Errorf("tailscale HTTPS serve loop failed: %w", err)
 	}

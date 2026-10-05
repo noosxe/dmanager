@@ -234,7 +234,7 @@ func startH2CapableServer(t *testing.T, h http.Handler) string {
 		ReadHeaderTimeout: 10 * time.Second,
 		IdleTimeout:       30 * time.Second,
 	}
-	http2.ConfigureServer(srv, &http2.Server{})
+	http2.ConfigureServer(srv, &http2.Server{}) //nolint:errcheck // best-effort in test wiring
 	go func() { _ = srv.Serve(ln) }()
 	t.Cleanup(func() { _ = srv.Close() })
 	return ln.Addr().String()
@@ -268,7 +268,7 @@ func TestH2WiringNegotiatesHTTP2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("h2 round trip: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if got, want := resp.Proto, "HTTP/2.0"; got != want {
 		t.Errorf("h2-capable client negotiated %q, want %q", got, want)
 	}
@@ -283,7 +283,7 @@ func TestH2WiringNegotiatesHTTP2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("h1 round trip: %v", err)
 	}
-	defer resp1.Body.Close()
+	defer func() { _ = resp1.Body.Close() }()
 	if got, want := resp1.Proto, "HTTP/1.1"; got != want {
 		t.Errorf("h1 client negotiated %q, want %q", got, want)
 	}
