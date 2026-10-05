@@ -48,3 +48,6 @@ Thumbs.db
 # Local package manager overrides
 /pnpm-workspace.yaml
 
+
+# Agent Session Task Outputs
+.pi/tasks/
