@@ -361,6 +361,10 @@ Working from a repository checkout, `make` wraps the common compose workflows (t
 - [docs/security.md](docs/security.md) — security model
 - [docs/design.md](docs/design.md) — architecture and design decisions
 
+## Roadmap
+
+- **v0.10.0 — shadcn/ui migration** ([#299](https://github.com/noosxe/dmanager/issues/299)): migrate the frontend onto shadcn/ui components over Tailwind v4 — accessible primitives (dialogs, tabs, dropdowns, toasts) replacing hand-rolled ones, the current palette carried over as a token theme, and an in-app light/dark/system theme toggle. Incremental page-by-page conversion — no big-bang rewrite. See the issue for the full audit and migration sketch.
+
 ## Security notes
 
 ### Why the container runs as root
