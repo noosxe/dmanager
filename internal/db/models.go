@@ -69,6 +69,7 @@ type User struct {
 	Role         string
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
+	Email        sql.NullString
 }
 
 type WebauthnChallenge struct {

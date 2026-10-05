@@ -23,7 +23,7 @@ func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (username, password_hash, role)
 VALUES (?, ?, ?)
-RETURNING id, username, password_hash, role, created_at, updated_at
+RETURNING id, username, password_hash, role, created_at, updated_at, email
 `
 
 type CreateUserParams struct {
@@ -42,12 +42,13 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Email,
 	)
 	return i, err
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, username, password_hash, role, created_at, updated_at FROM users WHERE id = ? LIMIT 1
+SELECT id, username, password_hash, role, created_at, updated_at, email FROM users WHERE id = ? LIMIT 1
 `
 
 func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
@@ -60,12 +61,13 @@ func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
 		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Email,
 	)
 	return i, err
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, password_hash, role, created_at, updated_at FROM users WHERE username = ? LIMIT 1
+SELECT id, username, password_hash, role, created_at, updated_at, email FROM users WHERE username = ? LIMIT 1
 `
 
 func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User, error) {
@@ -78,6 +80,7 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Email,
 	)
 	return i, err
 }
