@@ -234,7 +234,9 @@ func startH2CapableServer(t *testing.T, h http.Handler) string {
 		ReadHeaderTimeout: 10 * time.Second,
 		IdleTimeout:       30 * time.Second,
 	}
-	http2.ConfigureServer(srv, &http2.Server{}) //nolint:errcheck // best-effort in test wiring
+	if err := http2.ConfigureServer(srv, &http2.Server{}); err != nil {
+		t.Fatalf("configure HTTP/2: %v", err)
+	}
 	go func() { _ = srv.Serve(ln) }()
 	t.Cleanup(func() { _ = srv.Close() })
 	return ln.Addr().String()
