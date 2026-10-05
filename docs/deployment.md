@@ -148,13 +148,13 @@ Effects:
        container_name: dmanager
        restart: unless-stopped
        ports:
-         - "9283:9283"
+         - "${DMANAGER_PORT:-9283}:9283"
        volumes:
          - /var/run/docker.sock:/var/run/docker.sock
          - dmanager-data:/var/lib/dmanager
        environment:
          - DMANAGER_SERVER_PORT=9283
-         - DMANAGER_SCHEDULER_INTERVAL_MINUTES=60
+         - DMANAGER_SCHEDULER_INTERVAL_MINUTES=${DMANAGER_SCHEDULER_INTERVAL_MINUTES:-60}
 
    volumes:
      dmanager-data:

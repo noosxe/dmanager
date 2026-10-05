@@ -9,29 +9,34 @@ services:
     # waits indefinitely for s6-rc services, so docker is the real ceiling.
     stop_grace_period: 15s
     ports:
-      - "9283:9283"
+      # Fixed internal container port is 9283; host port controlled by DMANAGER_PORT
+      - "${DMANAGER_PORT:-9283}:9283"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - dmanager-data:/var/lib/dmanager
       # Optional: Uncomment to override the default configuration with a host file
       # - ./config.yaml:/etc/dmanager/config.yaml:ro
     environment:
-      # Optional environment variable overrides (prefixed with DMANAGER_)
+      # All values interpolate from the environment or a project-local .env file
+      # (copy .env.example) with safe fallbacks, so plain 'docker compose up'
+      # works without creating a .env first.
+      # Fixed internal container port; host port controlled by DMANAGER_PORT
       - DMANAGER_SERVER_PORT=9283
-      - DMANAGER_SCHEDULER_INTERVAL_MINUTES=60
-      # WebAuthn / Passkeys for local development/testing on http://localhost:9283
-      - DMANAGER_WEBAUTHN_RP_ID=localhost
-      - DMANAGER_WEBAUTHN_ORIGINS=http://localhost:9283
-      # Registry Credentials Example:
+      - DMANAGER_SCHEDULER_INTERVAL_MINUTES=${DMANAGER_SCHEDULER_INTERVAL_MINUTES:-60}
+      # WebAuthn / Passkeys: localhost defaults serve local testing on
+      # http://localhost:9283; override both in .env for real deployments
+      - DMANAGER_WEBAUTHN_RP_ID=${DMANAGER_WEBAUTHN_RP_ID:-localhost}
+      - DMANAGER_WEBAUTHN_ORIGINS=${DMANAGER_WEBAUTHN_ORIGINS:-http://localhost:9283}
+      # Registry credentials example (opt-in: uncomment and set values, or wire
+      # them to .env entries)
       # - DMANAGER_REGISTRIES_0_HOST=ghcr.io
       # - DMANAGER_REGISTRIES_0_USERNAME=myuser
       # - DMANAGER_REGISTRIES_0_PASSWORD=mypassword
-      # Embedded Tailscale node (docs/tailscale.md): set an auth key to serve
-      # dmanager directly on your tailnet — no published ports needed.
-      # Node state persists under /var/lib/dmanager/tailscale (same volume
-      # as the database), so the key is only needed for the first start.
-      # - TAILSCALE_AUTHKEY=tskey-auth-xxxxxxxxxxxx-xxxxxxxxxxxxx
-      # - TAILSCALE_HOSTNAME=dmanager
+      # Embedded Tailscale node (docs/tailscale.md): off unless the auth key is
+      # set in .env. Node state persists under /var/lib/dmanager/tailscale (same
+      # volume as the database), so the key is only needed for the first start.
+      - TAILSCALE_AUTHKEY=${TAILSCALE_AUTHKEY:-}
+      - TAILSCALE_HOSTNAME=${TAILSCALE_HOSTNAME:-dmanager}
 
 volumes:
   dmanager-data:

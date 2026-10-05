@@ -36,19 +36,22 @@ services:
     container_name: dmanager
     restart: unless-stopped
     ports:
-      - "9283:9283"
+      - "${DMANAGER_PORT:-9283}:9283"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - dmanager-data:/var/lib/dmanager
       # Optional: mount a custom config file
       # - ./config.yaml:/etc/dmanager/config.yaml:ro
     environment:
+      # Values interpolate from the environment or a .env file (see .env.example)
       - DMANAGER_SERVER_PORT=9283
-      - DMANAGER_SCHEDULER_INTERVAL_MINUTES=60
+      - DMANAGER_SCHEDULER_INTERVAL_MINUTES=${DMANAGER_SCHEDULER_INTERVAL_MINUTES:-60}
 
 volumes:
   dmanager-data:
 ```
+
+Optional: create a `.env` file next to `docker-compose.yml` to override any of the settings above — [`.env.example`](.env.example) in the repository is a documented template. Compose reads it automatically, and every variable has a safe fallback, so the stack also runs without one.
 
 ### 2. Start the application
 
