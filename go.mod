@@ -18,6 +18,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/wneessen/go-mail v0.8.1
 	golang.org/x/crypto v0.57.0
+	golang.org/x/net v0.58.0
 	google.golang.org/protobuf v1.36.12
 	tailscale.com v1.102.5
 )
@@ -91,7 +92,6 @@ require (
 	go4.org/mem v0.0.0-20240501181205-ae6ca9944745 // indirect
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect
 	golang.org/x/exp v0.0.0-20260824195058-e88cd73687aa // indirect
-	golang.org/x/net v0.58.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sync v0.23.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
