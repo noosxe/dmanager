@@ -1,0 +1,36 @@
+name: Cache Maintenance
+
+on:
+  schedule:
+    # Mondays 04:23 UTC: prune before the week's builds. GitHub evicts caches
+    # LRU-style at the 10 GB repo quota, but builds racing that eviction can
+    # fail buildx layer writes with "failed to reserve cache" (seen 2026-10-05).
+    # A weekly purge keeps real headroom instead.
+    - cron: "23 4 * * 1"
+  workflow_dispatch: {}
+
+permissions:
+  actions: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  prune:
+    name: Prune Actions caches
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Purge Actions caches
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          echo "Before:"
+          gh api "repos/$GH_REPO/actions/cache/usage" --jq '{caches: .active_caches_count, bytes: .active_caches_size_in_bytes}'
+          gh cache delete --all
+          # The usage endpoint lags a few minutes, so "after" may briefly show
+          # the pre-purge snapshot.
+          echo "Purge requested (after-values may lag):"
+          gh api "repos/$GH_REPO/actions/cache/usage" --jq '{caches: .active_caches_count, bytes: .active_caches_size_in_bytes}'
