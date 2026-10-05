@@ -2,15 +2,26 @@ package tailscale
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
 	"io"
 	"log/slog"
+	"math/big"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
+	"time"
 
 	"dmanager/internal/config"
+	"golang.org/x/net/http2"
 )
 
 const (
@@ -173,5 +184,107 @@ func TestSnapshotFailedStart(t *testing.T) {
 	}
 	if snap.Enabled != true {
 		t.Error("expected enabled true (auth key configured)")
+	}
+}
+
+// selfSignedCert returns a throwaway localhost certificate so the h2 wiring
+// tests below can run a real TLS listener without a tsnet backend.
+func selfSignedCert(t *testing.T) tls.Certificate {
+	t.Helper()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("generate key: %v", err)
+	}
+	tmpl := x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		DNSNames:     []string{"localhost"},
+		IPAddresses:  []net.IP{net.IPv4(127, 0, 0, 1)},
+		NotBefore:    time.Now().Add(-time.Hour),
+		NotAfter:     time.Now().Add(time.Hour),
+	}
+	der, err := x509.CreateCertificate(rand.Reader, &tmpl, &tmpl, &key.PublicKey, key)
+	if err != nil {
+		t.Fatalf("create certificate: %v", err)
+	}
+	leaf, err := x509.ParseCertificate(der)
+	if err != nil {
+		t.Fatalf("parse certificate: %v", err)
+	}
+	return tls.Certificate{Certificate: [][]byte{der}, PrivateKey: key, Leaf: leaf}
+}
+
+// startH2CapableServer wires a TLS listener exactly the way ServeHTTPS does:
+// the newTailnetTLSConfig shape (NextProtos h2+http/1.1, GetCertificate from
+// a LocalClient) plus http2.ConfigureServer on the http.Server. The
+// certificate is swapped for a self-signed one since no tsnet backend is
+// present; everything else about the negotiation path is real.
+func startH2CapableServer(t *testing.T, h http.Handler) string {
+	t.Helper()
+	getCert := func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
+		return nil, errors.New("no tsnet backend in test")
+	}
+	cfg := newTailnetTLSConfig(getCert)
+	cfg.Certificates = []tls.Certificate{selfSignedCert(t)}
+	ln, err := tls.Listen("tcp", "127.0.0.1:0", cfg)
+	if err != nil {
+		t.Fatalf("tls listen: %v", err)
+	}
+	srv := &http.Server{
+		Handler:           h,
+		ReadHeaderTimeout: 10 * time.Second,
+		IdleTimeout:       30 * time.Second,
+	}
+	http2.ConfigureServer(srv, &http2.Server{})
+	go func() { _ = srv.Serve(ln) }()
+	t.Cleanup(func() { _ = srv.Close() })
+	return ln.Addr().String()
+}
+
+func TestTailnetTLSConfigAdvertisesH2(t *testing.T) {
+	cfg := newTailnetTLSConfig(func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
+		return nil, errors.New("not used")
+	})
+	if got, want := cfg.NextProtos, []string{"h2", "http/1.1"}; !slices.Equal(got, want) {
+		t.Errorf("NextProtos = %v, want %v", got, want)
+	}
+	if cfg.GetCertificate == nil {
+		t.Error("GetCertificate must be set (delegates to the node's local client)")
+	}
+}
+
+func TestH2WiringNegotiatesHTTP2(t *testing.T) {
+	addr := startH2CapableServer(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+
+	// An HTTP/2-capable client must negotiate h2 via ALPN and get a real
+	// HTTP/2 response through the registered handler.
+	h2tr := &http2.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}} //nolint:gosec // test-only self-signed listener
+	req, err := http.NewRequest(http.MethodGet, "https://"+addr+"/", nil)
+	if err != nil {
+		t.Fatalf("build request: %v", err)
+	}
+	resp, err := h2tr.RoundTrip(req)
+	if err != nil {
+		t.Fatalf("h2 round trip: %v", err)
+	}
+	defer resp.Body.Close()
+	if got, want := resp.Proto, "HTTP/2.0"; got != want {
+		t.Errorf("h2-capable client negotiated %q, want %q", got, want)
+	}
+
+	// An HTTP/1.1-only client must keep working on the same listener.
+	h1tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}} //nolint:gosec // test-only self-signed listener
+	req1, err := http.NewRequest(http.MethodGet, "https://"+addr+"/", nil)
+	if err != nil {
+		t.Fatalf("build request: %v", err)
+	}
+	resp1, err := h1tr.RoundTrip(req1)
+	if err != nil {
+		t.Fatalf("h1 round trip: %v", err)
+	}
+	defer resp1.Body.Close()
+	if got, want := resp1.Proto, "HTTP/1.1"; got != want {
+		t.Errorf("h1 client negotiated %q, want %q", got, want)
 	}
 }

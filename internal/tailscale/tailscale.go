@@ -5,6 +5,8 @@ package tailscale
 
 import (
 	"context"
+	"crypto/tls"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -16,6 +18,7 @@ import (
 	"time"
 
 	"dmanager/internal/config"
+	"golang.org/x/net/http2"
 	"tailscale.com/ipn/ipnstate"
 	"tailscale.com/tsnet"
 )
@@ -261,20 +264,62 @@ func forwardedProtoHTTPS(h http.Handler) http.Handler {
 	})
 }
 
+// newTailnetTLSConfig builds the TLS configuration for the tailnet HTTPS
+// listener. NextProtos advertises ALPN "h2" and "http/1.1" — tsnet's own
+// ListenTLS omits them, which silently pins every client to HTTP/1.1.
+// getCert is usually LocalClient.GetCertificate, exactly what tsnet's
+// internal getCert delegates to.
+func newTailnetTLSConfig(getCert func(*tls.ClientHelloInfo) (*tls.Certificate, error)) *tls.Config {
+	return &tls.Config{
+		NextProtos:     []string{"h2", "http/1.1"},
+		GetCertificate: getCert,
+	}
+}
+
 // ServeHTTPS listens on the tailnet's TLS port (443) and serves h wrapped
 // in the X-Forwarded-Proto middleware until the listener closes. It
 // requires HTTPS certificates and MagicDNS to be enabled on the tailnet;
 // without them, certificate provisioning fails and TLS handshakes time out.
 // It is intended to run in its own goroutine. Errors caused by a concurrent
 // Close are not reported.
+//
+// The TLS listener is assembled by hand rather than via tsnet's ListenTLS,
+// whose tls.Config omits NextProtos: without ALPN, Go's http.Server.Serve
+// never dispatches HTTP/2 and every client falls back to HTTP/1.1. Here
+// "h2" is advertised and the http2 handler registered below, while
+// "http/1.1" and ALPN-less clients keep the existing HTTP/1.1 path.
 func (n *Node) ServeHTTPS(h http.Handler) error {
-	ln, err := n.srv.ListenTLS("tcp", ":443")
+	// Up is idempotent (Start already ran it) and yields the status the
+	// MagicDNS/HTTPS guards below are derived from, mirroring ListenTLS.
+	st, err := n.srv.Up(context.Background())
 	if err != nil {
 		if n.closing.Load() {
 			return nil
 		}
 		return fmt.Errorf("tailscale TLS listen failed: %w", err)
 	}
+	if !st.CurrentTailnet.MagicDNSEnabled {
+		return errors.New("tailscale: you must enable MagicDNS in the DNS page of the admin panel to proceed. See https://tailscale.com/s/https")
+	}
+	if len(st.CertDomains) == 0 {
+		return errors.New("tailscale: you must enable HTTPS in the admin panel to proceed. See https://tailscale.com/s/https")
+	}
+	lc, err := n.srv.LocalClient()
+	if err != nil {
+		if n.closing.Load() {
+			return nil
+		}
+		return fmt.Errorf("tailscale local client failed: %w", err)
+	}
+
+	ln, err := n.srv.Listen("tcp", ":443")
+	if err != nil {
+		if n.closing.Load() {
+			return nil
+		}
+		return fmt.Errorf("tailscale TLS listen failed: %w", err)
+	}
+	tlsLn := tls.NewListener(ln, newTailnetTLSConfig(lc.GetCertificate))
 	n.logger.Info("serving dmanager on tailnet over HTTPS", "port", 443)
 
 	srv := &http.Server{
@@ -282,7 +327,10 @@ func (n *Node) ServeHTTPS(h http.Handler) error {
 		ReadHeaderTimeout: 10 * time.Second,
 		IdleTimeout:       30 * time.Second,
 	}
-	if err := srv.Serve(ln); err != nil && !n.closing.Load() {
+	// Registers TLSNextProto["h2"]; together with the ALPN advertisement in
+	// the TLS config this is what switches negotiated connections to HTTP/2.
+	http2.ConfigureServer(srv, &http2.Server{})
+	if err := srv.Serve(tlsLn); err != nil && !n.closing.Load() {
 		return fmt.Errorf("tailscale HTTPS serve loop failed: %w", err)
 	}
 	return nil
