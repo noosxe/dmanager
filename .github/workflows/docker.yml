@@ -11,20 +11,46 @@ on:
       - '.github/workflows/docker.yml'
   pull_request:
     branches: [ main ]
-    paths:
-      - 'Dockerfile'
-      - 'docker-compose.yml'
-      - 'rootfs/**'
-      - '.dockerignore'
-      - '.github/workflows/docker.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect Docker Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      docker: ${{ steps.filter.outputs.docker }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed paths
+        id: filter
+        run: |
+          # Push runs are already path-filtered by the workflow trigger;
+          # pull requests gate every job through this detection instead,
+          # so the gate below reports on every PR regardless of contents.
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.ref }}"
+            git fetch origin "$BASE"
+            RANGE="origin/$BASE...HEAD"
+            if git diff --name-only "$RANGE" | grep -qE '^Dockerfile$|^docker-compose\.yml$|^rootfs/|^\.dockerignore$|^\.github/workflows/docker\.yml$'; then
+              echo "docker=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "docker=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "docker=true" >> "$GITHUB_OUTPUT"
+          fi
   build:
     name: Build Docker Image
+    needs: changes
+    if: needs.changes.outputs.docker == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -49,3 +75,17 @@ jobs:
             COMMIT=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=min
+
+  gate:
+    name: docker-gate
+    needs: [changes, build]
+    if: >-
+      always() &&
+      !cancelled() &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: All docker checks passed
+        run: echo "docker-gate satisfied - no required job failed (skips allowed)"
