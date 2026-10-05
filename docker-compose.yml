@@ -39,6 +39,18 @@ services:
       - TAILSCALE_HOSTNAME=${TAILSCALE_HOSTNAME:-dmanager}
       # Serve HTTPS on tailnet :443 with Tailscale-issued certs when set to true
       - TAILSCALE_HTTPS_ENABLED=${TAILSCALE_HTTPS_ENABLED:-}
+      # SMTP relay for system email: off unless DMANAGER_SMTP_ENABLED=true is
+      # set in .env (then host, port and from_email are required at startup).
+      # Empty values keep the section inert, mirroring the app defaults.
+      - DMANAGER_SMTP_ENABLED=${DMANAGER_SMTP_ENABLED:-}
+      - DMANAGER_SMTP_HOST=${DMANAGER_SMTP_HOST:-}
+      - DMANAGER_SMTP_PORT=${DMANAGER_SMTP_PORT:-}
+      - DMANAGER_SMTP_USERNAME=${DMANAGER_SMTP_USERNAME:-}
+      - DMANAGER_SMTP_PASSWORD=${DMANAGER_SMTP_PASSWORD:-}
+      - DMANAGER_SMTP_FROM_EMAIL=${DMANAGER_SMTP_FROM_EMAIL:-}
+      - DMANAGER_SMTP_FROM_NAME=${DMANAGER_SMTP_FROM_NAME:-}
+      - DMANAGER_SMTP_TLS_MODE=${DMANAGER_SMTP_TLS_MODE:-}
+      - DMANAGER_SMTP_TIMEOUT_SECONDS=${DMANAGER_SMTP_TIMEOUT_SECONDS:-}
 
 volumes:
   dmanager-data:
