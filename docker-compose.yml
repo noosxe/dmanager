@@ -37,6 +37,8 @@ services:
       # volume as the database), so the key is only needed for the first start.
       - TAILSCALE_AUTHKEY=${TAILSCALE_AUTHKEY:-}
       - TAILSCALE_HOSTNAME=${TAILSCALE_HOSTNAME:-dmanager}
+      # Serve HTTPS on tailnet :443 with Tailscale-issued certs when set to true
+      - TAILSCALE_HTTPS_ENABLED=${TAILSCALE_HTTPS_ENABLED:-}
 
 volumes:
   dmanager-data:
