@@ -4,7 +4,11 @@
 -- and finish steps of a ceremony" so extension outputs can be verified against
 -- what was actually requested. Rebuilt-bare SessionData (challenge only) left
 -- Requested empty, rejecting spec-mandated client outputs such as credProps.
-ALTER TABLE webauthn_challenges ADD COLUMN extensions BLOB NOT NULL DEFAULT NULL;
+--
+-- The column must be nullable: SQLite rejects ADD COLUMN with NOT NULL and a
+-- NULL default, and rows written before this migration legitimately have no
+-- extension state (the Go layer treats NULL/empty as "nothing was requested").
+ALTER TABLE webauthn_challenges ADD COLUMN extensions BLOB;
 
 -- +goose Down
 ALTER TABLE webauthn_challenges DROP COLUMN extensions;
