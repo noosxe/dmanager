@@ -14,7 +14,6 @@ Written by AI, tested and used by humans.
 - **Auto-Update** — optional per-container automatic re-deployment preserving all configuration
 - **Private Registry Support** — authenticate against private registries (GHCR, Docker Hub, etc.)
 - **Gotify Notifications** — receive push notifications for update events and failures
-- **Embedded Tailscale Node** — optional built-in tailnet access (`TAILSCALE_AUTHKEY`): manage dmanager from anywhere in your tailnet with no published ports and no sidecar container
 - **Embedded Tailscale Node** — optional built-in tailnet access (`TAILSCALE_AUTHKEY`): manage dmanager from anywhere in your tailnet with no published ports and no sidecar container; optional tailnet HTTPS (`:443`, Tailscale-issued certificates — passkeys included) served over HTTP/2, with node status visible in the Admin UI
 - **System Logs** — browse structured backend logs directly in the UI
 - **Authentication & Passkeys** — secure session-based authentication with role-based access control (admin / viewer), discoverable WebAuthn passkeys (Touch ID, Windows Hello, Face ID, hardware security keys), NIST password policy, login rate limiting, session management, and auth audit logging
@@ -241,7 +240,6 @@ The section is inert until an auth key is configured. See [docs/tailscale.md](do
 | `smtp.timeout_seconds` | `int` | `15` | Dial + send budget per message (1–120). |
 
 Email is sent by system flows only; there is no API or UI send path. Verify the setup from the deployment with `dmanager smtp test --to=you@example.com`.
-Email is sent by system flows only; there is no API or UI send path. Verify the setup from the deployment with `dmanager smtp test --to=you@example.com`, or `make smtp-test TO=you@example.com` from a compose checkout.
 #### `registries` — Private registry credentials
 
 A list of registry credential entries. Each entry supports the following fields:
@@ -353,6 +351,11 @@ Working from a repository checkout, `make` wraps the common compose workflows (t
 | `make logs` | Follow stack logs |
 | `make status` | Show container status |
 | `make smtp-test TO=you@example.com` | Send a test email through the configured relay |
+
+| `make lint` | Run golangci-lint with the repository config (same check as CI's lint job) |
+| `make lint-install` | Install the CI-pinned golangci-lint binary into `$(go env GOPATH)/bin` |
+
+Backend changes are linted in CI with golangci-lint (`Golangci-lint Check` job). Run the same check locally with `make lint`; if the binary is missing or a different version, `make lint-install` fetches exactly the pinned build. The pin matters: older golangci-lint releases fail against Go 1.27 stdlib export data — that mismatch, not a toolchain incompatibility, is what made local lint appear broken ([#311](https://github.com/noosxe/dmanager/issues/311)).
 
 ## Documentation
 
