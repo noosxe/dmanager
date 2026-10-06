@@ -55,7 +55,11 @@ func cborMap(pairs ...[]byte) []byte {
 
 func b64url(b []byte) string { return base64.RawURLEncoding.EncodeToString(b) }
 
-const credIDLen = 32
+const (
+	credIDLen      = 32
+	jsonFieldType  = "type"
+	credentialType = "public-key"
+)
 
 type fakeAuthenticator struct {
 	t      *testing.T
@@ -153,9 +157,9 @@ func (f *fakeAuthenticator) RegistrationResponseJSON(challenge string, clientExt
 		clientExt = map[string]any{}
 	}
 	b, err := json.Marshal(map[string]any{
-		"id":    b64url(f.credID),
-		"rawId": b64url(f.credID),
-		"type":  "public-key",
+		"id":          b64url(f.credID),
+		"rawId":       b64url(f.credID),
+		jsonFieldType: credentialType,
 		"response": map[string]any{
 			"attestationObject": b64url(f.attestationObject(flags, counter)),
 			"clientDataJSON":    b64url(f.clientData("webauthn.create", challenge, f.origin)),
@@ -192,9 +196,9 @@ func (f *fakeAuthenticator) AssertionResponseJSON(challenge string, userHandle [
 		f.t.Fatalf("fake authenticator assertion signature: %v", err)
 	}
 	b, err := json.Marshal(map[string]any{
-		"id":    b64url(f.credID),
-		"rawId": b64url(f.credID),
-		"type":  "public-key",
+		"id":          b64url(f.credID),
+		"rawId":       b64url(f.credID),
+		jsonFieldType: credentialType,
 		"response": map[string]any{
 			"authenticatorData": b64url(ad),
 			"clientDataJSON":    b64url(cd),
