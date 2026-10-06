@@ -540,11 +540,17 @@ func (s *Service) BeginPasskeyRegistration(ctx context.Context, req *connect.Req
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to begin passkey registration: %w", err))
 	}
 
+	extJSON, err := json.Marshal(sessionData.Extensions)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to encode WebAuthn session extensions: %w", err))
+	}
+
 	_, err = s.Queries.CreateWebAuthnChallenge(ctx, db.CreateWebAuthnChallengeParams{
-		Challenge: []byte(sessionData.Challenge),
-		Kind:      challengeKindRegistration,
-		UserID:    sql.NullInt64{Int64: user.ID, Valid: true},
-		ExpiresAt: time.Now().Add(120 * time.Second),
+		Challenge:  []byte(sessionData.Challenge),
+		Kind:       challengeKindRegistration,
+		UserID:     sql.NullInt64{Int64: user.ID, Valid: true},
+		ExpiresAt:  time.Now().Add(120 * time.Second),
+		Extensions: extJSON,
 	})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to store registration challenge: %w", err))
@@ -615,7 +621,11 @@ func (s *Service) FinishPasskeyRegistration(ctx context.Context, req *connect.Re
 		UserVerification: getUserVerificationRequirement(s.webauthnCfg.RequireUserVerification),
 		CredParams:       webauthn.CredentialParametersDefault(),
 	}
-
+	if len(dbChallenge.Extensions) > 0 {
+		if err := json.Unmarshal(dbChallenge.Extensions, &sessionData.Extensions); err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("stored WebAuthn session extensions are invalid: %w", err))
+		}
+	}
 	cred, err := s.webauthn.CreateCredential(webUser, sessionData, parsedResponse)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("failed to verify credential creation: %w", err))
@@ -687,11 +697,17 @@ func (s *Service) BeginPasskeyLogin(ctx context.Context, req *connect.Request[v1
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to begin passkey login: %w", err))
 	}
 
+	extJSON, err := json.Marshal(sessionData.Extensions)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to encode WebAuthn session extensions: %w", err))
+	}
+
 	_, err = s.Queries.CreateWebAuthnChallenge(ctx, db.CreateWebAuthnChallengeParams{
-		Challenge: []byte(sessionData.Challenge),
-		Kind:      challengeKindLogin,
-		UserID:    sql.NullInt64{Valid: false},
-		ExpiresAt: time.Now().Add(120 * time.Second),
+		Challenge:  []byte(sessionData.Challenge),
+		Kind:       challengeKindLogin,
+		UserID:     sql.NullInt64{Valid: false},
+		ExpiresAt:  time.Now().Add(120 * time.Second),
+		Extensions: extJSON,
 	})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to store login challenge: %w", err))
@@ -770,6 +786,11 @@ func (s *Service) FinishPasskeyLogin(ctx context.Context, req *connect.Request[v
 	sessionData := webauthn.SessionData{
 		Challenge:        challengeStr,
 		UserVerification: getUserVerificationRequirement(s.webauthnCfg.RequireUserVerification),
+	}
+	if len(dbChallenge.Extensions) > 0 {
+		if err := json.Unmarshal(dbChallenge.Extensions, &sessionData.Extensions); err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("stored WebAuthn session extensions are invalid: %w", err))
+		}
 	}
 
 	validCred, err := s.webauthn.ValidateDiscoverableLogin(

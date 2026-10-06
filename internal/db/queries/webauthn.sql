@@ -54,9 +54,10 @@ INSERT INTO webauthn_challenges (
     kind,
     user_id,
     expires_at,
+    extensions,
     consumed
 ) VALUES (
-    ?, ?, ?, ?, 0
+    ?, ?, ?, ?, ?, 0
 )
 RETURNING *;
 

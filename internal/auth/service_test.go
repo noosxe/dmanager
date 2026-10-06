@@ -9,11 +9,13 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	connect "connectrpc.com/connect"
+	"github.com/go-webauthn/webauthn/protocol"
 	_ "github.com/ncruces/go-sqlite3/driver"
 	"golang.org/x/crypto/bcrypt"
 
@@ -870,6 +872,42 @@ func TestBeginPasskeyRegistration(t *testing.T) {
 	}
 	if !found.UserID.Valid || found.UserID.Int64 != user.ID {
 		t.Errorf("expected challenge user_id %d, got %v", user.ID, found.UserID)
+		var persisted protocol.SessionExtensions
+		if err := json.Unmarshal(found.Extensions, &persisted); err != nil {
+			t.Fatalf("failed to unmarshal persisted session extensions: %v", err)
+		}
+		if !slices.Contains(persisted.Requested, "credProps") {
+			t.Errorf("expected credProps in persisted session extensions, got %v", persisted.Requested)
+		}
+	}
+}
+
+// Regression for the Bitwarden passkey enrollment failure: the browser returns
+// a spec-mandated credProps output; the finish step must accept it because the
+// begin step requested it and the request was persisted with the challenge.
+func TestPersistedSessionExtensionsSolicitCredPropsOutput(t *testing.T) {
+	requested := protocol.SessionExtensions{Requested: []string{"credProps"}}
+	b, err := json.Marshal(requested)
+	if err != nil {
+		t.Fatalf("failed to marshal session extensions: %v", err)
+	}
+	var restored protocol.SessionExtensions
+	if err := json.Unmarshal(b, &restored); err != nil {
+		t.Fatalf("failed to unmarshal session extensions: %v", err)
+	}
+
+	rk := true
+	outputs := protocol.AuthenticationExtensionsClientOutputs{
+		CredProps: &protocol.CredentialPropertiesOutput{RK: &rk},
+	}
+	if err := outputs.Verify(restored, protocol.CreateCeremony, protocol.UnsolicitedOutputPolicyReject); err != nil {
+		t.Fatalf("expected persisted credProps request to solicit the client output: %v", err)
+	}
+
+	// Without persistence (the pre-fix state) the same output is rejected —
+	// this is the exact error reported from production.
+	if err := outputs.Verify(protocol.SessionExtensions{}, protocol.CreateCeremony, protocol.UnsolicitedOutputPolicyReject); err == nil {
+		t.Fatal("expected unsolicited credProps output to be rejected")
 	}
 }
 
