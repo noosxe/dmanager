@@ -622,8 +622,8 @@ func (s *Service) FinishPasskeyRegistration(ctx context.Context, req *connect.Re
 		CredParams:       webauthn.CredentialParametersDefault(),
 	}
 	if len(dbChallenge.Extensions) > 0 {
-		if err := json.Unmarshal(dbChallenge.Extensions, &sessionData.Extensions); err != nil {
-			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("stored WebAuthn session extensions are invalid: %w", err))
+		if uerr := json.Unmarshal(dbChallenge.Extensions, &sessionData.Extensions); uerr != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("stored WebAuthn session extensions are invalid: %w", uerr))
 		}
 	}
 	cred, err := s.webauthn.CreateCredential(webUser, sessionData, parsedResponse)
@@ -788,8 +788,8 @@ func (s *Service) FinishPasskeyLogin(ctx context.Context, req *connect.Request[v
 		UserVerification: getUserVerificationRequirement(s.webauthnCfg.RequireUserVerification),
 	}
 	if len(dbChallenge.Extensions) > 0 {
-		if err := json.Unmarshal(dbChallenge.Extensions, &sessionData.Extensions); err != nil {
-			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("stored WebAuthn session extensions are invalid: %w", err))
+		if uerr := json.Unmarshal(dbChallenge.Extensions, &sessionData.Extensions); uerr != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("stored WebAuthn session extensions are invalid: %w", uerr))
 		}
 	}
 
