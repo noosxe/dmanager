@@ -73,12 +73,13 @@ type User struct {
 }
 
 type WebauthnChallenge struct {
-	ID        int64
-	Challenge []byte
-	Kind      string
-	UserID    sql.NullInt64
-	ExpiresAt time.Time
-	Consumed  int64
+	ID         int64
+	Challenge  []byte
+	Kind       string
+	UserID     sql.NullInt64
+	ExpiresAt  time.Time
+	Consumed   int64
+	Extensions []byte
 }
 
 type WebauthnCredential struct {

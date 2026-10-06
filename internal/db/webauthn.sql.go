@@ -40,18 +40,20 @@ INSERT INTO webauthn_challenges (
     kind,
     user_id,
     expires_at,
+    extensions,
     consumed
 ) VALUES (
-    ?, ?, ?, ?, 0
+    ?, ?, ?, ?, ?, 0
 )
-RETURNING id, challenge, kind, user_id, expires_at, consumed
+RETURNING id, challenge, kind, user_id, expires_at, consumed, extensions
 `
 
 type CreateWebAuthnChallengeParams struct {
-	Challenge []byte
-	Kind      string
-	UserID    sql.NullInt64
-	ExpiresAt time.Time
+	Challenge  []byte
+	Kind       string
+	UserID     sql.NullInt64
+	ExpiresAt  time.Time
+	Extensions []byte
 }
 
 func (q *Queries) CreateWebAuthnChallenge(ctx context.Context, arg CreateWebAuthnChallengeParams) (WebauthnChallenge, error) {
@@ -60,6 +62,7 @@ func (q *Queries) CreateWebAuthnChallenge(ctx context.Context, arg CreateWebAuth
 		arg.Kind,
 		arg.UserID,
 		arg.ExpiresAt,
+		arg.Extensions,
 	)
 	var i WebauthnChallenge
 	err := row.Scan(
@@ -69,6 +72,7 @@ func (q *Queries) CreateWebAuthnChallenge(ctx context.Context, arg CreateWebAuth
 		&i.UserID,
 		&i.ExpiresAt,
 		&i.Consumed,
+		&i.Extensions,
 	)
 	return i, err
 }
@@ -164,7 +168,7 @@ func (q *Queries) DeleteWebAuthnCredential(ctx context.Context, arg DeleteWebAut
 }
 
 const getUnconsumedWebAuthnChallenge = `-- name: GetUnconsumedWebAuthnChallenge :one
-SELECT id, challenge, kind, user_id, expires_at, consumed FROM webauthn_challenges
+SELECT id, challenge, kind, user_id, expires_at, consumed, extensions FROM webauthn_challenges
 WHERE challenge = ? AND kind = ? AND consumed = 0 AND expires_at > ?
 LIMIT 1
 `
@@ -185,6 +189,7 @@ func (q *Queries) GetUnconsumedWebAuthnChallenge(ctx context.Context, arg GetUnc
 		&i.UserID,
 		&i.ExpiresAt,
 		&i.Consumed,
+		&i.Extensions,
 	)
 	return i, err
 }
