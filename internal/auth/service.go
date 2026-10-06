@@ -532,6 +532,9 @@ func (s *Service) BeginPasskeyRegistration(ctx context.Context, req *connect.Req
 			UserVerification: uv,
 		}),
 		webauthn.WithConveyancePreference(protocol.PreferNoAttestation),
+		webauthn.WithExtensions(
+			webauthn.WithExtensionCredProps(),
+		),
 	)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to begin passkey registration: %w", err))
