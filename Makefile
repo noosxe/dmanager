@@ -16,6 +16,8 @@ help:
 	@echo "  logs     follow stack logs"
 	@echo "  status   show container status"
 	@echo "  smtp-test send a test email via the relay (requires TO=you@example.com)"
+	@echo "  lint     run golangci-lint (same config as CI)"
+	@echo "  lint-install install the CI-pinned golangci-lint binary"
 
 .PHONY: launch
 launch:
@@ -58,3 +60,26 @@ ifndef TO
 	$(error usage: make smtp-test TO=you@example.com)
 endif
 	$(COMPOSE) exec dmanager dmanager smtp test --to=$(TO)
+
+# golangci-lint must match the CI pin (.github/workflows/backend.yml). An older
+# binary cannot read Go 1.27 stdlib export data — the local-lint breakage was a
+# stale linter, not a toolchain incompatibility (issue #311).
+GOLANGCI_LINT_VERSION ?= v2.13.1
+GOLANGCI_LINT ?= $(shell command -v golangci-lint 2>/dev/null || echo "$$(go env GOPATH)/bin/golangci-lint")
+
+.PHONY: lint-install
+lint-install:
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b "$$(go env GOPATH)/bin" $(GOLANGCI_LINT_VERSION)
+
+.PHONY: lint
+lint:
+	@if [ ! -x "$(GOLANGCI_LINT)" ]; then \
+		echo "golangci-lint not found — install the CI-pinned build with:"; \
+		echo "  make lint-install"; \
+		exit 1; \
+	fi
+	@if ! $(GOLANGCI_LINT) version 2>/dev/null | grep -qF "$(GOLANGCI_LINT_VERSION:v%=%)"; then \
+		echo "warning: $$( $(GOLANGCI_LINT) version 2>/dev/null | head -1 )"; \
+		echo "warning: CI pins $(GOLANGCI_LINT_VERSION) — run 'make lint-install' for parity"; \
+	fi
+	$(GOLANGCI_LINT) run
