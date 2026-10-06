@@ -365,6 +365,7 @@ Working from a repository checkout, `make` wraps the common compose workflows (t
 
 - **v0.10.0 — shadcn/ui migration** ([#299](https://github.com/noosxe/dmanager/issues/299)): migrate the frontend onto shadcn/ui components over Tailwind v4 — accessible primitives (dialogs, tabs, dropdowns, toasts) replacing hand-rolled ones, the current palette carried over as a token theme, and an in-app light/dark/system theme toggle. Incremental page-by-page conversion — no big-bang rewrite. See the issue for the full audit and migration sketch.
 - **v0.11.0 — MCP server for agent access** ([#301](https://github.com/noosxe/dmanager/issues/301)): expose dmanager to AI agents via a streamable-HTTP Model Context Protocol server — container status, logs, and lifecycle actions as tools, gated by the existing RBAC model and audit-logged. Design story to define auth, SDK choice, and tool surface. Pairs naturally with the embedded Tailscale node for private agent access.
+- **v0.12.0 — reliable self-update** ([#302](https://github.com/noosxe/dmanager/issues/302)): 1-click "Update dmanager" plus optional scheduled automatic mode — a mechanism that survives the manager's own death (helper-container recreate as the default candidate), with pre-update DB backup, health-gate verification, and automatic rollback.
 
 ## Security notes
 
