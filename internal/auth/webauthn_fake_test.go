@@ -28,12 +28,16 @@ const (
 	flagED byte = 0x80 // extension data included
 )
 
+// Each arm emits the already-bounded length bytes; the byte conversions are
+// intentional truncations of masked values, which gosec G115 cannot see.
+//
+//nolint:gosec // bounded truncations, see comment above
 func cborHead(major byte, n uint64) []byte {
 	switch {
 	case n < 24:
-		return []byte{major<<5 | byte(n&0xff)}
+		return []byte{major<<5 | byte(n)}
 	case n <= 0xff:
-		return []byte{major<<5 | 24, byte(n & 0xff)}
+		return []byte{major<<5 | 24, byte(n)}
 	case n <= 0xffff:
 		return []byte{major<<5 | 25, byte(n >> 8), byte(n)}
 	default:
