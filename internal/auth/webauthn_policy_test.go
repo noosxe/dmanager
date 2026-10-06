@@ -109,10 +109,10 @@ func beginFakeLogin(t *testing.T, svc *Service) string {
 	return challengeFromOptions(t, begin.Msg.OptionsJson)
 }
 
-func finishFakeLogin(t *testing.T, svc *Service, auth *fakeAuthenticator, challenge string, userHandle []byte, clientExt map[string]any, flags byte, counter uint32, origin string) error {
+func finishFakeLogin(t *testing.T, svc *Service, auth *fakeAuthenticator, challenge string, userHandle []byte, flags byte, counter uint32, origin string) error {
 	t.Helper()
 	_, err := svc.FinishPasskeyLogin(context.Background(), connect.NewRequest(&v1.FinishPasskeyLoginRequest{
-		ResponseJson: auth.AssertionResponseJSON(challenge, userHandle, clientExt, flags, counter, origin),
+		ResponseJson: auth.AssertionResponseJSON(challenge, userHandle, nil, flags, counter, origin),
 	}))
 	return err
 }
@@ -155,7 +155,7 @@ func credentialRow(t *testing.T, queries *db.Queries, credID []byte) db.Webauthn
 func TestPolicyUnsolicitedExtensionOutputRejected(t *testing.T) {
 	_, _, svc := newPasskeyService(t)
 	user := newPasskeyUser(t, svc.Queries, "alice")
-	auth := newFakeAuthenticator(t, testRPID, testOrigin)
+	auth := newFakeAuthenticator(t)
 
 	// Positive control: requested credProps output accepted (the #305 replay,
 	// full ceremony this time rather than a unit-level probe).
@@ -167,7 +167,7 @@ func TestPolicyUnsolicitedExtensionOutputRejected(t *testing.T) {
 	// RP requesting it. With credProps requested, uvm remains unsolicited and
 	// must be rejected — a library upgrade silently flipping the default to
 	// ignore would fail right here.
-	auth2 := newFakeAuthenticator(t, testRPID, testOrigin)
+	auth2 := newFakeAuthenticator(t)
 	authCtx := context.WithValue(context.Background(), userContextKey, user)
 	challenge := beginFakeRegistration(t, svc, user)
 	_, err := svc.FinishPasskeyRegistration(authCtx, connect.NewRequest(&v1.FinishPasskeyRegistrationRequest{
@@ -192,13 +192,13 @@ func TestPolicyBackupFlagLifecycle(t *testing.T) {
 	_, queries, svc := newPasskeyService(t)
 	user := newPasskeyUser(t, svc.Queries, "bob")
 	handle := userHandleFor(user)
-	auth := newFakeAuthenticator(t, testRPID, testOrigin)
+	auth := newFakeAuthenticator(t)
 
 	enrollFakePasskey(t, svc, user, auth, nil, regFlagsSynced, 5)
 
 	// BS flip: passkey synced to another device presents BS=0 while BE stays
 	// 1 — must succeed and persist the new backup state.
-	if err := finishFakeLogin(t, svc, auth, beginFakeLogin(t, svc), handle, nil, flagUP|flagUV|flagBE, 6, ""); err != nil {
+	if err := finishFakeLogin(t, svc, auth, beginFakeLogin(t, svc), handle, flagUP|flagUV|flagBE, 6, ""); err != nil {
 		t.Fatalf("BS flip on synced passkey must be accepted: %v", err)
 	}
 	row := credentialRow(t, queries, auth.credID)
@@ -208,7 +208,7 @@ func TestPolicyBackupFlagLifecycle(t *testing.T) {
 
 	// BE change between ceremonies (1 → 0): spec-mandated error.
 	challenge := beginFakeLogin(t, svc)
-	err := finishFakeLogin(t, svc, auth, challenge, handle, nil, flagUP|flagUV, 7, "")
+	err := finishFakeLogin(t, svc, auth, challenge, handle, flagUP|flagUV, 7, "")
 	if err == nil {
 		t.Fatal("expected BE change between ceremonies to be rejected")
 	}
@@ -218,10 +218,10 @@ func TestPolicyBackupFlagLifecycle(t *testing.T) {
 
 	// BS without BE: a device-bound credential (never backup-eligible)
 	// presenting BS=1 — invalid combination, rejected.
-	device := newFakeAuthenticator(t, testRPID, testOrigin)
+	device := newFakeAuthenticator(t)
 	enrollFakePasskey(t, svc, user, device, nil, regFlagsDevice, 1)
 	challenge = beginFakeLogin(t, svc)
-	err = finishFakeLogin(t, svc, device, challenge, handle, nil, flagUP|flagUV|flagBS, 2, "")
+	err = finishFakeLogin(t, svc, device, challenge, handle, flagUP|flagUV|flagBS, 2, "")
 	if err == nil {
 		t.Fatal("expected BS without BE to be rejected")
 	}
@@ -236,9 +236,9 @@ func TestPolicySignCounterAndCloneDetection(t *testing.T) {
 	handle := userHandleFor(user)
 
 	// Synced authenticator: 0 → 0 forever, no clone warning.
-	synced := newFakeAuthenticator(t, testRPID, testOrigin)
+	synced := newFakeAuthenticator(t)
 	enrollFakePasskey(t, svc, user, synced, nil, regFlagsSynced, 0)
-	if err := finishFakeLogin(t, svc, synced, beginFakeLogin(t, svc), handle, nil, assertFlagsSynced, 0, ""); err != nil {
+	if err := finishFakeLogin(t, svc, synced, beginFakeLogin(t, svc), handle, assertFlagsSynced, 0, ""); err != nil {
 		t.Fatalf("sign-count 0 assertion must be accepted (synced authenticator): %v", err)
 	}
 	row := credentialRow(t, queries, synced.credID)
@@ -247,12 +247,12 @@ func TestPolicySignCounterAndCloneDetection(t *testing.T) {
 	}
 
 	// Counter authenticator: monotonic advance accepted, regression rejected.
-	counter := newFakeAuthenticator(t, testRPID, testOrigin)
+	counter := newFakeAuthenticator(t)
 	enrollFakePasskey(t, svc, user, counter, nil, regFlagsDevice, 7)
 	if row := credentialRow(t, queries, counter.credID); row.SignCount != 7 {
 		t.Fatalf("expected enrolled sign_count=7, got %d", row.SignCount)
 	}
-	if err := finishFakeLogin(t, svc, counter, beginFakeLogin(t, svc), handle, nil, assertFlagsNormal, 9, ""); err != nil {
+	if err := finishFakeLogin(t, svc, counter, beginFakeLogin(t, svc), handle, assertFlagsNormal, 9, ""); err != nil {
 		t.Fatalf("monotonic counter 7→9 must be accepted: %v", err)
 	}
 	if row := credentialRow(t, queries, counter.credID); row.SignCount != 9 {
@@ -260,7 +260,7 @@ func TestPolicySignCounterAndCloneDetection(t *testing.T) {
 	}
 
 	challenge := beginFakeLogin(t, svc)
-	err := finishFakeLogin(t, svc, counter, challenge, handle, nil, assertFlagsNormal, 4, "")
+	err := finishFakeLogin(t, svc, counter, challenge, handle, assertFlagsNormal, 4, "")
 	if err == nil {
 		t.Fatal("expected counter regression 9→4 to be rejected")
 	}
@@ -279,7 +279,7 @@ func TestRedTeamCeremonyEdges(t *testing.T) {
 	dbConn, _, svc := newPasskeyService(t)
 	user := newPasskeyUser(t, svc.Queries, "dave")
 	handle := userHandleFor(user)
-	auth := newFakeAuthenticator(t, testRPID, testOrigin)
+	auth := newFakeAuthenticator(t)
 	enrollFakePasskey(t, svc, user, auth, nil, regFlagsSynced, 1)
 
 	// Replay: the same assertion must not work twice — challenges are
@@ -301,16 +301,16 @@ func TestRedTeamCeremonyEdges(t *testing.T) {
 	if _, err := dbConn.Exec(`UPDATE webauthn_challenges SET expires_at = ? WHERE kind = 'login' AND consumed = 0`, past); err != nil {
 		t.Fatalf("failed to expire challenge: %v", err)
 	}
-	err := finishFakeLogin(t, svc, auth, challenge, handle, nil, assertFlagsSynced, 3, "")
+	err := finishFakeLogin(t, svc, auth, challenge, handle, assertFlagsSynced, 3, "")
 	if err == nil || !strings.Contains(err.Error(), "invalid or expired") {
 		t.Fatalf("expected expired-challenge rejection, got: %v", err)
 	}
 
 	// Unknown credential: an assertion from a credential the server has never
 	// seen is rejected before user resolution.
-	stranger := newFakeAuthenticator(t, testRPID, testOrigin)
+	stranger := newFakeAuthenticator(t)
 	challenge = beginFakeLogin(t, svc)
-	err = finishFakeLogin(t, svc, stranger, challenge, handle, nil, assertFlagsNormal, 1, "")
+	err = finishFakeLogin(t, svc, stranger, challenge, handle, assertFlagsNormal, 1, "")
 	if err == nil {
 		t.Fatal("expected unknown credential to be rejected")
 	}
@@ -340,12 +340,12 @@ func TestRedTeamContextMismatch(t *testing.T) {
 	_, _, svc := newPasskeyService(t)
 	user := newPasskeyUser(t, svc.Queries, "eve")
 	handle := userHandleFor(user)
-	auth := newFakeAuthenticator(t, testRPID, testOrigin)
+	auth := newFakeAuthenticator(t)
 	enrollFakePasskey(t, svc, user, auth, nil, regFlagsSynced, 1)
 
 	// Origin mismatch: real signature, wrong origin in clientDataJSON.
 	challenge := beginFakeLogin(t, svc)
-	err := finishFakeLogin(t, svc, auth, challenge, handle, nil, assertFlagsNormal, 2, "https://evil.example")
+	err := finishFakeLogin(t, svc, auth, challenge, handle, assertFlagsNormal, 2, "https://evil.example")
 	if err == nil {
 		t.Fatal("expected wrong-origin assertion to be rejected")
 	}
@@ -354,7 +354,7 @@ func TestRedTeamContextMismatch(t *testing.T) {
 	// RP ID (phishing-domain style clone).
 	shadow := auth.shadowOf("evil.example", testOrigin)
 	challenge = beginFakeLogin(t, svc)
-	if err = finishFakeLogin(t, svc, shadow, challenge, handle, nil, assertFlagsNormal, 2, ""); err == nil {
+	if err = finishFakeLogin(t, svc, shadow, challenge, handle, assertFlagsNormal, 2, ""); err == nil {
 		t.Fatal("expected wrong-rpIdHash assertion to be rejected")
 	}
 }
