@@ -33,6 +33,13 @@ restart: stop launch
 build:
 	$(COMPOSE) build
 
+
+# Full rebuild bypassing the BuildKit layer and context caches — the escape
+# hatch for the stat-cache pathology where --build serves a stale binary
+# despite changed sources (seen with host/daemon clock skew).
+.PHONY: build-no-cache
+build-no-cache:
+	$(COMPOSE) build --no-cache
 .PHONY: pull
 pull:
 	$(COMPOSE) pull
