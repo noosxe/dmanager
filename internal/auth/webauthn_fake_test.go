@@ -31,9 +31,9 @@ const (
 func cborHead(major byte, n uint64) []byte {
 	switch {
 	case n < 24:
-		return []byte{major<<5 | byte(n)}
+		return []byte{major<<5 | byte(n&0xff)}
 	case n <= 0xff:
-		return []byte{major<<5 | 24, byte(n)}
+		return []byte{major<<5 | 24, byte(n & 0xff)}
 	case n <= 0xffff:
 		return []byte{major<<5 | 25, byte(n >> 8), byte(n)}
 	default:
@@ -41,10 +41,10 @@ func cborHead(major byte, n uint64) []byte {
 	}
 }
 
-func cborUint(v uint64) []byte  { return cborHead(0, v) }
-func cborNeg(v int64) []byte    { return cborHead(1, uint64(-1-v)) } // v < 0
-func cborText(s string) []byte  { return append(cborHead(3, uint64(len(s))), s...) }
-func cborBytes(b []byte) []byte { return append(cborHead(2, uint64(len(b))), b...) }
+func cborUint(v uint64) []byte   { return cborHead(0, v) }
+func cborNegArg(n uint64) []byte { return cborHead(1, n-1) } // encodes -(n): CBOR major 1 = -1-n
+func cborText(s string) []byte   { return append(cborHead(3, uint64(len(s))), s...) }
+func cborBytes(b []byte) []byte  { return append(cborHead(2, uint64(len(b))), b...) }
 func cborMap(pairs ...[]byte) []byte {
 	out := cborHead(5, uint64(len(pairs)/2)) // pairs are key+value argument chunks
 	for _, p := range pairs {
@@ -55,6 +55,8 @@ func cborMap(pairs ...[]byte) []byte {
 
 func b64url(b []byte) string { return base64.RawURLEncoding.EncodeToString(b) }
 
+const credIDLen = 32
+
 type fakeAuthenticator struct {
 	t      *testing.T
 	rpID   string
@@ -64,17 +66,17 @@ type fakeAuthenticator struct {
 	aaguid [16]byte
 }
 
-func newFakeAuthenticator(t *testing.T, rpID, origin string) *fakeAuthenticator {
+func newFakeAuthenticator(t *testing.T) *fakeAuthenticator {
 	t.Helper()
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		t.Fatalf("fake authenticator keygen: %v", err)
 	}
-	credID := make([]byte, 32)
+	credID := make([]byte, credIDLen)
 	if _, err := rand.Read(credID); err != nil {
 		t.Fatalf("fake authenticator credential id: %v", err)
 	}
-	return &fakeAuthenticator{t: t, rpID: rpID, origin: origin, key: key, credID: credID}
+	return &fakeAuthenticator{t: t, rpID: testRPID, origin: testOrigin, key: key, credID: credID}
 }
 
 // shadowOf returns a copy bound to different RP parameters while reusing the
@@ -88,16 +90,17 @@ func (f *fakeAuthenticator) shadowOf(rpID, origin string) *fakeAuthenticator {
 }
 
 func (f *fakeAuthenticator) cosePublicKey() []byte {
-	x := make([]byte, 32)
-	y := make([]byte, 32)
-	f.key.PublicKey.X.FillBytes(x)
-	f.key.PublicKey.Y.FillBytes(y)
+	point, perr := f.key.PublicKey.Bytes() // uncompressed 0x04|x|y — PublicKey.X/Y are deprecated as of Go 1.26
+	if perr != nil {
+		f.t.Fatalf("fake authenticator public key encoding: %v", perr)
+	}
+	x, y := point[1:33], point[33:65]
 	return cborMap(
 		cborUint(1), cborUint(2), // kty: EC2
-		cborUint(3), cborNeg(-7), // alg: ES256
-		cborNeg(-1), cborUint(1), // crv: P-256
-		cborNeg(-2), cborBytes(x), // x coordinate
-		cborNeg(-3), cborBytes(y), // y coordinate
+		cborUint(3), cborNegArg(7), // alg: ES256
+		cborNegArg(1), cborUint(1), // crv: P-256
+		cborNegArg(2), cborBytes(x), // x coordinate
+		cborNegArg(3), cborBytes(y), // y coordinate
 	)
 }
 
@@ -112,7 +115,7 @@ func (f *fakeAuthenticator) authData(flags byte, counter uint32, withCredential 
 	buf = binary.BigEndian.AppendUint32(buf, counter)
 	if withCredential {
 		buf = append(buf, f.aaguid[:]...)
-		buf = binary.BigEndian.AppendUint16(buf, uint16(len(f.credID)))
+		buf = binary.BigEndian.AppendUint16(buf, uint16(credIDLen))
 		buf = append(buf, f.credID...)
 		buf = append(buf, f.cosePublicKey()...)
 	}
