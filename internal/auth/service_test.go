@@ -851,6 +851,15 @@ func TestBeginPasskeyRegistration(t *testing.T) {
 		t.Fatalf("expected challenge in options_json")
 	}
 
+	// The credProps extension must be requested: browsers are spec-mandated to
+	// implicitly request it when residentKey is required/preferred, so clients such
+	// as Bitwarden return a credProps output the RP never asked for — which the
+	// library's strict unsolicited-output validation rejects.
+	extensions, _ := optMap["extensions"].(map[string]interface{})
+	if _, ok := extensions["credProps"]; !ok {
+		t.Errorf("expected credProps extension request in options_json, got extensions: %v", extensions)
+	}
+
 	found, err := queries.GetUnconsumedWebAuthnChallenge(ctx, db.GetUnconsumedWebAuthnChallengeParams{
 		Challenge: []byte(challengeStr),
 		Kind:      challengeRegTest,
