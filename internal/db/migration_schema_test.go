@@ -79,10 +79,10 @@ func TestMigrationsWalkToHead(t *testing.T) {
 		t.Errorf("schema version after Up = %d, want %d (harness did not reach the head of the embedded chain)", version, max)
 	}
 
-	if err := goose.DownTo(dbConn, "migrations", 0); err != nil {
+	if err = goose.DownTo(dbConn, "migrations", 0); err != nil {
 		t.Fatalf("failed to roll back to zero: %v", err)
 	}
-	if err := goose.Up(dbConn, "migrations"); err != nil {
+	if err = goose.Up(dbConn, "migrations"); err != nil {
 		t.Fatalf("failed to re-migrate to head: %v", err)
 	}
 	version, err = goose.GetDBVersion(dbConn)
