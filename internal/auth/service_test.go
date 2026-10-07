@@ -79,9 +79,9 @@ func TestGetServerStatus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if resp.Msg.Version != version.Version || resp.Msg.Commit != version.Commit || resp.Msg.BuildDate != version.Date {
+	if resp.Msg.Version != version.Display() || resp.Msg.Commit != version.Commit || resp.Msg.BuildDate != version.Date {
 		t.Errorf("expected build metadata (version=%q commit=%q date=%q), got (version=%q commit=%q date=%q)",
-			version.Version, version.Commit, version.Date, resp.Msg.Version, resp.Msg.Commit, resp.Msg.BuildDate)
+			version.Display(), version.Commit, version.Date, resp.Msg.Version, resp.Msg.Commit, resp.Msg.BuildDate)
 	}
 	if !resp.Msg.NeedsSetup {
 		t.Errorf("expected NeedsSetup to be true, got false")

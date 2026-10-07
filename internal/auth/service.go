@@ -127,7 +127,7 @@ func (s *Service) GetServerStatus(ctx context.Context, req *connect.Request[v1.G
 		PasskeyLoginEnabled: s.webauthn != nil,
 		RpId:                s.webauthnCfg.RPID,
 		Origins:             s.webauthnCfg.Origins,
-		Version:             version.Version,
+		Version:             version.Display(),
 		Commit:              version.Commit,
 		BuildDate:           version.Date,
 	}), nil
