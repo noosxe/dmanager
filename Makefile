@@ -2,6 +2,14 @@
 
 COMPOSE := docker compose -f docker-compose.yml
 
+# Dev build metadata: stamp the short commit sha into locally built images so
+# the UI version reads dev+<sha> (compose interpolates DMANAGER_VERSION into
+# the Dockerfile VERSION build arg). No-op outside a git checkout.
+GIT_SHA := $(shell git describe --always --dirty --abbrev=7 2>/dev/null)
+ifneq ($(GIT_SHA),)
+export DMANAGER_VERSION = dev+$(GIT_SHA)
+endif
+
 
 # Recipient address for the smtp-test target (make smtp-test TO=you@example.com)
 TO ?=
