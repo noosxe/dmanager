@@ -70,8 +70,10 @@ jobs:
           context: .
           platforms: ${{ matrix.platform }}
           push: false
+          # VERSION stays "dev" - the backend derives dev+<short-sha> from the
+          # injected COMMIT (internal/version Display), matching local builds.
           build-args: |
-            VERSION=${{ github.sha }}
+            VERSION=dev
             COMMIT=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=min
