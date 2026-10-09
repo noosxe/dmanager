@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"dmanager/internal/config"
-	"golang.org/x/net/http2"
 )
 
 const (
@@ -215,7 +214,7 @@ func selfSignedCert(t *testing.T) tls.Certificate {
 
 // startH2CapableServer wires a TLS listener exactly the way ServeHTTPS does:
 // the newTailnetTLSConfig shape (NextProtos h2+http/1.1, GetCertificate from
-// a LocalClient) plus http2.ConfigureServer on the http.Server. The
+// a LocalClient) plus the http.Server Protocols enabling HTTP/2. The
 // certificate is swapped for a self-signed one since no tsnet backend is
 // present; everything else about the negotiation path is real.
 func startH2CapableServer(t *testing.T, h http.Handler) string {
@@ -234,9 +233,9 @@ func startH2CapableServer(t *testing.T, h http.Handler) string {
 		ReadHeaderTimeout: 10 * time.Second,
 		IdleTimeout:       30 * time.Second,
 	}
-	if err := http2.ConfigureServer(srv, &http2.Server{}); err != nil {
-		t.Fatalf("configure HTTP/2: %v", err)
-	}
+	srv.Protocols = new(http.Protocols)
+	srv.Protocols.SetHTTP1(true)
+	srv.Protocols.SetHTTP2(true)
 	go func() { _ = srv.Serve(ln) }()
 	t.Cleanup(func() { _ = srv.Close() })
 	return ln.Addr().String()
@@ -261,7 +260,14 @@ func TestH2WiringNegotiatesHTTP2(t *testing.T) {
 
 	// An HTTP/2-capable client must negotiate h2 via ALPN and get a real
 	// HTTP/2 response through the registered handler.
-	h2tr := &http2.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}} //nolint:gosec // test-only self-signed listener
+	// HTTP/2-only client: offers just h2 via ALPN, so no silent HTTP/1.1
+	// fallback is possible.
+	h2Protocols := new(http.Protocols)
+	h2Protocols.SetHTTP2(true)
+	h2tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec // test-only self-signed listener
+		Protocols:       h2Protocols,
+	}
 	req, err := http.NewRequest(http.MethodGet, "https://"+addr+"/", nil)
 	if err != nil {
 		t.Fatalf("build request: %v", err)

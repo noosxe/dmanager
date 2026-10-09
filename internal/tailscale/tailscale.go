@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"dmanager/internal/config"
-	"golang.org/x/net/http2"
 	"tailscale.com/ipn/ipnstate"
 	"tailscale.com/tsnet"
 )
@@ -327,13 +326,13 @@ func (n *Node) ServeHTTPS(h http.Handler) error {
 		ReadHeaderTimeout: 10 * time.Second,
 		IdleTimeout:       30 * time.Second,
 	}
-	// Registers TLSNextProto["h2"]; together with the ALPN advertisement in
-	// the TLS config this is what switches negotiated connections to HTTP/2.
-	// ConfigureServer only errors for a srv.TLSConfig that excludes h2; ours
-	// lives on the listener instead, so srv.TLSConfig is nil here.
-	if err := http2.ConfigureServer(srv, &http2.Server{}); err != nil {
-		return fmt.Errorf("configure HTTP/2: %w", err)
-	}
+	// Advertise HTTP/2 alongside HTTP/1.1; together with the ALPN
+	// advertisement in the TLS config this is what switches negotiated
+	// connections to HTTP/2. The TLS config lives on the listener, so
+	// srv.TLSConfig is nil and nothing else is needed here.
+	srv.Protocols = new(http.Protocols)
+	srv.Protocols.SetHTTP1(true)
+	srv.Protocols.SetHTTP2(true)
 	if err := srv.Serve(tlsLn); err != nil && !n.closing.Load() {
 		return fmt.Errorf("tailscale HTTPS serve loop failed: %w", err)
 	}
