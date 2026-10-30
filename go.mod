@@ -1,6 +1,6 @@
 module dmanager
 
-go 1.27.1
+go 1.27.3
 
 require (
 	connectrpc.com/connect v1.21.1
@@ -19,7 +19,7 @@ require (
 	github.com/wneessen/go-mail v0.8.1
 	golang.org/x/crypto v0.58.0
 	google.golang.org/protobuf v1.36.12
-	tailscale.com v1.104.1
+	tailscale.com v1.104.2
 )
 
 require (
