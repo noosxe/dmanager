@@ -297,6 +297,9 @@ export function useContainers() {
             .streamContainers({}, { signal: abortController.signal })
             [Symbol.asyncIterator]();
           let next = iterator.next();
+          // next is awaited only after the refetch; avoid an unhandled-rejection
+          // report if the stream fails meanwhile (the later await still throws).
+          next.catch(() => {});
           await fetchContainers();
 
           for (;;) {
