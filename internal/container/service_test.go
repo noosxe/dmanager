@@ -556,6 +556,12 @@ func TestUpgradeContainer(t *testing.T) {
 			return
 		}
 
+		// Rename old container aside
+		if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/containers/"+oldID+"/rename") {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
 		// Remove container
 		if r.Method == http.MethodDelete && strings.HasSuffix(r.URL.Path, "/containers/"+oldID) {
 			removeCalled++

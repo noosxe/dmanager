@@ -122,16 +122,6 @@ func (s *Service) upgradeContainerInternal(ctx context.Context, containerID stri
 		}
 	}
 
-	// 6. Delete the old container
-	s.logger.Info("Removing old container for upgrade", "container_id", containerID, "container_name", existing.Name)
-	removeOpts := client.ContainerRemoveOptions{
-		Force: true,
-	}
-	if _, removeErr := s.dockerClient.ContainerRemove(ctx, containerID, removeOpts); removeErr != nil {
-		s.logger.Error("Container upgrade failed: remove container failed", "container_id", containerID, "container_name", existing.Name, "error", removeErr)
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to remove old container: %w", removeErr))
-	}
-
 	// 7. Prepare parameters for recreation
 	// Trim leading slash from name if present
 	containerName := strings.TrimPrefix(inspect.Container.Name, "/")
@@ -168,11 +158,41 @@ func (s *Service) upgradeContainerInternal(ctx context.Context, containerID stri
 		Name:             containerName,
 	}
 
+	// 6. Rename the old container aside so the replacement can take its name.
+	// The old container is only removed once the replacement is running, so a
+	// failure below can restore it.
+	wasRunning := inspect.Container.State != nil && inspect.Container.State.Running
+	asideName := upgradeAsideName(containerName, containerID)
+	s.logger.Info("Renaming old container aside for upgrade", "container_id", containerID, "container_name", containerName, "aside_name", asideName)
+	if _, renameErr := s.dockerClient.ContainerRename(ctx, containerID, client.ContainerRenameOptions{NewName: asideName}); renameErr != nil {
+		s.logger.Error("Container upgrade failed: rename old container failed", "container_id", containerID, "container_name", containerName, "error", renameErr)
+		s.restartIfWasRunning(ctx, containerID, containerName, wasRunning)
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to rename old container: %w", renameErr))
+	}
+
+	// rollback removes the half-made replacement (if any), restores the old
+	// container's name and starts it again when it was running. It uses a
+	// context that survives cancellation of the request.
+	rollback := func(newID string) {
+		rctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
+		defer cancel()
+		if newID != "" {
+			if _, rmErr := s.dockerClient.ContainerRemove(rctx, newID, client.ContainerRemoveOptions{Force: true}); rmErr != nil {
+				s.logger.Error("Upgrade rollback: failed to remove new container", "container_id", newID, "error", rmErr)
+			}
+		}
+		if _, rnErr := s.dockerClient.ContainerRename(rctx, containerID, client.ContainerRenameOptions{NewName: containerName}); rnErr != nil {
+			s.logger.Error("Upgrade rollback: failed to restore old container name", "container_id", containerID, "container_name", containerName, "error", rnErr)
+		}
+		s.restartIfWasRunning(rctx, containerID, containerName, wasRunning)
+	}
+
 	// 8. Re-create the container
 	s.logger.Info("Re-creating upgraded container", "container_name", containerName, "image", imageRef)
 	created, createErr := s.dockerClient.ContainerCreate(ctx, createOpts)
 	if createErr != nil {
 		s.logger.Error("Container upgrade failed: re-create container failed", "container_name", containerName, "error", createErr)
+		rollback("")
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to re-create container: %w", createErr))
 	}
 
@@ -184,8 +204,8 @@ func (s *Service) upgradeContainerInternal(ctx context.Context, containerID stri
 		}
 		if _, netConnectErr := s.dockerClient.NetworkConnect(ctx, netName, connectOpts); netConnectErr != nil {
 			// Clean up the created container if networking setup fails to prevent zombie containers
-			s.logger.Error("Container upgrade failed: connect additional network failed, rolling back container creation", "container_name", containerName, "network", netName, "error", netConnectErr)
-			_, _ = s.dockerClient.ContainerRemove(ctx, created.ID, client.ContainerRemoveOptions{Force: true})
+			s.logger.Error("Container upgrade failed: connect additional network failed, rolling back upgrade", "container_name", containerName, "network", netName, "error", netConnectErr)
+			rollback(created.ID)
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to connect container to network %s: %w", netName, netConnectErr))
 		}
 	}
@@ -193,6 +213,7 @@ func (s *Service) upgradeContainerInternal(ctx context.Context, containerID stri
 	// 9. Start the new instance
 	if _, startErr := s.dockerClient.ContainerStart(ctx, created.ID, client.ContainerStartOptions{}); startErr != nil {
 		s.logger.Error("Container upgrade failed: start upgraded container failed", "container_name", containerName, "error", startErr)
+		rollback(created.ID)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start upgraded container: %w", startErr))
 	}
 	s.logger.Info("Upgraded container started successfully", "container_id", created.ID, "container_name", containerName, "image", imageRef)
@@ -217,6 +238,7 @@ func (s *Service) upgradeContainerInternal(ctx context.Context, containerID stri
 	})
 	if err != nil {
 		s.logger.Error("Container upgrade failed: update container record in DB failed", "container_id", containerID, "new_container_id", created.ID, "error", err)
+		rollback(created.ID)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update container record in DB: %w", err))
 	}
 
@@ -241,8 +263,16 @@ func (s *Service) upgradeContainerInternal(ctx context.Context, containerID stri
 		}
 		if saveErr := queries.SaveContainer(ctx, saveParams); saveErr != nil {
 			s.logger.Error("Container upgrade failed: fallback save to DB failed", "container_id", created.ID, "container_name", containerName, "error", saveErr)
+			rollback(created.ID)
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to save upgraded container to DB: %w", saveErr))
 		}
+	}
+
+	// The replacement is running and recorded: the old container can go now.
+	s.logger.Info("Removing old container after successful upgrade", "container_id", containerID, "container_name", containerName)
+	if _, removeErr := s.dockerClient.ContainerRemove(ctx, containerID, client.ContainerRemoveOptions{Force: true}); removeErr != nil && !cerrdefs.IsNotFound(removeErr) {
+		// The upgrade itself succeeded; the leftover is under the aside name.
+		s.logger.Warn("Upgrade succeeded but old container could not be removed", "container_id", containerID, "aside_name", asideName, "error", removeErr)
 	}
 
 	// 11. Broadcast database synchronization events to streaming clients
@@ -271,6 +301,27 @@ func (s *Service) upgradeContainerInternal(ctx context.Context, containerID stri
 		PreviousImageId: inspect.Container.Image,
 		CurrentImageId:  newImageID,
 	}, nil
+}
+
+// upgradeAsideName is the temporary name an old container gets while its
+// replacement is being created.
+func upgradeAsideName(name, id string) string {
+	short := id
+	if len(short) > 12 {
+		short = short[:12]
+	}
+	return name + "-dmanager-old-" + short
+}
+
+// restartIfWasRunning starts the old container again after a failed upgrade
+// step, if it was running before the upgrade stopped it.
+func (s *Service) restartIfWasRunning(ctx context.Context, containerID, name string, wasRunning bool) {
+	if !wasRunning {
+		return
+	}
+	if _, err := s.dockerClient.ContainerStart(ctx, containerID, client.ContainerStartOptions{}); err != nil {
+		s.logger.Error("Upgrade rollback: failed to restart old container", "container_id", containerID, "container_name", name, "error", err)
+	}
 }
 
 // auditUpgrade records one audit entry per container upgrade (design.md
