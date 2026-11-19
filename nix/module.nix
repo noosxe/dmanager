@@ -355,6 +355,10 @@ in
 
         Restart = "on-failure";
         RestartSec = "5s";
+        # An invalid Tailscale auth key exits on purpose; back off so the
+        # rejected key is not resent to the control server every 5s forever.
+        RestartSteps = 10;
+        RestartMaxDelaySec = "5min";
 
         # Hardening. It limits what a compromised process can do to the host
         # directly; it cannot limit what it can do through the Docker socket.
