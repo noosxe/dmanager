@@ -55,6 +55,7 @@ Caches discovered host container properties, scheduler inspection metrics, and u
 | `latest_image_digest`| TEXT | NULL | Image digest found in registry during the last update check. |
 | `last_checked_at` | DATETIME | NULL | Timestamp of the last check against the registry. |
 | `last_updated_at` | DATETIME | NULL | Timestamp of the last successful auto-update process. |
+| `labels` | TEXT | NOT NULL DEFAULT '{}' | Docker labels as a JSON object, refreshed on every sync and container event. Used at read time to decide whether the container is externally managed (`dmanager.managed-by` or `docker.external_label_selectors`). |
 | `created_at` | DATETIME | NOT NULL DEFAULT CURRENT_TIMESTAMP | Timestamp when container record was first discovered. |
 | `updated_at` | DATETIME | NOT NULL DEFAULT CURRENT_TIMESTAMP | Timestamp of the last local state change. |
 

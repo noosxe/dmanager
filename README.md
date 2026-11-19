@@ -128,9 +128,13 @@ server:
 
 docker:
   host: "unix:///var/run/docker.sock"
+  # Extra "key=value" (or bare "key") label selectors for containers owned by
+  # another tool; see "Externally managed containers".
+  external_label_selectors: []
 
 scheduler:
   interval_minutes: 60
+  notify_external_updates: false
 
 auth:
   session_idle_timeout: 168h
@@ -188,12 +192,14 @@ registries: []
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `docker.host` | `string` | `"unix:///var/run/docker.sock"` | Docker daemon endpoint. Typically the Unix socket path. |
+| `docker.external_label_selectors` | `string[]` | `[]` | Label selectors that mark a container as [externally managed](#externally-managed-containers). Each entry is `key=value` (label has exactly that value) or a bare `key` (label is present). A malformed entry fails startup. |
 
 #### `scheduler` — Background update checker
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `scheduler.interval_minutes` | `int` | `60` | Interval in minutes between automatic image update checks. |
+| `scheduler.notify_external_updates` | `bool` | `false` | Also send "update available" notifications for externally managed containers. |
 
 #### `auth` — Authentication & session timeouts
 
@@ -266,6 +272,31 @@ registries:
 
 ---
 
+## Externally managed containers
+
+Some containers belong to another tool (a NixOS service, a CI runner pool) and must not be recreated by dmanager. A container is **externally managed** when
+
+- it carries the label `dmanager.managed-by=<value>` with any non-empty value (the value names the owner, for example `nixos`), or
+- it matches one of the `docker.external_label_selectors`, for example `com.example.pool=true`.
+
+Labels are read from Docker and re-evaluated on every request, so a label added by recreating a container, or a selector added to the config, takes effect immediately.
+
+For these containers dmanager still checks for newer images and shows that an update is available, but:
+
+- `UpgradeContainer` and enabling auto-update are rejected with a `FailedPrecondition` error;
+- the scheduler never applies an auto-update, even if the flag was stored before the label appeared;
+- no "update available" notification is sent unless `scheduler.notify_external_updates` is `true`;
+- the UI shows a "Managed by <value>" badge (for a selector match, the selector itself) and disables the Upgrade button and the auto-update toggle.
+
+NixOS `virtualisation.oci-containers` with the Docker backend adds no marker label of its own. Set the label in the host configuration on each container dmanager should leave alone:
+
+```nix
+virtualisation.oci-containers.containers.<name> = {
+  image = "...";
+  labels."dmanager.managed-by" = "nixos";
+};
+```
+
 ## Environment variables
 
 All configuration values can be overridden via environment variables prefixed with `DMANAGER_`. Underscores map to the nested YAML structure (e.g. `server.port` → `DMANAGER_SERVER_PORT`).
@@ -277,7 +308,9 @@ All configuration values can be overridden via environment variables prefixed wi
 | `DMANAGER_SERVER_ALLOWED_ORIGINS` | `server.allowed_origins` | *(empty)* | Comma-separated list of allowed CORS origins. |
 | `DMANAGER_SERVER_TRUSTED_PROXY` | `server.trusted_proxy` | `false` | Trust `X-Forwarded-For` header for client IP extraction. |
 | `DMANAGER_DOCKER_HOST` | `docker.host` | `unix:///var/run/docker.sock` | Docker daemon endpoint. |
+| `DMANAGER_DOCKER_EXTERNAL_LABEL_SELECTORS` | `docker.external_label_selectors` | *(empty)* | Comma-separated label selectors (`key=value` or `key`) marking containers as externally managed. |
 | `DMANAGER_SCHEDULER_INTERVAL_MINUTES` | `scheduler.interval_minutes` | `60` | Minutes between automatic image update checks. |
+| `DMANAGER_SCHEDULER_NOTIFY_EXTERNAL_UPDATES` | `scheduler.notify_external_updates` | `false` | Send update notifications for externally managed containers too. |
 | `DMANAGER_AUTH_SESSION_IDLE_TIMEOUT` | `auth.session_idle_timeout` | `168h` | Sliding idle timeout for standard sessions. |
 | `DMANAGER_AUTH_SESSION_ABSOLUTE_TIMEOUT` | `auth.session_absolute_timeout` | `720h` | Absolute lifetime cap for standard sessions. |
 | `DMANAGER_AUTH_REMEMBER_ME_IDLE_TIMEOUT` | `auth.remember_me_idle_timeout` | `720h` | Sliding idle timeout for "Remember me" sessions. |

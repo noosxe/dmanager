@@ -367,7 +367,7 @@ The build is optimized using a three-stage Dockerfile that separates dependencie
 * **Notification Agent:**
   * A background dispatcher listening to container and scheduler event triggers.
   * Dispatches standard Gotify POST request payloads (`title`, `message`, `priority`) to `<gotify_url>/message?token=<gotify_token>` for the following events:
-    * **Image Update Found:** Dispatched at `normal` priority when the checker detects a newer image version in the registry.
+    * **Image Update Found:** Dispatched at `normal` priority when the checker detects a newer image version in the registry. Suppressed for externally managed containers (label `dmanager.managed-by`, or a match of `docker.external_label_selectors`) unless `scheduler.notify_external_updates` is set; those containers are also never upgraded or auto-updated.
     * **Update Check Failure:** Dispatched at `warning` or `high` priority if the scheduler fails to query the registry (e.g., registry down, network issues, or invalid credentials).
     * **Auto-update Success:** Dispatched at `normal` priority when the automatic re-deployment workflow completes successfully.
     * **Auto-update Failure:** Dispatched at `high` priority if the automated re-deployment workflow fails (e.g., container recreation fails, pull error).

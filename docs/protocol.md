@@ -149,6 +149,8 @@ message Container {
   string latest_image_digest = 8;
   string last_checked_at = 9;  // RFC3339 formatted datetime string
   string last_updated_at = 10; // RFC3339 formatted datetime string
+  bool externally_managed = 11; // owned by another tool: upgrades and auto-update are rejected
+  string managed_by = 12;       // label value or matched selector; empty unless externally_managed
 }
 
 message ListContainersRequest {}
