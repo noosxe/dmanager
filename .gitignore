@@ -51,3 +51,4 @@ Thumbs.db
 
 # Agent Session Task Outputs
 .pi/tasks/
+/result
