@@ -170,7 +170,8 @@ if cfg.Tailscale.Enabled {
 }
 ```
 
-The main `ListenAndServe` on `:9283` is unchanged. Startup ordering rationale: the tsnet `Up` handshake
+The main `ListenAndServe` on `:9283` is unchanged unless `server.http.enabled` is `false` (§10), in which case
+it is not started and a tailnet failure becomes fatal. Startup ordering rationale: the tsnet `Up` handshake
 (network + control plane round-trips) runs concurrently with normal boot so LAN availability never depends
 on tailnet health.
 
@@ -318,3 +319,44 @@ All open questions from the initial draft have been resolved; recommendations ad
 | Q9 | Default state dir | Derived from `db_path` dirname at config load time (`<dirname>/tailscale`). |
 | Q10 | `TS_AUTHKEY` alias | Not accepted; `AuthKey` set explicitly so tsnet never reads env implicitly. |
 | Q11 | Key-expiry warning UX | Shipped with STORY-078: expiry surfaces in the status response; the UI card warns within 7 days of expiry and once expired. |
+
+---
+
+## 10. Tailnet-only deployment (no plain HTTP listener)
+
+A deployment can serve dmanager on the tailnet only. Set `server.http.enabled: false`
+(`DMANAGER_SERVER_HTTP_ENABLED=false`); the plain listener (`server.port`, `server.listen_address`) is then
+not started. Startup fails with a clear error when `tailscale.enabled` is also `false`, since no listener
+would be up. Because the tailnet listener is then the only way in, a failure to bring the node up (bad auth
+key, tailnet outage, HTTPS certificates not enabled) ends the process with an error instead of the usual
+degraded mode. To keep the plain listener but restrict it, set `server.listen_address` (for example
+`127.0.0.1`); the default is all interfaces.
+
+Settings such a deployment needs (use your own tailnet name):
+
+```yaml
+server:
+  http:
+    enabled: false
+tailscale:
+  enabled: true
+  auth_key: "<auth key>"
+  hostname: dmanager
+  https_enabled: true        # serves HTTPS on 443; MagicDNS and HTTPS certificates must be enabled in the tailnet
+webauthn:
+  rp_id: dmanager.<tailnet>.ts.net
+  origins:
+    - https://dmanager.<tailnet>.ts.net
+```
+
+- **Passkeys**: browsers require a secure context, so use `tailscale.https_enabled: true`. `webauthn.rp_id` must be
+  the node's MagicDNS name and `webauthn.origins` its `https://` URL (no port, since HTTPS uses 443).
+  Without both, passkeys stay disabled. Passwords keep working either way.
+- **Session cookies**: the HTTPS listener marks every request `X-Forwarded-Proto: https`, so the default
+  `auth.secure_cookies: auto` issues `Secure` cookies; no change needed. Do not set `never`.
+- **CORS**: the UI is served from the same origin, so `server.allowed_origins` can stay empty.
+- **Setup flow**: the first-run administrator setup is served over the tailnet like any other page; open
+  `https://dmanager.<tailnet>.ts.net/`.
+- **Health checks**: the container image's health check probes the plain listener on `127.0.0.1:9283`, so keep
+  the plain listener on in the container image. A service manager that needs a probe should use the tailnet URL
+  or keep `server.http.enabled: true` with `server.listen_address: 127.0.0.1`.
