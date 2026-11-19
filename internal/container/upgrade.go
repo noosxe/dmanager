@@ -113,7 +113,8 @@ func (s *Service) upgradeContainerInternal(ctx context.Context, containerID stri
 	s.logger.Info("Latest image pulled successfully", "container_name", existing.Name, "image", imageRef, "new_image_id", newImageID)
 
 	// 5. Stop the container if it's currently running
-	if inspect.Container.State != nil && inspect.Container.State.Running {
+	wasRunning := inspect.Container.State != nil && inspect.Container.State.Running
+	if wasRunning {
 		s.logger.Info("Stopping running container for upgrade", "container_id", containerID, "container_name", existing.Name)
 		timeoutSeconds := 15
 		stopOpts := client.ContainerStopOptions{
@@ -164,7 +165,6 @@ func (s *Service) upgradeContainerInternal(ctx context.Context, containerID stri
 	// 7. Rename the old container aside so the replacement can take its name.
 	// The old container is only removed once the replacement is running, so a
 	// failure below can restore it.
-	wasRunning := inspect.Container.State != nil && inspect.Container.State.Running
 	asideName := upgradeAsideName(containerName, containerID)
 	s.logger.Info("Renaming old container aside for upgrade", "container_id", containerID, "container_name", containerName, "aside_name", asideName)
 	if _, renameErr := s.dockerClient.ContainerRename(ctx, containerID, client.ContainerRenameOptions{NewName: asideName}); renameErr != nil {
@@ -213,17 +213,20 @@ func (s *Service) upgradeContainerInternal(ctx context.Context, containerID stri
 		}
 	}
 
-	// 9. Start the new instance
-	if _, startErr := s.dockerClient.ContainerStart(ctx, created.ID, client.ContainerStartOptions{}); startErr != nil {
-		s.logger.Error("Container upgrade failed: start upgraded container failed", "container_name", containerName, "error", startErr)
-		rollback(created.ID)
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start upgraded container: %w", startErr))
+	// 9. Start the new instance, but only if the original was running
+	newState := "created"
+	if wasRunning {
+		if _, startErr := s.dockerClient.ContainerStart(ctx, created.ID, client.ContainerStartOptions{}); startErr != nil {
+			s.logger.Error("Container upgrade failed: start upgraded container failed", "container_name", containerName, "error", startErr)
+			rollback(created.ID)
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start upgraded container: %w", startErr))
+		}
+		newState = "running"
+		s.logger.Info("Upgraded container started successfully", "container_id", created.ID, "container_name", containerName, "image", imageRef)
 	}
-	s.logger.Info("Upgraded container started successfully", "container_id", created.ID, "container_name", containerName, "image", imageRef)
 
 	// 10. Inspect new container to get its actual state
 	newInspect, err := s.dockerClient.ContainerInspect(ctx, created.ID, client.ContainerInspectOptions{})
-	newState := "running"
 	if err == nil && newInspect.Container.State != nil {
 		newState = string(newInspect.Container.State.Status)
 	}
