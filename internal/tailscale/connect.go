@@ -33,33 +33,30 @@ func IsTerminal(err error) bool {
 	return errors.As(err, &t)
 }
 
-// terminalKeyPhrases are fragments of the control server's rejection messages
-// (surfaced by tsnet.Up as "backend: <message>") that mean the auth key itself
-// is unusable. Any other backend message is treated as transient.
-var terminalKeyPhrases = []string{
-	"invalid key",
-	"key expired",
-	"key has expired",
-	"expired key",
-	"revoked",
-	"invalid auth key",
-	"auth key not valid",
-	"not valid",
-}
+// backendPrefix is how tsnet.Up wraps a message the backend reports through
+// the IPN bus ("tsnet.Up: backend: <message>", tsnet package). The backend
+// only sends the control server's own register-response error text there
+// (control/controlclient, vizerror.New(resp.Error)).
+const backendPrefix = "backend: "
 
-// classifyUpError wraps err as terminal when it reports an unusable auth key.
+// terminalKeyPrefix starts the control server's rejection of an unusable auth
+// key ("invalid key: API key ... not valid"; unknown, expired and revoked keys
+// are all reported this way). The wording lives on the control-server side:
+// the client module has no such string to match, so this one prefix, taken
+// from the failure reported in the issue, is deliberately the whole list. It
+// must stay narrow, because a match ends the process in tailnet-only mode.
+// Everything else, including other backend messages, is retried.
+const terminalKeyPrefix = "invalid key"
+
+// classifyUpError wraps err as terminal when the backend reports an unusable
+// auth key.
 func classifyUpError(err error) error {
 	if err == nil || IsTerminal(err) {
 		return err
 	}
-	msg := strings.ToLower(err.Error())
-	if !strings.Contains(msg, "backend:") {
-		return err
-	}
-	for _, p := range terminalKeyPhrases {
-		if strings.Contains(msg, p) {
-			return &terminalError{err: fmt.Errorf("tailscale auth key rejected, fix tailscale.auth_key and restart: %w", err)}
-		}
+	_, msg, ok := strings.Cut(err.Error(), backendPrefix)
+	if ok && strings.HasPrefix(strings.ToLower(strings.TrimSpace(msg)), terminalKeyPrefix) {
+		return &terminalError{err: fmt.Errorf("tailscale auth key rejected, fix tailscale.auth_key and restart: %w", err)}
 	}
 	return err
 }
