@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 	"time"
 
@@ -97,8 +96,12 @@ func (s *Service) upgradeContainerInternal(ctx context.Context, containerID stri
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to pull image %s: %w", imageRef, err))
 	}
 	defer func() { _ = reader.Close() }()
-	// Consume pull progress stream to block until pull is fully complete
-	_, _ = io.Copy(io.Discard, reader)
+	// Wait drains the progress stream until the pull is complete and returns
+	// any error the registry reported inside the stream (denied, unauthorized...).
+	if waitErr := reader.Wait(ctx); waitErr != nil {
+		s.logger.Error("Container upgrade failed: image pull reported an error", "container_id", containerID, "container_name", existing.Name, "image", imageRef, "error", waitErr)
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to pull image %s: %w", imageRef, waitErr))
+	}
 
 	// Fetch the new image ID/digest after pull
 	inspectNewImage, err := s.dockerClient.ImageInspect(ctx, imageRef)
@@ -122,7 +125,7 @@ func (s *Service) upgradeContainerInternal(ctx context.Context, containerID stri
 		}
 	}
 
-	// 7. Prepare parameters for recreation
+	// 6. Prepare parameters for recreation
 	// Trim leading slash from name if present
 	containerName := strings.TrimPrefix(inspect.Container.Name, "/")
 
@@ -158,7 +161,7 @@ func (s *Service) upgradeContainerInternal(ctx context.Context, containerID stri
 		Name:             containerName,
 	}
 
-	// 6. Rename the old container aside so the replacement can take its name.
+	// 7. Rename the old container aside so the replacement can take its name.
 	// The old container is only removed once the replacement is running, so a
 	// failure below can restore it.
 	wasRunning := inspect.Container.State != nil && inspect.Container.State.Running
