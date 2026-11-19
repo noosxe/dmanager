@@ -7,15 +7,9 @@ import { ContainerService } from "./gen/proto/dmanager/v1/container_pb";
 import { LogService } from "./gen/proto/dmanager/v1/log_pb";
 import { SettingsService } from "./gen/proto/dmanager/v1/settings_pb";
 
-const getBaseUrl = () => {
-  if (typeof window !== "undefined") {
-    // If served by the Go backend directly, use relative URL
-    if (window.location.port !== "5173" && window.location.port !== "3000") {
-      return "";
-    }
-  }
-  return "http://localhost:9283";
-};
+// The dev server does not proxy the API, so `pnpm dev` talks to the backend
+// directly. Any production build is served by the backend and uses relative URLs.
+export const getBaseUrl = () => (import.meta.env.DEV ? "http://localhost:9283" : "");
 
 export const transport = createConnectTransport({
   baseUrl: getBaseUrl(),
