@@ -19,7 +19,7 @@ direct connections when possible).
 
 **Goals**
 
-- Feature is fully inert unless an auth key is configured — zero behavior change for existing deployments.
+- Feature is fully inert unless `tailscale.enabled` is `true` — an auth key alone never switches it on.
 - The same HTTP handler tree (ConnectRPC services + SPA + CORS middleware + auth interceptors) is served on
   the tailnet listener; **all existing authentication, sessions, RBAC and rate limiting still apply**.
 - Persistent node identity in a state directory so restarts reuse the registered node instead of burning
@@ -42,13 +42,21 @@ direct connections when possible).
 
 | YAML key | Environment variable | Default | Description |
 |---|---|---|---|
-| `tailscale.auth_key` | `TAILSCALE_AUTHKEY` (see §9 Q1) | `""` | **Gate.** Feature enabled iff non-empty after trim. Tailscale auth key (`tskey-auth-…`). |
+| `tailscale.enabled` | `TAILSCALE_ENABLED` | `false` | **Gate.** The only switch for the feature. When `false` there is no node and no listener, even if an auth key is set. |
+| `tailscale.auth_key` | `TAILSCALE_AUTHKEY` (see §9 Q1) | `""` | Tailscale auth key (`tskey-auth-…`). Required when `enabled` is `true`; startup fails otherwise. Ignored (one info log line, never the key) while disabled. |
 | `tailscale.hostname` | `TAILSCALE_HOSTNAME` | `"dmanager"` | MagicDNS hostname on the tailnet. |
 | `tailscale.state_dir` | `TAILSCALE_STATE_DIR` | `<dirname(db_path)>/tailscale` (see §9 Q9) | Directory for persistent node state (created `0700` if missing). |
-| `tailscale.port` | `TAILSCALE_PORT` | `80` (see §9 Q3) | Tailnet-side listen port for the HTTP server. |
+| `tailscale.port` | `TAILSCALE_PORT` | `80` (see §9 Q3) | Tailnet-side listen port in **HTTP mode only**. Ignored (and not validated) in HTTPS mode, which always uses 443. |
+| `tailscale.https_enabled` | `TAILSCALE_HTTPS_ENABLED` | `false` | Selects the protocol: `false` serves plain HTTP on `tailscale.port`; `true` serves HTTPS on 443 and **no** plain HTTP. |
 
-Gating rule (single switch, no separate `enabled` flag — mirrors `smtp.enabled`-free design of the auth key
-itself): **the node starts iff `tailscale.auth_key` resolves non-empty.**
+Gating rule: **the node starts iff `tailscale.enabled` is `true`.** `enabled: true` with an empty
+`auth_key` fails config validation at startup (`tailscale.enabled is true but tailscale.auth_key is empty`).
+
+> **Upgrade note (breaking change).** Earlier versions enabled the node whenever an auth key was set.
+> A deployment that only sets `TAILSCALE_AUTHKEY` no longer joins the tailnet until `TAILSCALE_ENABLED=true`
+> (`tailscale.enabled: true`) is set. Also, `https_enabled: true` now serves HTTPS **only** (on 443); it no
+> longer also serves plain HTTP on `tailscale.port`. Clients using the old HTTP URL in HTTPS mode must switch
+> to `https://<hostname>.<tailnet>.ts.net`.
 
 ### 2.2. Layering & precedence
 
@@ -74,19 +82,23 @@ Environment mapping follows the existing pattern in `internal/config/config.go`:
 ```go
 // internal/config/config.go
 type TailscaleConfig struct {
-    AuthKey   string `koanf:"auth_key"`
-    Hostname  string `koanf:"hostname"`
-    StateDir  string `koanf:"state_dir"`
-    Port      int    `koanf:"port"`
+    Enabled      bool   `koanf:"enabled"`
+    AuthKey      string `koanf:"auth_key"`
+    Hostname     string `koanf:"hostname"`
+    StateDir     string `koanf:"state_dir"`
+    Port         int    `koanf:"port"`
+    HTTPSEnabled bool   `koanf:"https_enabled"`
 }
 ```
 
-`Config.Validate()` additions (only when `auth_key != ""` — the whole section is inert while disabled, same
+`Config.Validate()` additions (only when `enabled` is `true` — the whole section is inert while disabled, same
 principle as SMTP):
+
+- `auth_key` must be non-empty.
 
 - `hostname` must match Tailscale hostname rules: lowercase letters, digits, and hyphens
   (`^[a-z0-9][a-z0-9-]*$`, no trailing hyphen, ≤63 chars).
-- `port` in 1–65535.
+- `port` in 1–65535 (HTTP mode only; not checked when `https_enabled` is `true`).
 - `state_dir` must not be `/` and must not equal the directory holding the SQLite DB itself (it becomes a
   sibling by default, which is fine — only direct collision is rejected).
 
@@ -115,7 +127,8 @@ func New(cfg config.TailscaleConfig, logger *slog.Logger) *Node
 // logs the tailnet identity (IPs, DNS name) at info level.
 func (n *Node) Start(ctx context.Context) error
 
-// Serve listens on the tailnet (":<port>") and serves h until the listener
+// Serve serves h on the tailnet over exactly one protocol — plain HTTP on
+// ":<port>", or HTTPS on ":443" when https_enabled — until the listener
 // closes or the serve loop errors. Intended to run in its own goroutine.
 func (n *Node) Serve(h http.Handler) error
 
@@ -139,7 +152,7 @@ Inserted after the HTTP handler tree is fully built (after `handler := withCORS(
 `ListenAndServe`, so the same `handler` value serves both listeners:
 
 ```go
-if cfg.Tailscale.AuthKey != "" {
+if cfg.Tailscale.Enabled {
     node := tailscale.New(cfg.Tailscale, logger.With("module", "tailscale"))
     go func() {
         upCtx, cancel := context.WithTimeout(srvCtx, 60*time.Second)
@@ -176,7 +189,7 @@ ephemeral node reaping if §9 Q5 is later enabled.
 
 ## 4. Serving & TLS Design (v1)
 
-v1 serves **plain HTTP on the tailnet listener** (`tsnet.Server.Listen("tcp", ":"+port)`, default port 80).
+By default (`https_enabled: false`) the node serves **plain HTTP on the tailnet listener** (`tsnet.Server.Listen("tcp", ":"+port)`, default port 80).
 Traffic is WireGuard-encrypted node-to-node; plain HTTP inside the tailnet is equivalent in trust level to
 the current plain-HTTP LAN deployment.
 
@@ -190,7 +203,12 @@ regress them):
    `X-Forwarded-Proto: https` is present (see `internal/auth/service.go`). Plain tailnet HTTP therefore
    yields non-Secure session cookies — same as today's HTTP LAN mode.
 
-**HTTPS follow-up (§9 Q4):** `tsnet.Server.ListenTLS("tcp", ":443")` provisions a Let's Encrypt cert for
+**HTTPS mode:** with `tailscale.https_enabled: true` the node serves HTTPS on 443 *instead of* HTTP (a single
+listener; `tailscale.port` is not used). It requires MagicDNS and HTTPS certificates to be enabled in the
+tailnet. If they are not, no tailnet listener is started: the log states that HTTPS mode needs them and the
+status RPC carries the error. There is deliberately no fallback to plain HTTP.
+
+**HTTPS design (§9 Q4):** `tsnet.Server.ListenTLS("tcp", ":443")` provisions a Let's Encrypt cert for
 `<hostname>.<tailnet>.ts.net` (requires HTTPS certificates + MagicDNS enabled on the tailnet). Because tsnet
 terminates TLS in-process, requests arrive without `X-Forwarded-Proto`; the design for that story includes a
 small middleware on the TLS listener that sets `X-Forwarded-Proto: https` before the CORS/auth stack, plus
@@ -234,6 +252,7 @@ Additions for `docs/security.md` when implemented:
 
   ```yaml
   environment:
+    - TAILSCALE_ENABLED=true
     - TAILSCALE_AUTHKEY=tskey-auth-xxxxxxxxxxxx-xxxxxxxxxxxxx
     # optional:
     # - TAILSCALE_HOSTNAME=dmanager
@@ -251,7 +270,7 @@ Additions for `docs/security.md` when implemented:
 
 - **Config unit tests** (`internal/config/config_test.go`): gating off by default; bare-name env mapping;
   `DMANAGER_`-prefixed precedence over bare names; hostname/port validation matrix; inert-section rule
-  (invalid hostname with empty auth key does not error).
+  (invalid hostname with the feature disabled does not error; `enabled` without a key fails).
 - **Node unit tests** (`internal/tailscale`): the package is kept thin; `tsnet.Server` construction fields
   (authkey/hostname/dir) asserted via a small seam — `New` returns the node with its `tsnet.Server`
   configured but not started, making assertions trivial without network. Serve-loop error propagation tested
@@ -273,8 +292,8 @@ Following the repo's bite-sized story convention (next free number: 074):
   serve.go wiring, degraded-mode logging, shutdown ordering, unit tests, `go.mod` addition.
 - **STORY-076 — Deployment & security docs (DONE).** Compose example, rootfs config section, security doc
   additions (§5), README feature bullet, manual validation checklist.
-- **STORY-077 — Tailnet HTTPS (DONE).** `ListenTLS` listener (`tailscale.https_enabled`, opt-in,
-  plain HTTP keeps running), `X-Forwarded-Proto` middleware (forced server-side, `Set` not `Add`),
+- **STORY-077 — Tailnet HTTPS (DONE).** `ListenTLS` listener (`tailscale.https_enabled`, opt-in;
+  originally ran next to plain HTTP, now replaces it — see the upgrade note in §2.1), `X-Forwarded-Proto` middleware (forced server-side, `Set` not `Add`),
   webauthn origins guidance in `docs/deployment.md` §2.3.
 - **STORY-078 — Node status in Admin API/UI (DONE).** `AdminService.GetTailscaleStatus` RPC
   (any role) + `Node.Snapshot` (nil-safe, live local-API probe with cached fallback);
@@ -291,7 +310,7 @@ All open questions from the initial draft have been resolved; recommendations ad
 | Q1 | Env var naming | `DMANAGER_TAILSCALE_*` canonical; bare `TAILSCALE_AUTHKEY` / `TAILSCALE_HOSTNAME` / `TAILSCALE_STATE_DIR` / `TAILSCALE_PORT` accepted as aliases. Prefixed wins over bare, bare wins over YAML. |
 | Q2 | Startup failure policy | Degraded mode: single attempt, error log, LAN-only operation continues. No retry loop in v1. |
 | Q3 | Tailnet listen port | Default `80`, configurable via `tailscale.port`. |
-| Q4 | HTTPS on tailnet | Shipped as STORY-077: opt-in `tailscale.https_enabled` serves HTTPS on 443 next to plain HTTP; passkeys work over the `https://*.ts.net` origin. |
+| Q4 | HTTPS on tailnet | Shipped as STORY-077: opt-in `tailscale.https_enabled` serves HTTPS on 443 instead of plain HTTP (single protocol); passkeys work over the `https://*.ts.net` origin. |
 | Q5 | Ephemeral node mode | Not supported in v1. |
 | Q6 | Headscale support | Defer; no `control_url` in v1. |
 | Q7 | Tailnet-only hardening | Defer; operators unpublish the Docker port if desired. |

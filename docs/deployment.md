@@ -36,11 +36,12 @@ This document details the procedure and requirements to deploy the `dmanager` ap
 | `webauthn.rp_id` | `DMANAGER_WEBAUTHN_RP_ID` | `""` | Relying Party ID for passkeys (domain without port). |
 | `webauthn.origins` | `DMANAGER_WEBAUTHN_ORIGINS` | `[]` | Allowed origins (scheme+host+port) authorized for passkeys. |
 | `webauthn.require_user_verification` | `DMANAGER_WEBAUTHN_REQUIRE_USER_VERIFICATION` | `preferred` | User verification policy (`preferred` or `required`). |
-| `tailscale.auth_key` | `DMANAGER_TAILSCALE_AUTHKEY` / `TAILSCALE_AUTHKEY` | `""` | Tailscale auth key. The embedded tailnet node is enabled iff non-empty. |
+| `tailscale.enabled` | `DMANAGER_TAILSCALE_ENABLED` / `TAILSCALE_ENABLED` | `false` | Switches the embedded tailnet node on; the only switch. Requires `tailscale.auth_key`. |
+| `tailscale.auth_key` | `DMANAGER_TAILSCALE_AUTHKEY` / `TAILSCALE_AUTHKEY` | `""` | Tailscale auth key. Required when `tailscale.enabled` is `true` (startup fails if empty); ignored when disabled. |
 | `tailscale.hostname` | `DMANAGER_TAILSCALE_HOSTNAME` / `TAILSCALE_HOSTNAME` | `dmanager` | MagicDNS hostname on the tailnet. |
 | `tailscale.state_dir` | `DMANAGER_TAILSCALE_STATE_DIR` / `TAILSCALE_STATE_DIR` | `<dirname of server.db_path>/tailscale` | Persistent node state directory (created `0700`). |
-| `tailscale.port` | `DMANAGER_TAILSCALE_PORT` / `TAILSCALE_PORT` | `80` | Tailnet-side port the web app is served on. |
-| `tailscale.https_enabled` | `DMANAGER_TAILSCALE_HTTPS_ENABLED` / `TAILSCALE_HTTPS_ENABLED` | `false` | Also serve HTTPS on tailnet port 443 with an automatic `*.ts.net` certificate. Requires HTTPS Certificates + MagicDNS on the tailnet (see §2.3). |
+| `tailscale.port` | `DMANAGER_TAILSCALE_PORT` / `TAILSCALE_PORT` | `80` | Tailnet-side port the web app is served on in HTTP mode. Ignored when `https_enabled` is `true` (HTTPS uses 443). |
+| `tailscale.https_enabled` | `DMANAGER_TAILSCALE_HTTPS_ENABLED` / `TAILSCALE_HTTPS_ENABLED` | `false` | Serve HTTPS **instead of** HTTP, on tailnet port 443, with an automatic `*.ts.net` certificate. Requires HTTPS Certificates + MagicDNS on the tailnet (see §2.3). |
 
 ### 2.2. Private Registry Configuration
 
@@ -65,10 +66,14 @@ DMANAGER_REGISTRIES_0_PASSWORD=ghp_securepersonaltoken
 
 dmanager can embed a [Tailscale](https://tailscale.com) node (via `tsnet`) directly in the
 server process, making the web app reachable from your tailnet without published ports or a
-sidecar container. The feature is inert unless an auth key is configured. Full design:
-[docs/tailscale.md](file:///home/mechsoull/Projects/dmanager/docs/tailscale.md).
+sidecar container. The feature is inert unless `tailscale.enabled` is `true` (an auth key alone does not enable it).
+Full design: [docs/tailscale.md](tailscale.md).
+
+> **Upgrade note (breaking change):** a deployment that only sets the auth key no longer joins the
+> tailnet until `TAILSCALE_ENABLED=true` is set, and HTTPS mode no longer also serves plain HTTP.
 
 ```bash
+TAILSCALE_ENABLED=true
 TAILSCALE_AUTHKEY=tskey-auth-xxxxxxxxxxxx-xxxxxxxxxxxxx
 # optional:
 TAILSCALE_HOSTNAME=dmanager
@@ -89,9 +94,10 @@ Operational notes:
 - **Network requirements:** outbound HTTPS (control plane/DERP) and outbound UDP for direct
   connections. No inbound ports, no `/dev/net/tun`, no extra container capabilities.
 - **HTTPS on the tailnet (optional):** set `tailscale.https_enabled: true` (or
-  `TAILSCALE_HTTPS_ENABLED=1`) to also serve HTTPS on tailnet port 443 with an automatic
-  Let's Encrypt certificate for `<hostname>.<tailnet>.ts.net` — see below. The plain-HTTP
-  tailnet listener keeps running; use the `https://` URL in browsers for passkey support.
+  `TAILSCALE_HTTPS_ENABLED=1`) to serve HTTPS on tailnet port 443 with an automatic
+  Let's Encrypt certificate for `<hostname>.<tailnet>.ts.net` — see below. This replaces the
+  plain-HTTP tailnet listener (`tailscale.port` is then unused); use the `https://` URL in
+  browsers for passkey support.
 - The state directory holds the node's private keys: treat it like the database (mounted volume,
   `0700`).
 
@@ -106,8 +112,9 @@ Prerequisites (tailnet-side, in the Tailscale admin console):
 Find your node's DNS name in the startup log (`module=tailscale ... dns_name=<name>`) or via
 `tailscale status` on any node. With both prerequisites met, `https_enabled: true` serves
 dmanager at `https://<hostname>.<tailnet>.ts.net`. The first request may pause briefly while
-the certificate is provisioned. Without the prerequisites, TLS handshakes fail while the plain
-HTTP listeners (LAN and tailnet) keep working.
+the certificate is provisioned. Without the prerequisites, no tailnet listener runs at all (there is
+no fallback to plain HTTP): the log says HTTPS mode needs MagicDNS and HTTPS certificates enabled
+in the tailnet, and the same error shows on the status card. The LAN listener keeps working.
 
 The node's live status — state, DNS name, tailnet IPs, access URLs, and key-expiry warnings —
 is also visible in the web UI (Administration page, top card) via `AdminService.GetTailscaleStatus`,

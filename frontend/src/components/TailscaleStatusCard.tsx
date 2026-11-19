@@ -114,7 +114,7 @@ export function TailscaleStatusCard({ status }: { status: TailscaleStatusState }
         ? detailRow(
             "Access",
             status.httpsEnabled
-              ? `https://${status.dnsName} (also http port ${status.port})`
+              ? `https://${status.dnsName}`
               : `http://${status.dnsName}:${status.port}`,
           )
         : null}

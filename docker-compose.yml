@@ -45,12 +45,14 @@ services:
       # - DMANAGER_REGISTRIES_0_HOST=ghcr.io
       # - DMANAGER_REGISTRIES_0_USERNAME=myuser
       # - DMANAGER_REGISTRIES_0_PASSWORD=mypassword
-      # Embedded Tailscale node (docs/tailscale.md): off unless the auth key is
-      # set in .env. Node state persists under /var/lib/dmanager/tailscale (same
+      # Embedded Tailscale node (docs/tailscale.md): off unless
+      # TAILSCALE_ENABLED=true is set in .env (the auth key is then required). Node state persists under /var/lib/dmanager/tailscale (same
       # volume as the database), so the key is only needed for the first start.
+      - TAILSCALE_ENABLED=${TAILSCALE_ENABLED:-}
       - TAILSCALE_AUTHKEY=${TAILSCALE_AUTHKEY:-}
       - TAILSCALE_HOSTNAME=${TAILSCALE_HOSTNAME:-dmanager}
-      # Serve HTTPS on tailnet :443 with Tailscale-issued certs when set to true
+      # true: serve HTTPS only, on tailnet :443 (Tailscale-issued certs); otherwise HTTP
+      # on the tailnet port (default 80)
       - TAILSCALE_HTTPS_ENABLED=${TAILSCALE_HTTPS_ENABLED:-}
       # SMTP relay for system email: off unless DMANAGER_SMTP_ENABLED=true is
       # set in .env (then host, port and from_email are required at startup).
