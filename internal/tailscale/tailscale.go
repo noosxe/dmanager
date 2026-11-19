@@ -31,6 +31,9 @@ type Node struct {
 	hostname     string
 	httpsEnabled bool
 
+	// probeFn overrides the local-API status probe in tests.
+	probeFn func(ctx context.Context) (*ipnstate.Status, error)
+
 	closing   atomic.Bool
 	started   atomic.Bool
 	closeOnce sync.Once
@@ -40,7 +43,9 @@ type Node struct {
 	// and the Snapshot probe, read by Snapshot from RPC handlers.
 	mu           sync.Mutex
 	startErr     error
-	serveErr     error // listener failure after a successful Start
+	up           bool   // the node reached Running
+	waitDetail   string // last transient start failure while retrying
+	serveErr     error  // listener failure after a successful Start
 	backendState string
 	dnsName      string
 	ips          []string
@@ -127,7 +132,7 @@ func (n *Node) Server() *tsnet.Server { return n.srv }
 func (n *Node) Start(ctx context.Context) error {
 	// tsnet requires the state directory to exist before startup.
 	if err := os.MkdirAll(n.srv.Dir, 0o700); err != nil {
-		return fmt.Errorf("failed to create tailscale state directory %s: %w", n.srv.Dir, err)
+		return &terminalError{err: fmt.Errorf("failed to create tailscale state directory %s: %w", n.srv.Dir, err)}
 	}
 
 	// Mark the node as started before Up so Close knows tsnet internals
@@ -136,13 +141,18 @@ func (n *Node) Start(ctx context.Context) error {
 
 	status, err := n.srv.Up(ctx)
 	if err != nil {
-		err = fmt.Errorf("tailscale node failed to connect: %w", err)
+		err = classifyUpError(fmt.Errorf("tailscale node failed to connect: %w", err))
 		n.mu.Lock()
 		n.startErr = err
 		n.mu.Unlock()
 		return err
 	}
 	n.cacheStatus(status)
+	n.mu.Lock()
+	n.up = true
+	n.startErr = nil
+	n.waitDetail = ""
+	n.mu.Unlock()
 
 	ips := statusIPs(status)
 	attrs := []any{"ips", ips, "state", status.BackendState}
@@ -162,7 +172,8 @@ func (n *Node) Start(ctx context.Context) error {
 const (
 	// StateDisabled is reported by a nil Node — feature inert (tailscale.enabled is false).
 	StateDisabled = "disabled"
-	// StateStarting covers a constructed node whose Start has not returned yet.
+	// StateStarting covers a node that is not up yet, including one retrying in
+	// the background (BackendState then says what it waits for).
 	StateStarting = "starting"
 	// StateRunning marks a node that connected; BackendState carries live detail.
 	StateRunning = "running"
@@ -213,6 +224,18 @@ func (n *Node) Snapshot(ctx context.Context) Snapshot {
 		n.mu.Unlock()
 		snap.State = StateFailed
 		snap.Err = err
+		return snap
+	}
+	if !n.up {
+		// Still coming up (retrying in the background): not a failure.
+		detail := n.waitDetail
+		n.mu.Unlock()
+		snap.State = StateStarting
+		snap.Err = detail
+		if st, err := n.probeStatus(ctx); err == nil {
+			n.cacheStatus(st)
+			snap.BackendState = st.BackendState
+		}
 		return snap
 	}
 	n.mu.Unlock()
@@ -266,6 +289,9 @@ func (n *Node) cacheStatus(st *ipnstate.Status) {
 // probeStatus queries the node's local API for the live backend state.
 // It fails when the node never fully initialized or is being torn down.
 func (n *Node) probeStatus(ctx context.Context) (*ipnstate.Status, error) {
+	if n.probeFn != nil {
+		return n.probeFn(ctx)
+	}
 	lc, err := n.srv.LocalClient()
 	if err != nil {
 		return nil, err

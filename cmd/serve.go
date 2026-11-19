@@ -273,34 +273,19 @@ var serveCmd = &cobra.Command{
 		// With the plain HTTP listener on, startup is deliberately non-fatal: a
 		// tailnet outage or an invalid auth key must not take down local (LAN)
 		// availability. With it off the tailnet listener is the only way in, so
-		// a failure to bring it up ends the process instead of leaving a daemon
-		// that serves nothing.
+		// an unrecoverable failure (rejected auth key, listener error) ends the
+		// process instead of leaving a daemon that serves nothing. Transient
+		// failures never do: the node keeps retrying in the background.
 		if tsNode != nil {
 			go func() {
-				fail := func(err error) {
-					if httpEnabled || srvCtx.Err() != nil {
-						return
-					}
-					select {
-					case listenerFailed <- err:
-					default:
-					}
-				}
-				upCtx, cancel := context.WithTimeout(srvCtx, 60*time.Second)
-				defer cancel()
-				if err := tsNode.Start(upCtx); err != nil {
-					cmdLogger.Error("tailscale node failed to start; tailnet access disabled", "error", err)
-					fail(fmt.Errorf("tailscale node failed to start and the plain HTTP listener is disabled: %w", err))
+				err := runTailnet(srvCtx, cmdLogger, tsNode, handler)
+				if err == nil || httpEnabled || srvCtx.Err() != nil {
 					return
 				}
-				err := tsNode.Serve(handler)
-				if err != nil {
-					cmdLogger.Error("tailscale serve loop exited; no tailnet listener is running", "error", err)
+				select {
+				case listenerFailed <- fmt.Errorf("the plain HTTP listener is disabled and the tailnet listener is gone: %w", err):
+				default:
 				}
-				if err == nil {
-					err = errors.New("tailscale serve loop returned")
-				}
-				fail(fmt.Errorf("tailnet listener stopped and the plain HTTP listener is disabled: %w", err))
 			}()
 		}
 
@@ -358,6 +343,31 @@ var serveCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+// tailnetNode is the part of tailscale.Node that runTailnet drives.
+type tailnetNode interface {
+	Connect(ctx context.Context) error
+	Serve(h http.Handler) error
+}
+
+// runTailnet brings the node up and serves h on it. Connect retries transient
+// failures (such as a device waiting for approval) on its own, so an error
+// from it is unrecoverable; runTailnet logs it and returns it. It returns nil
+// when ctx ends first, and a Serve failure is returned too.
+func runTailnet(ctx context.Context, logger *slog.Logger, node tailnetNode, h http.Handler) error {
+	if err := node.Connect(ctx); err != nil {
+		if ctx.Err() != nil {
+			return nil
+		}
+		logger.Error("tailscale node cannot start and will not be retried; tailnet access disabled", "error", err)
+		return err
+	}
+	if err := node.Serve(h); err != nil {
+		logger.Error("tailscale serve loop exited; no tailnet listener is running", "error", err)
+		return err
+	}
+	return nil
 }
 
 // plainListenAddr is the bind address of the plain HTTP listener. An empty
