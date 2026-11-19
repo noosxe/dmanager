@@ -14,6 +14,7 @@ let
 in
 {
   overlays.default = overlay;
+  nixosModules.default = import ./module.nix self;
 }
 // flake-utils.lib.eachSystem [ "x86_64-linux" "aarch64-linux" ] (system:
   let
@@ -29,4 +30,12 @@ in
     };
 
     devShells.default = import ./devshell.nix { inherit pkgs; };
+
+    checks = {
+      package = pkgs.dmanager;
+    }
+    # The VM test needs KVM-capable x86_64 hosts.
+    // pkgs.lib.optionalAttrs (system == "x86_64-linux") {
+      nixos-module = import ./tests/module.nix { inherit self pkgs; };
+    };
   })
