@@ -1,0 +1,92 @@
+name: Nix CI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'nix/**'
+      - 'flake.nix'
+      - 'flake.lock'
+      - 'go.mod'
+      - 'go.sum'
+      - '**.go'
+      - 'frontend/**'
+      - '.github/workflows/nix.yml'
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Detect Nix Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      nix: ${{ steps.filter.outputs.nix }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed paths
+        id: filter
+        run: |
+          # Push runs are already path-filtered by the workflow trigger;
+          # pull requests gate every job through this detection instead,
+          # so the gate below reports on every PR regardless of contents.
+          # Go and frontend sources are included because the package embeds
+          # them; the lock files catch stale hashes in nix/hashes.json.
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.ref }}"
+            git fetch origin "$BASE"
+            RANGE="origin/$BASE...HEAD"
+            if git diff --name-only "$RANGE" | grep -qE '^nix/|^flake\.(nix|lock)$|^go\.(mod|sum)$|\.go$|^frontend/|^\.github/workflows/nix\.yml$'; then
+              echo "nix=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "nix=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "nix=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  flake-check:
+    name: Nix Flake Check
+    needs: changes
+    if: needs.changes.outputs.nix == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v23
+
+      # The NixOS VM test needs KVM; GitHub-hosted Linux runners expose
+      # /dev/kvm but not to the runner user by default.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run nix flake check
+        run: nix flake check --print-build-logs
+
+  gate:
+    name: nix-gate
+    needs: [changes, flake-check]
+    if: >-
+      always() &&
+      !cancelled() &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: All nix checks passed
+        run: echo "nix-gate satisfied - no required job failed (skips allowed)"
