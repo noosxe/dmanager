@@ -25,7 +25,9 @@ This document details the procedure and requirements to deploy the `dmanager` ap
 | `server.allowed_origins` | `DMANAGER_SERVER_ALLOWED_ORIGINS` | `[]` | CORS comma-separated allowed origins list. |
 | `server.trusted_proxy` | `DMANAGER_SERVER_TRUSTED_PROXY` | `false` | When true, trusts `X-Forwarded-For` header for client IP extraction. |
 | `docker.host` | `DMANAGER_DOCKER_HOST` | `unix:///var/run/docker.sock` | Path to Docker unix socket. |
+| `docker.external_label_selectors` | `DMANAGER_DOCKER_EXTERNAL_LABEL_SELECTORS` | `[]` | Label selectors (`key=value` or bare `key`; comma-separated in the env var) that mark containers as externally managed, in addition to the `dmanager.managed-by` label. Such containers are never upgraded by dmanager. |
 | `scheduler.interval_minutes` | `DMANAGER_SCHEDULER_INTERVAL_MINUTES` | `60` | Schedule frequency for registry update checks. |
+| `scheduler.notify_external_updates` | `DMANAGER_SCHEDULER_NOTIFY_EXTERNAL_UPDATES` | `false` | Send update-available notifications for externally managed containers too. |
 | `auth.session_idle_timeout` | `DMANAGER_AUTH_SESSION_IDLE_TIMEOUT` | `168h` | Sliding idle timeout for standard sessions (7 days). |
 | `auth.session_absolute_timeout` | `DMANAGER_AUTH_SESSION_ABSOLUTE_TIMEOUT` | `720h` | Absolute lifetime cap for standard sessions (30 days). |
 | `auth.remember_me_idle_timeout` | `DMANAGER_AUTH_REMEMBER_ME_IDLE_TIMEOUT` | `720h` | Sliding idle timeout for "Remember me" sessions (30 days). |
