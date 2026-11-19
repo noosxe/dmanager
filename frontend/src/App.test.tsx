@@ -19,6 +19,14 @@ vi.mock("./client", () => ({
   transport: {},
 }));
 
+// The authenticated app is not under test here; stub the dashboard.
+vi.mock("./components/DashboardLayout", () => ({
+  DashboardLayout: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="dashboard">{children}</div>
+  ),
+}));
+vi.mock("./components/ContainerGrid", () => ({ ContainerGrid: () => null }));
+
 const status = (needsSetup: boolean) => ({
   needsSetup,
   passkeyLoginEnabled: false,
@@ -90,5 +98,21 @@ describe("App auth failures (real AuthProvider)", () => {
     await waitFor(() =>
       expect((screen.getByLabelText(/admin username/i) as HTMLInputElement).value).toBe("admin"),
     );
+  });
+
+  it("leaves /login and shows the authenticated app after a successful login", async () => {
+    const { App, authClient } = await prepare("/login", false);
+    vi.mocked(authClient.login).mockResolvedValue({ username: "alice", role: "admin" } as never);
+    render(<App />);
+
+    fireEvent.change(await screen.findByLabelText(/username/i), { target: { value: "alice" } });
+    fireEvent.change(screen.getByLabelText(/password/i, { selector: "input" }), {
+      target: { value: "correct-password" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+
+    expect(await screen.findByTestId("dashboard")).toBeInTheDocument();
+    expect(screen.queryByLabelText(/username/i)).not.toBeInTheDocument();
+    expect(localStorage.getItem("dmanager_token")).toBe("session_active");
   });
 });
