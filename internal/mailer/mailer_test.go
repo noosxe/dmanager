@@ -2,7 +2,12 @@ package mailer
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
+	"fmt"
 	"log/slog"
+	"net"
 	"strings"
 	"testing"
 
@@ -181,5 +186,48 @@ func TestSendStartTLSIsMandatory(t *testing.T) {
 	}
 	if mailFrom, _, data := relay.LastMessage(); mailFrom != "" || data != "" {
 		t.Error("no message may be sent in plaintext")
+	}
+}
+
+func TestIsTLSPhaseError(t *testing.T) {
+	tlsErrs := []error{
+		fmt.Errorf("wrapped: %w", &tls.CertificateVerificationError{Err: x509.UnknownAuthorityError{}}),
+		fmt.Errorf("wrapped: %w", x509.HostnameError{}),
+		fmt.Errorf("wrapped: %w", tls.RecordHeaderError{}),
+		errors.New(`STARTTLS mode set to: "TLSMandatory", but target host does not support STARTTLS`),
+	}
+	for _, err := range tlsErrs {
+		if !isTLSPhaseError(err) {
+			t.Errorf("expected TLS-phase error: %v", err)
+		}
+	}
+	for _, err := range []error{
+		errors.New("550 mailbox unavailable"),
+		errors.New("535 auth failed"),
+		errors.New("dial tcp: connection refused"),
+	} {
+		if isTLSPhaseError(err) {
+			t.Errorf("non-TLS failure classified as TLS: %v", err)
+		}
+	}
+}
+
+// A failure before the TLS phase in starttls mode must not carry the STARTTLS hint.
+func TestSendStartTLSNonTLSFailureHasNoHint(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, port, _ := net.SplitHostPort(ln.Addr().String())
+	_ = ln.Close() // nothing listens: dial fails
+
+	cfg := testSMTPConfig("127.0.0.1", port)
+	cfg.TLSMode = config.TLSModeStartTLS
+	err = New(cfg, slog.Default()).Send(context.Background(), Message{To: []string{testRecipient}, Subject: "x", TextBody: "y"})
+	if err == nil {
+		t.Fatal("expected dial error")
+	}
+	if strings.Contains(err.Error(), "STARTTLS") || strings.Contains(err.Error(), "tls_mode") {
+		t.Errorf("dial failure must not carry the STARTTLS hint, got %q", err)
 	}
 }

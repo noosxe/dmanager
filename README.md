@@ -236,7 +236,7 @@ The section is inert until an auth key is configured. See [docs/tailscale.md](do
 | `smtp.username` / `smtp.password` | `string` | `""` | Optional SMTP AUTH (PLAIN). Leave empty for relays that trust the internal network. Prefer `DMANAGER_SMTP_PASSWORD` env for the secret. |
 | `smtp.from_email` | `string` | `""` | Sender address, required when enabled. Must sit on the upstream provider’s verified domain (e.g. Resend) or upstream delivery fails. |
 | `smtp.from_name` | `string` | `""` | Optional display name, rendered as `From: "dmanager" <noreply@example.com>`. |
-| `smtp.tls_mode` | `string` | `"none"` | `none` (plaintext — internal networks only, the relay must be restricted to them), `starttls` (STARTTLS is mandatory: if the relay does not offer it or the upgrade fails, nothing is sent and no credentials are transmitted), or `tls` (implicit TLS, port 465 style). |
+| `smtp.tls_mode` | `string` | `"none"` | `none` (plaintext — internal networks only, the relay must be restricted to them), `starttls` (STARTTLS is mandatory: if the relay does not offer it or the upgrade fails, nothing is sent and no credentials are transmitted), or `tls` (implicit TLS, port 465 style). Certificates are always verified: an internal relay with a self-signed or otherwise untrusted certificate must present a trusted one, or use `none` (plaintext, internal networks only). |
 | `smtp.timeout_seconds` | `int` | `15` | Dial + send budget per message (1–120). |
 
 Email is sent by system flows only; there is no API or UI send path. Verify the setup from the deployment with `dmanager smtp test --to=you@example.com`.
