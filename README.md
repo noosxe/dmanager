@@ -183,6 +183,8 @@ registries: []
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `server.port` | `string` | `"9283"` | Port the HTTP server listens on. |
+| `server.listen_address` | `string` | `""` | IP address or host name the plain HTTP listener binds to (no port). Empty binds all interfaces. |
+| `server.http.enabled` | `bool` | `true` | Serve the plain HTTP listener. May be `false` only when `tailscale.enabled` is `true`; see [Tailnet-only deployment](docs/tailscale.md#10-tailnet-only-deployment-no-plain-http-listener). |
 | `server.db_path` | `string` | `"dmanager.db"` | Path to the SQLite database file. Inside Docker this should be on a persistent volume (e.g. `/var/lib/dmanager/dmanager.db`). |
 | `server.allowed_origins` | `string[]` | `[]` | List of allowed CORS origins. Leave empty to disallow cross-origin requests. Use `["*"]` to allow all origins. |
 | `server.trusted_proxy` | `bool` | `false` | When `true`, trusts `X-Forwarded-For` header from reverse proxies for client IP extraction and rate limiting. |
@@ -304,6 +306,8 @@ All configuration values can be overridden via environment variables prefixed wi
 | Variable | Maps to | Default | Description |
 |----------|---------|---------|-------------|
 | `DMANAGER_SERVER_PORT` | `server.port` | `9283` | Port the HTTP server listens on. |
+| `DMANAGER_SERVER_LISTEN_ADDRESS` | `server.listen_address` | *(empty)* | Bind address of the plain HTTP listener. |
+| `DMANAGER_SERVER_HTTP_ENABLED` | `server.http.enabled` | `true` | Enable the plain HTTP listener. |
 | `DMANAGER_SERVER_DB_PATH` | `server.db_path` | `dmanager.db` | Path to the SQLite database file. |
 | `DMANAGER_SERVER_ALLOWED_ORIGINS` | `server.allowed_origins` | *(empty)* | Comma-separated list of allowed CORS origins. |
 | `DMANAGER_SERVER_TRUSTED_PROXY` | `server.trusted_proxy` | `false` | Trust `X-Forwarded-For` header for client IP extraction. |

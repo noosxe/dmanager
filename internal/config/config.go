@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -23,11 +24,22 @@ type Registry struct {
 	Password string `koanf:"password"`
 }
 
+// HTTPConfig configures the plain HTTP listener.
+type HTTPConfig struct {
+	// Enabled turns the plain HTTP listener on or off (default on). It may be
+	// off only when the embedded Tailscale node is enabled.
+	Enabled bool `koanf:"enabled"`
+}
+
 type ServerConfig struct {
-	Port           string   `koanf:"port"`
-	DBPath         string   `koanf:"db_path"`
-	AllowedOrigins []string `koanf:"allowed_origins"`
-	TrustedProxy   bool     `koanf:"trusted_proxy"`
+	Port string `koanf:"port"`
+	// ListenAddress is the IP address or host name the plain HTTP listener
+	// binds to; empty binds every interface.
+	ListenAddress  string     `koanf:"listen_address"`
+	HTTP           HTTPConfig `koanf:"http"`
+	DBPath         string     `koanf:"db_path"`
+	AllowedOrigins []string   `koanf:"allowed_origins"`
+	TrustedProxy   bool       `koanf:"trusted_proxy"`
 }
 
 type DockerConfig struct {
@@ -147,6 +159,18 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("webauthn.origins cannot be empty when webauthn.rp_id is set")
 	}
 
+	if c.Server.HTTP.Enabled {
+		port, err := strconv.Atoi(c.Server.Port)
+		if err != nil || port < 1 || port > 65535 {
+			return fmt.Errorf("server.port must be a valid port number, got %q", c.Server.Port)
+		}
+		if a := c.Server.ListenAddress; a != "" && (strings.ContainsAny(a, " \t/") || (strings.Contains(a, ":") && net.ParseIP(a) == nil)) {
+			return fmt.Errorf("server.listen_address must be an IP address or host name without a port, got %q", a)
+		}
+	} else if !c.Tailscale.Enabled {
+		return fmt.Errorf("server.http.enabled is false and tailscale.enabled is false: no listener would be up; enable one of them")
+	}
+
 	if _, err := managed.ParseSelectors(c.Docker.ExternalLabelSelectors); err != nil {
 		return fmt.Errorf("docker.external_label_selectors: %w", err)
 	}
@@ -250,6 +274,8 @@ func Load(configPath string) (*Config, error) {
 	// 1. Load default fallback values
 	defaults := map[string]interface{}{
 		"server.port":                        "9283",
+		"server.listen_address":              "",
+		"server.http.enabled":                true,
 		"server.db_path":                     "dmanager.db",
 		"server.trusted_proxy":               false,
 		"docker.host":                        "unix:///var/run/docker.sock",
@@ -318,6 +344,9 @@ func Load(configPath string) (*Config, error) {
 						}
 					}
 					return "server.allowed_origins", origins
+				}
+				if sub == "http_enabled" {
+					return "server.http.enabled", v
 				}
 				return "server." + sub, v
 			}

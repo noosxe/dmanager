@@ -69,3 +69,17 @@ func TestWithCORS(t *testing.T) {
 		})
 	}
 }
+
+func TestPlainListenAddr(t *testing.T) {
+	tests := []struct{ host, port, want string }{
+		{"", "9283", ":9283"},
+		{"127.0.0.1", "9283", "127.0.0.1:9283"},
+		{"::1", "8080", "[::1]:8080"},
+		{"localhost", "80", "localhost:80"},
+	}
+	for _, tt := range tests {
+		if got := plainListenAddr(tt.host, tt.port); got != tt.want {
+			t.Errorf("plainListenAddr(%q, %q) = %q, want %q", tt.host, tt.port, got, tt.want)
+		}
+	}
+}

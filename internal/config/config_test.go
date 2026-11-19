@@ -423,6 +423,7 @@ func TestConfigSMTPValidation(t *testing.T) {
 
 func TestConfigSMTPDisabledInert(t *testing.T) {
 	cfg := &Config{
+		Server: ServerConfig{Port: "9283", HTTP: HTTPConfig{Enabled: true}},
 		Auth: AuthConfig{
 			SessionIdleTimeout:        168 * time.Hour,
 			SessionAbsoluteTimeout:    720 * time.Hour,
@@ -845,5 +846,99 @@ func TestConfigExternalManagement(t *testing.T) {
 	t.Setenv("DMANAGER_DOCKER_EXTERNAL_LABEL_SELECTORS", "=oops")
 	if _, err := Load(path); err == nil || !strings.Contains(err.Error(), "external_label_selectors") {
 		t.Errorf("expected selector validation error, got %v", err)
+	}
+}
+
+func TestConfigHTTPListenerDefaults(t *testing.T) {
+	cfg, err := Load("")
+	if err != nil {
+		t.Fatalf("load defaults: %v", err)
+	}
+	if !cfg.Server.HTTP.Enabled {
+		t.Error("server.http.enabled must default to true")
+	}
+	if cfg.Server.ListenAddress != "" {
+		t.Errorf("server.listen_address must default to all interfaces (empty), got %q", cfg.Server.ListenAddress)
+	}
+}
+
+func TestConfigHTTPListenerYAMLAndEnv(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	yaml := "server:\n  listen_address: 127.0.0.1\n  http:\n    enabled: false\ntailscale:\n  enabled: true\n  auth_key: tskey-test\n  https_enabled: true\n"
+	if err := os.WriteFile(path, []byte(yaml), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("load yaml: %v", err)
+	}
+	if cfg.Server.HTTP.Enabled || cfg.Server.ListenAddress != "127.0.0.1" {
+		t.Errorf("yaml not applied: %+v", cfg.Server)
+	}
+
+	t.Setenv("DMANAGER_SERVER_HTTP_ENABLED", "true")
+	t.Setenv("DMANAGER_SERVER_LISTEN_ADDRESS", "::1")
+	cfg, err = Load(path)
+	if err != nil {
+		t.Fatalf("load env: %v", err)
+	}
+	if !cfg.Server.HTTP.Enabled || cfg.Server.ListenAddress != "::1" {
+		t.Errorf("env not applied: %+v", cfg.Server)
+	}
+
+	t.Setenv("DMANAGER_SERVER_HTTP_ENABLED", "false")
+	cfg, err = Load("")
+	if err == nil {
+		t.Fatalf("expected error when no listener is up, got %+v", cfg.Server)
+	}
+	if !strings.Contains(err.Error(), "no listener would be up") {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestConfigHTTPListenerValidation(t *testing.T) {
+	tests := []struct {
+		name    string
+		mutate  func(c *Config)
+		wantErr string
+	}{
+		{"http on", func(c *Config) {}, ""},
+		{"http off tailscale on", func(c *Config) {
+			c.Server.HTTP.Enabled = false
+			c.Tailscale = TailscaleConfig{Enabled: true, AuthKey: "k", Hostname: "node", Port: 80, HTTPSEnabled: true, StateDir: testTailscaleStateDir}
+		}, ""},
+		{"http off tailscale off", func(c *Config) { c.Server.HTTP.Enabled = false }, "no listener would be up"},
+		{"ipv4 address", func(c *Config) { c.Server.ListenAddress = "127.0.0.1" }, ""},
+		{"ipv6 address", func(c *Config) { c.Server.ListenAddress = "::1" }, ""},
+		{"host name", func(c *Config) { c.Server.ListenAddress = "localhost" }, ""},
+		{"address with port", func(c *Config) { c.Server.ListenAddress = "127.0.0.1:80" }, "server.listen_address"},
+		{"bad port", func(c *Config) { c.Server.Port = "abc" }, "server.port"},
+		{"port out of range", func(c *Config) { c.Server.Port = "70000" }, "server.port"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Config{
+				Server: ServerConfig{Port: "9283", DBPath: "/var/lib/dmanager/dmanager.db", HTTP: HTTPConfig{Enabled: true}},
+				Auth: AuthConfig{
+					SessionIdleTimeout:        time.Hour,
+					SessionAbsoluteTimeout:    time.Hour,
+					RememberMeIdleTimeout:     time.Hour,
+					RememberMeAbsoluteTimeout: time.Hour,
+					SecureCookies:             SecureCookiesAuto,
+					BcryptCost:                12,
+				},
+			}
+			tt.mutate(c)
+			err := c.Validate()
+			if tt.wantErr == "" {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+				t.Fatalf("want error containing %q, got %v", tt.wantErr, err)
+			}
+		})
 	}
 }

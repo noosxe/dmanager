@@ -21,6 +21,8 @@ This document details the procedure and requirements to deploy the `dmanager` ap
 | YAML Key | Environment Override | Default Value | Description |
 | :--- | :--- | :--- | :--- |
 | `server.port` | `DMANAGER_SERVER_PORT` | `9283` | Port for the HTTP/ConnectRPC server. |
+| `server.listen_address` | `DMANAGER_SERVER_LISTEN_ADDRESS` | *(empty: all interfaces)* | IP address or host name the plain HTTP listener binds to (no port). |
+| `server.http.enabled` | `DMANAGER_SERVER_HTTP_ENABLED` | `true` | Serve the plain HTTP listener. May be `false` only when `tailscale.enabled` is `true`; otherwise startup fails because no listener would be up. |
 | `server.db_path` | `DMANAGER_SERVER_DB_PATH` | `/var/lib/dmanager/dmanager.db` | Persistent SQLite path. |
 | `server.allowed_origins` | `DMANAGER_SERVER_ALLOWED_ORIGINS` | `[]` | CORS comma-separated allowed origins list. |
 | `server.trusted_proxy` | `DMANAGER_SERVER_TRUSTED_PROXY` | `false` | When true, trusts `X-Forwarded-For` header for client IP extraction. |

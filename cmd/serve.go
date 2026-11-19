@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -261,31 +262,57 @@ var serveCmd = &cobra.Command{
 		// Apply CORS middleware
 		handler := withCORS(cfg.Server.AllowedOrigins, mux)
 
+		httpEnabled := cfg.Server.HTTP.Enabled
+
+		// listenerFailed carries a fatal listener failure to the main goroutine.
+		listenerFailed := make(chan error, 1)
+
 		// When the tailscale node exists, the identical handler tree is served
 		// on a tailnet listener.
-
-		// Startup is deliberately non-fatal: a tailnet outage or an invalid
-		// auth key must not take down local (LAN) availability.
-
+		//
+		// With the plain HTTP listener on, startup is deliberately non-fatal: a
+		// tailnet outage or an invalid auth key must not take down local (LAN)
+		// availability. With it off the tailnet listener is the only way in, so
+		// a failure to bring it up ends the process instead of leaving a daemon
+		// that serves nothing.
 		if tsNode != nil {
 			go func() {
+				fail := func(err error) {
+					if httpEnabled || srvCtx.Err() != nil {
+						return
+					}
+					select {
+					case listenerFailed <- err:
+					default:
+					}
+				}
 				upCtx, cancel := context.WithTimeout(srvCtx, 60*time.Second)
 				defer cancel()
 				if err := tsNode.Start(upCtx); err != nil {
 					cmdLogger.Error("tailscale node failed to start; tailnet access disabled", "error", err)
+					fail(fmt.Errorf("tailscale node failed to start and the plain HTTP listener is disabled: %w", err))
 					return
 				}
-				if err := tsNode.Serve(handler); err != nil {
+				err := tsNode.Serve(handler)
+				if err != nil {
 					cmdLogger.Error("tailscale serve loop exited; no tailnet listener is running", "error", err)
 				}
+				if err == nil {
+					err = errors.New("tailscale serve loop returned")
+				}
+				fail(fmt.Errorf("tailnet listener stopped and the plain HTTP listener is disabled: %w", err))
 			}()
 		}
-		// 5. Create HTTP Server
-		server := &http.Server{
-			Addr:              ":" + listenPort,
-			Handler:           handler,
-			ReadHeaderTimeout: 10 * time.Second,
-			IdleTimeout:       30 * time.Second,
+
+		// 5. Create the plain HTTP server, unless it is disabled.
+		var server *http.Server
+		if httpEnabled {
+			server = &http.Server{
+				Addr:              plainListenAddr(cfg.Server.ListenAddress, listenPort),
+				Handler:           handler,
+				ReadHeaderTimeout: 10 * time.Second,
+				IdleTimeout:       30 * time.Second,
+			}
 		}
 
 		// 6. Graceful shutdown handler
@@ -298,15 +325,29 @@ var serveCmd = &cobra.Command{
 			cmdLogger.Info("Shutting down backend server...")
 			srvCancel() // Cancel background operations context
 
+			if server == nil {
+				shutdownErr <- nil
+				return
+			}
 			shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer shutdownCancel()
 
 			shutdownErr <- server.Shutdown(shutdownCtx)
 		}()
 
-		cmdLogger.Info("Starting dmanager server", "port", listenPort)
-		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			return fmt.Errorf("server listen and serve failed: %w", err)
+		if server != nil {
+			cmdLogger.Info("Starting dmanager server", "addr", server.Addr)
+			if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				return fmt.Errorf("server listen and serve failed: %w", err)
+			}
+		} else {
+			cmdLogger.Info("Plain HTTP listener disabled (server.http.enabled=false); serving on the tailnet only")
+			select {
+			case err := <-listenerFailed:
+				return err
+			case err := <-shutdownErr:
+				shutdownErr <- err // re-queued for the common tail below
+			}
 		}
 
 		if err := <-shutdownErr; err != nil {
@@ -317,6 +358,12 @@ var serveCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+// plainListenAddr is the bind address of the plain HTTP listener. An empty
+// host binds every interface.
+func plainListenAddr(host, port string) string {
+	return net.JoinHostPort(host, port)
 }
 
 func withCORS(allowedOrigins []string, next http.Handler) http.Handler {
