@@ -164,11 +164,17 @@ func (s *Service) SetupAdmin(ctx context.Context, req *connect.Request[v1.SetupA
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to hash password: %w", err))
 	}
 
-	user, err := s.Queries.CreateUser(ctx, db.CreateUserParams{
+	// The CountUsers check above only gives a cheap early exit. The insert is
+	// the real guard: it succeeds only while the users table is empty, so
+	// concurrent setups cannot both create an admin.
+	user, err := s.Queries.CreateFirstUser(ctx, db.CreateFirstUserParams{
 		Username:     username,
 		PasswordHash: string(hashedPassword),
 		Role:         adminRole,
 	})
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("admin account already setup"))
+	}
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create admin: %w", err))
 	}

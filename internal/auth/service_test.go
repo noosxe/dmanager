@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -454,6 +455,51 @@ func TestSetupAdminPasswordTooLong(t *testing.T) {
 	}))
 	if err != nil {
 		t.Fatalf("expected 72-byte password to be accepted, got %v", err)
+	}
+}
+
+func TestSetupAdminConcurrentCreatesOneUser(t *testing.T) {
+	queries := newTestDB(t)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+	ctx := context.Background()
+
+	const callers = 8
+	start := make(chan struct{})
+	errs := make([]error, callers)
+	var wg sync.WaitGroup
+	for i := range callers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			_, errs[i] = svc.SetupAdmin(ctx, connect.NewRequest(&v1.SetupAdminRequest{
+				Username: fmt.Sprintf("admin%d", i),
+				Password: testPassword,
+			}))
+		}()
+	}
+	close(start)
+	wg.Wait()
+
+	succeeded := 0
+	for i, err := range errs {
+		switch {
+		case err == nil:
+			succeeded++
+		case connect.CodeOf(err) != connect.CodeFailedPrecondition:
+			t.Errorf("caller %d: expected FailedPrecondition for the losing call, got %v", i, err)
+		}
+	}
+	if succeeded != 1 {
+		t.Errorf("expected exactly one successful setup, got %d", succeeded)
+	}
+
+	count, err := queries.CountUsers(ctx)
+	if err != nil {
+		t.Fatalf("CountUsers failed: %v", err)
+	}
+	if count != 1 {
+		t.Errorf("expected exactly one user, got %d", count)
 	}
 }
 
