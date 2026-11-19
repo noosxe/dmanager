@@ -79,6 +79,15 @@ func (s *Service) upgradeContainerInternal(ctx context.Context, containerID stri
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to inspect container: %w", err))
 	}
 
+	// The live labels are authoritative: the stored ones can be stale or empty
+	// (a row from before the labels column, or a recreate not yet synced).
+	if inspect.Container.Config != nil {
+		if by, external := s.external.Check(inspect.Container.Config.Labels); external {
+			s.logger.Warn("Container upgrade refused: externally managed (live labels)", "container_id", containerID, "container_name", existing.Name, "managed_by", by)
+			return nil, externallyManagedError(existing.Name, by)
+		}
+	}
+
 	// 4. Pull the latest image tag digest
 	imageRef := inspect.Container.Config.Image
 	if imageRef == "" {

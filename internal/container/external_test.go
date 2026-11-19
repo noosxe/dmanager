@@ -174,3 +174,42 @@ func TestExternalSchedulerGuard(t *testing.T) {
 		})
 	}
 }
+
+// TestUpgradeRefusedByLiveLabels: the DB row has no labels (stale), but the
+// live inspect carries the marker; the upgrade is refused before any pull.
+func TestUpgradeRefusedByLiveLabels(t *testing.T) {
+	dbConn, q := newTestDB(t)
+	seedExternal(t, q, "stale-1", nil, 0)
+
+	var mutating atomic.Int32
+	docker := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		p := r.URL.Path
+		switch {
+		case strings.HasSuffix(p, "/_ping"):
+			w.Header().Set("API-Version", "1.45")
+			_, _ = w.Write([]byte("OK"))
+		case r.Method == http.MethodGet && strings.HasSuffix(p, "/containers/stale-1/json"):
+			_, _ = fmt.Fprintf(w, `{"Id":"stale-1","Name":"/x","Image":"sha256:old","Config":{"Image":%q,"Labels":{"dmanager.managed-by":"nixos"}},"State":{"Status":"running","Running":true}}`, externalImage)
+		default:
+			if r.Method != http.MethodGet {
+				mutating.Add(1)
+			}
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer docker.Close()
+	dc, err := client.New(client.WithHost(docker.URL), client.WithHTTPClient(docker.Client()))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	svc := NewService(dbConn, NewBroker(), dc, slog.Default(), nil, nil)
+	admin := auth.WithUser(context.Background(), db.User{Role: roleAdmin})
+	_, err = svc.UpgradeContainer(admin, connect.NewRequest(&v1.UpgradeContainerRequest{Id: "stale-1"}))
+	if connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Fatalf("want FailedPrecondition, got %v", err)
+	}
+	if n := mutating.Load(); n != 0 {
+		t.Errorf("%d mutating docker calls", n)
+	}
+}
