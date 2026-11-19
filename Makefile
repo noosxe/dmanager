@@ -26,6 +26,7 @@ help:
 	@echo "  smtp-test send a test email via the relay (requires TO=you@example.com)"
 	@echo "  lint     run golangci-lint (same config as CI)"
 	@echo "  lint-install install the CI-pinned golangci-lint binary"
+	@echo "  nix-hashes refresh the Nix pnpm and Go dependency hashes"
 
 .PHONY: launch
 launch:
@@ -92,3 +93,7 @@ lint:
 		echo "warning: CI pins $(GOLANGCI_LINT_VERSION) — run 'make lint-install' for parity"; \
 	fi
 	$(GOLANGCI_LINT) run
+
+.PHONY: nix-hashes
+nix-hashes:
+	nix develop -c nix/update-hashes.sh
