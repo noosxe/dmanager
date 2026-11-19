@@ -79,6 +79,8 @@ ALTER TABLE sessions DROP COLUMN last_seen_at;
 
 ### 3.3. Sliding Renewal Logic
 
+The idle window is stored per session in `sessions.idle_timeout_seconds` (set at login from the normal or remember-me tier), so a remember-me session slides by 30 days and a normal one by 7. Rows from before the column existed hold `0` and fall back to the configured `session_idle_timeout`. A slide never shortens an expiry that is already further out.
+
 In `Interceptor.authenticate`, after loading a valid session:
 
 ```go
@@ -92,8 +94,8 @@ if now.After(session.ExpiresAt) {
     return ctx, connect.NewError(connect.CodeUnauthenticated, errors.New("session expired"))
 }
 // Slide only if we've burned through half the idle window; avoids a write on every request.
-if now.After(session.ExpiresAt.Add(-s.idleTimeout/2)) {
-    newIdle := now.Add(s.idleTimeout)
+if now.After(session.ExpiresAt.Add(-idle/2)) { // idle = the session's own window
+    newIdle := now.Add(idle)
     if newIdle.After(session.AbsoluteExpiresAt) {
         newIdle = session.AbsoluteExpiresAt
     }
