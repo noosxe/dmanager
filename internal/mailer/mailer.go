@@ -7,6 +7,8 @@ package mailer
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -147,7 +149,7 @@ func (m *smtpMailer) Send(ctx context.Context, msg Message) error {
 			slog.String("to", strings.Join(msg.To, ",")),
 			slog.String("subject", msg.Subject),
 			slog.String("error", err.Error()))
-		if m.cfg.TLSMode == config.TLSModeStartTLS {
+		if m.cfg.TLSMode == config.TLSModeStartTLS && isTLSPhaseError(err) {
 			return fmt.Errorf("smtp send failed (tls_mode starttls requires the relay to offer STARTTLS and complete the upgrade; nothing was sent in plaintext): %w", err)
 		}
 		return fmt.Errorf("smtp send failed: %w", err)
@@ -157,6 +159,26 @@ func (m *smtpMailer) Send(ctx context.Context, msg Message) error {
 		slog.String("to", strings.Join(msg.To, ",")),
 		slog.String("subject", msg.Subject))
 	return nil
+}
+
+// isTLSPhaseError reports whether err came from the STARTTLS negotiation
+// (missing capability or failed handshake/certificate verification) rather
+// than from dialing, AUTH or the mail transaction. go-mail has no sentinel
+// for the missing-capability case, so it is matched by message.
+func isTLSPhaseError(err error) bool {
+	var certErr *tls.CertificateVerificationError
+	var unknownAuth x509.UnknownAuthorityError
+	var hostErr x509.HostnameError
+	var certInvalid x509.CertificateInvalidError
+	var recordErr tls.RecordHeaderError
+	var alertErr tls.AlertError
+	switch {
+	case errors.As(err, &certErr), errors.As(err, &unknownAuth),
+		errors.As(err, &hostErr), errors.As(err, &certInvalid),
+		errors.As(err, &recordErr), errors.As(err, &alertErr):
+		return true
+	}
+	return strings.Contains(err.Error(), "STARTTLS")
 }
 
 func portOrDefault(port string) int {
