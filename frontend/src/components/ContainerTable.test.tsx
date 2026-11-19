@@ -16,6 +16,8 @@ const mockContainers: Container[] = [
     latestImageDigest: "sha256:nginx123",
     lastCheckedAt: "2026-07-14T00:00:00Z",
     lastUpdatedAt: "2026-07-14T00:00:00Z",
+    externallyManaged: false,
+    managedBy: "",
   },
   {
     id: "9876543210fedcbafedcba9876543210",
@@ -28,6 +30,8 @@ const mockContainers: Container[] = [
     latestImageDigest: "sha256:redis123",
     lastCheckedAt: "2026-07-13T12:00:00Z",
     lastUpdatedAt: "2026-07-13T12:00:00Z",
+    externallyManaged: false,
+    managedBy: "",
   },
 ];
 
@@ -134,5 +138,40 @@ describe("ContainerTable Component", () => {
     render(<ContainerTable {...defaultProps} containers={[]} />);
 
     expect(screen.getByText("No Containers Found")).toBeInTheDocument();
+  });
+
+  it("locks upgrade and auto-update for externally managed containers", () => {
+    const external: Container = {
+      ...mockContainers[1],
+      autoUpdate: false,
+      updateAvailable: true,
+      externallyManaged: true,
+      managedBy: "nixos",
+    };
+    const upgradeContainer = vi.fn();
+    const setContainerAutoUpdate = vi.fn();
+    render(
+      <ContainerTable
+        {...defaultProps}
+        containers={[external]}
+        upgradeContainer={upgradeContainer}
+        setContainerAutoUpdate={setContainerAutoUpdate}
+      />,
+    );
+
+    expect(screen.getByText("Managed by nixos")).toBeInTheDocument();
+
+    const upgrade = screen.getByRole("button", { name: /Upgrade/ });
+    expect(upgrade).toBeDisabled();
+    expect(upgrade).toHaveAttribute("title", expect.stringContaining("Managed externally (nixos)"));
+    const toggle = screen
+      .getAllByTitle(/Managed externally \(nixos\)/)
+      .find((el) => el.tagName === "BUTTON" && el !== upgrade)!;
+    expect(toggle).toBeDisabled();
+
+    fireEvent.click(upgrade);
+    fireEvent.click(toggle);
+    expect(upgradeContainer).not.toHaveBeenCalled();
+    expect(setContainerAutoUpdate).not.toHaveBeenCalled();
   });
 });
