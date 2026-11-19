@@ -108,7 +108,13 @@ var serveCmd = &cobra.Command{
 		containerBroker := container.NewBroker()
 
 		docker.StartEventMonitor(srvCtx, logger.With("module", "docker"), queries, dockerClient, func(ctx context.Context) error {
-			return container.SyncContainers(ctx, dbConn, dockerClient)
+			if syncErr := container.SyncContainers(ctx, dbConn, dockerClient); syncErr != nil {
+				return syncErr
+			}
+			// Connected clients missed whatever changed during the gap; ending
+			// their streams makes them reconnect and refetch the list.
+			containerBroker.CloseAll()
+			return nil
 		}, func(action string, containerID string) {
 			switch action {
 			case "save":
