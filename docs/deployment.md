@@ -42,6 +42,7 @@ This document details the procedure and requirements to deploy the `dmanager` ap
 | `webauthn.require_user_verification` | `DMANAGER_WEBAUTHN_REQUIRE_USER_VERIFICATION` | `preferred` | User verification policy (`preferred` or `required`). |
 | `tailscale.enabled` | `DMANAGER_TAILSCALE_ENABLED` / `TAILSCALE_ENABLED` | `false` | Switches the embedded tailnet node on; the only switch. Requires `tailscale.auth_key`. |
 | `tailscale.auth_key` | `DMANAGER_TAILSCALE_AUTHKEY` / `TAILSCALE_AUTHKEY` | `""` | Tailscale auth key. Required when `tailscale.enabled` is `true` (startup fails if empty); ignored when disabled. |
+| `tailscale.auth_key_file` | `DMANAGER_TAILSCALE_AUTHKEY_FILE` / `TAILSCALE_AUTHKEY_FILE` | `""` | Read the auth key from this file instead (see [Secrets from files](#secrets-from-files)). |
 | `tailscale.hostname` | `DMANAGER_TAILSCALE_HOSTNAME` / `TAILSCALE_HOSTNAME` | `dmanager` | MagicDNS hostname on the tailnet. |
 | `tailscale.state_dir` | `DMANAGER_TAILSCALE_STATE_DIR` / `TAILSCALE_STATE_DIR` | `<dirname of server.db_path>/tailscale` | Persistent node state directory (created `0700`). |
 | `tailscale.port` | `DMANAGER_TAILSCALE_PORT` / `TAILSCALE_PORT` | `80` | Tailnet-side port the web app is served on in HTTP mode. Ignored when `https_enabled` is `true` (HTTPS uses 443). |
@@ -218,3 +219,19 @@ Following container startup, execute these diagnostics steps to verify correct a
   ```
 - [ ] **Onboard On Browser:**
   Open a browser tab to `http://localhost:9283` (or host IP if remote). Verify you are redirected to `/setup` to configure the primary administrator account (representing correct empty database verification).
+
+## Secrets from files
+
+Service managers and secret tools usually hand secrets over as files. The Tailscale auth key, the SMTP
+password and registry passwords each have a file variant, as a config key and as an environment variable:
+
+| Secret | Config key | Environment variable |
+| :--- | :--- | :--- |
+| Tailscale auth key | `tailscale.auth_key_file` | `DMANAGER_TAILSCALE_AUTHKEY_FILE` (or `TAILSCALE_AUTHKEY_FILE`) |
+| SMTP password | `smtp.password_file` | `DMANAGER_SMTP_PASSWORD_FILE` |
+| Registry password | `registries[N].password_file` | `DMANAGER_REGISTRIES_<N>_PASSWORD_FILE` |
+
+- Setting both the value and the file for the same secret is a startup error; use one.
+- Trailing newlines (LF or CRLF) are trimmed; other whitespace is kept.
+- A file that cannot be read fails startup. The error names the path, never the contents.
+- An empty file counts as an empty secret, so `tailscale.enabled` with an empty key file still fails validation.

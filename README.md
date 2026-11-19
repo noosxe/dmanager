@@ -231,6 +231,7 @@ The section is inert unless `tailscale.enabled` is `true`; an auth key alone doe
 |-----|------|---------|-------------|
 | `tailscale.enabled` | `bool` | `false` | The only switch for the embedded node. `true` requires `tailscale.auth_key`; startup fails if it is empty. |
 | `tailscale.auth_key` | `string` | `""` | Tailscale auth key (a tagged, reusable key is recommended). Node state persists in `tailscale.state_dir`, so the key is only needed on first start. |
+| `tailscale.auth_key_file` | `string` | `""` | Path of a file holding the auth key; mutually exclusive with `tailscale.auth_key`. |
 | `tailscale.hostname` | `string` | `"dmanager"` | Node name in the tailnet (lowercase letters, digits, hyphens; max 63 chars). Served at `<hostname>.<tailnet>.ts.net`. |
 | `tailscale.port` | `int` | `80` | Tailnet serving port in HTTP mode only; ignored when `https_enabled` is `true`. |
 | `tailscale.https_enabled` | `bool` | `false` | Selects the protocol. `false`: plain HTTP on `tailscale.port`. `true`: HTTPS only, on tailnet `:443` using Tailscale-issued certificates (valid TLS that passkeys accept, served over HTTP/2), with no plain-HTTP tailnet listener. Needs MagicDNS and HTTPS certificates on the tailnet; without them no tailnet listener runs. |
@@ -244,6 +245,7 @@ The section is inert unless `tailscale.enabled` is `true`; an auth key alone doe
 | `smtp.host` | `string` | `""` | SMTP relay host (e.g. a postfix container on the Docker network). Required when enabled. |
 | `smtp.port` | `string` | `"25"` | Relay port. Use `"587"` for submission-style relays. |
 | `smtp.username` / `smtp.password` | `string` | `""` | Optional SMTP AUTH (PLAIN). Leave empty for relays that trust the internal network. Prefer `DMANAGER_SMTP_PASSWORD` env for the secret. |
+| `smtp.password_file` | `string` | `""` | Path of a file holding the SMTP password; mutually exclusive with `smtp.password`. |
 | `smtp.from_email` | `string` | `""` | Sender address, required when enabled. Must sit on the upstream provider’s verified domain (e.g. Resend) or upstream delivery fails. |
 | `smtp.from_name` | `string` | `""` | Optional display name, rendered as `From: "dmanager" <noreply@example.com>`. |
 | `smtp.tls_mode` | `string` | `"none"` | `none` (plaintext — internal networks only, the relay must be restricted to them), `starttls` (STARTTLS is mandatory: if the relay does not offer it or the upgrade fails, nothing is sent and no credentials are transmitted), or `tls` (implicit TLS, port 465 style). Certificates are always verified: an internal relay with a self-signed or otherwise untrusted certificate must present a trusted one, or use `none` (plaintext, internal networks only). |
@@ -327,6 +329,7 @@ All configuration values can be overridden via environment variables prefixed wi
 | `DMANAGER_WEBAUTHN_REQUIRE_USER_VERIFICATION` | `webauthn.require_user_verification` | `preferred` | Passkey user verification policy (`preferred`, `required`, `discouraged`). |
 | `DMANAGER_TAILSCALE_ENABLED` | `tailscale.enabled` | `false` | Switches the embedded Tailscale node on. Requires an auth key. |
 | `DMANAGER_TAILSCALE_AUTHKEY` | `tailscale.auth_key` | *(empty)* | Embedded Tailscale node auth key — required when enabled; ignored when disabled. |
+| `DMANAGER_TAILSCALE_AUTHKEY_FILE` (also bare `TAILSCALE_AUTHKEY_FILE`) | `tailscale.auth_key_file` | *(empty)* | File holding the Tailscale auth key. |
 | `DMANAGER_TAILSCALE_HOSTNAME` | `tailscale.hostname` | `dmanager` | Node name in the tailnet. |
 | `DMANAGER_TAILSCALE_PORT` | `tailscale.port` | `80` | Tailnet serving port in HTTP mode only. |
 | `DMANAGER_TAILSCALE_HTTPS_ENABLED` | `tailscale.https_enabled` | `false` | Serve HTTPS only, on tailnet `:443`, instead of HTTP. |
@@ -335,12 +338,14 @@ All configuration values can be overridden via environment variables prefixed wi
 | `DMANAGER_SMTP_ENABLED` | `smtp.enabled` | `false` | Master switch for system email. |
 | `DMANAGER_SMTP_HOST` / `DMANAGER_SMTP_PORT` | `smtp.host` / `smtp.port` | `""` / `25` | SMTP relay endpoint (both required when enabled). |
 | `DMANAGER_SMTP_USERNAME` / `DMANAGER_SMTP_PASSWORD` | `smtp.username` / `smtp.password` | *(empty)* | Optional SMTP AUTH (PLAIN); prefer the env var for the password. |
+| `DMANAGER_SMTP_PASSWORD_FILE` | `smtp.password_file` | *(empty)* | File holding the SMTP password. |
 | `DMANAGER_SMTP_FROM_EMAIL` / `DMANAGER_SMTP_FROM_NAME` | `smtp.from_email` / `smtp.from_name` | *(empty)* | Sender address (required when enabled) and optional display name. |
 | `DMANAGER_SMTP_TLS_MODE` | `smtp.tls_mode` | `none` | `none`, `starttls`, or `tls`. |
 | `DMANAGER_SMTP_TIMEOUT_SECONDS` | `smtp.timeout_seconds` | `15` | Dial + send budget per message (1–120). |
 | `DMANAGER_REGISTRIES_<N>_HOST` | `registries[N].host` | — | Hostname of the Nth registry (0-indexed). |
 | `DMANAGER_REGISTRIES_<N>_USERNAME` | `registries[N].username` | — | Username for the Nth registry. |
 | `DMANAGER_REGISTRIES_<N>_PASSWORD` | `registries[N].password` | — | Password / token for the Nth registry. |
+| `DMANAGER_REGISTRIES_<N>_PASSWORD_FILE` | `registries[N].password_file` | — | File holding the password / token for the Nth registry. |
 | `DMANAGER_ENV` | *(logging mode)* | *(not set)* | Set to `production` to switch log output to JSON format. |
 | `APP_ENV` | *(logging mode)* | *(not set)* | Alternative to `DMANAGER_ENV`. Set to `production` for JSON logs. |
 
