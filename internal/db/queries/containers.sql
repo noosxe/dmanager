@@ -44,13 +44,14 @@ SET update_available = 0, last_updated_at = ?, updated_at = CURRENT_TIMESTAMP
 WHERE id = ?;
 
 -- name: UpsertContainerFromEvent :exec
-INSERT INTO containers (id, name, image, image_id, state)
-VALUES (?, ?, ?, ?, ?)
+INSERT INTO containers (id, name, image, image_id, state, labels)
+VALUES (?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
     name = excluded.name,
     image = excluded.image,
     image_id = excluded.image_id,
     state = excluded.state,
+    labels = excluded.labels,
     updated_at = CURRENT_TIMESTAMP;
 
 -- name: UpdateContainerForUpgrade :execresult

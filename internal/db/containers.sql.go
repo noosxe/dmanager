@@ -50,7 +50,7 @@ func (q *Queries) DeleteOrphanContainers(ctx context.Context, activeIds []string
 }
 
 const getContainer = `-- name: GetContainer :one
-SELECT id, name, image, image_id, state, auto_update, update_available, latest_image_digest, last_checked_at, last_updated_at, created_at, updated_at FROM containers WHERE id = ? LIMIT 1
+SELECT id, name, image, image_id, state, auto_update, update_available, latest_image_digest, last_checked_at, last_updated_at, created_at, updated_at, labels FROM containers WHERE id = ? LIMIT 1
 `
 
 func (q *Queries) GetContainer(ctx context.Context, id string) (Container, error) {
@@ -69,12 +69,13 @@ func (q *Queries) GetContainer(ctx context.Context, id string) (Container, error
 		&i.LastUpdatedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Labels,
 	)
 	return i, err
 }
 
 const getContainerByName = `-- name: GetContainerByName :one
-SELECT id, name, image, image_id, state, auto_update, update_available, latest_image_digest, last_checked_at, last_updated_at, created_at, updated_at FROM containers WHERE name = ? LIMIT 1
+SELECT id, name, image, image_id, state, auto_update, update_available, latest_image_digest, last_checked_at, last_updated_at, created_at, updated_at, labels FROM containers WHERE name = ? LIMIT 1
 `
 
 func (q *Queries) GetContainerByName(ctx context.Context, name string) (Container, error) {
@@ -93,12 +94,13 @@ func (q *Queries) GetContainerByName(ctx context.Context, name string) (Containe
 		&i.LastUpdatedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Labels,
 	)
 	return i, err
 }
 
 const getUpgradableContainers = `-- name: GetUpgradableContainers :many
-SELECT id, name, image, image_id, state, auto_update, update_available, latest_image_digest, last_checked_at, last_updated_at, created_at, updated_at FROM containers 
+SELECT id, name, image, image_id, state, auto_update, update_available, latest_image_digest, last_checked_at, last_updated_at, created_at, updated_at, labels FROM containers 
 WHERE auto_update = 1 AND update_available = 1
 `
 
@@ -124,6 +126,7 @@ func (q *Queries) GetUpgradableContainers(ctx context.Context) ([]Container, err
 			&i.LastUpdatedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Labels,
 		); err != nil {
 			return nil, err
 		}
@@ -139,7 +142,7 @@ func (q *Queries) GetUpgradableContainers(ctx context.Context) ([]Container, err
 }
 
 const listContainers = `-- name: ListContainers :many
-SELECT id, name, image, image_id, state, auto_update, update_available, latest_image_digest, last_checked_at, last_updated_at, created_at, updated_at FROM containers ORDER BY name ASC
+SELECT id, name, image, image_id, state, auto_update, update_available, latest_image_digest, last_checked_at, last_updated_at, created_at, updated_at, labels FROM containers ORDER BY name ASC
 `
 
 func (q *Queries) ListContainers(ctx context.Context) ([]Container, error) {
@@ -164,6 +167,7 @@ func (q *Queries) ListContainers(ctx context.Context) ([]Container, error) {
 			&i.LastUpdatedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Labels,
 		); err != nil {
 			return nil, err
 		}
@@ -312,13 +316,14 @@ func (q *Queries) UpdateContainerUpdateState(ctx context.Context, arg UpdateCont
 }
 
 const upsertContainerFromEvent = `-- name: UpsertContainerFromEvent :exec
-INSERT INTO containers (id, name, image, image_id, state)
-VALUES (?, ?, ?, ?, ?)
+INSERT INTO containers (id, name, image, image_id, state, labels)
+VALUES (?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
     name = excluded.name,
     image = excluded.image,
     image_id = excluded.image_id,
     state = excluded.state,
+    labels = excluded.labels,
     updated_at = CURRENT_TIMESTAMP
 `
 
@@ -328,6 +333,7 @@ type UpsertContainerFromEventParams struct {
 	Image   string
 	ImageID string
 	State   string
+	Labels  string
 }
 
 func (q *Queries) UpsertContainerFromEvent(ctx context.Context, arg UpsertContainerFromEventParams) error {
@@ -337,6 +343,7 @@ func (q *Queries) UpsertContainerFromEvent(ctx context.Context, arg UpsertContai
 		arg.Image,
 		arg.ImageID,
 		arg.State,
+		arg.Labels,
 	)
 	return err
 }

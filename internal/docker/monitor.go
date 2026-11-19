@@ -10,6 +10,7 @@ import (
 	"github.com/moby/moby/client"
 
 	"dmanager/internal/db"
+	"dmanager/internal/managed"
 )
 
 // StartEventMonitor starts a background goroutine to monitor Docker events.
@@ -92,6 +93,10 @@ func handleEvent(ctx context.Context, logger *slog.Logger, queries *db.Queries, 
 			image = inspect.Container.Config.Image
 		}
 		imageID := inspect.Container.Image
+		var labels map[string]string
+		if inspect.Container.Config != nil {
+			labels = inspect.Container.Config.Labels
+		}
 		state := ""
 		if inspect.Container.State != nil {
 			state = string(inspect.Container.State.Status)
@@ -103,6 +108,7 @@ func handleEvent(ctx context.Context, logger *slog.Logger, queries *db.Queries, 
 			Image:   image,
 			ImageID: imageID,
 			State:   state,
+			Labels:  managed.EncodeLabels(labels),
 		}); err != nil {
 			logger.Error("Failed to save container to DB", "container_id", containerID, "error", err)
 		} else if onEvent != nil {
