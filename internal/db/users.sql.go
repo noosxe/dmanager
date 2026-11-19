@@ -20,6 +20,37 @@ func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const createFirstUser = `-- name: CreateFirstUser :one
+INSERT INTO users (username, password_hash, role)
+SELECT ?, ?, ?
+WHERE NOT EXISTS (SELECT 1 FROM users)
+RETURNING id, username, password_hash, role, created_at, updated_at, email
+`
+
+type CreateFirstUserParams struct {
+	Username     string
+	PasswordHash string
+	Role         string
+}
+
+// Inserts a user only while the users table is empty. Check and insert are one
+// statement, so concurrent first-run setups cannot both succeed; no row is
+// returned (sql.ErrNoRows) when a user already exists.
+func (q *Queries) CreateFirstUser(ctx context.Context, arg CreateFirstUserParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, createFirstUser, arg.Username, arg.PasswordHash, arg.Role)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.PasswordHash,
+		&i.Role,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Email,
+	)
+	return i, err
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (username, password_hash, role)
 VALUES (?, ?, ?)
