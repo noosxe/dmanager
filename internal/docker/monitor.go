@@ -13,7 +13,10 @@ import (
 )
 
 // StartEventMonitor starts a background goroutine to monitor Docker events.
-func StartEventMonitor(ctx context.Context, logger *slog.Logger, queries *db.Queries, dockerClient *client.Client, onEvent func(action string, containerID string)) {
+// After every reconnect of the event stream, resync (if non-nil) is called to
+// pick up changes made while the stream was down. A resync failure is logged
+// and does not stop the monitor.
+func StartEventMonitor(ctx context.Context, logger *slog.Logger, queries *db.Queries, dockerClient *client.Client, resync func(ctx context.Context) error, onEvent func(action string, containerID string)) {
 	go func() {
 		filter := make(client.Filters).Add("type", "container")
 
@@ -41,6 +44,13 @@ func StartEventMonitor(ctx context.Context, logger *slog.Logger, queries *db.Que
 							Filters: filter,
 						})
 						eventChan, errChan = res.Messages, res.Err
+						if resync != nil {
+							// The stream is subscribed first so nothing is missed between
+							// the sync and the first event.
+							if err := resync(ctx); err != nil {
+								logger.Error("Container resync after event stream reconnect failed", "error", err)
+							}
+						}
 					}
 				}
 			case event := <-eventChan:
@@ -67,7 +77,8 @@ func handleEvent(ctx context.Context, logger *slog.Logger, queries *db.Queries, 
 		return
 	}
 
-	if action == "create" || action == "start" || action == "stop" || action == "die" || action == "update" {
+	if action == "create" || action == "start" || action == "stop" || action == "die" || action == "update" ||
+		action == "pause" || action == "unpause" || action == "rename" || action == "kill" {
 		logger.Info("Docker event: container state changed. Inspecting...", "container_id", containerID, "action", action)
 		inspect, err := dockerClient.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
 		if err != nil {

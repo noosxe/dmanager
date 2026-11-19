@@ -107,7 +107,9 @@ var serveCmd = &cobra.Command{
 		queries := db.New(dbConn)
 		containerBroker := container.NewBroker()
 
-		docker.StartEventMonitor(srvCtx, logger.With("module", "docker"), queries, dockerClient, func(action string, containerID string) {
+		docker.StartEventMonitor(srvCtx, logger.With("module", "docker"), queries, dockerClient, func(ctx context.Context) error {
+			return container.SyncContainers(ctx, dbConn, dockerClient)
+		}, func(action string, containerID string) {
 			switch action {
 			case "save":
 				dbQueries := db.New(dbConn)
