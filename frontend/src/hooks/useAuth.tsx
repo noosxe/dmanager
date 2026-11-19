@@ -44,6 +44,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [passkeyLoginEnabled, setPasskeyLoginEnabled] = useState<boolean>(false);
   const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
 
+  // `isLoading` is reserved for the initial auth check (and logout). Login, passkey
+  // login and setup must not toggle it: App swaps the whole tree for a loading
+  // screen while it is set, which would unmount the form and drop its error.
   const checkAuth = async () => {
     try {
       try {
@@ -93,7 +96,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (username: string, password: string, rememberMe = false) => {
-    setIsLoading(true);
     try {
       const response = await authClient.login({ username, password, rememberMe });
       const loggedUser = { username: response.username, role: response.role };
@@ -108,13 +110,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem("dmanager_user");
       localStorage.removeItem("dmanager_token");
       throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const loginWithPasskey = async (rememberMe = false) => {
-    setIsLoading(true);
     try {
       const beginResp = await authClient.beginPasskeyLogin({});
       const options = JSON.parse(beginResp.optionsJson);
@@ -135,13 +134,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem("dmanager_user");
       localStorage.removeItem("dmanager_token");
       throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const setupAdmin = async (username: string, password: string) => {
-    setIsLoading(true);
     try {
       // 1. Create the admin account
       await authClient.setupAdmin({ username, password });
@@ -160,8 +156,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem("dmanager_user");
       localStorage.removeItem("dmanager_token");
       throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
 
