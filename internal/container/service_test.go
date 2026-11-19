@@ -896,6 +896,60 @@ func TestGetContainerLogs(t *testing.T) {
 			t.Errorf("unexpected multiplexed log 1: %+v", multiplexedLogs[1])
 		}
 	}
+
+	// C. A TTY line over the per-line cap is truncated with a marker instead of
+	// ending the stream; the following line and timestamps survive.
+	inspectTty = true
+	over := 100
+	long := strings.Repeat("x", maxLogLineBytes+over)
+	logPayload = []byte("2026-07-04T12:00:00.000000000Z " + long + "\n2026-07-04T12:00:01.000000000Z after\n")
+
+	reqLong := connect.NewRequest(&v1.GetContainerLogsRequest{Id: containerID, Follow: false})
+	reqLong.Header().Set("Cookie", "session_id="+adminSessionID)
+	stream3, err := connClient.GetContainerLogs(context.Background(), reqLong)
+	if err != nil {
+		t.Fatalf("GetContainerLogs failed for long line: %v", err)
+	}
+	var longLogs []*v1.GetContainerLogsResponse
+	for stream3.Receive() {
+		longLogs = append(longLogs, stream3.Msg())
+	}
+	if sErr3 := stream3.Err(); sErr3 != nil {
+		t.Fatalf("stream with an overlong TTY line failed: %v", sErr3)
+	}
+	if len(longLogs) != 2 {
+		t.Fatalf("expected 2 log lines, got %d", len(longLogs))
+	}
+	// The timestamp prefix (31 bytes incl. space) counts toward the cap.
+	wantMarker := fmt.Sprintf("… [truncated %d bytes]", over+len("2026-07-04T12:00:00.000000000Z "))
+	if longLogs[0].Timestamp != "2026-07-04T12:00:00.000000000Z" || !strings.HasSuffix(longLogs[0].LogLine, wantMarker) {
+		t.Errorf("long line not truncated with marker %q: ts=%q len=%d", wantMarker, longLogs[0].Timestamp, len(longLogs[0].LogLine))
+	}
+	if longLogs[1].LogLine != "after" || longLogs[1].Timestamp != "2026-07-04T12:00:01.000000000Z" {
+		t.Errorf("line after the long one lost: %+v", longLogs[1])
+	}
+
+	// D. The multiplexed path has no per-line limit (frames are read whole):
+	// a line well over 64 KiB passes through intact.
+	inspectTty = false
+	big := strings.Repeat("y", 200*1024)
+	logPayload = makeLogFrame(1, "2026-07-04T12:00:00.300Z "+big+"\n")
+	reqBig := connect.NewRequest(&v1.GetContainerLogsRequest{Id: containerID, Follow: false})
+	reqBig.Header().Set("Cookie", "session_id="+adminSessionID)
+	stream4, err := connClient.GetContainerLogs(context.Background(), reqBig)
+	if err != nil {
+		t.Fatalf("GetContainerLogs failed for big frame: %v", err)
+	}
+	var bigLogs []*v1.GetContainerLogsResponse
+	for stream4.Receive() {
+		bigLogs = append(bigLogs, stream4.Msg())
+	}
+	if sErr4 := stream4.Err(); sErr4 != nil {
+		t.Fatalf("multiplexed long line failed: %v", sErr4)
+	}
+	if len(bigLogs) != 1 || bigLogs[0].LogLine != big {
+		t.Errorf("multiplexed long line not delivered intact: %d lines", len(bigLogs))
+	}
 }
 
 func makeLogFrame(streamType byte, payload string) []byte {

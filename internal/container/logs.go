@@ -27,6 +27,50 @@ const (
 	streamTypeStderr = "stderr"
 )
 
+// maxLogLineBytes caps how much of a single raw (TTY) log line is kept in
+// memory and sent to the client. The rest of an overlong line is discarded and
+// replaced by a marker, so one huge line neither ends the stream nor grows
+// memory without bound.
+const maxLogLineBytes = 1 << 20
+
+// readBoundedLine returns the next line (without its newline), keeping at most
+// max bytes. Bytes past the cap are consumed and dropped, and the returned
+// line ends with a "… [truncated N bytes]" marker. It returns io.EOF only when
+// no more data is available.
+func readBoundedLine(br *bufio.Reader, max int) (string, error) {
+	var buf []byte
+	dropped := 0
+	for {
+		chunk, isPrefix, err := br.ReadLine()
+		if err != nil {
+			if len(buf) > 0 || dropped > 0 {
+				// Partial line at the end of a failed read: surface the error
+				// on the next call rather than lose what was read.
+				break
+			}
+			return "", err
+		}
+		if room := max - len(buf); room >= len(chunk) {
+			buf = append(buf, chunk...)
+		} else {
+			if room > 0 {
+				buf = append(buf, chunk[:room]...)
+				chunk = chunk[room:]
+			}
+			dropped += len(chunk)
+		}
+		if !isPrefix {
+			break
+		}
+	}
+	line := string(buf)
+	if dropped > 0 {
+		// The cut may split a multi-byte rune; protobuf strings must be UTF-8.
+		line = strings.ToValidUTF8(line, "") + fmt.Sprintf("… [truncated %d bytes]", dropped)
+	}
+	return line, nil
+}
+
 // GetContainerLogs streams live console outputs (stdout/stderr) from a container.
 func (s *Service) GetContainerLogs(
 	ctx context.Context,
@@ -96,16 +140,26 @@ func (s *Service) GetContainerLogs(
 
 	// 5. Stream logs to the client based on TTY configuration
 	if inspect.Container.Config.Tty {
-		// Raw stream - scan line by line
-		scanner := bufio.NewScanner(reader)
-		for scanner.Scan() {
+		// Raw stream - read line by line, bounded per line.
+		br := bufio.NewReaderSize(reader, 64*1024)
+		for {
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
 			default:
 			}
 
-			line := scanner.Text()
+			line, err := readBoundedLine(br, maxLogLineBytes)
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					break
+				}
+				if errors.Is(err, context.Canceled) {
+					return nil
+				}
+				return connect.NewError(connect.CodeInternal, fmt.Errorf("error reading raw logs stream: %w", err))
+			}
+
 			timestamp := ""
 			logLine := line
 
@@ -125,12 +179,6 @@ func (s *Service) GetContainerLogs(
 			if err := stream.Send(resp); err != nil {
 				return err
 			}
-		}
-		if err := scanner.Err(); err != nil {
-			if errors.Is(err, context.Canceled) {
-				return nil
-			}
-			return connect.NewError(connect.CodeInternal, fmt.Errorf("error reading raw logs stream: %w", err))
 		}
 	} else {
 		// Multiplexed stream - read frame by frame
