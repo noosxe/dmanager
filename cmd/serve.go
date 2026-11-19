@@ -201,13 +201,16 @@ var serveCmd = &cobra.Command{
 
 		// Embedded Tailscale node (docs/tailscale.md). It is constructed here,
 		// before the admin service, so the status RPC sees the real node. It
-		// stays nil when the feature is disabled (no auth key); the status RPC
-		// reports the disabled snapshot in that case. Start/Serve happen in the
+		// stays nil unless tailscale.enabled is true; the status RPC reports the
+		// disabled snapshot in that case. Start/Serve happen in the
 		// listener section below, since they need the HTTP handler.
 		var tsNode *tailscale.Node
-		if cfg.Tailscale.AuthKey != "" {
+		if cfg.Tailscale.Enabled {
 			tsNode = tailscale.New(cfg.Tailscale, logger.With("module", "tailscale"))
 			defer func() { _ = tsNode.Close() }() // after the HTTP drain below
+		} else if cfg.Tailscale.AuthKey != "" {
+			// Never log the key itself.
+			cmdLogger.Info("tailscale.auth_key is set but tailscale.enabled is false; ignoring the auth key and leaving the tailnet node off")
 		}
 
 		// Register AdminService (read-only Docker resource inventories)

@@ -448,6 +448,9 @@ func TestConfigTailscaleDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load default config: %v", err)
 	}
+	if cfg.Tailscale.Enabled {
+		t.Error("expected default tailscale.enabled false")
+	}
 	if cfg.Tailscale.AuthKey != "" {
 		t.Errorf("expected default empty tailscale.auth_key, got %q", cfg.Tailscale.AuthKey)
 	}
@@ -612,6 +615,7 @@ func TestConfigTailscaleValidation(t *testing.T) {
 		{
 			name: "valid enabled section",
 			mutate: func(c *Config) {
+				c.Tailscale.Enabled = true
 				c.Tailscale.AuthKey = validTailscaleAuthKey
 				c.Tailscale.StateDir = testTailscaleStateDir
 			},
@@ -619,6 +623,7 @@ func TestConfigTailscaleValidation(t *testing.T) {
 		{
 			name: "uppercase hostname",
 			mutate: func(c *Config) {
+				c.Tailscale.Enabled = true
 				c.Tailscale.AuthKey = validTailscaleAuthKey
 				c.Tailscale.Hostname = "Dmanager"
 			},
@@ -627,6 +632,7 @@ func TestConfigTailscaleValidation(t *testing.T) {
 		{
 			name: "leading hyphen hostname",
 			mutate: func(c *Config) {
+				c.Tailscale.Enabled = true
 				c.Tailscale.AuthKey = validTailscaleAuthKey
 				c.Tailscale.Hostname = "-dmanager"
 			},
@@ -635,6 +641,7 @@ func TestConfigTailscaleValidation(t *testing.T) {
 		{
 			name: "trailing hyphen hostname",
 			mutate: func(c *Config) {
+				c.Tailscale.Enabled = true
 				c.Tailscale.AuthKey = validTailscaleAuthKey
 				c.Tailscale.Hostname = "dmanager-"
 			},
@@ -643,6 +650,7 @@ func TestConfigTailscaleValidation(t *testing.T) {
 		{
 			name: "hostname too long",
 			mutate: func(c *Config) {
+				c.Tailscale.Enabled = true
 				c.Tailscale.AuthKey = validTailscaleAuthKey
 				c.Tailscale.Hostname = strings.Repeat("a", 64)
 			},
@@ -651,6 +659,7 @@ func TestConfigTailscaleValidation(t *testing.T) {
 		{
 			name: "port zero",
 			mutate: func(c *Config) {
+				c.Tailscale.Enabled = true
 				c.Tailscale.AuthKey = validTailscaleAuthKey
 				c.Tailscale.Port = 0
 			},
@@ -659,6 +668,7 @@ func TestConfigTailscaleValidation(t *testing.T) {
 		{
 			name: "port too high",
 			mutate: func(c *Config) {
+				c.Tailscale.Enabled = true
 				c.Tailscale.AuthKey = validTailscaleAuthKey
 				c.Tailscale.Port = 65536
 			},
@@ -667,6 +677,7 @@ func TestConfigTailscaleValidation(t *testing.T) {
 		{
 			name: "state dir equals database directory",
 			mutate: func(c *Config) {
+				c.Tailscale.Enabled = true
 				c.Tailscale.AuthKey = validTailscaleAuthKey
 				// Default db_path is "dmanager.db" so its directory is ".".
 				c.Tailscale.StateDir = "."
@@ -676,10 +687,46 @@ func TestConfigTailscaleValidation(t *testing.T) {
 		{
 			name: "state dir root",
 			mutate: func(c *Config) {
+				c.Tailscale.Enabled = true
 				c.Tailscale.AuthKey = validTailscaleAuthKey
 				c.Tailscale.StateDir = "/"
 			},
 			wantErr: true,
+		},
+		{
+			name: "enabled without auth key",
+			mutate: func(c *Config) {
+				c.Tailscale.Enabled = true
+				c.Tailscale.StateDir = testTailscaleStateDir
+			},
+			wantErr: true,
+		},
+		{
+			name: "enabled with blank auth key",
+			mutate: func(c *Config) {
+				c.Tailscale.Enabled = true
+				c.Tailscale.AuthKey = "   "
+				c.Tailscale.StateDir = testTailscaleStateDir
+			},
+			wantErr: true,
+		},
+		{
+			name: "disabled with auth key is inert even if otherwise invalid",
+			mutate: func(c *Config) {
+				c.Tailscale.AuthKey = validTailscaleAuthKey
+				c.Tailscale.Hostname = "Dmanager!"
+				c.Tailscale.Port = 99999
+			},
+		},
+		{
+			name: "invalid port ignored in https mode",
+			mutate: func(c *Config) {
+				c.Tailscale.Enabled = true
+				c.Tailscale.AuthKey = validTailscaleAuthKey
+				c.Tailscale.HTTPSEnabled = true
+				c.Tailscale.Port = 0
+				c.Tailscale.StateDir = testTailscaleStateDir
+			},
 		},
 		{
 			name: "invalid hostname ignored while disabled",
@@ -708,5 +755,51 @@ func TestConfigTailscaleValidation(t *testing.T) {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestConfigTailscaleEnabledErrorMessage(t *testing.T) {
+	cfg, err := Load("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.Tailscale.Enabled = true
+	err = cfg.Validate()
+	if err == nil || !strings.Contains(err.Error(), "tailscale.enabled is true but tailscale.auth_key is empty") {
+		t.Errorf("expected enabled-without-key error, got %v", err)
+	}
+}
+
+func TestConfigTailscaleEnabledEnv(t *testing.T) {
+	t.Setenv("TAILSCALE_ENABLED", "true")
+	t.Setenv("TAILSCALE_AUTHKEY", "tskey-auth-bare")
+	cfg, err := Load("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.Tailscale.Enabled {
+		t.Error("expected TAILSCALE_ENABLED=true to enable the feature")
+	}
+	t.Setenv("DMANAGER_TAILSCALE_ENABLED", "false")
+	cfg, err = Load("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Tailscale.Enabled {
+		t.Error("expected prefixed DMANAGER_TAILSCALE_ENABLED=false to beat the bare alias")
+	}
+}
+
+func TestConfigTailscaleEnabledWithoutKeyFailsLoad(t *testing.T) {
+	t.Setenv("TAILSCALE_ENABLED", "true")
+	if _, err := Load(""); err == nil || !strings.Contains(err.Error(), "tailscale.auth_key is empty") {
+		t.Errorf("expected startup failure for enabled without key, got %v", err)
+	}
+}
+
+func TestConfigTailscaleInvalidBareEnabled(t *testing.T) {
+	t.Setenv("TAILSCALE_ENABLED", "maybe")
+	if _, err := Load(""); err == nil || !strings.Contains(err.Error(), "TAILSCALE_ENABLED") {
+		t.Errorf("expected TAILSCALE_ENABLED parse error, got %v", err)
 	}
 }
