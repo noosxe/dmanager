@@ -357,8 +357,15 @@ Working from a repository checkout, `make` wraps the common compose workflows (t
 
 | `make lint` | Run golangci-lint with the repository config (same check as CI's lint job) |
 | `make lint-install` | Install the CI-pinned golangci-lint binary into `$(go env GOPATH)/bin` |
+| `make nix-hashes` | Refresh the Nix package's pnpm and Go dependency hashes |
 
 Backend changes are linted in CI with golangci-lint (`Golangci-lint Check` job). Run the same check locally with `make lint`; if the binary is missing or a different version, `make lint-install` fetches exactly the pinned build. The pin matters: older golangci-lint releases fail against Go 1.27 stdlib export data — that mismatch, not a toolchain incompatibility, is what made local lint appear broken ([#311](https://github.com/noosxe/dmanager/issues/311)).
+
+## Nix package
+
+The flake builds dmanager without the container image: `nix build .#default` produces `result/bin/dmanager`, and `overlays.default` adds `pkgs.dmanager` (x86_64-linux and aarch64-linux). `nix develop` provides the dev shell. The definitions live in `nix/`.
+
+The package fetches dependencies as fixed-output derivations whose hashes are pinned in `nix/hashes.json`. Any change to `frontend/pnpm-lock.yaml`, `go.mod` or `go.sum` (including Dependabot bumps) invalidates them and the Nix build fails with a hash mismatch. Run `make nix-hashes` (or `nix/update-hashes.sh`) and commit the updated `nix/hashes.json`. The Go version is read from `go.mod` and must match the locked nixpkgs `go_1_27`.
 
 ## Documentation
 
