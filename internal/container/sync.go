@@ -40,9 +40,15 @@ func SyncContainers(ctx context.Context, dbConn db.DBTX, dockerClient *client.Cl
 	}
 
 	// Delete orphan containers that no longer exist on the host
-	if err := queries.DeleteOrphanContainers(ctx, activeIDs); err != nil {
-		return err
-	}
+	return pruneContainers(ctx, queries, activeIDs)
+}
 
-	return nil
+// pruneContainers deletes rows whose ID is not in activeIDs. An empty list
+// means the host has no containers, so every row is stale; sqlc renders an
+// empty slice as NOT IN (NULL), which matches nothing, so it is handled here.
+func pruneContainers(ctx context.Context, queries *db.Queries, activeIDs []string) error {
+	if len(activeIDs) == 0 {
+		return queries.DeleteAllContainers(ctx)
+	}
+	return queries.DeleteOrphanContainers(ctx, activeIDs)
 }

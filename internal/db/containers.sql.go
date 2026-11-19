@@ -12,6 +12,15 @@ import (
 	"time"
 )
 
+const deleteAllContainers = `-- name: DeleteAllContainers :exec
+DELETE FROM containers
+`
+
+func (q *Queries) DeleteAllContainers(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, deleteAllContainers)
+	return err
+}
+
 const deleteContainer = `-- name: DeleteContainer :exec
 DELETE FROM containers WHERE id = ?
 `
