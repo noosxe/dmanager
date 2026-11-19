@@ -2,6 +2,7 @@ package container
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"dmanager/internal/db"
 	dmanagerv1 "dmanager/internal/gen/proto/dmanager/v1"
 	"dmanager/internal/gen/proto/dmanager/v1/dmanagerv1connect"
+	"dmanager/internal/managed"
 	"dmanager/internal/notification"
 )
 
@@ -31,6 +33,34 @@ type Service struct {
 	registries   []config.Registry
 	notifier     *notification.Dispatcher
 	auditor      audit.Auditor // nil disables audit recording
+
+	// external decides which containers are owned by another tool; they are
+	// never upgraded. notifyExternal re-enables update-available
+	// notifications for them.
+	external       managed.Policy
+	notifyExternal bool
+}
+
+// SetExternalManagement configures the externally-managed policy. It must be
+// called before the service starts handling requests.
+func (s *Service) SetExternalManagement(policy managed.Policy, notifyUpdates bool) {
+	s.external = policy
+	s.notifyExternal = notifyUpdates
+}
+
+// externalOwner reports whether the record is externally managed, decided from
+// its current labels and the configured selectors.
+func (s *Service) externalOwner(r db.Container) (string, bool) {
+	return s.external.Check(managed.DecodeLabels(r.Labels))
+}
+
+func (s *Service) mapRecord(r db.Container) *dmanagerv1.Container {
+	return MapContainerRecord(r, s.external)
+}
+
+func externallyManagedError(name, by string) error {
+	return connect.NewError(connect.CodeFailedPrecondition,
+		fmt.Errorf("container %s is managed externally (%s) and cannot be upgraded or auto-updated by dmanager", name, by))
 }
 
 // NewService creates a new Container service.
@@ -47,7 +77,8 @@ func NewService(dbConn db.DBTX, broker *Broker, dockerClient *client.Client, log
 }
 
 // MapContainerRecord maps a database container record to a Protobuf Container structure.
-func MapContainerRecord(r db.Container) *dmanagerv1.Container {
+func MapContainerRecord(r db.Container, policy managed.Policy) *dmanagerv1.Container {
+	managedBy, external := policy.Check(managed.DecodeLabels(r.Labels))
 	latestImageDigest := ""
 	if digest, ok := r.LatestImageDigest.(string); ok {
 		latestImageDigest = digest
@@ -78,6 +109,8 @@ func MapContainerRecord(r db.Container) *dmanagerv1.Container {
 		LatestImageDigest: latestImageDigest,
 		LastCheckedAt:     lastCheckedAtStr,
 		LastUpdatedAt:     lastUpdatedAtStr,
+		ExternallyManaged: external,
+		ManagedBy:         managedBy,
 	}
 }
 
@@ -91,7 +124,7 @@ func (s *Service) ListContainers(ctx context.Context, req *connect.Request[dmana
 
 	protoContainers := make([]*dmanagerv1.Container, len(records))
 	for i, r := range records {
-		protoContainers[i] = MapContainerRecord(r)
+		protoContainers[i] = s.mapRecord(r)
 	}
 
 	res := connect.NewResponse(&dmanagerv1.ListContainersResponse{

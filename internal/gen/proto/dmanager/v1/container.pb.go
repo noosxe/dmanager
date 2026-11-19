@@ -33,8 +33,14 @@ type Container struct {
 	LatestImageDigest string                 `protobuf:"bytes,8,opt,name=latest_image_digest,json=latestImageDigest,proto3" json:"latest_image_digest,omitempty"`
 	LastCheckedAt     string                 `protobuf:"bytes,9,opt,name=last_checked_at,json=lastCheckedAt,proto3" json:"last_checked_at,omitempty"`  // RFC3339 formatted datetime string
 	LastUpdatedAt     string                 `protobuf:"bytes,10,opt,name=last_updated_at,json=lastUpdatedAt,proto3" json:"last_updated_at,omitempty"` // RFC3339 formatted datetime string
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// True when another tool owns the container (dmanager.managed-by label or a
+	// configured selector); upgrades and auto-update are then rejected.
+	ExternallyManaged bool `protobuf:"varint,11,opt,name=externally_managed,json=externallyManaged,proto3" json:"externally_managed,omitempty"`
+	// Value of the dmanager.managed-by label, or the matched selector; empty
+	// unless externally_managed.
+	ManagedBy     string `protobuf:"bytes,12,opt,name=managed_by,json=managedBy,proto3" json:"managed_by,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Container) Reset() {
@@ -133,6 +139,20 @@ func (x *Container) GetLastCheckedAt() string {
 func (x *Container) GetLastUpdatedAt() string {
 	if x != nil {
 		return x.LastUpdatedAt
+	}
+	return ""
+}
+
+func (x *Container) GetExternallyManaged() bool {
+	if x != nil {
+		return x.ExternallyManaged
+	}
+	return false
+}
+
+func (x *Container) GetManagedBy() string {
+	if x != nil {
+		return x.ManagedBy
 	}
 	return ""
 }
@@ -957,7 +977,7 @@ var File_proto_dmanager_v1_container_proto protoreflect.FileDescriptor
 
 const file_proto_dmanager_v1_container_proto_rawDesc = "" +
 	"\n" +
-	"!proto/dmanager/v1/container.proto\x12\vdmanager.v1\"\xc2\x02\n" +
+	"!proto/dmanager/v1/container.proto\x12\vdmanager.v1\"\x90\x03\n" +
 	"\tContainer\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
@@ -970,7 +990,10 @@ const file_proto_dmanager_v1_container_proto_rawDesc = "" +
 	"\x13latest_image_digest\x18\b \x01(\tR\x11latestImageDigest\x12&\n" +
 	"\x0flast_checked_at\x18\t \x01(\tR\rlastCheckedAt\x12&\n" +
 	"\x0flast_updated_at\x18\n" +
-	" \x01(\tR\rlastUpdatedAt\"\x17\n" +
+	" \x01(\tR\rlastUpdatedAt\x12-\n" +
+	"\x12externally_managed\x18\v \x01(\bR\x11externallyManaged\x12\x1d\n" +
+	"\n" +
+	"managed_by\x18\f \x01(\tR\tmanagedBy\"\x17\n" +
 	"\x15ListContainersRequest\"P\n" +
 	"\x16ListContainersResponse\x126\n" +
 	"\n" +

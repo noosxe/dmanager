@@ -41,6 +41,12 @@ message Container {
   string latest_image_digest = 8;
   string last_checked_at = 9;  // RFC3339 formatted datetime string
   string last_updated_at = 10; // RFC3339 formatted datetime string
+  // True when another tool owns the container (dmanager.managed-by label or a
+  // configured selector); upgrades and auto-update are then rejected.
+  bool externally_managed = 11;
+  // Value of the dmanager.managed-by label, or the matched selector; empty
+  // unless externally_managed.
+  string managed_by = 12;
 }
 
 message ListContainersRequest {}

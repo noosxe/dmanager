@@ -21,6 +21,7 @@ import (
 	"dmanager/internal/db"
 	v1 "dmanager/internal/gen/proto/dmanager/v1"
 	"dmanager/internal/gen/proto/dmanager/v1/dmanagerv1connect"
+	"dmanager/internal/managed"
 )
 
 const (
@@ -70,7 +71,8 @@ func TestSyncContainers(t *testing.T) {
 					"Names": ["/my-container-1"],
 					"Image": "nginx:latest",
 					"ImageID": "sha256:1",
-					"State": "running"
+					"State": "running",
+					"Labels": {"dmanager.managed-by": "nixos"}
 				},
 				{
 					"Id": "test-container-2",
@@ -114,6 +116,10 @@ func TestSyncContainers(t *testing.T) {
 	c1 := containers[0] // ordered by name: my-container-1, then my-container-2
 	if c1.ID != testContainer1ID || c1.Name != "my-container-1" || c1.State != stateRunning {
 		t.Errorf("unexpected container 1 data: %+v", c1)
+	}
+
+	if got := managed.DecodeLabels(c1.Labels)[managed.Label]; got != testOwnerName {
+		t.Errorf("expected labels to be synced, got %q", c1.Labels)
 	}
 
 	c2 := containers[1]

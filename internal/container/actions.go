@@ -111,7 +111,7 @@ func (s *Service) StartContainer(ctx context.Context, req *connect.Request[v1.St
 		s.broker.Publish(&v1.StreamContainersResponse{
 			Action:      actionSave,
 			ContainerId: containerID,
-			Container:   MapContainerRecord(updatedRecord),
+			Container:   s.mapRecord(updatedRecord),
 		})
 	}
 
@@ -213,7 +213,7 @@ func (s *Service) StopContainer(ctx context.Context, req *connect.Request[v1.Sto
 		s.broker.Publish(&v1.StreamContainersResponse{
 			Action:      actionSave,
 			ContainerId: containerID,
-			Container:   MapContainerRecord(updatedRecord),
+			Container:   s.mapRecord(updatedRecord),
 		})
 	}
 
@@ -252,6 +252,14 @@ func (s *Service) SetContainerAutoUpdate(ctx context.Context, req *connect.Reque
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to query container from DB: %w", err))
 	}
 
+	// Enabling is refused for externally managed containers; disabling stays
+	// possible so a stale flag can still be cleared.
+	if req.Msg.AutoUpdate {
+		if by, external := s.externalOwner(existing); external {
+			return nil, externallyManagedError(existing.Name, by)
+		}
+	}
+
 	s.logger.Info("Setting container auto-update", "container_id", containerID, "container_name", existing.Name, "auto_update", req.Msg.AutoUpdate)
 
 	var autoUpdateVal int64
@@ -274,7 +282,7 @@ func (s *Service) SetContainerAutoUpdate(ctx context.Context, req *connect.Reque
 		s.broker.Publish(&v1.StreamContainersResponse{
 			Action:      actionSave,
 			ContainerId: containerID,
-			Container:   MapContainerRecord(updatedRecord),
+			Container:   s.mapRecord(updatedRecord),
 		})
 	}
 
@@ -402,7 +410,7 @@ func (s *Service) checkContainerUpdatesInternal(ctx context.Context, containerID
 		s.broker.Publish(&v1.StreamContainersResponse{
 			Action:      actionSave,
 			ContainerId: containerID,
-			Container:   MapContainerRecord(updatedRecord),
+			Container:   s.mapRecord(updatedRecord),
 		})
 	}
 

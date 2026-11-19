@@ -51,10 +51,17 @@ func (s *Service) checkAllContainers(ctx context.Context) {
 
 		if updateAvailable {
 			s.logger.Info("Scheduler: update is available for container", "container_name", record.Name, "container_id", record.ID)
-			s.notifier.SendGotify(ctx, "Image Update Available", fmt.Sprintf("A new image update has been detected in the registry for container %s.", record.Name), 5)
+			managedBy, external := s.externalOwner(record)
+			if !external || s.notifyExternal {
+				s.notifier.SendGotify(ctx, "Image Update Available", fmt.Sprintf("A new image update has been detected in the registry for container %s.", record.Name), 5)
+			}
 
-			// Trigger automated re-deployment workflow if auto-update is enabled
-			if record.AutoUpdate != 0 {
+			// Trigger automated re-deployment workflow if auto-update is enabled.
+			// Externally managed containers are never upgraded, even when the
+			// flag was stored before their label appeared.
+			if external && record.AutoUpdate != 0 {
+				s.logger.Info("Scheduler: skipping auto-update for externally managed container", "container_name", record.Name, "container_id", record.ID, "managed_by", managedBy)
+			} else if record.AutoUpdate != 0 {
 				s.logger.Info("Scheduler: auto-update is enabled. Triggering automated container re-deployment", "container_name", record.Name, "container_id", record.ID)
 				resp, upgradeErr := s.upgradeContainerInternal(ctx, record.ID)
 				s.auditUpgrade(ctx, audit.SourceSystem, audit.SystemActor, "", record.ID, resp, upgradeErr)

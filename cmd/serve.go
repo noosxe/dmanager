@@ -28,6 +28,7 @@ import (
 	"dmanager/internal/gen/proto/dmanager/v1/dmanagerv1connect"
 	"dmanager/internal/logging"
 	"dmanager/internal/mailer"
+	"dmanager/internal/managed"
 	"dmanager/internal/settings"
 	"dmanager/internal/tailscale"
 )
@@ -104,6 +105,7 @@ var serveCmd = &cobra.Command{
 		}
 
 		// 3. Initialize queries and services
+		extPolicy := managed.NewPolicy(cfg.Docker.ExternalLabelSelectors)
 		queries := db.New(dbConn)
 		containerBroker := container.NewBroker()
 
@@ -127,7 +129,7 @@ var serveCmd = &cobra.Command{
 				containerBroker.Publish(&dmanagerv1.StreamContainersResponse{
 					Action:      "save",
 					ContainerId: containerID,
-					Container:   container.MapContainerRecord(c),
+					Container:   container.MapContainerRecord(c, extPolicy),
 				})
 			case "delete":
 				containerBroker.Publish(&dmanagerv1.StreamContainersResponse{
@@ -175,6 +177,7 @@ var serveCmd = &cobra.Command{
 
 		// Register ContainerService
 		containerSvc := container.NewService(dbConn, containerBroker, dockerClient, logger.With("module", "container"), cfg.Registries, auditor)
+		containerSvc.SetExternalManagement(extPolicy, cfg.Scheduler.NotifyExternalUpdates)
 		containerPath, containerHandler := dmanagerv1connect.NewContainerServiceHandler(
 			containerSvc,
 			// Streams (container list, logs) end at shutdown so the HTTP drain
