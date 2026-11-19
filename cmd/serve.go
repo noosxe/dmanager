@@ -177,7 +177,9 @@ var serveCmd = &cobra.Command{
 		containerSvc := container.NewService(dbConn, containerBroker, dockerClient, logger.With("module", "container"), cfg.Registries, auditor)
 		containerPath, containerHandler := dmanagerv1connect.NewContainerServiceHandler(
 			containerSvc,
-			connect.WithInterceptors(authInterceptor),
+			// Streams (container list, logs) end at shutdown so the HTTP drain
+			// is not held open; unary calls still finish normally.
+			connect.WithInterceptors(authInterceptor, endStreamsOnShutdown(srvCtx)),
 		)
 		mux.Handle(containerPath, containerHandler)
 
