@@ -130,3 +130,63 @@ func TestUpgradeContainerStartFailureRestoresOld(t *testing.T) {
 		t.Errorf("new container must not be recorded, got: %v", err)
 	}
 }
+
+// TestUpgradeContainerPullStreamErrorFailsUpgrade verifies an error reported
+// inside the pull progress stream fails the upgrade before the container is
+// touched.
+func TestUpgradeContainerPullStreamErrorFailsUpgrade(t *testing.T) {
+	dbConn, queries := newTestDB(t)
+
+	const (
+		oldID    = "old-container-123"
+		name     = "upgrade-pull-error-test"
+		imageRef = testImageNginx
+	)
+	if err := queries.SaveContainer(context.Background(), db.SaveContainerParams{
+		ID: oldID, Name: name, Image: imageRef, ImageID: "sha256:old",
+		State: stateRunning, UpdatedAt: time.Now(),
+	}); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	var mu sync.Mutex
+	var mutating []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		p := r.URL.Path
+		switch {
+		case strings.HasSuffix(p, "/_ping"):
+			w.Header().Set("API-Version", "1.45")
+			_, _ = w.Write([]byte("OK"))
+		case r.Method == http.MethodGet && strings.HasSuffix(p, "/containers/"+oldID+"/json"):
+			_, _ = fmt.Fprintf(w, `{"Id":"%s","Name":"/%s","Image":"sha256:old","Config":{"Image":"%s"},"State":{"Status":"running","Running":true},"HostConfig":{}}`, oldID, name, imageRef)
+		case strings.HasSuffix(p, "/images/create"):
+			_, _ = w.Write([]byte(`{"status":"pulling..."}` + "\n" + `{"errorDetail":{"message":"denied: access forbidden"},"error":"denied: access forbidden"}` + "\n"))
+		case strings.HasSuffix(p, "/images/"+imageRef+"/json"):
+			_, _ = w.Write([]byte(`{"Id":"sha256:old"}`))
+		default:
+			mu.Lock()
+			mutating = append(mutating, r.Method+" "+p)
+			mu.Unlock()
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	dockerClient, err := client.New(client.WithHost(server.URL), client.WithHTTPClient(server.Client()))
+	if err != nil {
+		t.Fatalf("docker client: %v", err)
+	}
+	svc := NewService(dbConn, NewBroker(), dockerClient, slog.Default(), nil, nil)
+	adminCtx := auth.WithUser(context.Background(), db.User{Role: roleAdmin})
+
+	_, err = svc.UpgradeContainer(adminCtx, connect.NewRequest(&v1.UpgradeContainerRequest{Id: oldID}))
+	if err == nil || !strings.Contains(err.Error(), "denied: access forbidden") {
+		t.Fatalf("expected pull stream error to fail the upgrade, got: %v", err)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(mutating) != 0 {
+		t.Errorf("container must not be touched after a failed pull, got: %v", mutating)
+	}
+}
