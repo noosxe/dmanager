@@ -197,11 +197,16 @@ var serveCmd = &cobra.Command{
 		)
 		mux.Handle(settingsPath, settingsHandler)
 
-		// tsNode stays nil when the tailscale feature is disabled (no auth
-		// key); the status RPC reports the disabled snapshot in that case.
-		// Declared before the admin service registration and constructed in the
-		// listener section below, so both share the same instance.
+		// Embedded Tailscale node (docs/tailscale.md). It is constructed here,
+		// before the admin service, so the status RPC sees the real node. It
+		// stays nil when the feature is disabled (no auth key); the status RPC
+		// reports the disabled snapshot in that case. Start/Serve happen in the
+		// listener section below, since they need the HTTP handler.
 		var tsNode *tailscale.Node
+		if cfg.Tailscale.AuthKey != "" {
+			tsNode = tailscale.New(cfg.Tailscale, logger.With("module", "tailscale"))
+			defer func() { _ = tsNode.Close() }() // after the HTTP drain below
+		}
 
 		// Register AdminService (read-only Docker resource inventories)
 		adminSvc := admin.NewService(dockerClient, queries, tsNode, logger.With("module", "admin"))
@@ -248,15 +253,13 @@ var serveCmd = &cobra.Command{
 		// Apply CORS middleware
 		handler := withCORS(cfg.Server.AllowedOrigins, mux)
 
-		// Embedded Tailscale node (docs/tailscale.md): when an auth key is
-		// configured, the identical handler tree is served on a tailnet listener.
+		// When the tailscale node exists, the identical handler tree is served
+		// on a tailnet listener.
 
 		// Startup is deliberately non-fatal: a tailnet outage or an invalid
 		// auth key must not take down local (LAN) availability.
 
-		if cfg.Tailscale.AuthKey != "" {
-			tsNode = tailscale.New(cfg.Tailscale, logger.With("module", "tailscale"))
-			defer func() { _ = tsNode.Close() }() // after the HTTP drain below
+		if tsNode != nil {
 			go func() {
 				upCtx, cancel := context.WithTimeout(srvCtx, 60*time.Second)
 				defer cancel()
