@@ -155,11 +155,10 @@ Inserted after the HTTP handler tree is fully built (after `handler := withCORS(
 if cfg.Tailscale.Enabled {
     node := tailscale.New(cfg.Tailscale, logger.With("module", "tailscale"))
     go func() {
-        upCtx, cancel := context.WithTimeout(srvCtx, 60*time.Second)
-        defer cancel()
-        if err := node.Start(upCtx); err != nil {
-            cmdLogger.Error("tailscale node failed to start; tailnet access disabled",
-                "error", err) // degraded mode — see §9 Q2
+        // Connect retries in the background (see §3.4); it returns only
+        // when the node is running or the failure cannot recover.
+        if err := node.Connect(srvCtx); err != nil {
+            cmdLogger.Error("tailscale node cannot start and will not be retried", "error", err)
             return
         }
         if err := node.Serve(handler); err != nil {
@@ -187,6 +186,25 @@ goroutine's resources, so it fires last). Clean offline transition matters for f
 ephemeral node reaping if §9 Q5 is later enabled.
 
 ---
+
+### 3.4. Bringing the node up: retries and waiting states
+
+`Node.Connect` keeps trying to bring the node up until it is running; the listeners attach as soon as it is.
+`tsnet.Up` blocks until the backend reports `Running`, which can take hours when the tailnet requires
+device approval, so no finite deadline is a failure:
+
+- Each attempt is bounded at 60 s only so the state gets logged regularly. Hitting that bound just starts
+  the next attempt (the node keeps working in the background).
+- Other failures are retried after a capped exponential delay: 2 s, 4 s, … up to 60 s.
+- Every retry logs the attempt, the live backend state with a hint (for example `NeedsMachineAuth`:
+  waiting for the device to be approved in the tailnet admin console), and the last error.
+- Retrying stops only for errors that cannot recover: the control server rejecting the auth key (invalid,
+  expired or revoked) and an unusable state directory. These are logged and the node stays off for the
+  process lifetime; with the plain HTTP listener disabled the process exits with that error.
+- The Admin status card and `GetTailscaleStatus` report `starting` (with the live backend state) while the
+  node is retrying, and `failed` only for unrecoverable errors.
+
+There are no tuning options; the attempt bound and the delays are fixed.
 
 ## 4. Serving & TLS Design (v1)
 
@@ -309,7 +327,7 @@ All open questions from the initial draft have been resolved; recommendations ad
 | # | Question | Decision |
 |---|---|---|
 | Q1 | Env var naming | `DMANAGER_TAILSCALE_*` canonical; bare `TAILSCALE_AUTHKEY` / `TAILSCALE_HOSTNAME` / `TAILSCALE_STATE_DIR` / `TAILSCALE_PORT` accepted as aliases. Prefixed wins over bare, bare wins over YAML. |
-| Q2 | Startup failure policy | Degraded mode: single attempt, error log, LAN-only operation continues. No retry loop in v1. |
+| Q2 | Startup failure policy | Degraded mode: error log, LAN-only operation continues. v1 made a single attempt; it now retries in the background (§3.4). |
 | Q3 | Tailnet listen port | Default `80`, configurable via `tailscale.port`. |
 | Q4 | HTTPS on tailnet | Shipped as STORY-077: opt-in `tailscale.https_enabled` serves HTTPS on 443 instead of plain HTTP (single protocol); passkeys work over the `https://*.ts.net` origin. |
 | Q5 | Ephemeral node mode | Not supported in v1. |
@@ -327,9 +345,10 @@ All open questions from the initial draft have been resolved; recommendations ad
 A deployment can serve dmanager on the tailnet only. Set `server.http.enabled: false`
 (`DMANAGER_SERVER_HTTP_ENABLED=false`); the plain listener (`server.port`, `server.listen_address`) is then
 not started. Startup fails with a clear error when `tailscale.enabled` is also `false`, since no listener
-would be up. Because the tailnet listener is then the only way in, a failure to bring the node up (bad auth
-key, tailnet outage, HTTPS certificates not enabled) ends the process with an error instead of the usual
-degraded mode. To keep the plain listener but restrict it, set `server.listen_address` (for example
+would be up. Because the tailnet listener is then the only way in, an unrecoverable failure (a rejected auth key,
+HTTPS certificates not enabled, a listener error) ends the process with an error instead of the usual
+degraded mode. A node that is merely slow, offline or waiting for approval does not: the process stays up
+while the node keeps retrying (§3.4). To keep the plain listener but restrict it, set `server.listen_address` (for example
 `127.0.0.1`); the default is all interfaces.
 
 Settings such a deployment needs (use your own tailnet name):
