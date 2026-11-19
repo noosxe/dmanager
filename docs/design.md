@@ -927,7 +927,7 @@ Each future consumer owns its rendering: Go `html/template` files embedded with 
 
 - **Header injection**: impossible by construction — every header value passes through the go-mail API, which validates addresses and encodes headers.
 - **Credentials**: `smtp.password` only ever exists in env/config memory; it is excluded from the startup log line and from any error wrapping (library errors quote the SMTP conversation status, not AUTH material).
-- **Relay trust**: `tls_mode: none` transmits plaintext across the Docker network only. The relay must be restricted to internal networks (postfix `mynetworks`), and the docs recommend `starttls` whenever the relay offers it.
+- **Relay trust**: `tls_mode: none` transmits plaintext across the Docker network only. The relay must be restricted to internal networks (postfix `mynetworks`), and the docs recommend `starttls` whenever the relay offers it. `tls_mode: starttls` is mandatory STARTTLS (go-mail `TLSMandatory`): a relay that does not offer it, or a failed upgrade, aborts the send before AUTH or message data, so a stripped capability cannot downgrade to plaintext.
 - **Upstream deliverability**: with Resend behind the relay, `from_email` must be on the verified domain — an unverified sender surfaces as a relay-side rejection (550), reported verbatim by `smtp test` and logged by the mailer.
 - **No audit-log coupling**: mail delivery is infrastructure, not a user action — sends are not audit entries. The triggering events of future consumers (invitation created, password changed) are audited by those flows if their designs say so.
 

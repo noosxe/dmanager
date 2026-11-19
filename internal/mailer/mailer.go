@@ -116,7 +116,9 @@ func (m *smtpMailer) Send(ctx context.Context, msg Message) error {
 	case config.TLSModeNone:
 		opts = append(opts, mail.WithTLSPolicy(mail.NoTLS))
 	case config.TLSModeStartTLS:
-		opts = append(opts, mail.WithTLSPolicy(mail.TLSOpportunistic))
+		// Mandatory: never fall back to plaintext if the relay lacks (or an
+		// attacker strips) STARTTLS; credentials are not sent either.
+		opts = append(opts, mail.WithTLSPolicy(mail.TLSMandatory))
 	case config.TLSModeTLS:
 		opts = append(opts, mail.WithTLSPolicy(mail.TLSMandatory), mail.WithSSLPort(true))
 	}
@@ -145,6 +147,9 @@ func (m *smtpMailer) Send(ctx context.Context, msg Message) error {
 			slog.String("to", strings.Join(msg.To, ",")),
 			slog.String("subject", msg.Subject),
 			slog.String("error", err.Error()))
+		if m.cfg.TLSMode == config.TLSModeStartTLS {
+			return fmt.Errorf("smtp send failed (tls_mode starttls requires the relay to offer STARTTLS and complete the upgrade; nothing was sent in plaintext): %w", err)
+		}
 		return fmt.Errorf("smtp send failed: %w", err)
 	}
 

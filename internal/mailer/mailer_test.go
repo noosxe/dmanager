@@ -155,3 +155,31 @@ func TestPortOrDefault(t *testing.T) {
 		t.Errorf("bogus port = %d, want 25", got)
 	}
 }
+
+// TestSendStartTLSIsMandatory pins that starttls never degrades to plaintext:
+// a relay that does not offer STARTTLS must make the send fail before AUTH or
+// any message content is sent.
+func TestSendStartTLSIsMandatory(t *testing.T) {
+	relay := mailertest.New(t)
+	relay.RequireAuth("relay-user", "relay-secret")
+
+	cfg := testSMTPConfig("127.0.0.1", relay.Port())
+	cfg.TLSMode = config.TLSModeStartTLS
+	cfg.Username = "relay-user"
+	cfg.Password = "relay-secret"
+	m := New(cfg, slog.Default())
+
+	err := m.Send(context.Background(), Message{To: []string{testRecipient}, Subject: "x", TextBody: "secret body"})
+	if err == nil {
+		t.Fatal("expected an error when the relay does not offer STARTTLS")
+	}
+	if !strings.Contains(err.Error(), "STARTTLS") || !strings.Contains(err.Error(), "tls_mode") {
+		t.Errorf("error should explain the STARTTLS requirement, got %q", err)
+	}
+	if relay.AuthSucceeded() {
+		t.Error("credentials must not be sent without TLS")
+	}
+	if mailFrom, _, data := relay.LastMessage(); mailFrom != "" || data != "" {
+		t.Error("no message may be sent in plaintext")
+	}
+}
