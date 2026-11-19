@@ -22,6 +22,9 @@ type Registry struct {
 	Host     string `koanf:"host"`
 	Username string `koanf:"username"`
 	Password string `koanf:"password"`
+	// PasswordFile names a file holding the password; mutually exclusive with
+	// Password.
+	PasswordFile string `koanf:"password_file"`
 }
 
 // HTTPConfig configures the plain HTTP listener.
@@ -87,6 +90,7 @@ type SMTPConfig struct {
 	Port           string `koanf:"port"`
 	Username       string `koanf:"username"`
 	Password       string `koanf:"password"`
+	PasswordFile   string `koanf:"password_file"`
 	FromEmail      string `koanf:"from_email"`
 	FromName       string `koanf:"from_name"`
 	TLSMode        string `koanf:"tls_mode"`
@@ -106,6 +110,7 @@ type WebAuthnConfig struct {
 type TailscaleConfig struct {
 	Enabled      bool   `koanf:"enabled"`
 	AuthKey      string `koanf:"auth_key"`
+	AuthKeyFile  string `koanf:"auth_key_file"`
 	Hostname     string `koanf:"hostname"`
 	StateDir     string `koanf:"state_dir"`
 	Port         int    `koanf:"port"`
@@ -392,6 +397,9 @@ func Load(configPath string) (*Config, error) {
 			}
 			if strings.HasPrefix(key, "tailscale_") {
 				sub := strings.TrimPrefix(key, "tailscale_")
+				if sub == "authkey_file" {
+					sub = "auth_key_file"
+				}
 				if sub == "authkey" {
 					// TAILSCALE_AUTHKEY (per feature spec) maps to the auth_key YAML key.
 					sub = "auth_key"
@@ -418,6 +426,12 @@ func Load(configPath string) (*Config, error) {
 		return nil, fmt.Errorf("invalid environment: %w", err)
 	}
 
+	// Resolve the *_file variants of the secrets before validation so that
+	// validation sees the real values.
+	if err := resolveSecretFiles(&cfg); err != nil {
+		return nil, err
+	}
+
 	// Default the node state directory to a sibling of the SQLite database so
 	// container and bare-metal deployments persist it on the same volume.
 	if cfg.Tailscale.StateDir == "" {
@@ -433,12 +447,14 @@ func Load(configPath string) (*Config, error) {
 		hostKey := fmt.Sprintf("DMANAGER_REGISTRIES_%d_HOST", i)
 		userKey := fmt.Sprintf("DMANAGER_REGISTRIES_%d_USERNAME", i)
 		passKey := fmt.Sprintf("DMANAGER_REGISTRIES_%d_PASSWORD", i)
+		passFileKey := fmt.Sprintf("DMANAGER_REGISTRIES_%d_PASSWORD_FILE", i)
 
 		hostVal, hostOk := os.LookupEnv(hostKey)
 		userVal, userOk := os.LookupEnv(userKey)
 		passVal, passOk := os.LookupEnv(passKey)
+		passFileVal, passFileOk := os.LookupEnv(passFileKey)
 
-		if !hostOk && !userOk && !passOk {
+		if !hostOk && !userOk && !passOk && !passFileOk {
 			break
 		}
 
@@ -452,6 +468,9 @@ func Load(configPath string) (*Config, error) {
 		if passOk {
 			reg.Password = passVal
 		}
+		if passFileOk {
+			reg.PasswordFile = passFileVal
+		}
 
 		if i < len(cfg.Registries) {
 			if hostOk {
@@ -463,12 +482,54 @@ func Load(configPath string) (*Config, error) {
 			if passOk {
 				cfg.Registries[i].Password = passVal
 			}
+			if passFileOk {
+				cfg.Registries[i].PasswordFile = passFileVal
+			}
 		} else {
 			cfg.Registries = append(cfg.Registries, reg)
 		}
 	}
 
+	for i := range cfg.Registries {
+		r := &cfg.Registries[i]
+		pw, err := resolveSecret(fmt.Sprintf("registries[%d].password", i), r.Password, r.PasswordFile)
+		if err != nil {
+			return nil, err
+		}
+		r.Password = pw
+	}
+
 	return &cfg, nil
+}
+
+// resolveSecretFiles replaces the secrets that may come from a file with the
+// file contents.
+func resolveSecretFiles(cfg *Config) error {
+	var err error
+	if cfg.Tailscale.AuthKey, err = resolveSecret("tailscale.auth_key", cfg.Tailscale.AuthKey, cfg.Tailscale.AuthKeyFile); err != nil {
+		return err
+	}
+	if cfg.SMTP.Password, err = resolveSecret("smtp.password", cfg.SMTP.Password, cfg.SMTP.PasswordFile); err != nil {
+		return err
+	}
+	return nil
+}
+
+// resolveSecret returns value, or the contents of file when one is named.
+// Setting both is an error. Trailing newlines (LF or CRLF) are trimmed; the
+// error never contains the secret.
+func resolveSecret(name, value, file string) (string, error) {
+	if file == "" {
+		return value, nil
+	}
+	if value != "" {
+		return "", fmt.Errorf("%s and %s_file are both set; use only one", name, name)
+	}
+	data, err := os.ReadFile(file) //nolint:gosec // reading an operator-supplied secret file path is the purpose
+	if err != nil {
+		return "", fmt.Errorf("failed to read %s_file %q: %w", name, file, err)
+	}
+	return strings.TrimRight(string(data), "\r\n"), nil
 }
 
 // applyTailscaleEnvAliases maps the bare TAILSCALE_* variable names onto the
@@ -478,6 +539,9 @@ func Load(configPath string) (*Config, error) {
 func applyTailscaleEnvAliases(cfg *Config) error {
 	if v := os.Getenv("TAILSCALE_AUTHKEY"); v != "" && os.Getenv("DMANAGER_TAILSCALE_AUTHKEY") == "" {
 		cfg.Tailscale.AuthKey = v
+	}
+	if v := os.Getenv("TAILSCALE_AUTHKEY_FILE"); v != "" && os.Getenv("DMANAGER_TAILSCALE_AUTHKEY_FILE") == "" {
+		cfg.Tailscale.AuthKeyFile = v
 	}
 	if v := strings.TrimSpace(os.Getenv("TAILSCALE_ENABLED")); v != "" && os.Getenv("DMANAGER_TAILSCALE_ENABLED") == "" {
 		b, err := strconv.ParseBool(v)

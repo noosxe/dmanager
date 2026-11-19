@@ -942,3 +942,92 @@ func TestConfigHTTPListenerValidation(t *testing.T) {
 		})
 	}
 }
+
+const inlineSecret = "inline"
+
+func writeSecretFile(t *testing.T, content string) string {
+	t.Helper()
+	p := filepath.Join(t.TempDir(), "secret")
+	if err := os.WriteFile(p, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+func TestConfigSecretFilesEnv(t *testing.T) {
+	t.Setenv("DMANAGER_TAILSCALE_ENABLED", "true")
+	t.Setenv("DMANAGER_TAILSCALE_AUTHKEY_FILE", writeSecretFile(t, "tskey-from-file\n"))
+	t.Setenv("DMANAGER_SMTP_PASSWORD_FILE", writeSecretFile(t, "smtp-pass\r\n"))
+	t.Setenv("DMANAGER_REGISTRIES_0_HOST", "registry.example.com")
+	t.Setenv("DMANAGER_REGISTRIES_0_PASSWORD_FILE", writeSecretFile(t, "reg-pass\n\n"))
+	t.Setenv("DMANAGER_REGISTRIES_1_PASSWORD_FILE", writeSecretFile(t, " spaced pass "))
+
+	cfg, err := Load("")
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if cfg.Tailscale.AuthKey != "tskey-from-file" {
+		t.Errorf("auth key = %q", cfg.Tailscale.AuthKey)
+	}
+	if cfg.SMTP.Password != "smtp-pass" {
+		t.Errorf("smtp password = %q", cfg.SMTP.Password)
+	}
+	if len(cfg.Registries) != 2 || cfg.Registries[0].Password != "reg-pass" || cfg.Registries[1].Password != " spaced pass " {
+		t.Errorf("registries = %+v", cfg.Registries)
+	}
+}
+
+func TestConfigSecretFilesYAMLAndBareAlias(t *testing.T) {
+	keyFile := writeSecretFile(t, "tskey-yaml\n")
+	pwFile := writeSecretFile(t, "yaml-reg\n")
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	yaml := "tailscale:\n  enabled: true\n  auth_key_file: " + keyFile + "\nregistries:\n  - host: registry.example.com\n    username: u\n    password_file: " + pwFile + "\n"
+	if err := os.WriteFile(path, []byte(yaml), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if cfg.Tailscale.AuthKey != "tskey-yaml" || cfg.Registries[0].Password != "yaml-reg" {
+		t.Errorf("unexpected secrets: %q %+v", cfg.Tailscale.AuthKey, cfg.Registries)
+	}
+
+	t.Setenv("TAILSCALE_AUTHKEY_FILE", writeSecretFile(t, "tskey-bare\n"))
+	cfg, err = Load(path)
+	if err != nil {
+		t.Fatalf("load bare: %v", err)
+	}
+	if cfg.Tailscale.AuthKey != "tskey-bare" {
+		t.Errorf("bare alias key = %q", cfg.Tailscale.AuthKey)
+	}
+}
+
+func TestConfigSecretFileConflictsAndErrors(t *testing.T) {
+	file := writeSecretFile(t, "x\n")
+	tests := []struct {
+		name    string
+		env     map[string]string
+		wantErr string
+	}{
+		{"tailscale both", map[string]string{"DMANAGER_TAILSCALE_ENABLED": "true", "DMANAGER_TAILSCALE_AUTHKEY": inlineSecret, "DMANAGER_TAILSCALE_AUTHKEY_FILE": file}, "tailscale.auth_key and tailscale.auth_key_file are both set"},
+		{"smtp both", map[string]string{"DMANAGER_SMTP_PASSWORD": inlineSecret, "DMANAGER_SMTP_PASSWORD_FILE": file}, "smtp.password and smtp.password_file are both set"},
+		{"registry both", map[string]string{"DMANAGER_REGISTRIES_0_PASSWORD": inlineSecret, "DMANAGER_REGISTRIES_0_PASSWORD_FILE": file}, "registries[0].password and registries[0].password_file are both set"},
+		{"missing file", map[string]string{"DMANAGER_SMTP_PASSWORD_FILE": filepath.Join(t.TempDir(), "nope")}, "failed to read smtp.password_file"},
+		{"empty tailscale file fails validation", map[string]string{"DMANAGER_TAILSCALE_ENABLED": "true", "DMANAGER_TAILSCALE_AUTHKEY_FILE": writeSecretFile(t, "\n")}, "auth_key is empty"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for k, v := range tt.env {
+				t.Setenv(k, v)
+			}
+			_, err := Load("")
+			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+				t.Fatalf("want error containing %q, got %v", tt.wantErr, err)
+			}
+			if strings.Contains(err.Error(), inlineSecret) {
+				t.Errorf("error leaks secret value: %v", err)
+			}
+		})
+	}
+}
