@@ -17,6 +17,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -150,8 +151,8 @@ func TestSnapshotUnstartedNode(t *testing.T) {
 	if snap.Hostname != testHostname {
 		t.Errorf("expected hostname %q, got %q", testHostname, snap.Hostname)
 	}
-	if snap.Port != 8080 {
-		t.Errorf("expected port 8080, got %d", snap.Port)
+	if snap.Port != 443 {
+		t.Errorf("expected HTTPS mode to report port 443 regardless of tailscale.port, got %d", snap.Port)
 	}
 	if !snap.HTTPSEnabled {
 		t.Error("expected https_enabled true")
@@ -212,7 +213,7 @@ func selfSignedCert(t *testing.T) tls.Certificate {
 	return tls.Certificate{Certificate: [][]byte{der}, PrivateKey: key, Leaf: leaf}
 }
 
-// startH2CapableServer wires a TLS listener exactly the way ServeHTTPS does:
+// startH2CapableServer wires a TLS listener exactly the way serveHTTPS does:
 // the newTailnetTLSConfig shape (NextProtos h2+http/1.1, GetCertificate from
 // a LocalClient) plus the http.Server Protocols enabling HTTP/2. The
 // certificate is swapped for a self-signed one since no tsnet backend is
@@ -294,5 +295,50 @@ func TestH2WiringNegotiatesHTTP2(t *testing.T) {
 	defer func() { _ = resp1.Body.Close() }()
 	if got, want := resp1.Proto, "HTTP/1.1"; got != want {
 		t.Errorf("h1 client negotiated %q, want %q", got, want)
+	}
+}
+
+func TestServeSelectedRunsOnlyHTTPInHTTPMode(t *testing.T) {
+	var httpRan, httpsRan bool
+	err := serveSelected(false,
+		func() error { httpRan = true; return nil },
+		func() error { httpsRan = true; return nil },
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !httpRan || httpsRan {
+		t.Errorf("HTTP mode: http=%v https=%v, want only http", httpRan, httpsRan)
+	}
+}
+
+func TestServeSelectedRunsOnlyHTTPSInHTTPSMode(t *testing.T) {
+	var httpRan, httpsRan bool
+	wantErr := errors.New("boom")
+	err := serveSelected(true,
+		func() error { httpRan = true; return nil },
+		func() error { httpsRan = true; return wantErr },
+	)
+	if !errors.Is(err, wantErr) {
+		t.Errorf("expected HTTPS error to propagate without HTTP fallback, got %v", err)
+	}
+	if httpRan || !httpsRan {
+		t.Errorf("HTTPS mode: http=%v https=%v, want only https", httpRan, httpsRan)
+	}
+}
+
+func TestServedPort(t *testing.T) {
+	if got := servedPort(false, 8080); got != 8080 {
+		t.Errorf("HTTP mode port = %d, want 8080", got)
+	}
+	if got := servedPort(true, 8080); got != 443 {
+		t.Errorf("HTTPS mode port = %d, want 443", got)
+	}
+}
+
+func TestHTTPSModeRequirementMessage(t *testing.T) {
+	if !strings.Contains(httpsModeRequirement, "MagicDNS and HTTPS certificates") ||
+		!strings.Contains(httpsModeRequirement, "not served as a fallback") {
+		t.Errorf("HTTPS-mode failure message must name the tailnet requirements and the lack of HTTP fallback: %q", httpsModeRequirement)
 	}
 }
