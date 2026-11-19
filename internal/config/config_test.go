@@ -803,3 +803,47 @@ func TestConfigTailscaleInvalidBareEnabled(t *testing.T) {
 		t.Errorf("expected TAILSCALE_ENABLED parse error, got %v", err)
 	}
 }
+
+func TestConfigExternalManagement(t *testing.T) {
+	cfg, err := Load("")
+	if err != nil {
+		t.Fatalf("load defaults: %v", err)
+	}
+	if len(cfg.Docker.ExternalLabelSelectors) != 0 || cfg.Scheduler.NotifyExternalUpdates {
+		t.Errorf("unexpected defaults: %+v %+v", cfg.Docker, cfg.Scheduler)
+	}
+
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	yaml := "docker:\n  external_label_selectors:\n    - com.example.pool=true\n    - nixos\nscheduler:\n  notify_external_updates: true\n"
+	if err = os.WriteFile(path, []byte(yaml), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err = Load(path)
+	if err != nil {
+		t.Fatalf("load yaml: %v", err)
+	}
+	if got := strings.Join(cfg.Docker.ExternalLabelSelectors, "|"); got != "com.example.pool=true|nixos" {
+		t.Errorf("yaml selectors: %q", got)
+	}
+	if !cfg.Scheduler.NotifyExternalUpdates {
+		t.Error("yaml notify_external_updates not set")
+	}
+
+	t.Setenv("DMANAGER_DOCKER_EXTERNAL_LABEL_SELECTORS", " a=b , ,c ")
+	t.Setenv("DMANAGER_SCHEDULER_NOTIFY_EXTERNAL_UPDATES", "false")
+	cfg, err = Load(path)
+	if err != nil {
+		t.Fatalf("load env: %v", err)
+	}
+	if got := strings.Join(cfg.Docker.ExternalLabelSelectors, "|"); got != "a=b|c" {
+		t.Errorf("env selectors: %q", got)
+	}
+	if cfg.Scheduler.NotifyExternalUpdates {
+		t.Error("env should override notify_external_updates to false")
+	}
+
+	t.Setenv("DMANAGER_DOCKER_EXTERNAL_LABEL_SELECTORS", "=oops")
+	if _, err := Load(path); err == nil || !strings.Contains(err.Error(), "external_label_selectors") {
+		t.Errorf("expected selector validation error, got %v", err)
+	}
+}
