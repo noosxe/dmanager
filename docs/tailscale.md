@@ -198,8 +198,8 @@ device approval, so no finite deadline is a failure:
 - Other failures are retried after a capped exponential delay: 2 s, 4 s, … up to 60 s.
 - Every retry logs the attempt, the live backend state with a hint (for example `NeedsMachineAuth`:
   waiting for the device to be approved in the tailnet admin console), and the last error.
-- Retrying stops only for errors that cannot recover: the control server rejecting the auth key (invalid,
-  expired or revoked) and an unusable state directory. These are logged and the node stays off for the
+- Retrying stops only for errors that cannot recover: the control server rejecting the auth key (its
+  `invalid key: …` message; no other backend message is treated as unrecoverable) and an unusable state directory. These are logged and the node stays off for the
   process lifetime; with the plain HTTP listener disabled the process exits with that error.
 - The Admin status card and `GetTailscaleStatus` report `starting` (with the live backend state) while the
   node is retrying, and `failed` only for unrecoverable errors.

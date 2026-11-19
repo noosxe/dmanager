@@ -97,8 +97,12 @@ func TestClassifyUpError(t *testing.T) {
 		terminal bool
 	}{
 		{"tsnet.Up: backend: invalid key: API key abc not valid", true},
-		{"tsnet.Up: backend: node key expired", true},
-		{"tsnet.Up: backend: auth key has been revoked", true},
+		{"tsnet.Up: backend: Invalid key: key abc not valid", true},
+		// transient messages that merely contain "valid", "expired", "key"
+		{"tsnet.Up: backend: x509: certificate is not valid yet", false},
+		{"tsnet.Up: backend: certificate has expired or is not yet valid", false},
+		{"tsnet.Up: backend: node key expired; renewing", false},
+		{"tsnet.Up: backend: could not validate the DERP map", false},
 		{"tsnet.Up: backend: no route to control", false},
 		{"tsnet.Up: context deadline exceeded", false},
 		{"tsnet.Up: running, but no ip", false},
