@@ -320,7 +320,7 @@ message CheckEngineResponse {
 message GetTailscaleStatusRequest {}
 
 message GetTailscaleStatusResponse {
-  // false when no auth key is configured — the whole feature is inert.
+  // false when tailscale.enabled is false — the whole feature is inert.
   bool enabled = 1;
 
   // Lifecycle state of the embedded node:
@@ -344,10 +344,11 @@ message GetTailscaleStatusResponse {
   // Tailnet IP addresses assigned to the node (100.x.y.z and/or fd7a:...).
   repeated string ips = 6;
 
-  // Port the plain-HTTP tailnet listener serves on (tailscale.port).
+  // The single port the tailnet listener serves on: 443 in HTTPS mode,
+  // tailscale.port in HTTP mode.
   int32 port = 7;
 
-  // Whether the HTTPS listener (tailnet port 443) is enabled.
+  // Protocol selector: true = HTTPS only (port 443), false = plain HTTP only.
   bool https_enabled = 8;
 
   // Certificate domains provisioned for the node ("<name>.ts.net") —

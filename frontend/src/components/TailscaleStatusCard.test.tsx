@@ -35,6 +35,13 @@ describe("TailscaleStatusCard", () => {
     expect(card.textContent).toContain("https://dmanager.tail1234.ts.net");
   });
 
+  it("shows only the https URL in https mode, with no http variant", () => {
+    render(<TailscaleStatusCard status={base} />);
+    const text = screen.getByTestId("tailscale-status-card").textContent ?? "";
+    expect(text).not.toContain("http://");
+    expect(text).not.toContain("also http");
+  });
+
   it("shows the plain http URL when https is off", () => {
     render(<TailscaleStatusCard status={{ ...base, httpsEnabled: false }} />);
     expect(screen.getByTestId("tailscale-status-card").textContent).toContain(

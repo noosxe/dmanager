@@ -1595,7 +1595,7 @@ func (*GetTailscaleStatusRequest) Descriptor() ([]byte, []int) {
 
 type GetTailscaleStatusResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// false when no auth key is configured — the whole feature is inert.
+	// false when tailscale.enabled is false — the whole feature is inert.
 	Enabled bool `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`
 	// Lifecycle state of the embedded node:
 	//   "starting" — connecting to the tailnet (or not yet attempted)
@@ -1613,9 +1613,10 @@ type GetTailscaleStatusResponse struct {
 	DnsName string `protobuf:"bytes,5,opt,name=dns_name,json=dnsName,proto3" json:"dns_name,omitempty"`
 	// Tailnet IP addresses assigned to the node (100.x.y.z and/or fd7a:...).
 	Ips []string `protobuf:"bytes,6,rep,name=ips,proto3" json:"ips,omitempty"`
-	// Port the plain-HTTP tailnet listener serves on (tailscale.port).
+	// The single port the tailnet listener serves on: 443 in HTTPS mode,
+	// tailscale.port in HTTP mode.
 	Port int32 `protobuf:"varint,7,opt,name=port,proto3" json:"port,omitempty"`
-	// Whether the HTTPS listener (tailnet port 443) is enabled.
+	// Protocol selector: true = HTTPS only (port 443), false = plain HTTP only.
 	HttpsEnabled bool `protobuf:"varint,8,opt,name=https_enabled,json=httpsEnabled,proto3" json:"https_enabled,omitempty"`
 	// Certificate domains provisioned for the node ("<name>.ts.net") —
 	// present when HTTPS certificates are enabled on the tailnet.

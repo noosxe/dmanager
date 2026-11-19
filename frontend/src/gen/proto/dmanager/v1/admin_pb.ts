@@ -769,7 +769,7 @@ export const GetTailscaleStatusRequestSchema: GenMessage<GetTailscaleStatusReque
  */
 export type GetTailscaleStatusResponse = Message<"dmanager.v1.GetTailscaleStatusResponse"> & {
   /**
-   * false when no auth key is configured — the whole feature is inert.
+   * false when tailscale.enabled is false — the whole feature is inert.
    *
    * @generated from field: bool enabled = 1;
    */
@@ -817,14 +817,15 @@ export type GetTailscaleStatusResponse = Message<"dmanager.v1.GetTailscaleStatus
   ips: string[];
 
   /**
-   * Port the plain-HTTP tailnet listener serves on (tailscale.port).
+   * The single port the tailnet listener serves on: 443 in HTTPS mode,
+   * tailscale.port in HTTP mode.
    *
    * @generated from field: int32 port = 7;
    */
   port: number;
 
   /**
-   * Whether the HTTPS listener (tailnet port 443) is enabled.
+   * Protocol selector: true = HTTPS only (port 443), false = plain HTTP only.
    *
    * @generated from field: bool https_enabled = 8;
    */

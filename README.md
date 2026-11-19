@@ -14,7 +14,7 @@ Written by AI, tested and used by humans.
 - **Auto-Update** — optional per-container automatic re-deployment preserving all configuration
 - **Private Registry Support** — authenticate against private registries (GHCR, Docker Hub, etc.)
 - **Gotify Notifications** — receive push notifications for update events and failures
-- **Embedded Tailscale Node** — optional built-in tailnet access (`TAILSCALE_AUTHKEY`): manage dmanager from anywhere in your tailnet with no published ports and no sidecar container; optional tailnet HTTPS (`:443`, Tailscale-issued certificates — passkeys included) served over HTTP/2, with node status visible in the Admin UI
+- **Embedded Tailscale Node** — optional built-in tailnet access (`TAILSCALE_ENABLED=true` plus `TAILSCALE_AUTHKEY`): manage dmanager from anywhere in your tailnet with no published ports and no sidecar container; optional tailnet HTTPS mode (`:443` instead of HTTP, Tailscale-issued certificates — passkeys included) served over HTTP/2, with node status visible in the Admin UI
 - **System Logs** — browse structured backend logs directly in the UI
 - **Authentication & Passkeys** — secure session-based authentication with role-based access control (admin / viewer), discoverable WebAuthn passkeys (Touch ID, Windows Hello, Face ID, hardware security keys), NIST password policy, login rate limiting, session management, and auth audit logging
 - **Audit Logs** — every mutation and system action is recorded to an audit trail with days-based retention, manageable from the Admin UI
@@ -77,7 +77,7 @@ Navigate to [http://localhost:9283](http://localhost:9283) in your browser.
 
 On first launch you will be prompted to create an administrator account.
 
-With the embedded Tailscale node enabled, the UI is also reachable from your tailnet at `http(s)://<hostname>.<tailnet>.ts.net` — no published ports required.
+With the embedded Tailscale node enabled, the UI is also reachable from your tailnet at `http://<hostname>.<tailnet>.ts.net:<port>` (HTTP mode, default) or `https://<hostname>.<tailnet>.ts.net` (HTTPS mode) — no published ports required.
 
 ### Stopping the application
 
@@ -147,12 +147,13 @@ webauthn:
     - "https://dmanager.example.com"
   require_user_verification: preferred
 
-# Embedded Tailscale node (optional — inert without an auth key; see docs/tailscale.md)
+# Embedded Tailscale node (optional — off unless enabled is true; see docs/tailscale.md)
 # tailscale:
+#   enabled: false               # the only switch; true requires auth_key (startup fails otherwise)
 #   auth_key: "tskey-auth-..."   # tagged, reusable key; only needed on first start
 #   hostname: "dmanager"         # node name in the tailnet
-#   port: 80                     # tailnet serving port when HTTPS is disabled
-#   https_enabled: false         # true: HTTPS on tailnet :443 with Tailscale-issued certs
+#   port: 80                     # HTTP-mode tailnet port; ignored when https_enabled is true
+#   https_enabled: false         # false: HTTP on port; true: HTTPS only, on tailnet :443 (no HTTP)
 #   state_dir: ""                # defaults to <db_dir>/tailscale
 
 # System email (optional). Mail goes through an SMTP relay for system
@@ -216,14 +217,15 @@ registries: []
 
 #### `tailscale` — embedded tailnet node (optional)
 
-The section is inert until an auth key is configured. See [docs/tailscale.md](docs/tailscale.md) for the full setup walkthrough.
+The section is inert unless `tailscale.enabled` is `true`; an auth key alone does nothing (a key set while disabled is ignored). **Breaking change:** deployments that only set the auth key must now also set `tailscale.enabled: true`, and `https_enabled: true` now serves HTTPS *instead of* HTTP. See [docs/tailscale.md](docs/tailscale.md) for the full setup walkthrough.
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
+| `tailscale.enabled` | `bool` | `false` | The only switch for the embedded node. `true` requires `tailscale.auth_key`; startup fails if it is empty. |
 | `tailscale.auth_key` | `string` | `""` | Tailscale auth key (a tagged, reusable key is recommended). Node state persists in `tailscale.state_dir`, so the key is only needed on first start. |
 | `tailscale.hostname` | `string` | `"dmanager"` | Node name in the tailnet (lowercase letters, digits, hyphens; max 63 chars). Served at `<hostname>.<tailnet>.ts.net`. |
-| `tailscale.port` | `int` | `80` | Tailnet serving port when HTTPS is disabled. |
-| `tailscale.https_enabled` | `bool` | `false` | Serve HTTPS on tailnet `:443` using Tailscale-issued certificates — valid TLS that passkeys accept, served over HTTP/2. |
+| `tailscale.port` | `int` | `80` | Tailnet serving port in HTTP mode only; ignored when `https_enabled` is `true`. |
+| `tailscale.https_enabled` | `bool` | `false` | Selects the protocol. `false`: plain HTTP on `tailscale.port`. `true`: HTTPS only, on tailnet `:443` using Tailscale-issued certificates (valid TLS that passkeys accept, served over HTTP/2), with no plain-HTTP tailnet listener. Needs MagicDNS and HTTPS certificates on the tailnet; without them no tailnet listener runs. |
 | `tailscale.state_dir` | `string` | `<db_dir>/tailscale` | tsnet state directory; must be a dedicated directory when set explicitly. |
 
 #### `smtp` — system email relay (optional)
@@ -286,12 +288,13 @@ All configuration values can be overridden via environment variables prefixed wi
 | `DMANAGER_WEBAUTHN_RP_ID` | `webauthn.rp_id` | *(empty)* | Relying Party ID for passkey authentication. |
 | `DMANAGER_WEBAUTHN_ORIGINS` | `webauthn.origins` | *(empty)* | Comma-separated list of allowed WebAuthn origins. |
 | `DMANAGER_WEBAUTHN_REQUIRE_USER_VERIFICATION` | `webauthn.require_user_verification` | `preferred` | Passkey user verification policy (`preferred`, `required`, `discouraged`). |
-| `DMANAGER_TAILSCALE_AUTHKEY` | `tailscale.auth_key` | *(empty)* | Embedded Tailscale node auth key — the node is off unless set. |
+| `DMANAGER_TAILSCALE_ENABLED` | `tailscale.enabled` | `false` | Switches the embedded Tailscale node on. Requires an auth key. |
+| `DMANAGER_TAILSCALE_AUTHKEY` | `tailscale.auth_key` | *(empty)* | Embedded Tailscale node auth key — required when enabled; ignored when disabled. |
 | `DMANAGER_TAILSCALE_HOSTNAME` | `tailscale.hostname` | `dmanager` | Node name in the tailnet. |
-| `DMANAGER_TAILSCALE_PORT` | `tailscale.port` | `80` | Tailnet serving port when HTTPS is disabled. |
-| `DMANAGER_TAILSCALE_HTTPS_ENABLED` | `tailscale.https_enabled` | `false` | Serve HTTPS on tailnet `:443` with Tailscale-issued certificates. |
+| `DMANAGER_TAILSCALE_PORT` | `tailscale.port` | `80` | Tailnet serving port in HTTP mode only. |
+| `DMANAGER_TAILSCALE_HTTPS_ENABLED` | `tailscale.https_enabled` | `false` | Serve HTTPS only, on tailnet `:443`, instead of HTTP. |
 | `DMANAGER_TAILSCALE_STATE_DIR` | `tailscale.state_dir` | `<db_dir>/tailscale` | tsnet state directory. |
-| `TAILSCALE_AUTHKEY`, `TAILSCALE_HOSTNAME`, `TAILSCALE_PORT`, `TAILSCALE_HTTPS_ENABLED`, `TAILSCALE_STATE_DIR` | *(bare aliases)* | — | Tailscale-style aliases; apply only when the `DMANAGER_TAILSCALE_*` counterpart is unset (precedence: prefixed > bare > YAML > defaults). |
+| `TAILSCALE_ENABLED`, `TAILSCALE_AUTHKEY`, `TAILSCALE_HOSTNAME`, `TAILSCALE_PORT`, `TAILSCALE_HTTPS_ENABLED`, `TAILSCALE_STATE_DIR` | *(bare aliases)* | — | Tailscale-style aliases; apply only when the `DMANAGER_TAILSCALE_*` counterpart is unset (precedence: prefixed > bare > YAML > defaults). |
 | `DMANAGER_SMTP_ENABLED` | `smtp.enabled` | `false` | Master switch for system email. |
 | `DMANAGER_SMTP_HOST` / `DMANAGER_SMTP_PORT` | `smtp.host` / `smtp.port` | `""` / `25` | SMTP relay endpoint (both required when enabled). |
 | `DMANAGER_SMTP_USERNAME` / `DMANAGER_SMTP_PASSWORD` | `smtp.username` / `smtp.password` | *(empty)* | Optional SMTP AUTH (PLAIN); prefer the env var for the password. |
@@ -333,7 +336,7 @@ environment:
 | Container port | Protocol | Description |
 |----------------|----------|-------------|
 | `9283` | HTTP | Web UI and ConnectRPC API. Fixed internal container port — publish it on any host port (e.g. `${DMANAGER_PORT:-9283}:9283`). |
-| `80` / `443` | HTTP / HTTPS | Tailnet-only listeners when the embedded Tailscale node is enabled — reachable via MagicDNS (`<hostname>.<tailnet>.ts.net`), never published to the host. `443` serves HTTPS with Tailscale-issued certificates and HTTP/2 when `tailscale.https_enabled: true`. |
+| `80` / `443` | HTTP / HTTPS | Tailnet-only listeners when the embedded Tailscale node is enabled — reachable via MagicDNS (`<hostname>.<tailnet>.ts.net`), never published to the host. Exactly one is served: `443` (HTTPS with Tailscale-issued certificates and HTTP/2) when `tailscale.https_enabled: true`, otherwise `tailscale.port` (HTTP, default `80`). |
 
 ---
 
