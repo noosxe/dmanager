@@ -101,7 +101,7 @@ export function TailscaleStatusCard({ status }: { status: TailscaleStatusState }
       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
         <span className={stateDotClass(status.state)} />
         <strong style={{ color: "var(--text)" }}>Tailscale node {stateLabel(status.state)}</strong>
-        {status.backendState && status.state === "running" ? (
+        {status.backendState && (status.state === "running" || status.state === "starting") ? (
           <span style={{ color: "var(--text-secondary, #94a3b8)", fontSize: "12px" }}>
             ({status.backendState})
           </span>
