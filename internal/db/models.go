@@ -44,6 +44,7 @@ type Container struct {
 	LastUpdatedAt     interface{}
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
+	Labels            string
 }
 
 type Session struct {

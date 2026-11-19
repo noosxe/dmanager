@@ -7,6 +7,7 @@ import (
 	"github.com/moby/moby/client"
 
 	"dmanager/internal/db"
+	"dmanager/internal/managed"
 )
 
 // SyncContainers fetches all containers on the host and caches them in SQLite.
@@ -34,6 +35,7 @@ func SyncContainers(ctx context.Context, dbConn db.DBTX, dockerClient *client.Cl
 			Image:   c.Image,
 			ImageID: c.ImageID,
 			State:   string(c.State),
+			Labels:  managed.EncodeLabels(c.Labels),
 		}); err != nil {
 			return err
 		}
