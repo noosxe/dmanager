@@ -49,6 +49,22 @@ describe("TailscaleStatusCard", () => {
     );
   });
 
+  it("shows what a starting node is waiting for", () => {
+    render(
+      <TailscaleStatusCard
+        status={{
+          ...base,
+          state: "starting",
+          backendState: "NeedsMachineAuth",
+          ips: [],
+          dnsName: "",
+        }}
+      />,
+    );
+    const card = screen.getByTestId("tailscale-status-card");
+    expect(card.textContent).toContain("(NeedsMachineAuth)");
+  });
+
   it("shows the failure detail in degraded mode", () => {
     render(
       <TailscaleStatusCard
