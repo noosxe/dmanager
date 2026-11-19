@@ -55,6 +55,11 @@ func (s *Service) upgradeContainerInternal(ctx context.Context, containerID stri
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to query container from DB: %w", err))
 	}
 
+	if by, external := s.externalOwner(existing); external {
+		s.logger.Warn("Container upgrade refused: externally managed", "container_id", containerID, "container_name", existing.Name, "managed_by", by)
+		return nil, externallyManagedError(existing.Name, by)
+	}
+
 	s.logger.Info("Upgrading container", "container_id", containerID, "container_name", existing.Name, "image", existing.Image)
 
 	// 3. Inspect container settings on Docker host
@@ -296,7 +301,7 @@ func (s *Service) upgradeContainerInternal(ctx context.Context, containerID stri
 		s.broker.Publish(&v1.StreamContainersResponse{
 			Action:      actionSave,
 			ContainerId: created.ID,
-			Container:   MapContainerRecord(updatedRecord),
+			Container:   s.mapRecord(updatedRecord),
 		})
 	}
 
