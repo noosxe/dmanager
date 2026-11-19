@@ -20,6 +20,7 @@ import {
 import { useState } from "react";
 
 import type { Container } from "../hooks/useContainers";
+import { ExternalBadge, externalReason } from "./ExternalBadge";
 
 interface ContainerTableProps {
   containers: Container[];
@@ -74,6 +75,7 @@ export function ContainerTable({
             <span className="container-name-text" title={container.name}>
               {container.name}
             </span>
+            <ExternalBadge container={container} />
           </div>
         );
       },
@@ -184,7 +186,7 @@ export function ContainerTable({
             <button
               type="button"
               onClick={() => setContainerAutoUpdate(container.id, !container.autoUpdate)}
-              disabled={!isAdmin || !!loadingType}
+              disabled={!isAdmin || !!loadingType || container.externallyManaged}
               style={{
                 background: container.autoUpdate ? "var(--accent)" : "rgba(255,255,255,0.06)",
                 border: "1px solid var(--border)",
@@ -197,9 +199,15 @@ export function ContainerTable({
                 alignItems: "center",
                 justifyContent: container.autoUpdate ? "flex-end" : "flex-start",
                 transition: "all var(--transition-fast)",
-                opacity: isAdmin ? 1 : 0.6,
+                opacity: isAdmin && !container.externallyManaged ? 1 : 0.6,
               }}
-              title={isAdmin ? "Toggle automatic updates" : "Admin required"}
+              title={
+                container.externallyManaged
+                  ? externalReason(container)
+                  : isAdmin
+                    ? "Toggle automatic updates"
+                    : "Admin required"
+              }
             >
               <span
                 style={{
@@ -287,8 +295,10 @@ export function ContainerTable({
                 type="button"
                 className="card-action-btn upgrade table-action-btn-sm"
                 onClick={() => upgradeContainer(container.id)}
-                disabled={!isAdmin || !!loadingType}
-                title="Upgrade Container"
+                disabled={!isAdmin || !!loadingType || container.externallyManaged}
+                title={
+                  container.externallyManaged ? externalReason(container) : "Upgrade Container"
+                }
               >
                 {loadingType === "upgrading" ? (
                   <RefreshCw size={12} className="spinner" />

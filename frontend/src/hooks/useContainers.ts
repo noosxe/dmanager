@@ -15,6 +15,8 @@ export interface Container {
   latestImageDigest: string;
   lastCheckedAt: string;
   lastUpdatedAt: string;
+  externallyManaged: boolean;
+  managedBy: string;
 }
 
 interface ProtoContainer {
@@ -28,6 +30,8 @@ interface ProtoContainer {
   latestImageDigest?: string;
   lastCheckedAt?: string;
   lastUpdatedAt?: string;
+  externallyManaged?: boolean;
+  managedBy?: string;
 }
 
 // Delay before re-subscribing after the server ended the stream cleanly
@@ -72,6 +76,8 @@ export function useContainers() {
       latestImageDigest: c.latestImageDigest || "",
       lastCheckedAt: c.lastCheckedAt || "",
       lastUpdatedAt: c.lastUpdatedAt || "",
+      externallyManaged: c.externallyManaged ?? false,
+      managedBy: c.managedBy || "",
     };
   }, []);
 

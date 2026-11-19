@@ -17,6 +17,7 @@ import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useContainers } from "../hooks/useContainers";
 import { ContainerTable } from "./ContainerTable";
+import { ExternalBadge, externalReason } from "./ExternalBadge";
 import { LogsDrawer } from "./LogsDrawer";
 
 export function ContainerGrid() {
@@ -265,6 +266,7 @@ export function ContainerGrid() {
                     <h3 className="container-title" title={container.name}>
                       {container.name}
                     </h3>
+                    <ExternalBadge container={container} />
                     <span className="container-image" title={container.image}>
                       {container.image}
                     </span>
@@ -306,7 +308,7 @@ export function ContainerGrid() {
                       <button
                         type="button"
                         onClick={() => setContainerAutoUpdate(container.id, !container.autoUpdate)}
-                        disabled={!isAdmin || !!loadingType}
+                        disabled={!isAdmin || !!loadingType || container.externallyManaged}
                         style={{
                           background: container.autoUpdate
                             ? "var(--accent)"
@@ -321,9 +323,15 @@ export function ContainerGrid() {
                           alignItems: "center",
                           justifyContent: container.autoUpdate ? "flex-end" : "flex-start",
                           transition: "all var(--transition-fast)",
-                          opacity: isAdmin ? 1 : 0.6,
+                          opacity: isAdmin && !container.externallyManaged ? 1 : 0.6,
                         }}
-                        title={isAdmin ? "Toggle automatic updates" : "Admin required"}
+                        title={
+                          container.externallyManaged
+                            ? externalReason(container)
+                            : isAdmin
+                              ? "Toggle automatic updates"
+                              : "Admin required"
+                        }
                       >
                         <span
                           style={{
@@ -405,7 +413,8 @@ export function ContainerGrid() {
                       type="button"
                       className="card-action-btn upgrade"
                       onClick={() => upgradeContainer(container.id)}
-                      disabled={!isAdmin || !!loadingType}
+                      disabled={!isAdmin || !!loadingType || container.externallyManaged}
+                      title={container.externallyManaged ? externalReason(container) : undefined}
                     >
                       {loadingType === "upgrading" ? (
                         <RefreshCw size={14} className="spinner" />
