@@ -212,12 +212,13 @@ func (s *Service) issueSession(ctx context.Context, userID int64, rememberMe boo
 	}
 
 	_, err := s.Queries.CreateSession(ctx, db.CreateSessionParams{
-		SessionID:         sessionID,
-		UserID:            userID,
-		UserAgent:         userAgent,
-		ExpiresAt:         expiresAt,
-		LastSeenAt:        now,
-		AbsoluteExpiresAt: absoluteExpiresAt,
+		SessionID:          sessionID,
+		UserID:             userID,
+		UserAgent:          userAgent,
+		ExpiresAt:          expiresAt,
+		LastSeenAt:         now,
+		AbsoluteExpiresAt:  absoluteExpiresAt,
+		IdleTimeoutSeconds: int64(idleTimeout.Seconds()),
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to save session: %w", err)

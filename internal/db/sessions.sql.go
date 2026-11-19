@@ -11,18 +11,19 @@ import (
 )
 
 const createSession = `-- name: CreateSession :one
-INSERT INTO sessions (session_id, user_id, user_agent, expires_at, last_seen_at, absolute_expires_at)
-VALUES (?, ?, ?, ?, ?, ?)
-RETURNING session_id, user_id, expires_at, created_at, last_seen_at, absolute_expires_at, user_agent
+INSERT INTO sessions (session_id, user_id, user_agent, expires_at, last_seen_at, absolute_expires_at, idle_timeout_seconds)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+RETURNING session_id, user_id, expires_at, created_at, last_seen_at, absolute_expires_at, user_agent, idle_timeout_seconds
 `
 
 type CreateSessionParams struct {
-	SessionID         string
-	UserID            int64
-	UserAgent         string
-	ExpiresAt         time.Time
-	LastSeenAt        time.Time
-	AbsoluteExpiresAt time.Time
+	SessionID          string
+	UserID             int64
+	UserAgent          string
+	ExpiresAt          time.Time
+	LastSeenAt         time.Time
+	AbsoluteExpiresAt  time.Time
+	IdleTimeoutSeconds int64
 }
 
 func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error) {
@@ -33,6 +34,7 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (S
 		arg.ExpiresAt,
 		arg.LastSeenAt,
 		arg.AbsoluteExpiresAt,
+		arg.IdleTimeoutSeconds,
 	)
 	var i Session
 	err := row.Scan(
@@ -43,6 +45,7 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (S
 		&i.LastSeenAt,
 		&i.AbsoluteExpiresAt,
 		&i.UserAgent,
+		&i.IdleTimeoutSeconds,
 	)
 	return i, err
 }
@@ -91,7 +94,7 @@ func (q *Queries) DeleteSessionsByUser(ctx context.Context, arg DeleteSessionsBy
 }
 
 const getSession = `-- name: GetSession :one
-SELECT session_id, user_id, expires_at, created_at, last_seen_at, absolute_expires_at, user_agent FROM sessions WHERE session_id = ? LIMIT 1
+SELECT session_id, user_id, expires_at, created_at, last_seen_at, absolute_expires_at, user_agent, idle_timeout_seconds FROM sessions WHERE session_id = ? LIMIT 1
 `
 
 func (q *Queries) GetSession(ctx context.Context, sessionID string) (Session, error) {
@@ -105,24 +108,26 @@ func (q *Queries) GetSession(ctx context.Context, sessionID string) (Session, er
 		&i.LastSeenAt,
 		&i.AbsoluteExpiresAt,
 		&i.UserAgent,
+		&i.IdleTimeoutSeconds,
 	)
 	return i, err
 }
 
 const listSessionsByUser = `-- name: ListSessionsByUser :many
-SELECT s.session_id, s.user_id, s.expires_at, s.created_at, s.last_seen_at, s.absolute_expires_at, s.user_agent, u.username FROM sessions s JOIN users u ON u.id = s.user_id
+SELECT s.session_id, s.user_id, s.expires_at, s.created_at, s.last_seen_at, s.absolute_expires_at, s.user_agent, s.idle_timeout_seconds, u.username FROM sessions s JOIN users u ON u.id = s.user_id
 WHERE s.user_id = ? ORDER BY s.last_seen_at DESC
 `
 
 type ListSessionsByUserRow struct {
-	SessionID         string
-	UserID            int64
-	ExpiresAt         time.Time
-	CreatedAt         time.Time
-	LastSeenAt        time.Time
-	AbsoluteExpiresAt time.Time
-	UserAgent         string
-	Username          string
+	SessionID          string
+	UserID             int64
+	ExpiresAt          time.Time
+	CreatedAt          time.Time
+	LastSeenAt         time.Time
+	AbsoluteExpiresAt  time.Time
+	UserAgent          string
+	IdleTimeoutSeconds int64
+	Username           string
 }
 
 func (q *Queries) ListSessionsByUser(ctx context.Context, userID int64) ([]ListSessionsByUserRow, error) {
@@ -142,6 +147,7 @@ func (q *Queries) ListSessionsByUser(ctx context.Context, userID int64) ([]ListS
 			&i.LastSeenAt,
 			&i.AbsoluteExpiresAt,
 			&i.UserAgent,
+			&i.IdleTimeoutSeconds,
 			&i.Username,
 		); err != nil {
 			return nil, err

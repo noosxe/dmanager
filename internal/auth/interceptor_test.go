@@ -456,3 +456,124 @@ func (c *customProcedureRequest) Spec() connect.Spec {
 	spec.Procedure = c.procedure
 	return spec
 }
+
+func createSlideSession(t *testing.T, queries *db.Queries, userID int64, id string, idleSeconds int64, lastSeen, expires, abs time.Time) db.Session {
+	t.Helper()
+	s, err := queries.CreateSession(context.Background(), db.CreateSessionParams{
+		SessionID:          id,
+		UserID:             userID,
+		ExpiresAt:          expires,
+		LastSeenAt:         lastSeen,
+		AbsoluteExpiresAt:  abs,
+		IdleTimeoutSeconds: idleSeconds,
+	})
+	if err != nil {
+		t.Fatalf("failed to create session: %v", err)
+	}
+	return s
+}
+
+func TestSlideSessionUsesPerSessionIdleTimeout(t *testing.T) {
+	queries := newTestDB(t)
+	ctx := context.Background()
+	user, err := queries.CreateUser(ctx, db.CreateUserParams{Username: testUsername, PasswordHash: dummyHashValue, Role: viewerRole})
+	if err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
+
+	const normal = 7 * 24 * time.Hour
+	const remember = 30 * 24 * time.Hour
+	interceptor := NewInterceptor(queries, slog.Default(), normal, nil)
+	now := time.Now()
+	farAbs := now.Add(365 * 24 * time.Hour)
+
+	cases := []struct {
+		name        string
+		idle        time.Duration // stored on the session; 0 = legacy row
+		wantWindow  time.Duration
+		abs         time.Time
+		wantClamped bool
+	}{
+		{"normal session slides by 7 days", normal, normal, farAbs, false},
+		{"remember-me session slides by 30 days", remember, remember, farAbs, false},
+		{"legacy session falls back to the default idle timeout", 0, normal, farAbs, false},
+		{"slide never passes the absolute expiry", remember, remember, now.Add(10 * 24 * time.Hour), true},
+	}
+	for n, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			window := tc.wantWindow
+			// Past the halfway point of the window: 1h left.
+			expires := now.Add(time.Hour)
+			s := createSlideSession(t, queries, user.ID, fmt.Sprintf("slide-%d", n), int64(tc.idle.Seconds()), expires.Add(-window), expires, tc.abs)
+
+			got, slid := interceptor.slideSession(ctx, s, now)
+			if !slid {
+				t.Fatalf("expected the session to slide")
+			}
+			want := now.Add(window)
+			if tc.wantClamped {
+				want = tc.abs
+			}
+			if d := got.Sub(want); d < -time.Second || d > time.Second {
+				t.Errorf("new expiry = %v, want about %v", got, want)
+			}
+			stored, err := queries.GetSession(ctx, s.SessionID)
+			if err != nil {
+				t.Fatalf("GetSession: %v", err)
+			}
+			if !stored.ExpiresAt.Equal(got) {
+				t.Errorf("stored expiry %v != returned expiry %v", stored.ExpiresAt, got)
+			}
+			if stored.ExpiresAt.After(tc.abs) {
+				t.Errorf("expiry %v passes the absolute cap %v", stored.ExpiresAt, tc.abs)
+			}
+		})
+	}
+
+	t.Run("remember-me session before its halfway point is not slid", func(t *testing.T) {
+		// 10 days into a 30-day window: a 7-day halfway rule would have slid it.
+		expires := now.Add(20 * 24 * time.Hour)
+		s := createSlideSession(t, queries, user.ID, "slide-early", int64(remember.Seconds()), now.Add(-10*24*time.Hour), expires, farAbs)
+		got, slid := interceptor.slideSession(ctx, s, now)
+		if slid || !got.Equal(expires) {
+			t.Errorf("expected no slide and unchanged expiry, got slid=%v expiry=%v", slid, got)
+		}
+	})
+
+	t.Run("session already at the absolute cap does not report a slide", func(t *testing.T) {
+		abs := now.Add(time.Hour)
+		s := createSlideSession(t, queries, user.ID, "slide-capped", int64(normal.Seconds()), now.Add(-time.Hour), abs, abs)
+		got, slid := interceptor.slideSession(ctx, s, now)
+		if slid || !got.Equal(abs) {
+			t.Errorf("expected no slide at the cap, got slid=%v expiry=%v", slid, got)
+		}
+	})
+}
+
+func TestLoginStoresIdleTimeoutPerSession(t *testing.T) {
+	queries := newTestDB(t)
+	cfg := testAuthConfig()
+	svc := NewService(queries, slog.Default(), cfg, testWebAuthnConfig(), false)
+	ctx := context.Background()
+
+	if _, err := svc.SetupAdmin(ctx, connect.NewRequest(&v1.SetupAdminRequest{Username: testAdminUsername, Password: testPassword})); err != nil {
+		t.Fatalf("setup failed: %v", err)
+	}
+	for _, remember := range []bool{false, true} {
+		resp, err := svc.Login(ctx, connect.NewRequest(&v1.LoginRequest{Username: testAdminUsername, Password: testPassword, RememberMe: remember}))
+		if err != nil {
+			t.Fatalf("login failed: %v", err)
+		}
+		s, err := queries.GetSession(ctx, parseSessionCookie(resp.Header().Get("Set-Cookie")))
+		if err != nil {
+			t.Fatalf("GetSession: %v", err)
+		}
+		want := cfg.SessionIdleTimeout
+		if remember {
+			want = cfg.RememberMeIdleTimeout
+		}
+		if got := time.Duration(s.IdleTimeoutSeconds) * time.Second; got != want {
+			t.Errorf("remember_me=%v: stored idle timeout %v, want %v", remember, got, want)
+		}
+	}
+}

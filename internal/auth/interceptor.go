@@ -37,6 +37,45 @@ func NewInterceptor(queries *db.Queries, logger *slog.Logger, idleTimeout time.D
 	}
 }
 
+// sessionIdleTimeout returns the sliding idle window of one session. Sessions
+// store their own window (remember-me differs from a normal session); rows
+// created before it was stored hold 0 and use the configured default.
+func (i *Interceptor) sessionIdleTimeout(session db.Session) time.Duration {
+	if session.IdleTimeoutSeconds > 0 {
+		return time.Duration(session.IdleTimeoutSeconds) * time.Second
+	}
+	return i.idleTimeout
+}
+
+// slideSession extends the session's idle expiry once it is past the halfway
+// point of its idle window (avoiding a DB write on every request), clamped to
+// the absolute expiry. It returns the session's current idle expiry and
+// whether that expiry moved, i.e. whether the cookie lifetime must be renewed.
+func (i *Interceptor) slideSession(ctx context.Context, session db.Session, now time.Time) (time.Time, bool) {
+	idle := i.sessionIdleTimeout(session)
+	if !now.After(session.ExpiresAt.Add(-idle / 2)) {
+		return session.ExpiresAt, false
+	}
+
+	newExpiry := now.Add(idle)
+	if newExpiry.After(session.AbsoluteExpiresAt) {
+		newExpiry = session.AbsoluteExpiresAt
+	}
+	// Never shorten an expiry that is already further out (e.g. a legacy
+	// remember-me session that predates per-session idle windows).
+	if newExpiry.Before(session.ExpiresAt) {
+		newExpiry = session.ExpiresAt
+	}
+	if err := i.queries.TouchSession(ctx, db.TouchSessionParams{
+		SessionID:  session.SessionID,
+		ExpiresAt:  newExpiry,
+		LastSeenAt: now,
+	}); err != nil {
+		return session.ExpiresAt, false
+	}
+	return newExpiry, newExpiry.After(session.ExpiresAt)
+}
+
 func (i *Interceptor) authenticate(ctx context.Context, cookieHeader string) (context.Context, error) {
 	sessionID := parseSessionCookie(cookieHeader)
 	if sessionID == "" {
@@ -61,18 +100,7 @@ func (i *Interceptor) authenticate(ctx context.Context, cookieHeader string) (co
 		return ctx, connect.NewError(connect.CodeUnauthenticated, errors.New("session expired"))
 	}
 
-	// Slide only when now > expires_at - idle_timeout/2 (avoid a DB write on every request), clamped to absolute_expires_at
-	if now.After(session.ExpiresAt.Add(-i.idleTimeout / 2)) {
-		newIdle := now.Add(i.idleTimeout)
-		if newIdle.After(session.AbsoluteExpiresAt) {
-			newIdle = session.AbsoluteExpiresAt
-		}
-		_ = i.queries.TouchSession(ctx, db.TouchSessionParams{
-			SessionID:  session.SessionID,
-			ExpiresAt:  newIdle,
-			LastSeenAt: now,
-		})
-	}
+	i.slideSession(ctx, session, now)
 
 	user, err := i.queries.GetUser(ctx, session.UserID)
 	if err != nil {

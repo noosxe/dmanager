@@ -1,6 +1,6 @@
 -- name: CreateSession :one
-INSERT INTO sessions (session_id, user_id, user_agent, expires_at, last_seen_at, absolute_expires_at)
-VALUES (?, ?, ?, ?, ?, ?)
+INSERT INTO sessions (session_id, user_id, user_agent, expires_at, last_seen_at, absolute_expires_at, idle_timeout_seconds)
+VALUES (?, ?, ?, ?, ?, ?, ?)
 RETURNING *;
 
 -- name: GetSession :one
