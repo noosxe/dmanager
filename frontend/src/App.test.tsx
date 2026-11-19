@@ -17,6 +17,7 @@ vi.mock("./client", () => ({
   logClient: {},
   settingsClient: {},
   transport: {},
+  setUnauthenticatedHandler: vi.fn(),
 }));
 
 // The authenticated app is not under test here; stub the dashboard.

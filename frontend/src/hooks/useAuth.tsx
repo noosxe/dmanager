@@ -2,7 +2,7 @@ import { ConnectError, Code } from "@connectrpc/connect";
 import { get as webauthnGet } from "@github/webauthn-json";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
-import { authClient } from "../client";
+import { authClient, setUnauthenticatedHandler } from "../client";
 
 export interface User {
   username: string;
@@ -93,6 +93,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     checkAuth();
+  }, []);
+
+  // An authenticated RPC returned Unauthenticated: the session expired or was
+  // revoked. Dropping the auth state sends the app to the login screen, which
+  // also unmounts the container stream.
+  useEffect(() => {
+    setUnauthenticatedHandler(() => {
+      setUser(null);
+      setIsAuthenticated(false);
+      localStorage.removeItem("dmanager_user");
+      localStorage.removeItem("dmanager_token");
+    });
+    return () => setUnauthenticatedHandler(null);
   }, []);
 
   const login = async (username: string, password: string, rememberMe = false) => {

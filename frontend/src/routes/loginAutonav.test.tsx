@@ -39,6 +39,7 @@ vi.mock("../client", () => {
     containerClient: anyClient,
     logClient: anyClient,
     settingsClient: anyClient,
+    setUnauthenticatedHandler: () => {},
   };
 });
 
