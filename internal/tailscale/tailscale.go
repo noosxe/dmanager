@@ -40,6 +40,7 @@ type Node struct {
 	// and the Snapshot probe, read by Snapshot from RPC handlers.
 	mu           sync.Mutex
 	startErr     error
+	serveErr     error // listener failure after a successful Start
 	backendState string
 	dnsName      string
 	ips          []string
@@ -67,11 +68,54 @@ func New(cfg config.TailscaleConfig, logger *slog.Logger) *Node {
 	}
 	return &Node{
 		srv:          srv,
-		port:         cfg.Port,
+		port:         servedPort(cfg.HTTPSEnabled, cfg.Port),
 		logger:       logger,
 		hostname:     cfg.Hostname,
 		httpsEnabled: cfg.HTTPSEnabled,
 	}
+}
+
+// httpsModeRequirement prefixes the HTTPS-mode failures so the log states the
+// consequence: no tailnet listener is started and HTTP is not a fallback.
+const httpsModeRequirement = "tailscale HTTPS mode (tailscale.https_enabled=true) needs MagicDNS and HTTPS certificates enabled in the tailnet; no tailnet listener is running and plain HTTP is not served as a fallback"
+
+// httpsPort is the fixed tailnet port of the HTTPS listener.
+const httpsPort = 443
+
+// servedPort is the single tailnet port the node serves on: 443 in HTTPS
+// mode, the configured tailscale.port in HTTP mode.
+func servedPort(httpsEnabled bool, httpPort int) int {
+	if httpsEnabled {
+		return httpsPort
+	}
+	return httpPort
+}
+
+// serveSelected runs exactly one of the two listeners: HTTPS when
+// httpsEnabled, plain HTTP otherwise. The other is never started, so
+// tailscale.https_enabled selects the protocol rather than adding a listener.
+func serveSelected(httpsEnabled bool, serveHTTP, serveHTTPS func() error) error {
+	if httpsEnabled {
+		return serveHTTPS()
+	}
+	return serveHTTP()
+}
+
+// Serve serves h on the tailnet over the single configured protocol (HTTPS on
+// 443 or plain HTTP on tailscale.port) until the listener closes. It is
+// intended to run in its own goroutine. Errors caused by a concurrent Close
+// are not reported. A listener failure is also surfaced in Snapshot.
+func (n *Node) Serve(h http.Handler) error {
+	err := serveSelected(n.httpsEnabled,
+		func() error { return n.serveHTTP(h) },
+		func() error { return n.serveHTTPS(h) },
+	)
+	if err != nil {
+		n.mu.Lock()
+		n.serveErr = err
+		n.mu.Unlock()
+	}
+	return err
 }
 
 // Server exposes the underlying tsnet server for inspection in tests.
@@ -116,7 +160,7 @@ func (n *Node) Start(ctx context.Context) error {
 
 // Node lifecycle states reported by Snapshot.
 const (
-	// StateDisabled is reported by a nil Node — feature inert (no auth key).
+	// StateDisabled is reported by a nil Node — feature inert (tailscale.enabled is false).
 	StateDisabled = "disabled"
 	// StateStarting covers a constructed node whose Start has not returned yet.
 	StateStarting = "starting"
@@ -136,7 +180,7 @@ type Snapshot struct {
 	Hostname     string
 	DNSName      string // full MagicDNS name, no trailing dot; empty pre-connect
 	IPs          []string
-	Port         int
+	Port         int // the single served port: 443 in HTTPS mode, tailscale.port in HTTP mode
 	HTTPSEnabled bool
 	CertDomains  []string
 	KeyExpiry    time.Time // zero = no expiry known
@@ -183,6 +227,9 @@ func (n *Node) Snapshot(ctx context.Context) Snapshot {
 	}
 
 	n.mu.Lock()
+	if snap.Err == "" && n.serveErr != nil {
+		snap.Err = n.serveErr.Error()
+	}
 	snap.BackendState = n.backendState
 	snap.DNSName = n.dnsName
 	snap.IPs = slices.Clone(n.ips)
@@ -226,10 +273,9 @@ func (n *Node) probeStatus(ctx context.Context) (*ipnstate.Status, error) {
 	return lc.Status(ctx)
 }
 
-// Serve listens on the tailnet-side port and serves h until the listener
-// closes. It is intended to run in its own goroutine. Errors caused by a
-// concurrent Close are not reported.
-func (n *Node) Serve(h http.Handler) error {
+// serveHTTP listens on the tailnet-side HTTP port and serves h until the
+// listener closes. Errors caused by a concurrent Close are not reported.
+func (n *Node) serveHTTP(h http.Handler) error {
 	ln, err := n.srv.Listen("tcp", fmt.Sprintf(":%d", n.port))
 	if err != nil {
 		if n.closing.Load() {
@@ -237,7 +283,7 @@ func (n *Node) Serve(h http.Handler) error {
 		}
 		return fmt.Errorf("tailscale listen failed: %w", err)
 	}
-	n.logger.Info("serving dmanager on tailnet", "port", n.port)
+	n.logger.Info("serving dmanager on tailnet over HTTP", "port", n.port)
 
 	// Mirror the LAN server's timeout posture (cmd/serve.go).
 	srv := &http.Server{
@@ -275,19 +321,19 @@ func newTailnetTLSConfig(getCert func(*tls.ClientHelloInfo) (*tls.Certificate, e
 	}
 }
 
-// ServeHTTPS listens on the tailnet's TLS port (443) and serves h wrapped
+// serveHTTPS listens on the tailnet's TLS port (443) and serves h wrapped
 // in the X-Forwarded-Proto middleware until the listener closes. It
 // requires HTTPS certificates and MagicDNS to be enabled on the tailnet;
-// without them, certificate provisioning fails and TLS handshakes time out.
-// It is intended to run in its own goroutine. Errors caused by a concurrent
-// Close are not reported.
+// without them it fails with an explicit error and no tailnet listener
+// exists (there is deliberately no fallback to plain HTTP). Errors caused by
+// a concurrent Close are not reported.
 //
 // The TLS listener is assembled by hand rather than via tsnet's ListenTLS,
 // whose tls.Config omits NextProtos: without ALPN, Go's http.Server.Serve
 // never dispatches HTTP/2 and every client falls back to HTTP/1.1. Here
 // "h2" is advertised and the http2 handler registered below, while
 // "http/1.1" and ALPN-less clients keep the existing HTTP/1.1 path.
-func (n *Node) ServeHTTPS(h http.Handler) error {
+func (n *Node) serveHTTPS(h http.Handler) error {
 	// Up is idempotent (Start already ran it) and yields the status the
 	// MagicDNS/HTTPS guards below are derived from, mirroring ListenTLS.
 	st, err := n.srv.Up(context.Background())
@@ -298,10 +344,10 @@ func (n *Node) ServeHTTPS(h http.Handler) error {
 		return fmt.Errorf("tailscale TLS listen failed: %w", err)
 	}
 	if !st.CurrentTailnet.MagicDNSEnabled {
-		return errors.New("tailscale: you must enable MagicDNS in the DNS page of the admin panel to proceed. See https://tailscale.com/s/https")
+		return errors.New(httpsModeRequirement + ": MagicDNS is not enabled (enable it in the DNS page of the admin panel; see https://tailscale.com/s/https)")
 	}
 	if len(st.CertDomains) == 0 {
-		return errors.New("tailscale: you must enable HTTPS in the admin panel to proceed. See https://tailscale.com/s/https")
+		return errors.New(httpsModeRequirement + ": HTTPS certificates are not enabled (enable them in the DNS page of the admin panel; see https://tailscale.com/s/https)")
 	}
 	lc, err := n.srv.LocalClient()
 	if err != nil {
@@ -311,7 +357,7 @@ func (n *Node) ServeHTTPS(h http.Handler) error {
 		return fmt.Errorf("tailscale local client failed: %w", err)
 	}
 
-	ln, err := n.srv.Listen("tcp", ":443")
+	ln, err := n.srv.Listen("tcp", fmt.Sprintf(":%d", httpsPort))
 	if err != nil {
 		if n.closing.Load() {
 			return nil
@@ -319,7 +365,7 @@ func (n *Node) ServeHTTPS(h http.Handler) error {
 		return fmt.Errorf("tailscale TLS listen failed: %w", err)
 	}
 	tlsLn := tls.NewListener(ln, newTailnetTLSConfig(lc.GetCertificate))
-	n.logger.Info("serving dmanager on tailnet over HTTPS", "port", 443)
+	n.logger.Info("serving dmanager on tailnet over HTTPS", "port", httpsPort)
 
 	srv := &http.Server{
 		Handler:           forwardedProtoHTTPS(h),
