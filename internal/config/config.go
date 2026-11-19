@@ -79,8 +79,11 @@ type WebAuthnConfig struct {
 }
 
 // TailscaleConfig configures the embedded tsnet node (see docs/tailscale.md).
-// The whole section is inert while AuthKey is empty.
+// The whole section is inert unless Enabled is true; AuthKey alone never
+// switches the feature on. HTTPSEnabled selects the protocol (HTTP on Port, or
+// HTTPS on 443); Port applies to HTTP mode only.
 type TailscaleConfig struct {
+	Enabled      bool   `koanf:"enabled"`
 	AuthKey      string `koanf:"auth_key"`
 	Hostname     string `koanf:"hostname"`
 	StateDir     string `koanf:"state_dir"`
@@ -143,8 +146,12 @@ func (c *Config) Validate() error {
 		}
 	}
 
-	// The tailscale section is inert while no auth key is configured.
-	if c.Tailscale.AuthKey != "" {
+	// The tailscale section is inert unless explicitly enabled; an auth key
+	// alone never switches the feature on.
+	if c.Tailscale.Enabled {
+		if strings.TrimSpace(c.Tailscale.AuthKey) == "" {
+			return fmt.Errorf("tailscale.enabled is true but tailscale.auth_key is empty")
+		}
 		if err := c.Tailscale.Validate(filepath.Dir(c.Server.DBPath)); err != nil {
 			return err
 		}
@@ -182,18 +189,19 @@ func (c *SMTPConfig) Validate() error {
 	return nil
 }
 
-// Validate checks the tailscale section itself; only called when an auth key
-// is set. dbDir is the directory holding the SQLite database, used to reject
+// Validate checks the tailscale section itself; only called when tailscale.enabled
+// is true. dbDir is the directory holding the SQLite database, used to reject
 // state directories that would collide with it.
 func (c *TailscaleConfig) Validate(dbDir string) error {
 	if !isValidTailscaleHostname(c.Hostname) {
 		return fmt.Errorf("tailscale.hostname must use lowercase letters, digits and hyphens, start and end with a letter or digit, and be at most 63 characters, got %q", c.Hostname)
 	}
-	if c.Port < 1 || c.Port > 65535 {
+	// The port only applies to the plain-HTTP listener; HTTPS mode is fixed to 443.
+	if !c.HTTPSEnabled && (c.Port < 1 || c.Port > 65535) {
 		return fmt.Errorf("tailscale.port must be between 1 and 65535, got %d", c.Port)
 	}
 	if strings.TrimSpace(c.StateDir) == "" {
-		return fmt.Errorf("tailscale.state_dir must not be empty when tailscale.auth_key is set")
+		return fmt.Errorf("tailscale.state_dir must not be empty when tailscale.enabled is true")
 	}
 	cleanDir := filepath.Clean(c.StateDir)
 	if cleanDir == "/" || cleanDir == filepath.Clean(dbDir) {
@@ -245,6 +253,7 @@ func Load(configPath string) (*Config, error) {
 		"smtp.port":                          "25",
 		"smtp.tls_mode":                      TLSModeNone,
 		"smtp.timeout_seconds":               15,
+		"tailscale.enabled":                  false,
 		"tailscale.hostname":                 "dmanager",
 		"tailscale.port":                     80,
 		"tailscale.https_enabled":            false,
@@ -416,6 +425,13 @@ func Load(configPath string) (*Config, error) {
 func applyTailscaleEnvAliases(cfg *Config) error {
 	if v := os.Getenv("TAILSCALE_AUTHKEY"); v != "" && os.Getenv("DMANAGER_TAILSCALE_AUTHKEY") == "" {
 		cfg.Tailscale.AuthKey = v
+	}
+	if v := strings.TrimSpace(os.Getenv("TAILSCALE_ENABLED")); v != "" && os.Getenv("DMANAGER_TAILSCALE_ENABLED") == "" {
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			return fmt.Errorf("invalid TAILSCALE_ENABLED value %q: must be a boolean", v)
+		}
+		cfg.Tailscale.Enabled = b
 	}
 	if v := os.Getenv("TAILSCALE_HOSTNAME"); v != "" && os.Getenv("DMANAGER_TAILSCALE_HOSTNAME") == "" {
 		cfg.Tailscale.Hostname = v
