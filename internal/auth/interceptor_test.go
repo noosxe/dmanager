@@ -382,6 +382,35 @@ func TestInterceptorRBACEnforcement(t *testing.T) {
 			wantCode:     0,
 			wantExecuted: true,
 		},
+		// Settings reads are admin-only (the response carries the Gotify token, #356)
+		{
+			name:         "viewer accessing GetSettings returns PermissionDenied",
+			procedure:    dmanagerv1connect.SettingsServiceGetSettingsProcedure,
+			sessionID:    viewerSessionID,
+			wantCode:     connect.CodePermissionDenied,
+			wantExecuted: false,
+		},
+		{
+			name:         "admin accessing GetSettings succeeds",
+			procedure:    dmanagerv1connect.SettingsServiceGetSettingsProcedure,
+			sessionID:    adminSessionID,
+			wantCode:     0,
+			wantExecuted: true,
+		},
+		{
+			name:         "viewer accessing GetRegistryStatus returns PermissionDenied",
+			procedure:    dmanagerv1connect.SettingsServiceGetRegistryStatusProcedure,
+			sessionID:    viewerSessionID,
+			wantCode:     connect.CodePermissionDenied,
+			wantExecuted: false,
+		},
+		{
+			name:         "admin accessing GetRegistryStatus succeeds",
+			procedure:    dmanagerv1connect.SettingsServiceGetRegistryStatusProcedure,
+			sessionID:    adminSessionID,
+			wantCode:     0,
+			wantExecuted: true,
+		},
 		// SyncLogs procedure (per #134)
 		{
 			name:         "anonymous accessing SyncLogs returns Unauthenticated",
