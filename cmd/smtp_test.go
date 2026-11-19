@@ -46,7 +46,7 @@ func TestRunSMTPTestSendsVerification(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if !strings.Contains(out.String(), "test email sent to " + testOpsAddress) {
+	if !strings.Contains(out.String(), "test email sent to "+testOpsAddress) {
 		t.Errorf("confirmation missing, got %q", out.String())
 	}
 	mailFrom, rcptTo, data := relay.LastMessage()
