@@ -19,10 +19,17 @@
         # Latest stable PNPM overridden with our pinned LTS Node
         pnpm = pkgs.pnpm.override { nodejs-slim = nodejs; };
 
-        # Go pinned to the exact repo-wide version. Bump in lockstep with
-        # go.mod, .github/workflows/backend.yml, and the Dockerfile; the
-        # assertion fails the dev shell if nixpkgs drifts to another patch.
-        go = assert pkgs.go_1_27.version == "1.27.1"; pkgs.go_1_27;
+        # Go and golangci-lint versions are read from the files that CI and
+        # the Makefile use, so the dev shell cannot drift from them. The
+        # assertions fail the shell if the locked nixpkgs provides another
+        # version; fix that with `nix flake update nixpkgs`.
+        goVersion = builtins.head
+          (builtins.match ".*\ngo ([0-9.]+)\n.*" (builtins.readFile ./go.mod));
+        lintVersion = builtins.head
+          (builtins.match ".*\nGOLANGCI_LINT_VERSION [?]= v([0-9.]+)\n.*"
+            (builtins.readFile ./Makefile));
+        go = assert pkgs.go_1_27.version == goVersion; pkgs.go_1_27;
+        golangci-lint = assert pkgs.golangci-lint.version == lintVersion; pkgs.golangci-lint;
       in
       {
         devShells.default = pkgs.mkShell {
@@ -30,7 +37,7 @@
             go
             nodejs
             pnpm
-            pkgs.golangci-lint
+            golangci-lint
             pkgs.direnv
             pkgs.nix-direnv
             pkgs.sqlc
