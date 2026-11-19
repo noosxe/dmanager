@@ -409,6 +409,51 @@ The flake builds dmanager without the container image: `nix build .#default` pro
 
 The package fetches dependencies as fixed-output derivations whose hashes are pinned in `nix/hashes.json`. Any change to `frontend/pnpm-lock.yaml`, `go.mod` or `go.sum` (including Dependabot bumps) invalidates them and the Nix build fails with a hash mismatch. Run `make nix-hashes` (or `nix/update-hashes.sh`) and commit the updated `nix/hashes.json`. The Go version is read from `go.mod` and must match the locked nixpkgs `go_1_27`.
 
+
+### NixOS module
+
+`nixosModules.default` runs dmanager as a plain systemd service (no container image). Add the flake as an input and enable it:
+
+```nix
+# flake.nix
+inputs.dmanager.url = "github:noosxe/dmanager";
+
+# configuration.nix (with dmanager.nixosModules.default in the host's modules)
+virtualisation.docker.enable = true;
+services.dmanager = {
+  enable = true;
+  # Plain HTTP on :9283; open the port only if the host is not behind another listener.
+  openFirewall = true;
+  # Or tailnet-only: http.enable = false plus the Tailscale node.
+  # http.enable = false;
+  # tailscale = {
+  #   enable = true;
+  #   hostname = "dmanager";
+  #   authKeyFile = "/run/secrets/dmanager-tailscale-key";
+  # };
+  # webauthn = {
+  #   rpId = "dmanager.<tailnet>.ts.net";
+  #   origins = [ "https://dmanager.<tailnet>.ts.net" ];
+  # };
+};
+```
+
+The module options map to the config keys: `port`, `listenAddress`, `openFirewall` (opens `port` only while `http.enable` is true), `http.enable`, `webauthn.{rpId,origins}`, `tailscale.{enable,hostname,httpsEnabled,authKeyFile}`, `smtp.{enable,host,port,username,passwordFile,fromEmail,fromName,tlsMode}`, `registries` (`host`, `username`, `passwordFile`), `externalLabelSelectors` and `notifyExternalUpdates`. Anything else goes into the freeform `settings` attribute set (the YAML structure of the config file); a value set there wins over the typed options. `environmentFile` points at a dotenv file for secrets given as `DMANAGER_*` variables.
+
+The config is rendered into the world-readable Nix store, so secrets must come from the `*File` options (only the file path is written) or from `environmentFile`; the module refuses plain `password`/`auth_key` values in `settings`.
+
+The service runs as the `dmanager` user, which gets the `docker` group for the unit only. Docker socket access is root-equivalent: anyone who can drive dmanager can start a privileged container. The unit is sandboxed (read-only file system except the state directory, no capabilities, restricted syscalls and address families), but that cannot limit what dmanager does through Docker.
+
+The state directory `/var/lib/dmanager` (mode 0700) holds the database and the Tailscale node state. On a host with an ephemeral root (impermanence), persist it, or the admin account and the tailnet identity are lost on every reboot.
+
+Containers declared with `virtualisation.oci-containers` that dmanager should only observe get the label described under [Externally managed containers](#externally-managed-containers):
+
+```nix
+virtualisation.oci-containers.containers.<name>.labels."dmanager.managed-by" = "nixos";
+```
+
+`nix flake check` builds the package and boots a NixOS VM test (x86_64-linux, needs KVM) that runs the service next to Docker and checks that the UI and API answer and that a labelled container is reported as externally managed.
+
 ## Documentation
 
 - [docs/tailscale.md](docs/tailscale.md) — embedded Tailscale node: setup, HTTPS, passkeys over the tailnet
