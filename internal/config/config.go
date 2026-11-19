@@ -13,6 +13,8 @@ import (
 	"github.com/knadh/koanf/providers/env/v2"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"
+
+	"dmanager/internal/managed"
 )
 
 type Registry struct {
@@ -30,6 +32,10 @@ type ServerConfig struct {
 
 type DockerConfig struct {
 	Host string `koanf:"host"`
+	// ExternalLabelSelectors lists "key=value" (or bare "key", meaning the
+	// label is present) selectors; a container matching any of them is
+	// externally managed and never upgraded by dmanager.
+	ExternalLabelSelectors []string `koanf:"external_label_selectors"`
 }
 
 const (
@@ -48,6 +54,9 @@ const (
 
 type SchedulerConfig struct {
 	IntervalMinutes int `koanf:"interval_minutes"`
+	// NotifyExternalUpdates sends update-available notifications for
+	// externally managed containers too; off by default.
+	NotifyExternalUpdates bool `koanf:"notify_external_updates"`
 }
 
 type AuthConfig struct {
@@ -136,6 +145,10 @@ func (c *Config) Validate() error {
 
 	if c.WebAuthn.RPID != "" && len(c.WebAuthn.Origins) == 0 {
 		return fmt.Errorf("webauthn.origins cannot be empty when webauthn.rp_id is set")
+	}
+
+	if _, err := managed.ParseSelectors(c.Docker.ExternalLabelSelectors); err != nil {
+		return fmt.Errorf("docker.external_label_selectors: %w", err)
 	}
 
 	// The whole SMTP section is inert while disabled: partial or commented-out
@@ -241,6 +254,7 @@ func Load(configPath string) (*Config, error) {
 		"server.trusted_proxy":               false,
 		"docker.host":                        "unix:///var/run/docker.sock",
 		"scheduler.interval_minutes":         60,
+		"scheduler.notify_external_updates":  false,
 		"auth.session_idle_timeout":          168 * time.Hour,
 		"auth.session_absolute_timeout":      720 * time.Hour,
 		"auth.remember_me_idle_timeout":      720 * time.Hour,
@@ -309,6 +323,16 @@ func Load(configPath string) (*Config, error) {
 			}
 			if strings.HasPrefix(key, "docker_") {
 				sub := strings.TrimPrefix(key, "docker_")
+				if sub == "external_label_selectors" {
+					var selectors []string
+					for _, part := range strings.Split(v, ",") {
+						trimmed := strings.TrimSpace(part)
+						if trimmed != "" {
+							selectors = append(selectors, trimmed)
+						}
+					}
+					return "docker.external_label_selectors", selectors
+				}
 				return "docker." + sub, v
 			}
 			if strings.HasPrefix(key, "scheduler_") {
