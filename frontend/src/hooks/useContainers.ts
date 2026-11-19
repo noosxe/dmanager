@@ -1,3 +1,4 @@
+import { Code, ConnectError } from "@connectrpc/connect";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { containerClient } from "../client";
@@ -28,6 +29,15 @@ interface ProtoContainer {
   lastCheckedAt?: string;
   lastUpdatedAt?: string;
 }
+
+// Delay before re-subscribing after the server ended the stream cleanly
+// (slow-client cutoff, resync after a Docker reconnect).
+const STREAM_CLEAN_END_DELAY_MS = 1000;
+// First delay after a stream error; doubles per consecutive failure.
+const STREAM_ERROR_DELAY_MS = 2000;
+const STREAM_MAX_DELAY_MS = 30000;
+// An expired session cannot be fixed by retrying, so wait the longest.
+const STREAM_UNAUTHENTICATED_DELAY_MS = STREAM_MAX_DELAY_MS;
 
 export function useContainers() {
   const [containers, setContainers] = useState<Container[]>([]);
@@ -210,78 +220,109 @@ export function useContainers() {
   // Set up real-time stream subscription with automatic reconnection
   useEffect(() => {
     isMounted.current = true;
-    let abortController = new AbortController();
+    const abortController = new AbortController();
 
-    // Fetch initial list first
-    fetchContainers();
+    // Resolves after ms, or immediately when the hook unmounts.
+    const sleep = (ms: number) =>
+      new Promise<void>((resolve) => {
+        const timer = setTimeout(resolve, ms);
+        abortController.signal.addEventListener(
+          "abort",
+          () => {
+            clearTimeout(timer);
+            resolve();
+          },
+          { once: true },
+        );
+      });
+
+    const applyEvent = (response: {
+      action: string;
+      containerId: string;
+      container?: ProtoContainer;
+    }) => {
+      const action = response.action;
+      const containerId = response.containerId;
+      const protoContainer = response.container;
+
+      setContainers((prev) => {
+        if (action === "delete") {
+          const containerToDelete = prev.find((c) => c.id === containerId);
+          if (containerToDelete) {
+            const name = containerToDelete.name;
+            if (pendingDeletes.current[name]) {
+              window.clearTimeout(pendingDeletes.current[name]);
+            }
+            pendingDeletes.current[name] = window.setTimeout(() => {
+              setContainers((p) => p.filter((c) => c.id !== containerId));
+              delete pendingDeletes.current[name];
+            }, 300);
+            return prev;
+          }
+          return prev.filter((c) => c.id !== containerId);
+        }
+        if (action === "save" && protoContainer) {
+          const mapped = mapProtoContainer(protoContainer);
+          if (pendingDeletes.current[mapped.name]) {
+            window.clearTimeout(pendingDeletes.current[mapped.name]);
+            delete pendingDeletes.current[mapped.name];
+          }
+          // Try matching by ID first
+          let idx = prev.findIndex((c) => c.id === mapped.id);
+          // Fallback to matching by name to handle container ID changes on recreation
+          if (idx < 0) {
+            idx = prev.findIndex((c) => c.name === mapped.name);
+          }
+          if (idx >= 0) {
+            const updated = [...prev];
+            updated[idx] = mapped;
+            return updated;
+          }
+          return [...prev, mapped];
+        }
+        return prev;
+      });
+    };
 
     const startStreamSubscription = async () => {
+      let failures = 0;
       while (isMounted.current) {
+        let delayMs = STREAM_CLEAN_END_DELAY_MS;
         try {
-          // Initialize stream
-          const stream = await containerClient.streamContainers(
-            {},
-            { signal: abortController.signal },
-          );
+          // The stream carries live events only, so every (re)subscribe also
+          // refetches the list to pick up changes made while disconnected.
+          // Subscribe first (next() sends the request) and apply events only
+          // after the refetch, so nothing falls between the two.
+          const iterator = containerClient
+            .streamContainers({}, { signal: abortController.signal })
+            [Symbol.asyncIterator]();
+          let next = iterator.next();
+          await fetchContainers();
 
-          for await (const response of stream) {
-            if (!isMounted.current) break;
-
-            const action = response.action;
-            const containerId = response.containerId;
-            const protoContainer = response.container;
-
-            setContainers((prev) => {
-              if (action === "delete") {
-                const containerToDelete = prev.find((c) => c.id === containerId);
-                if (containerToDelete) {
-                  const name = containerToDelete.name;
-                  if (pendingDeletes.current[name]) {
-                    window.clearTimeout(pendingDeletes.current[name]);
-                  }
-                  pendingDeletes.current[name] = window.setTimeout(() => {
-                    setContainers((p) => p.filter((c) => c.id !== containerId));
-                    delete pendingDeletes.current[name];
-                  }, 300);
-                  return prev;
-                }
-                return prev.filter((c) => c.id !== containerId);
-              }
-              if (action === "save" && protoContainer) {
-                const mapped = mapProtoContainer(protoContainer);
-                if (pendingDeletes.current[mapped.name]) {
-                  window.clearTimeout(pendingDeletes.current[mapped.name]);
-                  delete pendingDeletes.current[mapped.name];
-                }
-                // Try matching by ID first
-                let idx = prev.findIndex((c) => c.id === mapped.id);
-                // Fallback to matching by name to handle container ID changes on recreation
-                if (idx < 0) {
-                  idx = prev.findIndex((c) => c.name === mapped.name);
-                }
-                if (idx >= 0) {
-                  const updated = [...prev];
-                  updated[idx] = mapped;
-                  return updated;
-                }
-                return [...prev, mapped];
-              }
-              return prev;
-            });
+          for (;;) {
+            const result = await next;
+            if (result.done || !isMounted.current) break;
+            failures = 0;
+            applyEvent(result.value);
+            next = iterator.next();
           }
         } catch (err: unknown) {
-          // If aborted, exit cleanly
           if (abortController.signal.aborted) {
             break;
           }
-          console.error("Containers stream connection failed, reconnecting in 2s...", err);
-          // Wait 2s before reconnecting
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-          // Reset AbortController for the next attempt
-          if (isMounted.current) {
-            abortController = new AbortController();
-          }
+          failures += 1;
+          // Session expiry is handled elsewhere; just don't hammer the backend.
+          delayMs =
+            err instanceof ConnectError && err.code === Code.Unauthenticated
+              ? STREAM_UNAUTHENTICATED_DELAY_MS
+              : Math.min(STREAM_ERROR_DELAY_MS * 2 ** (failures - 1), STREAM_MAX_DELAY_MS);
+          console.error(
+            `Containers stream connection failed, reconnecting in ${delayMs}ms...`,
+            err,
+          );
         }
+        if (!isMounted.current) break;
+        await sleep(delayMs);
       }
     };
 
