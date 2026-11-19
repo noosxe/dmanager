@@ -398,7 +398,7 @@ Today a nonexistent username returns before bcrypt runs, making valid usernames 
 
 Enforced in `SetupAdmin` (and any future password-set path):
 
-* Minimum length 12 (frontend hints passphrases; no composition rules, per NIST SP 800-63B).
+* Minimum length 12 and maximum length 72 **bytes** (bcrypt's input limit; multi-byte characters count per byte). Longer passwords are rejected with `InvalidArgument` rather than failing in the hasher. (frontend hints passphrases; no composition rules, per NIST SP 800-63B).
 * Optional, off by default: HIBP k-anonymity range check (`https://api.pwnedpasswords.com/range/`, first 5 SHA-1 hex chars, no full hash ever transmitted; feature-flagged because it phones out).
 
 ---

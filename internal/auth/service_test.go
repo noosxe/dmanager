@@ -421,6 +421,42 @@ func TestSetupAdminPasswordPolicyRejection(t *testing.T) {
 	}
 }
 
+func TestSetupAdminPasswordTooLong(t *testing.T) {
+	queries := newTestDB(t)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+	ctx := context.Background()
+
+	// 73 bytes: one over the bcrypt limit.
+	_, err := svc.SetupAdmin(ctx, connect.NewRequest(&v1.SetupAdminRequest{
+		Username: testAdminUsername,
+		Password: strings.Repeat("a", MaxPasswordBytes+1),
+	}))
+	if connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("expected CodeInvalidArgument for 73-byte password, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "72 bytes") {
+		t.Errorf("expected message to mention the 72 byte limit, got %v", err)
+	}
+
+	// 40 two-byte characters = 80 bytes but only 40 characters: still too long.
+	_, err = svc.SetupAdmin(ctx, connect.NewRequest(&v1.SetupAdminRequest{
+		Username: testAdminUsername,
+		Password: strings.Repeat("é", 40),
+	}))
+	if connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("expected CodeInvalidArgument for 80-byte multibyte password, got %v", err)
+	}
+
+	// Exactly 72 bytes is accepted.
+	_, err = svc.SetupAdmin(ctx, connect.NewRequest(&v1.SetupAdminRequest{
+		Username: testAdminUsername,
+		Password: strings.Repeat("a", MaxPasswordBytes),
+	}))
+	if err != nil {
+		t.Fatalf("expected 72-byte password to be accepted, got %v", err)
+	}
+}
+
 func TestLoginRateLimitingThrottling(t *testing.T) {
 	queries := newTestDB(t)
 	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
