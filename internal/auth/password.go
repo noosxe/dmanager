@@ -17,7 +17,10 @@ import (
 
 const (
 	MinPasswordLength = 12
-	hibpRangeAPIURL   = "https://api.pwnedpasswords.com/range/"
+	// MaxPasswordBytes is the longest password bcrypt can hash; it silently
+	// truncates or rejects anything beyond 72 bytes.
+	MaxPasswordBytes = 72
+	hibpRangeAPIURL  = "https://api.pwnedpasswords.com/range/"
 )
 
 type PasswordValidator struct {
@@ -38,10 +41,14 @@ func NewPasswordValidator(checkBreached bool, logger *slog.Logger) *PasswordVali
 	}
 }
 
-// Validate verifies that the password meets minimum length policy (>=12) and optionally checks for breaches via HIBP.
+// Validate verifies that the password is at least 12 characters and at most 72 bytes (bcrypt's limit), and optionally checks for breaches via HIBP.
 func (v *PasswordValidator) Validate(password string) error {
 	if len(password) < MinPasswordLength {
 		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("password must be at least %d characters", MinPasswordLength))
+	}
+
+	if len(password) > MaxPasswordBytes {
+		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("password must be at most %d bytes", MaxPasswordBytes))
 	}
 
 	if !v.checkBreached {

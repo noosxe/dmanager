@@ -31,7 +31,7 @@ graph TD
 
 ### 2.1. Password Hashing & Policy
 * **Standard:** All passwords must be hashed using **bcrypt** with a minimum work factor (cost) of `12`.
-* **Password Policy:** Minimum length of `12` characters. Passphrases are recommended; no arbitrary composition or special character rules (per NIST SP 800-63B guidelines).
+* **Password Policy:** Minimum length of `12` characters and maximum of `72` bytes (bcrypt's input limit). Passphrases are recommended; no arbitrary composition or special character rules (per NIST SP 800-63B guidelines).
 * **Breached Password Verification:** Optional HIBP k-anonymity check (`auth.breached_password_check`, disabled by default). When enabled, validates hashes via range API without sending full plaintext or hashes. Fails open on upstream network issues to preserve availability.
 * **Verification:** Raw passwords must never be stored in the database or logged under any circumstances.
 
