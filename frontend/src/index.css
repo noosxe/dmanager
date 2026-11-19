@@ -1972,6 +1972,16 @@ body {
   white-space: nowrap;
 }
 
+/* Card header: space the badge from the title above and the image line below. */
+.card-title-section .external-badge {
+  margin: 6px 0;
+}
+
+/* Table view: the badge follows the name inline, so give it a small gap. */
+.table-cell-name .external-badge {
+  margin-left: 6px;
+}
+
 .table-cell-id {
   font-family: var(--font-mono, monospace);
   font-size: 11px;
