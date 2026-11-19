@@ -81,6 +81,8 @@ ALTER TABLE sessions DROP COLUMN last_seen_at;
 
 The idle window is stored per session in `sessions.idle_timeout_seconds` (set at login from the normal or remember-me tier), so a remember-me session slides by 30 days and a normal one by 7. Rows from before the column existed hold `0` and fall back to the configured `session_idle_timeout`. A slide never shortens an expiry that is already further out.
 
+When a request slides the session, the interceptor also re-sends the session cookie with `Max-Age` set to the time left until the new idle expiry (never past the absolute expiry) and the same attributes as at login (`Path=/`, `HttpOnly`, `SameSite=Lax`, `Secure` per `auth.secure_cookies`). This happens on the same throttle as the DB write, for unary responses (or the error metadata when the handler fails) and for streaming responses (header set before the first message). A handler's own `Set-Cookie` (login, logout) is never overridden.
+
 In `Interceptor.authenticate`, after loading a valid session:
 
 ```go

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	connect "connectrpc.com/connect"
 
 	"dmanager/internal/audit"
+	"dmanager/internal/config"
 	"dmanager/internal/db"
 	dmanagerv1 "dmanager/internal/gen/proto/dmanager/v1"
 	"dmanager/internal/gen/proto/dmanager/v1/dmanagerv1connect"
@@ -23,6 +25,10 @@ type Interceptor struct {
 	logger      *slog.Logger
 	idleTimeout time.Duration
 	auditor     audit.Auditor // nil disables audit recording
+
+	// secureCookies is the auth.secure_cookies mode used for refreshed session
+	// cookies; it must match the login cookie.
+	secureCookies string
 }
 
 func NewInterceptor(queries *db.Queries, logger *slog.Logger, idleTimeout time.Duration, auditor audit.Auditor) *Interceptor {
@@ -34,7 +40,34 @@ func NewInterceptor(queries *db.Queries, logger *slog.Logger, idleTimeout time.D
 		logger:      logger,
 		idleTimeout: idleTimeout,
 		auditor:     auditor,
+
+		secureCookies: config.SecureCookiesAuto,
 	}
+}
+
+// WithSecureCookies sets the auth.secure_cookies mode used when the session
+// cookie is re-sent after a slide, so it carries the same Secure attribute as
+// at login.
+func (i *Interceptor) WithSecureCookies(mode string) *Interceptor {
+	if mode != "" {
+		i.secureCookies = mode
+	}
+	return i
+}
+
+// refreshCookie returns the Set-Cookie value that renews the session cookie
+// after a slide, or false when this request did not slide the session. The
+// lifetime is the time left until the (absolute-clamped) idle expiry.
+func (i *Interceptor) refreshCookie(ctx context.Context, reqHeader http.Header) (string, bool) {
+	r, ok := sessionRefreshFromContext(ctx)
+	if !ok {
+		return "", false
+	}
+	maxAge := int(time.Until(r.expiresAt).Seconds())
+	if maxAge <= 0 {
+		return "", false
+	}
+	return formatSessionCookie(r.sessionID, maxAge, i.secureCookies, reqHeader), true
 }
 
 // sessionIdleTimeout returns the sliding idle window of one session. Sessions
@@ -71,6 +104,7 @@ func (i *Interceptor) slideSession(ctx context.Context, session db.Session, now 
 		ExpiresAt:  newExpiry,
 		LastSeenAt: now,
 	}); err != nil {
+		i.logger.Warn("Failed to slide session", "error", err)
 		return session.ExpiresAt, false
 	}
 	return newExpiry, newExpiry.After(session.ExpiresAt)
@@ -100,7 +134,7 @@ func (i *Interceptor) authenticate(ctx context.Context, cookieHeader string) (co
 		return ctx, connect.NewError(connect.CodeUnauthenticated, errors.New("session expired"))
 	}
 
-	i.slideSession(ctx, session, now)
+	slidTo, slid := i.slideSession(ctx, session, now)
 
 	user, err := i.queries.GetUser(ctx, session.UserID)
 	if err != nil {
@@ -112,6 +146,9 @@ func (i *Interceptor) authenticate(ctx context.Context, cookieHeader string) (co
 
 	ctx = WithUser(ctx, user)
 	ctx = WithSessionID(ctx, sessionID)
+	if slid {
+		ctx = withSessionRefresh(ctx, sessionRefresh{sessionID: sessionID, expiresAt: slidTo})
+	}
 	return ctx, nil
 }
 
@@ -228,6 +265,7 @@ func (i *Interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 		startTime := time.Now()
 		resp, err := next(authCtx, req)
 		duration := time.Since(startTime)
+		i.attachRefreshedCookie(authCtx, req.Header(), resp, err)
 
 		if err != nil {
 			i.logger.Info("Request failed",
@@ -249,6 +287,31 @@ func (i *Interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 		}
 		return resp, err
 	})
+}
+
+// attachRefreshedCookie renews the session cookie on a unary response (or on
+// the error's metadata when the handler failed). A handler that already wrote
+// its own session cookie (login, logout) wins: a refresh must never resurrect
+// a cookie for a session that was just ended or replaced.
+func (i *Interceptor) attachRefreshedCookie(ctx context.Context, reqHeader http.Header, resp connect.AnyResponse, handlerErr error) {
+	cookie, ok := i.refreshCookie(ctx, reqHeader)
+	if !ok {
+		return
+	}
+	var header http.Header
+	if handlerErr != nil {
+		var cerr *connect.Error
+		if !errors.As(handlerErr, &cerr) {
+			return
+		}
+		header = cerr.Meta()
+	} else if resp != nil {
+		header = resp.Header()
+	}
+	if header == nil || header.Get("Set-Cookie") != "" {
+		return
+	}
+	header.Add("Set-Cookie", cookie)
 }
 
 func (i *Interceptor) WrapStreamingClient(next connect.StreamingClientFunc) connect.StreamingClientFunc {
@@ -298,6 +361,10 @@ func (i *Interceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) co
 		}
 
 		startTime := time.Now()
+		// The response header must be set before the handler sends its first message.
+		if cookie, ok := i.refreshCookie(authCtx, conn.RequestHeader()); ok {
+			conn.ResponseHeader().Add("Set-Cookie", cookie)
+		}
 		i.logger.Info("Streaming request started", "procedure", procedure, "user", userStr)
 		streamErr := next(authCtx, conn)
 		duration := time.Since(startTime)
