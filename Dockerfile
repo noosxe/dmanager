@@ -24,7 +24,8 @@ RUN pnpm --dir frontend run build
 
 
 # Stage 2: Backend Builder
-FROM --platform=$BUILDPLATFORM golang:1.27.1-alpine AS backend-builder
+# Go version must match go.mod (bump together; flake.nix reads go.mod).
+FROM --platform=$BUILDPLATFORM golang:1.27.3-alpine AS backend-builder
 WORKDIR /app
 
 # Configure CGO-free build parameters

@@ -69,10 +69,11 @@ ifndef TO
 endif
 	$(COMPOSE) exec dmanager dmanager smtp test --to=$(TO)
 
-# golangci-lint must match the CI pin (.github/workflows/backend.yml). An older
+# golangci-lint must match the CI pin (.github/workflows/backend.yml); flake.nix
+# reads this line too, so bump all three together. An older
 # binary cannot read Go 1.27 stdlib export data — the local-lint breakage was a
 # stale linter, not a toolchain incompatibility (issue #311).
-GOLANGCI_LINT_VERSION ?= v2.13.1
+GOLANGCI_LINT_VERSION ?= v2.15.0
 GOLANGCI_LINT ?= $(shell command -v golangci-lint 2>/dev/null || echo "$$(go env GOPATH)/bin/golangci-lint")
 
 .PHONY: lint-install
