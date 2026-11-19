@@ -69,7 +69,7 @@ graph TD
 ### 3.1. User Roles
 The system supports two user roles:
 1. `admin`: Full privileges to manage containers, execute lifecycles/updates, change system settings, and trigger notification tests.
-2. `viewer`: Read-only access to view the dashboard, read settings, and stream logs. Cannot mutate container states or update configurations.
+2. `viewer`: Read-only access to view the dashboard and stream logs. Cannot mutate container states, and cannot read or update settings or registry status (the settings response includes the Gotify token).
 
 ### 3.2. Endpoint Access Control Matrix
 
@@ -99,8 +99,8 @@ The system supports two user roles:
 | `UpgradeContainer` | `ContainerService` | `admin` | Authenticated + Admin |
 | `SetContainerAutoUpdate` | `ContainerService` | `admin` | Authenticated + Admin |
 | `CheckContainerUpdates` | `ContainerService` | `admin` | Authenticated + Admin |
-| `GetSettings` | `SettingsService` | `viewer` | Authenticated |
-| `GetRegistryStatus` | `SettingsService` | `viewer` | Authenticated |
+| `GetSettings` | `SettingsService` | `admin` | Authenticated + Admin |
+| `GetRegistryStatus` | `SettingsService` | `admin` | Authenticated + Admin |
 | `UpdateSettings` | `SettingsService` | `admin` | Authenticated + Admin |
 | `TestGotifyNotification` | `SettingsService` | `admin` | Authenticated + Admin |
 | `GetSystemLogs` | `LogService` | `viewer` | Authenticated |
