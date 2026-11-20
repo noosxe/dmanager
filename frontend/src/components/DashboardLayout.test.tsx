@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type React from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -114,5 +114,19 @@ describe("DashboardLayout engine status pill", () => {
 
     expect(screen.getByText("Checking…")).toBeInTheDocument();
     expect(document.querySelector(".status-dot")).toHaveClass("checking");
+  });
+});
+
+describe("DashboardLayout mobile menu", () => {
+  it("opens from the menu button and closes after navigating", () => {
+    renderLayout(null);
+    const sidebar = document.querySelector(".dashboard-sidebar");
+    expect(sidebar).not.toHaveClass("open");
+
+    fireEvent.click(screen.getByLabelText("Toggle Navigation Menu"));
+    expect(sidebar).toHaveClass("open");
+
+    fireEvent.click(screen.getByText("System Logs"));
+    expect(sidebar).not.toHaveClass("open");
   });
 });
