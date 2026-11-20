@@ -7,10 +7,10 @@ const ago = (ms: number) => new Date(Date.now() - ms);
 const agoIso = (ms: number) => ago(ms).toISOString();
 const ts = (ms: number) => timestampFromDate(ago(ms));
 
-export type Scenario = "admin" | "login" | "setup" | "empty";
+export type Scenario = "admin" | "viewer" | "login" | "setup" | "empty";
 export type TailscaleVariant = "running" | "starting" | "disabled" | "failed";
 
-export const SCENARIOS: Scenario[] = ["admin", "login", "setup", "empty"];
+export const SCENARIOS: Scenario[] = ["admin", "viewer", "login", "setup", "empty"];
 export const TAILSCALE_VARIANTS: TailscaleVariant[] = ["running", "starting", "disabled", "failed"];
 
 /** Bare-key selector the mock server pretends to be configured with (a label-present match). */
@@ -134,6 +134,8 @@ export function containerFixtures(): MockContainer[] {
 }
 
 export const ADMIN_USER = { userId: 1n, username: "admin", role: "admin" };
+
+export const VIEWER_USER = { userId: 2n, username: "viewer-1", role: "viewer" };
 
 export const SERVER_VERSION = { version: "0.0.0-mock", commit: "0000000", buildDate: "2026-01-01" };
 

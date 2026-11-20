@@ -1,7 +1,9 @@
 // In-memory implementation of every backend service, driven by fixtures.
 // Server-side rules that the UI depends on are mirrored from the Go services
 // (internal/container): externally managed containers reject upgrade and
-// enabling auto-update with FailedPrecondition and the same message.
+// enabling auto-update with FailedPrecondition and the same message. Role rules
+// follow the procedure matrix in internal/auth/interceptor.go (admin-only: all
+// mutations, GetSettings, GetRegistryStatus, ListAuditLogs).
 import { Code, ConnectError, createRouterTransport, type Interceptor } from "@connectrpc/connect";
 
 import { AdminService } from "../gen/proto/dmanager/v1/admin_pb";
@@ -20,6 +22,7 @@ import {
   SERVER_VERSION,
   SETTINGS,
   SYSTEM_LOGS,
+  VIEWER_USER,
   VOLUMES,
   VOLUME_USAGE,
   auditFixtures,
@@ -89,7 +92,11 @@ type StreamMessage = {
 export function createMockTransport(opts: MockOptions) {
   let needsSetup = opts.scenario === "setup";
   let user: { userId: bigint; username: string; role: string } | null =
-    opts.scenario === "admin" || opts.scenario === "empty" ? { ...ADMIN_USER } : null;
+    opts.scenario === "admin" || opts.scenario === "empty"
+      ? { ...ADMIN_USER }
+      : opts.scenario === "viewer"
+        ? { ...VIEWER_USER }
+        : null;
   const containers = opts.scenario === "empty" ? [] : containerFixtures();
   let settings = { ...SETTINGS };
   let images = [...IMAGES];
@@ -306,7 +313,7 @@ export function createMockTransport(opts: MockOptions) {
 
       service(SettingsService, {
         getSettings: () => {
-          requireUser();
+          requireAdmin();
           return settings;
         },
         updateSettings: (req) => {
@@ -325,13 +332,16 @@ export function createMockTransport(opts: MockOptions) {
             : { success: false, errorMessage: "gotify url is empty" };
         },
         getRegistryStatus: () => {
-          requireUser();
+          requireAdmin();
           return { registries: REGISTRIES };
         },
       });
 
       service(LogService, {
-        syncLogs: (req) => ({ processedCount: req.entries.length }),
+        syncLogs: (req) => {
+          requireUser();
+          return { processedCount: req.entries.length };
+        },
         getSystemLogs: (req) => {
           requireUser();
           const q = req.searchQuery.toLowerCase();
@@ -435,7 +445,10 @@ export function createMockTransport(opts: MockOptions) {
           buildCache = buildCache.filter((r) => r.id !== req.id);
           return { cachesDeleted: rec ? 1 : 0, spaceReclaimed: rec?.sizeBytes ?? 0n };
         },
-        checkEngine: () => ({ connected: true, apiVersion: "1.51", error: "" }),
+        checkEngine: () => {
+          requireUser();
+          return { connected: true, apiVersion: "1.51", error: "" };
+        },
         getTailscaleStatus: () => {
           requireUser();
           return tailscaleFixture(opts.tailscale);
