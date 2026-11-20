@@ -43,7 +43,7 @@ const notifyIfUnauthenticated = (err: unknown, procedure: string) => {
 
 // Central place that notices an expired or revoked session mid-use, for unary
 // calls and for errors raised while consuming a server stream.
-const sessionExpiryInterceptor: Interceptor = (next) => async (req) => {
+export const sessionExpiryInterceptor: Interceptor = (next) => async (req) => {
   const procedure = `${req.service.typeName}/${req.method.name}`;
   let res;
   try {
@@ -67,17 +67,23 @@ const sessionExpiryInterceptor: Interceptor = (next) => async (req) => {
   };
 };
 
-export const transport = createConnectTransport({
-  baseUrl: getBaseUrl(),
-  interceptors: [sessionExpiryInterceptor],
-  useBinaryFormat: true,
-  fetch: (url, options) => {
-    return fetch(url, {
-      ...options,
-      credentials: "include",
-    });
-  },
-});
+// `vite --mode mock` (pnpm dev:mock) swaps the network transport for an
+// in-browser one backed by fixtures. MODE is replaced at build time, so
+// production builds drop the branch and never bundle src/mock.
+export const transport =
+  import.meta.env.MODE === "mock"
+    ? (await import("./mock")).createBrowserMockTransport([sessionExpiryInterceptor])
+    : createConnectTransport({
+        baseUrl: getBaseUrl(),
+        interceptors: [sessionExpiryInterceptor],
+        useBinaryFormat: true,
+        fetch: (url, options) => {
+          return fetch(url, {
+            ...options,
+            credentials: "include",
+          });
+        },
+      });
 
 export const adminClient = createClient(AdminService, transport);
 export const authClient = createClient(AuthService, transport);
