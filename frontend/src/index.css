@@ -1940,8 +1940,8 @@ body {
   gap: 4px;
   /* Keep the column readable: never narrower than this, never wider than
      the cap; longer references are truncated (full text in the tooltip). */
-  min-width: 200px;
-  max-width: 320px;
+  min-width: 160px;
+  max-width: 240px;
 }
 
 .container-image-text {
