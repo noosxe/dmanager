@@ -367,5 +367,5 @@ modernc.org/sqlite v1.62.0 h1:gMaCjSM1qpl+iOjiWhR1LYP3zqrYDI+5GYLGt6veP2g=
 modernc.org/sqlite v1.62.0/go.mod h1:Jzjh1mt4s0HuQ0KvtB1LIuHiGRmU2D5pgj8dUhW7/SE=
 software.sslmate.com/src/go-pkcs12 v0.7.3 h1:JBQD3FDqYjTeyDAeZQklj2ar88ykBLtALloPJHyAauU=
 software.sslmate.com/src/go-pkcs12 v0.7.3/go.mod h1:Qiz0EyvDRJjjxGyUQa2cCNZn/wMyzrRJ/qcDXOQazLI=
-tailscale.com v1.104.7 h1:YqImcXyNIe25x7Qwei8PgbtkjFd3pKed9cFY0Flkitc=
-tailscale.com v1.104.7/go.mod h1:pNl682NgUoac2/Um3khv8pduX3D1YPBZTL067+zo8wY=
+tailscale.com v1.104.5 h1:TLemRww20+bcQ0FEVTTZ7yMtVDZ4pOpSCL86Oo9g3mA=
+tailscale.com v1.104.5/go.mod h1:Hq4zB8UpaxMW1fvqO30CLVQo3A7Ith0t9MnvEyiuoSA=
