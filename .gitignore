@@ -53,3 +53,6 @@ Thumbs.db
 .pi/tasks/
 /result
 /.scratch/
+
+# Claude worktrees (launch.json under .claude/ is committed)
+/.claude/worktrees/

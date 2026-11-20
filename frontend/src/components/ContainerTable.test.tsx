@@ -75,6 +75,20 @@ describe("ContainerTable Component", () => {
     expect(screen.getByText("Update Ready")).toBeInTheDocument(); // Update indicator
   });
 
+  it("shows the full image reference in a tooltip and keeps the update badge", () => {
+    const longImage =
+      "registry.example.com/some-organisation/some-team/a-deeply-nested-repository:2026.1.20-build";
+    render(
+      <ContainerTable
+        {...defaultProps}
+        containers={[{ ...mockContainers[1], image: longImage }]}
+      />,
+    );
+
+    expect(screen.getByText(longImage)).toHaveAttribute("title", longImage);
+    expect(screen.getByText("Update Ready")).toBeInTheDocument();
+  });
+
   it("calls action callbacks on click", () => {
     render(<ContainerTable {...defaultProps} />);
 

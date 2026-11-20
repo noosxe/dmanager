@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "frontend-mock",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "frontend/node_modules/vite/bin/vite.js",
+        "frontend",
+        "--mode",
+        "mock",
+        "--port",
+        "5199",
+        "--strictPort"
+      ],
+      "port": 5199
+    }
+  ]
+}

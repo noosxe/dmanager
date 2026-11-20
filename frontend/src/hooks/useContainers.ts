@@ -299,9 +299,8 @@ export function useContainers() {
           // refetches the list to pick up changes made while disconnected.
           // Subscribe first (next() sends the request) and apply events only
           // after the refetch, so nothing falls between the two.
-          const iterator = containerClient
-            .streamContainers({}, { signal: abortController.signal })
-            [Symbol.asyncIterator]();
+          const stream = containerClient.streamContainers({}, { signal: abortController.signal });
+          const iterator = stream[Symbol.asyncIterator]();
           let next = iterator.next();
           // next is awaited only after the refetch; avoid an unhandled-rejection
           // report if the stream fails meanwhile (the later await still throws).
