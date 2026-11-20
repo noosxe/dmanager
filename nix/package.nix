@@ -2,7 +2,7 @@
   lib,
   stdenvNoCC,
   buildGoModule,
-  go_1_27,
+  go,
   fetchPnpmDeps,
   pnpmConfigHook,
   pnpm_11,
@@ -18,9 +18,28 @@ let
   fs = lib.fileset;
   hashes = lib.importJSON ./hashes.json;
 
-  # Same Go the dev shell asserts against go.mod.
-  goVersion = builtins.head (builtins.match ".*\ngo ([0-9.]+)\n.*" (builtins.readFile ../go.mod));
-  go = assert go_1_27.version == goVersion; go_1_27;
+  # Minimum Go: the `go` directive in go.mod, raised to a `toolchain` line
+  # if there is one. Any newer Go is accepted, so a host can follow its own
+  # nixpkgs. buildGoModule alone would not give a readable error: it sets
+  # GOTOOLCHAIN=local, so an older Go only fails deep in the build with
+  # "go.mod requires go >= X". This check fails at evaluation instead.
+  goMod = builtins.readFile ../go.mod;
+  goDirective = builtins.head (builtins.match ".*\ngo ([0-9.]+)\n.*" goMod);
+  toolchainLine = builtins.match ".*\ntoolchain go([0-9.]+)\n.*" goMod;
+  goMinimum =
+    if toolchainLine != null && lib.versionOlder goDirective (builtins.head toolchainLine) then
+      builtins.head toolchainLine
+    else
+      goDirective;
+
+  # `go` is the nixpkgs default Go, which tracks the newest stable release.
+  # Pinning go_1_27 would break once nixpkgs drops that attribute, while the
+  # default always satisfies a go.mod minimum that was current when written.
+  goChecked =
+    if lib.versionAtLeast go.version goMinimum then
+      go
+    else
+      throw "dmanager needs Go >= ${goMinimum} (from go.mod), but this nixpkgs provides Go ${go.version}; use a newer nixpkgs.";
 
   version = "dev";
   shortRev = builtins.substring 0 7 rev;
@@ -66,7 +85,7 @@ let
     '';
   });
 in
-(buildGoModule.override { inherit go; }) {
+(buildGoModule.override { go = goChecked; }) {
   pname = "dmanager";
   inherit version;
 
