@@ -438,6 +438,8 @@ services.dmanager = {
 };
 ```
 
+`inputs.dmanager.inputs.nixpkgs.follows = "nixpkgs"` is supported as long as the host's nixpkgs has a Go at least as new as `go.mod` requires; evaluation fails with a clear message otherwise. Without `follows`, dmanager uses its own locked nixpkgs.
+
 The module options map to the config keys: `port`, `listenAddress`, `openFirewall` (opens `port` only while `http.enable` is true), `http.enable`, `webauthn.{rpId,origins}`, `tailscale.{enable,hostname,httpsEnabled,authKeyFile}`, `smtp.{enable,host,port,username,passwordFile,fromEmail,fromName,tlsMode}`, `registries` (`host`, `username`, `passwordFile`), `externalLabelSelectors` and `notifyExternalUpdates`. Anything else goes into the freeform `settings` attribute set (the YAML structure of the config file); a value set there wins over the typed options. `environmentFile` points at a dotenv file for secrets given as `DMANAGER_*` variables.
 
 The config is rendered into the world-readable Nix store, so secrets must come from the `*File` options (only the file path is written) or from `environmentFile`; the module refuses plain `password`/`auth_key` values in `settings`.

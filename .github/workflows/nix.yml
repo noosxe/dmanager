@@ -77,6 +77,14 @@ jobs:
       - name: Run nix flake check
         run: nix flake check --print-build-logs
 
+      # Consumers may follow their own nixpkgs; make sure the package still
+      # evaluates against the newest channel. Evaluation only: a full build
+      # would break on unrelated dependency hash churn and is slow.
+      - name: Evaluate package against nixos-unstable
+        run: >-
+          nix eval .#packages.x86_64-linux.default.drvPath
+          --override-input nixpkgs github:NixOS/nixpkgs/nixos-unstable
+
   gate:
     name: nix-gate
     needs: [changes, flake-check]
