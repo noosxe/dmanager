@@ -93,7 +93,7 @@ describe("mock transport", () => {
       if (live.length >= 2) break;
     }
     ac.abort();
-    expect(live.sort()).toEqual(["a1", "a2"]);
+    expect(live.toSorted()).toEqual(["a1", "a2"]);
   });
 
   it("streams container logs", async () => {
