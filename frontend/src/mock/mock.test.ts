@@ -45,6 +45,21 @@ describe("mock transport", () => {
     );
   });
 
+  it("denies admin-only calls to a viewer, like the server", async () => {
+    const c = clients({ scenario: "viewer" });
+    expect((await c.auth.getMe({})).role).toBe("viewer");
+    expect((await c.containers.listContainers({})).containers.length).toBeGreaterThan(0);
+    const denied = [
+      c.settings.getSettings({}),
+      c.settings.getRegistryStatus({}),
+      c.admin.listAuditLogs({}),
+      c.containers.stopContainer({ id: "a1" }),
+    ];
+    for (const call of denied) {
+      await expect(call).rejects.toMatchObject({ code: Code.PermissionDenied });
+    }
+  });
+
   it("applies mutations and mirrors the externally-managed rules", async () => {
     const { containers } = clients();
     const stopped = await containers.stopContainer({ id: "a1" });
