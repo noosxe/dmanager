@@ -12,6 +12,11 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+      # tailscale.com 1.104.6 and later require Go 1.27.4, which nixpkgs does
+      # not ship yet, so the Nix build and dev shell would fail. Remove this
+      # rule once nixpkgs provides Go 1.27.4.
+      - dependency-name: "tailscale.com"
+        versions: [">= 1.104.6"]
 
   - package-ecosystem: "npm"
     directory: "/frontend"
