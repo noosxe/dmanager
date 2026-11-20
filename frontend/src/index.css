@@ -486,6 +486,17 @@ body {
 }
 
 @media (max-width: 768px) {
+  /* Stack the mobile header bar above the content instead of beside it. */
+  .dashboard-wrapper {
+    flex-direction: column;
+    width: 100%;
+  }
+  .main-container {
+    flex: 1 1 0;
+    min-height: 0;
+    width: 100%;
+    overflow-x: hidden;
+  }
   .dashboard-sidebar {
     position: absolute;
     left: 0;
@@ -898,6 +909,12 @@ body {
   width: 100%;
 }
 
+@media (max-width: 600px) {
+  .containers-grid-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .container-card {
   background: var(--card-bg);
   backdrop-filter: blur(15px);
@@ -1215,6 +1232,10 @@ body {
   .logs-drawer-panel {
     width: 100%;
     min-width: 100%;
+  }
+  /* The closed drawer sits just off-screen; its shadow must not bleed in. */
+  .logs-drawer-panel:not(.open) {
+    box-shadow: none;
   }
 }
 
