@@ -4,7 +4,7 @@ Project overview, build and configuration: see [README.md](README.md). The front
 
 ## Checks
 
-- Frontend: `pnpm --dir frontend run check` (oxlint + oxfmt), `pnpm --dir frontend run test` (Vitest), `pnpm --dir frontend exec vite build`.
+- Frontend: `pnpm --dir frontend run check` (oxlint + oxfmt), `pnpm --dir frontend run test` (Vitest), `pnpm --dir frontend exec vite build --outDir ../.scratch/vite-build --emptyOutDir` (the output goes to the gitignored `.scratch/` because a plain build empties the tracked `frontend/dist`, whose `.gitkeep` Nix and `go:embed` need).
 - Backend: `go test -race ./...` and `make lint` (see [Make targets](README.md#make-targets)).
 - Changing `frontend/pnpm-lock.yaml`, `go.mod` or `go.sum` needs `make nix-hashes` (see [Nix package](README.md#nix-package)).
 
