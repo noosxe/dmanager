@@ -59,7 +59,7 @@ describe("browser tab titles", () => {
 
   it.each([
     ["/", "dmanager"],
-    ["/logs", "Logs · dmanager"],
+    ["/logs", "System Logs · dmanager"],
     ["/audit-logs", "Audit Logs · dmanager"],
     ["/administration/images", "Images · Administration · dmanager"],
     ["/administration/volumes", "Volumes · Administration · dmanager"],
