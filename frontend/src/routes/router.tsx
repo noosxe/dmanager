@@ -109,7 +109,7 @@ const setupRoute = createRoute({
 const logsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/logs",
-  head: () => pageTitle("Logs"),
+  head: () => pageTitle("System Logs"),
   beforeLoad: ({ context }) => {
     if (context.auth.needsSetup) {
       throw redirect({ to: "/setup" });
