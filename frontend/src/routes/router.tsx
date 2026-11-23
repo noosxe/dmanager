@@ -2,6 +2,7 @@ import {
   createRootRouteWithContext,
   createRoute,
   createRouter,
+  HeadContent,
   Outlet,
   redirect,
 } from "@tanstack/react-router";
@@ -14,6 +15,7 @@ import { Login } from "../components/Login";
 import { Settings } from "../components/Settings";
 import { Setup } from "../components/Setup";
 import { SystemLogs } from "../components/SystemLogs";
+import { ADMIN_TAB_LABELS, SETTINGS_TAB_LABELS } from "../components/tabLabels";
 
 // 1. Define routing context type
 export interface RouterContext {
@@ -26,8 +28,30 @@ export interface RouterContext {
 }
 
 // 2. Create the root route
+const APP_NAME = "dmanager";
+
+// Browser tab title: `<Page> · dmanager`, most specific part first.
+const pageTitle = (...parts: string[]) => ({
+  meta: [{ title: [...parts, APP_NAME].join(" · ") }],
+});
+
+// The root title is the dashboard's (bare app name); child routes override it.
 export const rootRoute = createRootRouteWithContext<RouterContext>()({
-  component: () => <Outlet />,
+  head: () => pageTitle(),
+  component: () => (
+    <>
+      <HeadContent />
+      <Outlet />
+    </>
+  ),
+  // head() cannot see the not-found state, so the fallback page sets its own
+  // title (React hoists <title> into the document head).
+  notFoundComponent: () => (
+    <>
+      <title>{`Page not found · ${APP_NAME}`}</title>
+      <p>Page not found</p>
+    </>
+  ),
 });
 
 // 3. Protected Dashboard route (Placeholder, full layout in STORY-011)
@@ -53,6 +77,7 @@ const dashboardRoute = createRoute({
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/login",
+  head: () => pageTitle("Sign in"),
   beforeLoad: ({ context }) => {
     if (context.auth.needsSetup) {
       throw redirect({ to: "/setup" });
@@ -68,6 +93,7 @@ const loginRoute = createRoute({
 const setupRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/setup",
+  head: () => pageTitle("Setup"),
   beforeLoad: ({ context }) => {
     if (!context.auth.needsSetup) {
       if (context.auth.isAuthenticated) {
@@ -83,6 +109,7 @@ const setupRoute = createRoute({
 const logsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/logs",
+  head: () => pageTitle("Logs"),
   beforeLoad: ({ context }) => {
     if (context.auth.needsSetup) {
       throw redirect({ to: "/setup" });
@@ -102,6 +129,7 @@ const logsRoute = createRoute({
 const auditLogsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/audit-logs",
+  head: () => pageTitle("Audit Logs"),
   beforeLoad: ({ context }) => {
     if (context.auth.needsSetup) {
       throw redirect({ to: "/setup" });
@@ -138,6 +166,11 @@ const administrationIndexRoute = createRoute({
 const administrationTabRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/administration/$tab",
+  head: ({ params }) =>
+    pageTitle(
+      ADMIN_TAB_LABELS[params.tab as keyof typeof ADMIN_TAB_LABELS] ?? ADMIN_TAB_LABELS.images,
+      "Administration",
+    ),
   beforeLoad: ({ context, params }) => {
     if (context.auth.needsSetup) {
       throw redirect({ to: "/setup" });
@@ -179,6 +212,12 @@ const settingsIndexRoute = createRoute({
 const settingsTabRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/settings/$tab",
+  head: ({ params }) =>
+    pageTitle(
+      SETTINGS_TAB_LABELS[params.tab as keyof typeof SETTINGS_TAB_LABELS] ??
+        SETTINGS_TAB_LABELS.general,
+      "Settings",
+    ),
   beforeLoad: ({ context, params }) => {
     if (context.auth.needsSetup) {
       throw redirect({ to: "/setup" });

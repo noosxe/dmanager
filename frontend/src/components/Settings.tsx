@@ -33,6 +33,7 @@ import type { AuthEvent, Passkey, Session } from "../gen/proto/dmanager/v1/auth_
 import type { RegistryStatus } from "../gen/proto/dmanager/v1/settings_pb";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { PageTabs, type PageTabItem } from "./PageTabs";
+import { SETTINGS_TAB_LABELS } from "./tabLabels";
 
 interface SettingsProps {
   initialTab?: "general" | "security";
@@ -534,7 +535,7 @@ export function Settings({ initialTab }: SettingsProps = {}) {
       to: "/settings/$tab",
       params: { tab: "general" },
       icon: SettingsIcon,
-      label: "General",
+      label: SETTINGS_TAB_LABELS.general,
       active: activeTab === "general",
       onClick: () => setLocalTab("general"),
     },
@@ -542,7 +543,7 @@ export function Settings({ initialTab }: SettingsProps = {}) {
       to: "/settings/$tab",
       params: { tab: "security" },
       icon: Shield,
-      label: "Security & Sessions",
+      label: SETTINGS_TAB_LABELS.security,
       active: activeTab === "security",
       onClick: () => setLocalTab("security"),
     },

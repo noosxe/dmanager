@@ -28,6 +28,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { ImageTable } from "./ImageTable";
 import { NetworkTable } from "./NetworkTable";
 import { PageTabs, type PageTabItem } from "./PageTabs";
+import { ADMIN_TAB_LABELS } from "./tabLabels";
 import { TailscaleStatusCard } from "./TailscaleStatusCard";
 import { VolumeTable } from "./VolumeTable";
 
@@ -115,28 +116,28 @@ export function Administration() {
       to: "/administration/$tab",
       params: { tab: "images" },
       icon: ImageIcon,
-      label: "Images",
+      label: ADMIN_TAB_LABELS.images,
       active: tab === "images",
     },
     {
       to: "/administration/$tab",
       params: { tab: "builder" },
       icon: Hammer,
-      label: "Builder",
+      label: ADMIN_TAB_LABELS.builder,
       active: tab === "builder",
     },
     {
       to: "/administration/$tab",
       params: { tab: "volumes" },
       icon: HardDrive,
-      label: "Volumes",
+      label: ADMIN_TAB_LABELS.volumes,
       active: tab === "volumes",
     },
     {
       to: "/administration/$tab",
       params: { tab: "networks" },
       icon: NetworkIcon,
-      label: "Networks",
+      label: ADMIN_TAB_LABELS.networks,
       active: tab === "networks",
     },
   ];
