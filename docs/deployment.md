@@ -242,7 +242,7 @@ Compose top-level `secrets:` backed by files mount each secret read-only at `/ru
 ```yaml
 services:
   dmanager:
-    image: dmanager:latest
+    image: ghcr.io/noosxe/dmanager:latest
     secrets:
       - tailscale_authkey
       - ghcr_token
