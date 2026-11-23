@@ -50,22 +50,19 @@ This document details the procedure and requirements to deploy the `dmanager` ap
 
 ### 2.2. Private Registry Configuration
 
-To configure credentials for private registry checks, list them inside the YAML configuration:
+Credentials for private registry checks go in the `registries` list. Supply the token from a file
+rather than as a plain value (the file variant is `password_file`, or `DMANAGER_REGISTRIES_<N>_PASSWORD_FILE`
+as an environment variable; see [Secrets from files](#secrets-from-files) for a Docker Compose example):
 
 ```yaml
 registries:
   - host: "ghcr.io"
-    username: "my-github-user"
-    password: "ghp_securepersonaltoken"
+    username: "example-user"
+    password_file: "/run/secrets/ghcr_token"
 ```
 
-Or configure them via indexed environment variables:
-
-```bash
-DMANAGER_REGISTRIES_0_HOST=ghcr.io
-DMANAGER_REGISTRIES_0_USERNAME=my-github-user
-DMANAGER_REGISTRIES_0_PASSWORD=ghp_securepersonaltoken
-```
+A plain `password` (or `DMANAGER_REGISTRIES_<N>_PASSWORD`) still works, but then the token sits in the
+config file or the container environment.
 
 ### 2.3. Embedded Tailscale Node
 
@@ -76,6 +73,7 @@ Full design: [docs/tailscale.md](tailscale.md).
 
 > **Upgrade note (breaking change):** a deployment that only sets the auth key no longer joins the
 > tailnet until `TAILSCALE_ENABLED=true` is set, and HTTPS mode no longer also serves plain HTTP.
+> See [Upgrading](#upgrading).
 
 ```bash
 TAILSCALE_ENABLED=true
@@ -235,3 +233,81 @@ password and registry passwords each have a file variant, as a config key and as
 - Trailing newlines (LF or CRLF) are trimmed; other whitespace is kept.
 - A file that cannot be read fails startup. The error names the path, never the contents.
 - An empty file counts as an empty secret, so `tailscale.enabled` with an empty key file still fails validation.
+
+### Docker Compose with `secrets:`
+
+Compose top-level `secrets:` backed by files mount each secret read-only at `/run/secrets/<name>`. Point the
+`*_FILE` variables at those paths:
+
+```yaml
+services:
+  dmanager:
+    image: dmanager:latest
+    secrets:
+      - tailscale_authkey
+      - ghcr_token
+    environment:
+      - DMANAGER_TAILSCALE_ENABLED=true
+      - DMANAGER_TAILSCALE_AUTHKEY_FILE=/run/secrets/tailscale_authkey
+      - DMANAGER_REGISTRIES_0_HOST=ghcr.io
+      - DMANAGER_REGISTRIES_0_USERNAME=example-user
+      - DMANAGER_REGISTRIES_0_PASSWORD_FILE=/run/secrets/ghcr_token
+
+secrets:
+  tailscale_authkey:
+    file: ./secrets/tailscale_authkey
+  ghcr_token:
+    file: ./secrets/ghcr_token
+```
+
+Keep the `./secrets/` files readable only by you (for example `chmod 600`) and out of version control.
+
+The same in the YAML config file:
+
+```yaml
+tailscale:
+  enabled: true
+  auth_key_file: /run/secrets/tailscale_authkey
+registries:
+  - host: ghcr.io
+    username: example-user
+    password_file: /run/secrets/ghcr_token
+```
+
+When switching from a plain value, remove the plain value (`tailscale.auth_key`, `TAILSCALE_AUTHKEY`,
+`DMANAGER_TAILSCALE_AUTHKEY`, `registries[N].password`, `DMANAGER_REGISTRIES_<N>_PASSWORD`) from the config
+file, the Compose `environment:` and any `.env` file. A value and its file set together is a startup error.
+An empty-string variable counts as unset, so `TAILSCALE_AUTHKEY=${TAILSCALE_AUTHKEY:-}` in a Compose file
+does not conflict with a key file.
+
+---
+
+## Upgrading
+
+### To v0.10.0
+
+**Breaking changes**
+
+- **`tailscale.enabled` is the only switch for the embedded Tailscale node.** An auth key alone no longer
+  starts the node (it is ignored, with one info log line). Existing tailnet deployments must set
+  `tailscale.enabled: true` (`DMANAGER_TAILSCALE_ENABLED` / `TAILSCALE_ENABLED`). With `enabled: true` an empty
+  auth key fails startup.
+- **`tailscale.https_enabled` serves HTTPS instead of HTTP, not both.** `false` serves plain HTTP on
+  `tailscale.port`; `true` serves HTTPS on tailnet port 443 only, and `tailscale.port` is unused. If the
+  tailnet lacks MagicDNS or HTTPS certificates, no tailnet listener runs and the error shows in the status
+  card (there is no fallback to HTTP). Update bookmarks, `webauthn.origins` and any reverse proxy that relied
+  on the plain-HTTP tailnet URL.
+- **Externally managed containers are locked server-side.** Containers carrying the `dmanager.managed-by`
+  label, or matching `docker.external_label_selectors`, cannot be upgraded or have auto-update enabled (the
+  request is rejected), the scheduler never auto-updates them, and update notifications are skipped unless
+  `scheduler.notify_external_updates` is `true`. The UI shows them with a badge and disabled controls. See
+  [Externally managed containers](../README.md#externally-managed-containers).
+
+**New, non-breaking options**
+
+- `server.http.enabled` and `server.listen_address`: turn the plain HTTP listener off (tailnet-only
+  deployments) or bind it to one address. See §2.1.
+- `*_file` variants for the Tailscale auth key, SMTP password and registry passwords:
+  see [Secrets from files](#secrets-from-files).
+- A Nix flake package and a NixOS module (`services.dmanager`): see
+  [NixOS module](../README.md#nixos-module).

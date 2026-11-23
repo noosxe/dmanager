@@ -45,6 +45,9 @@ services:
       # - DMANAGER_REGISTRIES_0_HOST=ghcr.io
       # - DMANAGER_REGISTRIES_0_USERNAME=myuser
       # - DMANAGER_REGISTRIES_0_PASSWORD=mypassword
+      # Better: read the token from a Compose secret instead of a plain value
+      # (docs/deployment.md, "Secrets from files"):
+      # - DMANAGER_REGISTRIES_0_PASSWORD_FILE=/run/secrets/ghcr_token
       # Embedded Tailscale node (docs/tailscale.md): off unless
       # TAILSCALE_ENABLED=true is set in .env (the auth key is then required). Node state persists under /var/lib/dmanager/tailscale (same
       # volume as the database), so the key is only needed for the first start.

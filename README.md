@@ -261,6 +261,7 @@ A list of registry credential entries. Each entry supports the following fields:
 | `registries[].host` | `string` | — | Registry hostname (e.g. `ghcr.io`, `registry.example.com`). |
 | `registries[].username` | `string` | — | Authentication username. |
 | `registries[].password` | `string` | — | Authentication password or access token. |
+| `registries[].password_file` | `string` | — | Path of a file holding the password or token; mutually exclusive with `password`. Preferred, see [Secrets from files](docs/deployment.md#secrets-from-files). |
 
 **Example with private registries:**
 
@@ -459,7 +460,7 @@ virtualisation.oci-containers.containers.<name>.labels."dmanager.managed-by" = "
 ## Documentation
 
 - [docs/tailscale.md](docs/tailscale.md) — embedded Tailscale node: setup, HTTPS, passkeys over the tailnet
-- [docs/deployment.md](docs/deployment.md) — deployment guide
+- [docs/deployment.md](docs/deployment.md) — deployment guide, secrets from files, [upgrade notes](docs/deployment.md#upgrading)
 - [docs/security.md](docs/security.md) — security model
 - [docs/design.md](docs/design.md) — architecture and design decisions
 
