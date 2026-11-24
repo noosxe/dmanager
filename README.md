@@ -125,6 +125,7 @@ server:
   db_path: "/var/lib/dmanager/dmanager.db"
   allowed_origins: []
   trusted_proxy: false
+  trusted_proxy_hops: 1
 
 docker:
   host: "unix:///var/run/docker.sock"
@@ -187,7 +188,8 @@ registries: []
 | `server.http.enabled` | `bool` | `true` | Serve the plain HTTP listener. May be `false` only when `tailscale.enabled` is `true`; see [Tailnet-only deployment](docs/tailscale.md#10-tailnet-only-deployment-no-plain-http-listener). |
 | `server.db_path` | `string` | `"dmanager.db"` | Path to the SQLite database file. Inside Docker this should be on a persistent volume (e.g. `/var/lib/dmanager/dmanager.db`). |
 | `server.allowed_origins` | `string[]` | `[]` | List of allowed CORS origins. Leave empty to disallow cross-origin requests. Use `["*"]` to allow all origins. |
-| `server.trusted_proxy` | `bool` | `false` | When `true`, trusts `X-Forwarded-For` header from reverse proxies for client IP extraction and rate limiting. Set it behind a reverse proxy; otherwise all clients share the proxy's address and login rate limits apply to them together. |
+| `server.trusted_proxy` | `bool` | `false` | When `true`, takes the client IP for rate limiting and the audit log from `X-Forwarded-For`, read from the right (see `trusted_proxy_hops`). Set it behind a reverse proxy; otherwise all clients share the proxy's address and login rate limits apply to them together. The proxy must append to `X-Forwarded-For` rather than replace it (nginx `$proxy_add_x_forwarded_for`; Caddy and Traefik do by default). |
+| `server.trusted_proxy_hops` | `int` | `1` | Number of reverse proxies in front of dmanager that append to `X-Forwarded-For`. The client IP is the entry that many positions from the right, so `1` uses the rightmost entry (the address the nearest proxy saw) and `2` suits Cloudflare in front of nginx. Entries further left are client-controlled and ignored. Must be at least `1`; only used when `trusted_proxy` is `true`. |
 
 #### `docker` — Docker daemon connection
 
@@ -314,6 +316,7 @@ All configuration values can be overridden via environment variables prefixed wi
 | `DMANAGER_SERVER_DB_PATH` | `server.db_path` | `dmanager.db` | Path to the SQLite database file. |
 | `DMANAGER_SERVER_ALLOWED_ORIGINS` | `server.allowed_origins` | *(empty)* | Comma-separated list of allowed CORS origins. |
 | `DMANAGER_SERVER_TRUSTED_PROXY` | `server.trusted_proxy` | `false` | Trust `X-Forwarded-For` header for client IP extraction. |
+| `DMANAGER_SERVER_TRUSTED_PROXY_HOPS` | `server.trusted_proxy_hops` | `1` | Proxies appending to `X-Forwarded-For`; the client IP is that many entries from the right. |
 | `DMANAGER_DOCKER_HOST` | `docker.host` | `unix:///var/run/docker.sock` | Docker daemon endpoint. |
 | `DMANAGER_DOCKER_EXTERNAL_LABEL_SELECTORS` | `docker.external_label_selectors` | *(empty)* | Comma-separated label selectors (`key=value` or `key`) marking containers as externally managed. |
 | `DMANAGER_SCHEDULER_INTERVAL_MINUTES` | `scheduler.interval_minutes` | `60` | Minutes between automatic image update checks. |

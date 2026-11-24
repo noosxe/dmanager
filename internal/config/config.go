@@ -43,6 +43,10 @@ type ServerConfig struct {
 	DBPath         string     `koanf:"db_path"`
 	AllowedOrigins []string   `koanf:"allowed_origins"`
 	TrustedProxy   bool       `koanf:"trusted_proxy"`
+	// TrustedProxyHops is how many reverse proxies append to X-Forwarded-For
+	// in front of the server; the client address is the entry that many
+	// positions from the right. Only used when TrustedProxy is true.
+	TrustedProxyHops int `koanf:"trusted_proxy_hops"`
 }
 
 type DockerConfig struct {
@@ -164,6 +168,10 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("webauthn.origins cannot be empty when webauthn.rp_id is set")
 	}
 
+	if c.Server.TrustedProxyHops < 1 {
+		return fmt.Errorf("server.trusted_proxy_hops must be at least 1, got %d", c.Server.TrustedProxyHops)
+	}
+
 	if c.Server.HTTP.Enabled {
 		port, err := strconv.Atoi(c.Server.Port)
 		if err != nil || port < 1 || port > 65535 {
@@ -283,6 +291,7 @@ func Load(configPath string) (*Config, error) {
 		"server.http.enabled":                true,
 		"server.db_path":                     "dmanager.db",
 		"server.trusted_proxy":               false,
+		"server.trusted_proxy_hops":          1,
 		"docker.host":                        "unix:///var/run/docker.sock",
 		"scheduler.interval_minutes":         60,
 		"scheduler.notify_external_updates":  false,

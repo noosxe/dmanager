@@ -582,7 +582,7 @@ func TestSlideSessionUsesPerSessionIdleTimeout(t *testing.T) {
 func TestLoginStoresIdleTimeoutPerSession(t *testing.T) {
 	queries := newTestDB(t)
 	cfg := testAuthConfig()
-	svc := NewService(queries, slog.Default(), cfg, testWebAuthnConfig(), false)
+	svc := NewService(queries, slog.Default(), cfg, testWebAuthnConfig(), false, 1)
 	ctx := context.Background()
 
 	if _, err := svc.SetupAdmin(ctx, connect.NewRequest(&v1.SetupAdminRequest{Username: testAdminUsername, Password: testPassword})); err != nil {

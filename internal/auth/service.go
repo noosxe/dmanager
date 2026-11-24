@@ -41,12 +41,13 @@ type Service struct {
 	webauthnCfg       config.WebAuthnConfig
 	webauthn          *webauthn.WebAuthn
 	trustedProxy      bool
+	trustedHops       int
 	dummyHash         []byte
 	rateLimiter       *RateLimiter
 	passwordValidator *PasswordValidator
 }
 
-func NewService(queries *db.Queries, logger *slog.Logger, cfg config.AuthConfig, webauthnCfg config.WebAuthnConfig, trustedProxy bool) *Service {
+func NewService(queries *db.Queries, logger *slog.Logger, cfg config.AuthConfig, webauthnCfg config.WebAuthnConfig, trustedProxy bool, trustedHops int) *Service {
 	if cfg.SessionIdleTimeout <= 0 {
 		cfg.SessionIdleTimeout = 168 * time.Hour
 	}
@@ -96,6 +97,7 @@ func NewService(queries *db.Queries, logger *slog.Logger, cfg config.AuthConfig,
 		webauthnCfg:       webauthnCfg,
 		webauthn:          web,
 		trustedProxy:      trustedProxy,
+		trustedHops:       trustedHops,
 		dummyHash:         dummyHash,
 		rateLimiter:       NewRateLimiter(trustedProxy),
 		passwordValidator: NewPasswordValidator(cfg.BreachedPasswordCheck, logger),
@@ -181,7 +183,7 @@ func (s *Service) SetupAdmin(ctx context.Context, req *connect.Request[v1.SetupA
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create admin: %w", err))
 	}
 
-	clientIP := ExtractClientIP(req.Header(), req.Peer().Addr, s.trustedProxy)
+	clientIP := ExtractClientIP(req.Header(), req.Peer().Addr, s.trustedProxy, s.trustedHops)
 	s.recordAuthEvent(ctx, &user.ID, user.Username, "setup_admin", "ip: "+clientIP)
 
 	return connect.NewResponse(&v1.SetupAdminResponse{
@@ -254,7 +256,7 @@ func (s *Service) Login(ctx context.Context, req *connect.Request[v1.LoginReques
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("username and password are required"))
 	}
 
-	clientIP := ExtractClientIP(req.Header(), req.Peer().Addr, s.trustedProxy)
+	clientIP := ExtractClientIP(req.Header(), req.Peer().Addr, s.trustedProxy, s.trustedHops)
 
 	locked, retryAfter := s.rateLimiter.Check(MethodPassword, username, clientIP, time.Now())
 	if locked {
@@ -721,7 +723,7 @@ func (s *Service) BeginPasskeyLogin(ctx context.Context, req *connect.Request[v1
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("passkey support is not configured on this server"))
 	}
 
-	clientIP := ExtractClientIP(req.Header(), req.Peer().Addr, s.trustedProxy)
+	clientIP := ExtractClientIP(req.Header(), req.Peer().Addr, s.trustedProxy, s.trustedHops)
 	locked, retryAfter := s.rateLimiter.Check(MethodPasskey, "", clientIP, time.Now())
 	if locked {
 		retrySec := int(math.Ceil(retryAfter.Seconds()))
@@ -805,7 +807,7 @@ func (s *Service) FinishPasskeyLogin(ctx context.Context, req *connect.Request[v
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("passkey support is not configured on this server"))
 	}
 
-	clientIP := ExtractClientIP(req.Header(), req.Peer().Addr, s.trustedProxy)
+	clientIP := ExtractClientIP(req.Header(), req.Peer().Addr, s.trustedProxy, s.trustedHops)
 
 	parsedResponse, err := protocol.ParseCredentialRequestResponseBody(strings.NewReader(req.Msg.ResponseJson))
 	if err != nil {

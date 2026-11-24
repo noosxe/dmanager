@@ -153,7 +153,7 @@ var serveCmd = &cobra.Command{
 			cmdLogger.Debug("smtp disabled")
 		}
 
-		authSvc := auth.NewService(queries, logger.With("module", "auth"), cfg.Auth, cfg.WebAuthn, cfg.Server.TrustedProxy)
+		authSvc := auth.NewService(queries, logger.With("module", "auth"), cfg.Auth, cfg.WebAuthn, cfg.Server.TrustedProxy, cfg.Server.TrustedProxyHops)
 		auditor := audit.NewRecorder(queries, logger.With("module", "audit"))
 
 		authInterceptor := auth.NewInterceptor(queries, logger.With("module", "auth"), cfg.Auth.SessionIdleTimeout, auditor).

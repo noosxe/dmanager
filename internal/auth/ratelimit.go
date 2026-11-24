@@ -293,18 +293,21 @@ func (rl *RateLimiter) evictExpired(now time.Time) {
 	}
 }
 
-// ExtractClientIP extracts the client IP address from the request header or remote address.
-func ExtractClientIP(reqHeader http.Header, remoteAddr string, trustedProxy bool) string {
+// ExtractClientIP returns the client address for rate limiting and auditing.
+//
+// Without trustedProxy it is the TCP peer address and X-Forwarded-For is
+// ignored. With it, X-Forwarded-For is read from the right: every proxy
+// appends the address it received the request from, so only the entries added
+// by the operator's own proxies can be trusted and anything further left is
+// client-controlled. The entry trustedHops positions from the right is used
+// (1 is the rightmost entry, the address the nearest proxy saw). If the header
+// has fewer entries, the leftmost one is used. Multiple header lines are
+// combined in order. When the chosen entry is not a valid IP address the peer
+// address is returned.
+func ExtractClientIP(reqHeader http.Header, remoteAddr string, trustedProxy bool, trustedHops int) string {
 	if trustedProxy && reqHeader != nil {
-		xff := reqHeader.Get("X-Forwarded-For")
-		if xff != "" {
-			parts := strings.Split(xff, ",")
-			if len(parts) > 0 {
-				clientIP := strings.TrimSpace(parts[0])
-				if clientIP != "" {
-					return clientIP
-				}
-			}
+		if ip := forwardedClientIP(reqHeader.Values("X-Forwarded-For"), trustedHops); ip != "" {
+			return ip
 		}
 	}
 
@@ -317,4 +320,35 @@ func ExtractClientIP(reqHeader http.Header, remoteAddr string, trustedProxy bool
 		return host
 	}
 	return remoteAddr
+}
+
+// forwardedClientIP picks the entry hops from the right of the combined
+// X-Forwarded-For lines and returns it as a canonical IP, or "" if there is no
+// usable entry.
+func forwardedClientIP(lines []string, hops int) string {
+	if hops < 1 {
+		hops = 1
+	}
+	var entries []string
+	for _, line := range lines {
+		entries = append(entries, strings.Split(line, ",")...)
+	}
+	if len(entries) == 0 {
+		return ""
+	}
+	idx := len(entries) - hops
+	if idx < 0 {
+		idx = 0
+	}
+	entry := strings.TrimSpace(entries[idx])
+	if ip := net.ParseIP(entry); ip != nil {
+		return ip.String()
+	}
+	// Tolerate "ip:port" and "[ipv6]:port".
+	if host, _, err := net.SplitHostPort(entry); err == nil {
+		if ip := net.ParseIP(host); ip != nil {
+			return ip.String()
+		}
+	}
+	return ""
 }

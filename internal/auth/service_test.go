@@ -73,7 +73,7 @@ func testWebAuthnConfig() config.WebAuthnConfig {
 
 func TestGetServerStatus(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false, 1)
 	ctx := context.Background()
 
 	resp, err := svc.GetServerStatus(ctx, connect.NewRequest(&v1.GetServerStatusRequest{}))
@@ -108,7 +108,7 @@ func TestGetServerStatus(t *testing.T) {
 
 func TestSetupAdmin(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false, 1)
 	ctx := context.Background()
 
 	resp, err := svc.SetupAdmin(ctx, connect.NewRequest(&v1.SetupAdminRequest{
@@ -150,7 +150,7 @@ func TestSetupAdmin(t *testing.T) {
 
 func TestLogin(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false, 1)
 	ctx := context.Background()
 
 	_, err := svc.SetupAdmin(ctx, connect.NewRequest(&v1.SetupAdminRequest{
@@ -239,7 +239,7 @@ func TestLogin(t *testing.T) {
 
 func TestLoginLegacyBcryptCost10(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false, 1)
 	ctx := context.Background()
 
 	// Seed user with legacy cost 10 hash
@@ -333,7 +333,7 @@ func TestCookieSecureMatrix(t *testing.T) {
 
 func TestGetMe(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false, 1)
 
 	user := db.User{
 		ID:       42,
@@ -362,7 +362,7 @@ func TestGetMe(t *testing.T) {
 
 func TestLogout(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false, 1)
 	ctx := context.Background()
 
 	_, err := svc.SetupAdmin(ctx, connect.NewRequest(&v1.SetupAdminRequest{
@@ -406,7 +406,7 @@ func TestLogout(t *testing.T) {
 
 func TestSetupAdminPasswordPolicyRejection(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false, 1)
 	ctx := context.Background()
 
 	// Less than 12 chars should be rejected
@@ -424,7 +424,7 @@ func TestSetupAdminPasswordPolicyRejection(t *testing.T) {
 
 func TestSetupAdminPasswordTooLong(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false, 1)
 	ctx := context.Background()
 
 	// 73 bytes: one over the bcrypt limit.
@@ -460,7 +460,7 @@ func TestSetupAdminPasswordTooLong(t *testing.T) {
 
 func TestSetupAdminConcurrentCreatesOneUser(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false, 1)
 	ctx := context.Background()
 
 	const callers = 8
@@ -505,7 +505,7 @@ func TestSetupAdminConcurrentCreatesOneUser(t *testing.T) {
 
 func TestLoginRateLimitingThrottling(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false, 1)
 	ctx := context.Background()
 
 	_, err := svc.SetupAdmin(ctx, connect.NewRequest(&v1.SetupAdminRequest{
@@ -545,7 +545,7 @@ func TestLoginRateLimitingThrottling(t *testing.T) {
 
 func TestLoginTimingEqualization(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false, 1)
 	ctx := context.Background()
 
 	if len(svc.dummyHash) == 0 {
@@ -567,7 +567,7 @@ func TestLoginTimingEqualization(t *testing.T) {
 
 func TestAuthEventsLoggingOnDecisionPoints(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false, 1)
 	ctx := context.Background()
 
 	// 1. Setup Admin writes setup_admin event
@@ -634,7 +634,7 @@ func TestAuthEventsLoggingOnDecisionPoints(t *testing.T) {
 
 func TestListAuthEventsScoping(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false, 1)
 	ctx := context.Background()
 
 	// Create admin and viewer users
@@ -696,7 +696,7 @@ func TestListAuthEventsScoping(t *testing.T) {
 
 func TestSessionManagementAndRevocation(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false, 1)
 	ctx := context.Background()
 
 	user, err := queries.CreateUser(ctx, db.CreateUserParams{
@@ -873,7 +873,7 @@ func TestPasskeyLoginEnabledStatus(t *testing.T) {
 	ctx := context.Background()
 
 	// 1. Configured WebAuthn
-	svc1 := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+	svc1 := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false, 1)
 	resp1, err := svc1.GetServerStatus(ctx, connect.NewRequest(&v1.GetServerStatusRequest{}))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -886,7 +886,7 @@ func TestPasskeyLoginEnabledStatus(t *testing.T) {
 	}
 
 	// 2. Unconfigured WebAuthn
-	svc2 := NewService(queries, slog.Default(), testAuthConfig(), config.WebAuthnConfig{}, false)
+	svc2 := NewService(queries, slog.Default(), testAuthConfig(), config.WebAuthnConfig{}, false, 1)
 	resp2, err := svc2.GetServerStatus(ctx, connect.NewRequest(&v1.GetServerStatusRequest{}))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -898,7 +898,7 @@ func TestPasskeyLoginEnabledStatus(t *testing.T) {
 
 func TestBeginPasskeyRegistration(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false, 1)
 	ctx := context.Background()
 
 	user, err := queries.CreateUser(ctx, db.CreateUserParams{
@@ -995,7 +995,7 @@ func TestPersistedSessionExtensionsSolicitCredPropsOutput(t *testing.T) {
 
 func TestPasskeyCredentialManagementAndLockoutGuardrail(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false, 1)
 	ctx := context.Background()
 
 	// 1. User with password
@@ -1115,7 +1115,7 @@ func TestPasskeyCredentialManagementAndLockoutGuardrail(t *testing.T) {
 
 func TestBeginPasskeyLoginAndChallengeCreation(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false, 1)
 	ctx := context.Background()
 
 	resp, err := svc.BeginPasskeyLogin(ctx, connect.NewRequest(&v1.BeginPasskeyLoginRequest{}))
@@ -1153,7 +1153,7 @@ func TestBeginPasskeyLoginAndChallengeCreation(t *testing.T) {
 
 func TestFinishPasskeyLoginInvalidPayloadAndMissingChallenge(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false, 1)
 	ctx := context.Background()
 
 	// 1. Malformed payload
@@ -1188,7 +1188,7 @@ func TestDeletePasskeySignOutOtherSessions(t *testing.T) {
 	for _, signOut := range []bool{false, true} {
 		t.Run(fmt.Sprintf("sign_out_other_sessions=%v", signOut), func(t *testing.T) {
 			queries := newTestDB(t)
-			svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+			svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false, 1)
 			ctx := context.Background()
 
 			user, err := queries.CreateUser(ctx, db.CreateUserParams{Username: "carol", PasswordHash: testDummyHash, Role: viewerRole})
@@ -1270,7 +1270,7 @@ func TestDeletePasskeySignOutOtherSessions(t *testing.T) {
 
 func TestSessionRevokeFailsClosedWithoutSessionID(t *testing.T) {
 	queries := newTestDB(t)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false, 1)
 	ctx := context.Background()
 
 	user, err := queries.CreateUser(ctx, db.CreateUserParams{Username: "nosession", PasswordHash: testDummyHash, Role: viewerRole})
