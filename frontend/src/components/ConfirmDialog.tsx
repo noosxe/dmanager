@@ -53,7 +53,6 @@ export function ConfirmDialog({
       title={title}
       description={message}
       initialFocus={variant === "danger" ? "cancel" : "confirm"}
-      children={children}
       footer={
         <>
           <button
@@ -77,6 +76,8 @@ export function ConfirmDialog({
           </button>
         </>
       }
-    />
+    >
+      {children}
+    </Dialog>
   );
 }
