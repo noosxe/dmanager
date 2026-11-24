@@ -1267,3 +1267,58 @@ func TestDeletePasskeySignOutOtherSessions(t *testing.T) {
 		})
 	}
 }
+
+func TestSessionRevokeFailsClosedWithoutSessionID(t *testing.T) {
+	queries := newTestDB(t)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+	ctx := context.Background()
+
+	user, err := queries.CreateUser(ctx, db.CreateUserParams{Username: "nosession", PasswordHash: testDummyHash, Role: viewerRole})
+	if err != nil {
+		t.Fatalf("create user: %v", err)
+	}
+	credID := []byte("cred-nosession")
+	if _, cerr := queries.CreateWebAuthnCredential(ctx, db.CreateWebAuthnCredentialParams{
+		CredentialID: credID, UserID: user.ID, PublicKey: []byte("pk"), Aaguid: []byte{}, Transport: "usb", Name: "Key", CreatedAt: time.Now(),
+	}); cerr != nil {
+		t.Fatalf("create credential: %v", cerr)
+	}
+	now := time.Now()
+	for _, id := range []string{"s1", "s2"} {
+		if _, serr := queries.CreateSession(ctx, db.CreateSessionParams{
+			SessionID: id, UserID: user.ID, ExpiresAt: now.Add(time.Hour), LastSeenAt: now, AbsoluteExpiresAt: now.Add(24 * time.Hour),
+		}); serr != nil {
+			t.Fatalf("create session: %v", serr)
+		}
+	}
+	sessionsLeft := func() int {
+		rows, lerr := queries.ListSessionsByUser(ctx, user.ID)
+		if lerr != nil {
+			t.Fatalf("list sessions: %v", lerr)
+		}
+		return len(rows)
+	}
+
+	noSession := WithUser(ctx, user) // a user but no session ID in the context
+
+	_, err = svc.RevokeAllOtherSessions(noSession, connect.NewRequest(&v1.RevokeAllOtherSessionsRequest{}))
+	if connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Errorf("RevokeAllOtherSessions without a session: code = %v, want Unauthenticated", connect.CodeOf(err))
+	}
+	if n := sessionsLeft(); n != 2 {
+		t.Fatalf("RevokeAllOtherSessions without a session deleted sessions: %d left, want 2", n)
+	}
+
+	_, err = svc.DeletePasskey(noSession, connect.NewRequest(&v1.DeletePasskeyRequest{
+		Id: hex.EncodeToString(credID), SignOutOtherSessions: true,
+	}))
+	if connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Errorf("DeletePasskey without a session: code = %v, want Unauthenticated", connect.CodeOf(err))
+	}
+	if n := sessionsLeft(); n != 2 {
+		t.Errorf("DeletePasskey without a session deleted sessions: %d left, want 2", n)
+	}
+	if _, gerr := queries.GetWebAuthnCredential(ctx, credID); gerr != nil {
+		t.Errorf("the passkey must not be deleted when the sign-out cannot run: %v", gerr)
+	}
+}
