@@ -221,7 +221,7 @@ registries: []
 |-----|------|---------|-------------|
 | `webauthn.rp_id` | `string` | `""` | Relying Party ID for passkeys (effective domain without port, e.g. `"dmanager.example.com"` or `"localhost"`). |
 | `webauthn.origins` | `string[]` | `[]` | Fully-qualified origins allowed for passkey ceremonies (e.g. `["https://dmanager.example.com"]`). |
-| `webauthn.require_user_verification` | `string` | `"preferred"` | User verification requirement (`"preferred"`, `"required"`, or `"discouraged"`). |
+| `webauthn.require_user_verification` | `string` | `"preferred"` | User verification policy: `preferred` (default), `required` or `discouraged`. With `required`, every passkey sign-in and registration asks for the authenticator's PIN or biometric (for a password manager, its unlock check) and credentials without it are rejected. With `preferred`, the authenticator decides: a PIN-less security key or an already-unlocked password manager can sign in with one confirmation. `discouraged` does not ask for it. A change applies to new ceremonies; existing passkeys are kept. See [Passkey user verification](docs/security.md#25-webauthn--passkey-security-model). |
 
 #### `tailscale` — embedded tailnet node (optional)
 
@@ -327,7 +327,7 @@ All configuration values can be overridden via environment variables prefixed wi
 | `DMANAGER_AUTH_BREACHED_PASSWORD_CHECK` | `auth.breached_password_check` | `false` | Enable HaveIBeenPwned password breach checking. |
 | `DMANAGER_WEBAUTHN_RP_ID` | `webauthn.rp_id` | *(empty)* | Relying Party ID for passkey authentication. |
 | `DMANAGER_WEBAUTHN_ORIGINS` | `webauthn.origins` | *(empty)* | Comma-separated list of allowed WebAuthn origins. |
-| `DMANAGER_WEBAUTHN_REQUIRE_USER_VERIFICATION` | `webauthn.require_user_verification` | `preferred` | Passkey user verification policy (`preferred`, `required`, `discouraged`). |
+| `DMANAGER_WEBAUTHN_REQUIRE_USER_VERIFICATION` | `webauthn.require_user_verification` | `preferred` | Passkey user verification policy (`preferred`, `required`, `discouraged`); see [`webauthn`](#webauthn--passkeys--webauthn-configuration). |
 | `DMANAGER_TAILSCALE_ENABLED` | `tailscale.enabled` | `false` | Switches the embedded Tailscale node on. Requires an auth key. |
 | `DMANAGER_TAILSCALE_AUTHKEY` | `tailscale.auth_key` | *(empty)* | Embedded Tailscale node auth key — required when enabled; ignored when disabled. |
 | `DMANAGER_TAILSCALE_AUTHKEY_FILE` (also bare `TAILSCALE_AUTHKEY_FILE`) | `tailscale.auth_key_file` | *(empty)* | File holding the Tailscale auth key. |

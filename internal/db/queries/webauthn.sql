@@ -10,11 +10,12 @@ INSERT INTO webauthn_credentials (
     clone_warning,
     backup_eligible,
     backup_state,
+    user_verified,
     name,
     created_at,
     last_used_at
 ) VALUES (
-    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 )
 RETURNING *;
 

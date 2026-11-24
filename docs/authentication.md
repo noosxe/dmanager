@@ -213,6 +213,7 @@ CREATE TABLE webauthn_credentials (
     aaguid BLOB NOT NULL,                 -- authenticator model for friendly naming
     sign_count INTEGER NOT NULL DEFAULT 0,-- clone detection
     clone_warning INTEGER NOT NULL DEFAULT 0,
+    user_verified INTEGER NOT NULL DEFAULT 1,-- UV flag at registration
     backup_eligible INTEGER NOT NULL DEFAULT 0,  --CredentialFlags
     backup_state INTEGER NOT NULL DEFAULT 0,
     name TEXT NOT NULL DEFAULT '',        -- user-assigned label ("YubiKey 5C")
@@ -328,7 +329,7 @@ Verification rules (enforced via `go-webauthn`, listed for reviewability):
 2. Origin ∈ `webauthn.origins`; RP ID hash matches.
 3. Signature validates against the stored public key.
 4. `sign_count`: the library flags a regression when the new count is ≤ the stored count and either is nonzero (this includes a stored count above zero followed by 0). The login is **allowed**: `clone_warning` is set to 1, the presented count becomes the new stored count, a `passkey_clone_warning` audit event (credential name, IP) is written, and the attempt is not counted as a failed login. A regression is a signal, not proof: a restored backup or a provider that resets counters looks the same, and rejecting would lock those users out. The flag is sticky; Settings shows a warning badge on the passkey until it is deleted. Authenticators that always report 0 (most synced passkeys) never trigger it.
-5. If `require_user_verification = required`, `user_verified` must be true.
+5. If `require_user_verification = required`, the assertion's UV flag must be set; under `preferred` or `discouraged` it is not enforced. The UV flag of the registration ceremony is stored per credential (`user_verified`) and shown in Settings; see [Security §2.5](security.md#25-webauthn--passkey-security-model).
 6. On success: update `sign_count`, `last_used_at`, `backup_state`; issue the same session cookie as password login (shared code path — one `issueSession(ctx, userID, rememberMe)` helper).
 
 Rate limiting (§6) applies to `BeginPasskeyLogin`/`FinishPasskeyLogin` per source IP: the challenge table doubles as a natural slowdown, but failed-finish attempts should count toward the same backoff counter as password failures.

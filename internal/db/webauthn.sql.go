@@ -89,13 +89,14 @@ INSERT INTO webauthn_credentials (
     clone_warning,
     backup_eligible,
     backup_state,
+    user_verified,
     name,
     created_at,
     last_used_at
 ) VALUES (
-    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 )
-RETURNING credential_id, user_id, public_key, attestation_type, transport, aaguid, sign_count, clone_warning, backup_eligible, backup_state, name, created_at, last_used_at
+RETURNING credential_id, user_id, public_key, attestation_type, transport, aaguid, sign_count, clone_warning, backup_eligible, backup_state, name, created_at, last_used_at, user_verified
 `
 
 type CreateWebAuthnCredentialParams struct {
@@ -109,6 +110,7 @@ type CreateWebAuthnCredentialParams struct {
 	CloneWarning    int64
 	BackupEligible  int64
 	BackupState     int64
+	UserVerified    int64
 	Name            string
 	CreatedAt       time.Time
 	LastUsedAt      sql.NullTime
@@ -126,6 +128,7 @@ func (q *Queries) CreateWebAuthnCredential(ctx context.Context, arg CreateWebAut
 		arg.CloneWarning,
 		arg.BackupEligible,
 		arg.BackupState,
+		arg.UserVerified,
 		arg.Name,
 		arg.CreatedAt,
 		arg.LastUsedAt,
@@ -145,6 +148,7 @@ func (q *Queries) CreateWebAuthnCredential(ctx context.Context, arg CreateWebAut
 		&i.Name,
 		&i.CreatedAt,
 		&i.LastUsedAt,
+		&i.UserVerified,
 	)
 	return i, err
 }
@@ -195,7 +199,7 @@ func (q *Queries) GetUnconsumedWebAuthnChallenge(ctx context.Context, arg GetUnc
 }
 
 const getWebAuthnCredential = `-- name: GetWebAuthnCredential :one
-SELECT credential_id, user_id, public_key, attestation_type, transport, aaguid, sign_count, clone_warning, backup_eligible, backup_state, name, created_at, last_used_at FROM webauthn_credentials
+SELECT credential_id, user_id, public_key, attestation_type, transport, aaguid, sign_count, clone_warning, backup_eligible, backup_state, name, created_at, last_used_at, user_verified FROM webauthn_credentials
 WHERE credential_id = ? LIMIT 1
 `
 
@@ -216,12 +220,13 @@ func (q *Queries) GetWebAuthnCredential(ctx context.Context, credentialID []byte
 		&i.Name,
 		&i.CreatedAt,
 		&i.LastUsedAt,
+		&i.UserVerified,
 	)
 	return i, err
 }
 
 const listWebAuthnCredentialsByUser = `-- name: ListWebAuthnCredentialsByUser :many
-SELECT credential_id, user_id, public_key, attestation_type, transport, aaguid, sign_count, clone_warning, backup_eligible, backup_state, name, created_at, last_used_at FROM webauthn_credentials
+SELECT credential_id, user_id, public_key, attestation_type, transport, aaguid, sign_count, clone_warning, backup_eligible, backup_state, name, created_at, last_used_at, user_verified FROM webauthn_credentials
 WHERE user_id = ?
 ORDER BY created_at ASC
 `
@@ -249,6 +254,7 @@ func (q *Queries) ListWebAuthnCredentialsByUser(ctx context.Context, userID int6
 			&i.Name,
 			&i.CreatedAt,
 			&i.LastUsedAt,
+			&i.UserVerified,
 		); err != nil {
 			return nil, err
 		}

@@ -95,6 +95,7 @@ describe("Settings Component", () => {
           backupState: true,
           signCount: 1,
           cloneWarning: false,
+          userVerified: true,
           createdAt: { seconds: BigInt(1700000000), nanos: 0 },
           lastUsedAt: { seconds: BigInt(1700000000), nanos: 0 },
           $typeName: "dmanager.v1.Passkey",
@@ -465,6 +466,34 @@ describe("Settings Component", () => {
       "title",
       expect.stringContaining("until the passkey is deleted"),
     );
+  });
+
+  it("flags a passkey registered without user verification", async () => {
+    vi.mocked(authClient.listPasskeys).mockResolvedValue({
+      passkeys: [
+        {
+          id: "cred-8",
+          name: "PIN-less key",
+          friendlyDeviceName: "Example Security Key",
+          backupEligible: false,
+          cloneWarning: false,
+          userVerified: false,
+          createdAt: { seconds: BigInt(1700000000), nanos: 0 },
+          $typeName: "dmanager.v1.Passkey",
+        },
+      ],
+      $typeName: "dmanager.v1.ListPasskeysResponse",
+    } as unknown as ListPasskeysResponse);
+    render(
+      <ToastProvider>
+        <Settings />
+      </ToastProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: /security & sessions/i }));
+
+    const badge = await screen.findByText("No User Verification");
+    expect(badge.closest("[title]")).toHaveAttribute("title", expect.stringContaining("required"));
+    expect(screen.queryByText("Counter Warning")).not.toBeInTheDocument();
   });
 
   it("deletes a passkey successfully", async () => {
