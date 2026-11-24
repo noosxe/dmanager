@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -723,5 +724,81 @@ func TestDuplicateCredentialIsPrimaryKeyViolation(t *testing.T) {
 	}
 	if isDuplicateKey(sql.ErrNoRows) {
 		t.Error("unrelated errors must not be treated as duplicates")
+	}
+}
+
+// TestConcurrentRegistrationsShareOneChallenge: parallel finishes with ONE
+// challenge but a different authenticator each. Only the atomic consume can
+// make exactly one win here, because the duplicate-credential check does not
+// apply (every credential ID differs). Losers must see the challenge error.
+func TestConcurrentRegistrationsShareOneChallenge(t *testing.T) {
+	const parallel = 16
+	_, queries, svc := newPasskeyService(t)
+	user := newPasskeyUser(t, svc.Queries, "otto")
+	authCtx := context.WithValue(context.Background(), userContextKey, user)
+	challenge := beginFakeRegistration(t, svc, user)
+
+	responses := make([]string, parallel)
+	for i := range responses {
+		responses[i] = newFakeAuthenticator(t).RegistrationResponseJSON(challenge, nil, regFlagsSynced, 0)
+	}
+	var next atomic.Int32
+	errs := raceAll(parallel, func() error {
+		_, err := svc.FinishPasskeyRegistration(authCtx, connect.NewRequest(&v1.FinishPasskeyRegistrationRequest{
+			ResponseJson: responses[next.Add(1)-1],
+		}))
+		return err
+	})
+	if got := countNil(errs); got != 1 {
+		t.Fatalf("expected exactly one success, got %d", got)
+	}
+	for _, err := range errs {
+		if err == nil {
+			continue
+		}
+		if connect.CodeOf(err) != connect.CodeInvalidArgument || !strings.Contains(err.Error(), "invalid or expired registration challenge") {
+			t.Errorf("loser must get the challenge error, got %v", err)
+		}
+	}
+	if rows, _ := queries.ListWebAuthnCredentialsByUser(context.Background(), user.ID); len(rows) != 1 {
+		t.Errorf("expected one stored credential, got %d", len(rows))
+	}
+}
+
+// TestConcurrentRegistrationsSameCredentialID: two finishes with different
+// challenges but the same credential ID. One stores it; the other must get
+// AlreadyExists (from the existence check or, if both pass it, from the
+// primary key), never Internal.
+func TestConcurrentRegistrationsSameCredentialID(t *testing.T) {
+	for round := 0; round < 10; round++ {
+		_, queries, svc := newPasskeyService(t)
+		user := newPasskeyUser(t, svc.Queries, "pia")
+		authCtx := context.WithValue(context.Background(), userContextKey, user)
+
+		first := newFakeAuthenticator(t)
+		second := newFakeAuthenticator(t)
+		second.credID = first.credID
+		responses := []string{
+			first.RegistrationResponseJSON(beginFakeRegistration(t, svc, user), nil, regFlagsSynced, 0),
+			second.RegistrationResponseJSON(beginFakeRegistration(t, svc, user), nil, regFlagsSynced, 0),
+		}
+		var next atomic.Int32
+		errs := raceAll(2, func() error {
+			_, err := svc.FinishPasskeyRegistration(authCtx, connect.NewRequest(&v1.FinishPasskeyRegistrationRequest{
+				ResponseJson: responses[next.Add(1)-1],
+			}))
+			return err
+		})
+		if got := countNil(errs); got != 1 {
+			t.Fatalf("round %d: expected exactly one success, got %d (%v)", round, got, errs)
+		}
+		for _, err := range errs {
+			if err != nil && connect.CodeOf(err) != connect.CodeAlreadyExists {
+				t.Errorf("round %d: loser must get AlreadyExists, got %v", round, err)
+			}
+		}
+		if rows, _ := queries.ListWebAuthnCredentialsByUser(context.Background(), user.ID); len(rows) != 1 {
+			t.Errorf("round %d: expected one stored credential, got %d", round, len(rows))
+		}
 	}
 }
