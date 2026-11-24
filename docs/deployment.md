@@ -284,6 +284,13 @@ does not conflict with a key file.
 
 ## Upgrading
 
+### Passkey changes (next release)
+
+- **Non-discoverable passkeys are not detected.** New registrations now require a discoverable credential and fail with a clear message otherwise. Passkeys registered earlier as non-discoverable are not detected: they never worked for sign-in (which is username-less) and can be deleted in Settings.
+- **Counter regressions no longer block sign-in.** A passkey whose counter goes backwards or resets now signs in and shows a warning badge in Settings (see [Security](security.md#25-webauthn--passkey-security-model)).
+- **Existing passkeys count as user-verified.** The new per-passkey verification flag cannot be recovered for passkeys registered before it was recorded, so they are assumed verified; only new registrations record the real value.
+- **Set `server.trusted_proxy` behind a reverse proxy.** Passkey sign-in start requests are limited to 20 per minute per client address; without the setting all clients share the proxy's address.
+
 ### To v0.10.0
 
 **Breaking changes**

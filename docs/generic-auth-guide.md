@@ -204,8 +204,8 @@ the UI hides the button.
    unexpired); resolve the credential by ID and the user from it;
    rate-limit check on the resolved username; verify the ceremony (origin,
    RP hash, signature vs stored public key).
-3. **Clone detection:** if the new sign count ≤ stored count and both are
-   nonzero → set `clone_warning`, store the new count, write an audit
+3. **Clone detection:** if the new sign count ≤ stored count, unless both
+   are 0 (so a drop from N to 0 is flagged) → set `clone_warning`, store the new count, write an audit
    event, but allow the login and record no failure.
 4. Success: update sign count / last-used / backup state, reset the
    rate-limit counter, and issue a session through the **same** issuance
