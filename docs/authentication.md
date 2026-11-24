@@ -194,9 +194,9 @@ Protobuf `bytes` fields round-trip binary credential/challenge data; `@github/we
 
 WebAuthn binds credentials to an **RP ID** (a registrable domain) and a set of **allowed origins**. This must be pinned in config, not derived per-request (deriving from the `Origin` header lets an attacker with DNS control register credentials for their own origin):
 
-* `webauthn.rp_id`: defaults to the request `Host` minus port when unset — acceptable for a single-domain deployment; must be set explicitly when the dashboard is reachable on multiple domains.
+* `webauthn.rp_id`: no default. If `rp_id` or `origins` is unset, passkeys stay disabled (the server logs that they are not configured and `GetServerStatus` reports `passkey_login_enabled = false`); setting `rp_id` without `origins` is a configuration error. It must cover every domain the dashboard is reached on.
 * `webauthn.origins`: must list every origin users reach the UI through (scheme + host + port), including `https://localhost:PORT` variants for local access.
-* Mismatched RP ID/origin is the single most common passkey integration failure; the settings page surfaces the effective values for debugging.
+* Mismatched RP ID/origin is the single most common passkey integration failure; Settings → Security & Sessions shows the effective RP ID and origins (from `GetServerStatus`) for debugging. See also [passkeys.md](passkeys.md) for what clients must support.
 
 ### 4.3. Schema
 
@@ -254,7 +254,7 @@ service AuthService {
 
   // --- Passkey login (Unauthenticated) ---
   rpc BeginPasskeyLogin(BeginPasskeyLoginRequest) returns (BeginPasskeyLoginResponse);
-  rpc FinishPasskeyLogin(FinishPasskeyLoginRequest) returns (FinishPasskeyLoginResponse);
+  rpc FinishPasskeyLogin(FinishPasskeyLoginRequest) returns (LoginResponse);
 
   // --- Credential management (Authenticated) ---
   rpc ListPasskeys(ListPasskeysRequest) returns (ListPasskeysResponse);
@@ -339,9 +339,9 @@ Rate limiting (§6) applies to `BeginPasskeyLogin`/`FinishPasskeyLogin` per sour
 ### 4.7. Lockout Guardrails
 
 * `DeletePasskey` takes `sign_out_other_sessions`: when true, all other sessions of the user are revoked in the same request (current session kept, `session_revoked` audit event with `reason: passkey_removed`, count returned as `revoked_sessions`). The Settings dialog ticks it by default. Adding or deleting passkeys needs no re-authentication.
-* `DeletePasskey` and password changes refuse to leave a user with **zero** usable login methods (no passkey and no password). API: `FailedPrecondition` with an explanatory message.
+* `DeletePasskey` refuses to leave a user with **zero** usable login methods (no passkey and no password). API: `FailedPrecondition` with an explanatory message. (There is no password-change or remove-password RPC yet; when one exists it must apply the same rule.)
 * Since users are created via `SetupAdmin` with a password, the password always exists initially; a future "remove password" option must additionally require ≥ 1 `backup_eligible` (synced) passkey.
-* `GetServerStatus` gains a `passkey_login_enabled` hint (derived from `webauthn.rp_id`/`origins` being usable) so the login page can hide the passkey button when unconfigured.
+* `GetServerStatus` returns `passkey_login_enabled`, true exactly when the WebAuthn relying party was initialised (both `rp_id` and `origins` set and accepted by the library), so the login page can hide the passkey button when unconfigured.
 
 ### 4.8. Frontend Changes
 
@@ -395,6 +395,7 @@ In-memory limiter (no schema changes; single-process deployment makes this viabl
 * **Per-method username counters:** per-username records are keyed by sign-in method (`password`, `passkey`). Repeated wrong passwords do not block passkey sign-in for that account, a passkey sign-in does not reset the password-failure count, and the reverse. Per-IP records are shared across methods, so an address that fails with either method is limited as a whole. Passkey failures before the account is known (bad or expired challenge, unknown credential) are recorded per IP only; they used to share one global username key, which let any five of them block passkey sign-in for everyone.
 * **Scope:** password `Login` failures and passkey `FinishPasskeyLogin` verification failures feed the counter.
 * **Begin throttle:** `BeginPasskeyLogin` is unauthenticated and stores a challenge per call, so it has a separate per-IP limit of 20 calls per sliding minute. Extra calls get `ResourceExhausted` ("try again in N seconds"); at most one `rate_limited` audit event is written per IP per window, so a flood cannot grow the 90-day audit log. It is independent of the failure lockout above: a flood of begins slows the flooder but never locks anyone out of signing in, and the 20th call is still served normally.
+* **Begin and the IP lock:** `BeginPasskeyLogin` also refuses a source IP that is currently locked by the failure counter.
 * **Response:** `ResourceExhausted` with `RetryInfo`-style metadata so the UI can show "try again in N minutes".
 * **Reset on restart** is acceptable (documented limitation); failures are also written to the audit log (§7).
 

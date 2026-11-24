@@ -16,7 +16,7 @@ Written by AI, tested and used by humans.
 - **Gotify Notifications** — receive push notifications for update events and failures
 - **Embedded Tailscale Node** — optional built-in tailnet access (`TAILSCALE_ENABLED=true` plus `TAILSCALE_AUTHKEY`): manage dmanager from anywhere in your tailnet with no published ports and no sidecar container; optional tailnet HTTPS mode (`:443` instead of HTTP, Tailscale-issued certificates — passkeys included) served over HTTP/2, with node status visible in the Admin UI
 - **System Logs** — browse structured backend logs directly in the UI
-- **Authentication & Passkeys** — secure session-based authentication with role-based access control (admin / viewer), discoverable WebAuthn passkeys (Touch ID, Windows Hello, Face ID, hardware security keys), NIST password policy, login rate limiting, session management, and auth audit logging
+- **Authentication & Passkeys** — secure session-based authentication with role-based access control (admin / viewer), discoverable WebAuthn passkeys (Touch ID, Windows Hello, Face ID, hardware security keys), NIST password policy, login rate limiting (separate lockout counters for password and passkey sign-in), session management, and auth audit logging
 - **Audit Logs** — every mutation and system action is recorded to an audit trail with days-based retention, manageable from the Admin UI
 - **System Email** — optional SMTP delivery for system notifications via a relay (off and fully inert unless configured; verify with `dmanager smtp test`)
 ---
@@ -219,7 +219,7 @@ registries: []
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `webauthn.rp_id` | `string` | `""` | Relying Party ID for passkeys (effective domain without port, e.g. `"dmanager.example.com"` or `"localhost"`). |
+| `webauthn.rp_id` | `string` | `""` | Relying Party ID for passkeys (effective domain without port, e.g. `"dmanager.example.com"` or `"localhost"`). Passkeys are disabled unless both `rp_id` and `origins` are set. |
 | `webauthn.origins` | `string[]` | `[]` | Fully-qualified origins allowed for passkey ceremonies (e.g. `["https://dmanager.example.com"]`). |
 | `webauthn.require_user_verification` | `string` | `"preferred"` | User verification policy: `preferred` (default), `required` or `discouraged`. With `required`, every passkey sign-in and registration asks for the authenticator's PIN or biometric (for a password manager, its unlock check) and credentials without it are rejected. With `preferred`, the authenticator decides: a PIN-less security key or an already-unlocked password manager can sign in with one confirmation. `discouraged` does not ask for it. A change applies to new ceremonies; existing passkeys are kept. See [Passkey user verification](docs/security.md#25-webauthn--passkey-security-model). |
 
@@ -462,6 +462,7 @@ virtualisation.oci-containers.containers.<name>.labels."dmanager.managed-by" = "
 - [docs/tailscale.md](docs/tailscale.md) — embedded Tailscale node: setup, HTTPS, passkeys over the tailnet
 - [docs/deployment.md](docs/deployment.md) — deployment guide, secrets from files, [upgrade notes](docs/deployment.md#upgrading)
 - [docs/security.md](docs/security.md) — security model
+- [docs/passkeys.md](docs/passkeys.md) — passkey requirements, what the tests pin, client notes and how to report a problem
 - [docs/design.md](docs/design.md) — architecture and design decisions
 
 ## Roadmap

@@ -165,6 +165,8 @@ the UI hides the button.
   reach the app through) MUST be pinned in config. MUST NOT be derived from
   the request `Origin` header (an attacker with DNS control could register
   credentials for their own origin).
+- No defaults: if either is unset, passkeys are disabled and the status
+  endpoint says so. Setting `rp_id` without `origins` is a config error.
 - Mismatched RP ID/origin is the most common failure; surface effective
   values in the UI for debugging.
 - `require_user_verification`: `preferred` (default) | `required` | `discouraged`.
@@ -211,13 +213,20 @@ the UI hides the button.
    rate-limit counter, and issue a session through the **same** issuance
    path as password login.
 5. Every failure path (bad JSON, bad challenge, unknown credential,
-   failed validation) records a rate-limit failure.
+   failed validation) records a rate-limit failure and returns the same
+   `Unauthenticated` message; the specific reason goes only into the audit
+   event. Failures before the user is known count per IP only.
+6. The WebAuthn user handle is a random per-user value stored on the user
+   (not the row ID); the handle the authenticator returns must resolve to the
+   owner of the credential.
 
 ### 5.5 Lockout guardrail
 
 Deleting the last passkey MUST fail if the user would be left with zero
 login methods (no passkeys and no password set) → `FailedPrecondition`
-with an explanatory message.
+with an explanatory message. Deleting a passkey SHOULD offer to revoke the
+user's other sessions in the same request (audited), so a session created
+with a lost passkey does not outlive it.
 
 ---
 
@@ -261,15 +270,16 @@ error for every call — one log point, not per-handler.
 In-memory rate limiter (acceptable for single-process deployments; use a
 shared store only if multi-instance):
 
-- **Key:** username + client IP.
+- **Key:** client IP, and username per sign-in method (password and
+  passkey keep separate username counters; IP counters are shared).
 - **Window:** sliding 15 minutes.
 - **Threshold:** 5 failures in the window → lockout.
 - **Backoff:** exponential — 1, 2, 4, … minutes, capped at 15.
-- **Success resets** the failure counter for that username.
+- **Success resets** the failure counter for that username and method only.
 - Locked responses: `429` + "try again in N seconds" + audit
   `rate_limited`.
-- Feeds from: password failures, passkey-finish failures, passkey-begin
-  flooding.
+- Feeds from: password failures and passkey-finish failures. Passkey-begin
+  flooding has its own per-IP throttle that never locks an account.
 - Counter reset on restart is an accepted, documented limitation (the audit
   log retains the history).
 
