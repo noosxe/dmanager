@@ -17,8 +17,16 @@ function param<T extends string>(name: string, allowed: readonly T[], fallback: 
   return stored && (allowed as readonly string[]).includes(stored) ? (stored as T) : fallback;
 }
 
+// `?webauthn=unavailable` simulates a page where WebAuthn cannot be used (an
+// insecure context such as plain HTTP on a LAN address): the passkey buttons
+// must show their explanation instead of failing.
+const WEBAUTHN_VARIANTS = ["available", "unavailable"] as const;
+
 /** Transport used by `client.ts` in mock mode (`vite --mode mock`). */
 export function createBrowserMockTransport(interceptors: Interceptor[]) {
+  if (param("webauthn", WEBAUTHN_VARIANTS, "available") === "unavailable") {
+    Object.defineProperty(window, "isSecureContext", { value: false, configurable: true });
+  }
   return createMockTransport({
     scenario: param<Scenario>("scenario", SCENARIOS, "admin"),
     tailscale: param<TailscaleVariant>("tailscale", TAILSCALE_VARIANTS, "running"),

@@ -225,8 +225,9 @@ func TestPolicyBackupFlagLifecycle(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected BE change between ceremonies to be rejected")
 	}
-	if !strings.Contains(strings.ToLower(err.Error()), "backup") {
-		t.Errorf("expected backup-flag validation error, got: %v", err)
+	// The browser only sees the generic error; the library's reason is audited.
+	if !strings.Contains(strings.ToLower(lastLoginFailedDetail(t, svc, user)), "backup") {
+		t.Errorf("expected backup-flag reason in the audit event, got: %q", lastLoginFailedDetail(t, svc, user))
 	}
 
 	// BS without BE: a device-bound credential (never backup-eligible)
@@ -341,7 +342,7 @@ func TestRedTeamCeremonyEdges(t *testing.T) {
 	}
 	if err := finishFakeLoginRaw(t, svc, first); err == nil {
 		t.Fatal("expected replayed assertion to be rejected (challenge consumed)")
-	} else if !strings.Contains(err.Error(), "invalid or expired") {
+	} else if !strings.Contains(err.Error(), errPasskeySignInFailed.Error()) {
 		t.Errorf("expected challenge-consumed error, got: %v", err)
 	}
 
@@ -353,7 +354,7 @@ func TestRedTeamCeremonyEdges(t *testing.T) {
 		t.Fatalf("failed to expire challenge: %v", err)
 	}
 	err := finishFakeLogin(t, svc, auth, challenge, handle, assertFlagsSynced, 3, "")
-	if err == nil || !strings.Contains(err.Error(), "invalid or expired") {
+	if err == nil || !strings.Contains(err.Error(), errPasskeySignInFailed.Error()) {
 		t.Fatalf("expected expired-challenge rejection, got: %v", err)
 	}
 
@@ -365,8 +366,8 @@ func TestRedTeamCeremonyEdges(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected unknown credential to be rejected")
 	}
-	if !strings.Contains(err.Error(), "credential not found") {
-		t.Errorf("expected unknown-credential error, got: %v", err)
+	if !strings.Contains(err.Error(), errPasskeySignInFailed.Error()) {
+		t.Errorf("expected the generic sign-in error, got: %v", err)
 	}
 
 	// Duplicate registration: re-registering the same credential ID must fail
@@ -809,4 +810,25 @@ func TestConcurrentRegistrationsSameCredentialID(t *testing.T) {
 			t.Errorf("round %d: expected one stored credential, got %d", round, len(rows))
 		}
 	}
+}
+
+const eventLoginFailed = "login_failed"
+
+// lastLoginFailedDetail returns the detail of the user's newest login_failed
+// audit event.
+func lastLoginFailedDetail(t *testing.T, svc *Service, user db.User) string {
+	t.Helper()
+	events, err := svc.Queries.ListAuthEventsByUser(context.Background(), db.ListAuthEventsByUserParams{
+		UserID: sql.NullInt64{Int64: user.ID, Valid: true}, Limit: 20,
+	})
+	if err != nil {
+		t.Fatalf("list events: %v", err)
+	}
+	for _, e := range events {
+		if e.Event == eventLoginFailed {
+			return e.Detail
+		}
+	}
+	t.Fatal("no login_failed audit event")
+	return ""
 }

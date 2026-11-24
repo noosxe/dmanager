@@ -774,6 +774,13 @@ func (s *Service) BeginPasskeyLogin(ctx context.Context, req *connect.Request[v1
 	}), nil
 }
 
+// errPasskeySignInFailed is the one message returned for every
+// FinishPasskeyLogin verification failure (unparseable response, bad or
+// expired challenge, unknown credential, failed assertion). The specific
+// reason, including library detail, goes only into the audit event, so a
+// caller holding a valid challenge cannot tell these cases apart.
+var errPasskeySignInFailed = errors.New("passkey sign-in failed")
+
 func (s *Service) FinishPasskeyLogin(ctx context.Context, req *connect.Request[v1.FinishPasskeyLoginRequest]) (*connect.Response[v1.LoginResponse], error) {
 	if s.webauthn == nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("passkey support is not configured on this server"))
@@ -784,7 +791,8 @@ func (s *Service) FinishPasskeyLogin(ctx context.Context, req *connect.Request[v
 	parsedResponse, err := protocol.ParseCredentialRequestResponseBody(strings.NewReader(req.Msg.ResponseJson))
 	if err != nil {
 		s.rateLimiter.RecordFailure(MethodPasskey, "", clientIP, time.Now())
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid login assertion response json: %w", err))
+		s.recordAuthEvent(ctx, nil, "unknown", "login_failed", "method: passkey, reason: unparseable response, ip: "+clientIP)
+		return nil, connect.NewError(connect.CodeUnauthenticated, errPasskeySignInFailed)
 	}
 
 	challengeStr := parsedResponse.Response.CollectedClientData.Challenge
@@ -798,14 +806,14 @@ func (s *Service) FinishPasskeyLogin(ctx context.Context, req *connect.Request[v
 	if err != nil {
 		s.rateLimiter.RecordFailure(MethodPasskey, "", clientIP, time.Now())
 		s.recordAuthEvent(ctx, nil, "unknown", "login_failed", "method: passkey, reason: invalid or expired challenge, ip: "+clientIP)
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid or expired passkey challenge"))
+		return nil, connect.NewError(connect.CodeUnauthenticated, errPasskeySignInFailed)
 	}
 
 	credRow, err := s.Queries.GetWebAuthnCredential(ctx, parsedResponse.RawID)
 	if err != nil {
 		s.rateLimiter.RecordFailure(MethodPasskey, "", clientIP, time.Now())
 		s.recordAuthEvent(ctx, nil, "unknown", "login_failed", "method: passkey, reason: credential not found, ip: "+clientIP)
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("passkey credential not found"))
+		return nil, connect.NewError(connect.CodeUnauthenticated, errPasskeySignInFailed)
 	}
 
 	user, err := s.Queries.GetUser(ctx, credRow.UserID)
@@ -838,7 +846,7 @@ func (s *Service) FinishPasskeyLogin(ctx context.Context, req *connect.Request[v
 	}
 	if len(dbChallenge.Extensions) > 0 {
 		if uerr := json.Unmarshal(dbChallenge.Extensions, &sessionData.Extensions); uerr != nil {
-			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("stored WebAuthn session extensions are invalid: %w", uerr))
+			return nil, connect.NewError(connect.CodeInternal, errors.New("stored WebAuthn session extensions are invalid"))
 		}
 	}
 
@@ -858,8 +866,8 @@ func (s *Service) FinishPasskeyLogin(ctx context.Context, req *connect.Request[v
 	)
 	if err != nil {
 		s.rateLimiter.RecordFailure(MethodPasskey, user.Username, clientIP, time.Now())
-		s.recordAuthEvent(ctx, &user.ID, user.Username, "login_failed", "method: passkey, reason: validation failed, ip: "+clientIP)
-		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("passkey verification failed: %w", err))
+		s.recordAuthEvent(ctx, &user.ID, user.Username, "login_failed", "method: passkey, reason: validation failed: "+err.Error()+", ip: "+clientIP)
+		return nil, connect.NewError(connect.CodeUnauthenticated, errPasskeySignInFailed)
 	}
 
 	// Counter regression: the library sets CloneWarning (and leaves the

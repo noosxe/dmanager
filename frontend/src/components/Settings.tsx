@@ -32,6 +32,7 @@ import { authClient, settingsClient } from "../client";
 import { useToast } from "../context/ToastContext";
 import type { AuthEvent, Passkey, Session } from "../gen/proto/dmanager/v1/auth_pb";
 import type { RegistryStatus } from "../gen/proto/dmanager/v1/settings_pb";
+import { isPasskeyCancel, passkeysUnavailableReason } from "../lib/passkeys";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { PageTabs, type PageTabItem } from "./PageTabs";
 import { SETTINGS_TAB_LABELS } from "./tabLabels";
@@ -53,7 +54,7 @@ const destructiveDialogCopy = (pending: PendingDestructive) => {
     case "passkey":
       return {
         title: "Delete passkey?",
-        message: `Passkey "${pending.passkey.name}" will be removed from your account. If it is your only remaining credential, you will be locked out.`,
+        message: `Passkey "${pending.passkey.name}" will be removed from your account. You can no longer sign in with it. The last way to sign in cannot be removed.`,
         confirmLabel: "Delete",
       };
     case "session":
@@ -411,6 +412,8 @@ export function Settings({ initialTab }: SettingsProps = {}) {
     setPendingDestructive(null);
   };
 
+  const passkeysUnavailable = passkeysUnavailableReason();
+
   const handleAddPasskey = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsAddingPasskey(true);
@@ -432,6 +435,10 @@ export function Settings({ initialTab }: SettingsProps = {}) {
       toast.success("Passkey registered successfully.");
       fetchAuthEvents();
     } catch (err: unknown) {
+      // Dismissing the browser prompt or a timeout is a quiet cancel.
+      if (isPasskeyCancel(err)) {
+        return;
+      }
       console.error("Passkey registration failed:", err);
       // Browser DOMExceptions: InvalidStateError = the authenticator holds an excluded
       // credential; NotSupportedError = no authenticator can make a resident key.
@@ -1080,7 +1087,8 @@ export function Settings({ initialTab }: SettingsProps = {}) {
                 <button
                   type="button"
                   onClick={() => setShowAddPasskey(true)}
-                  disabled={isAddingPasskey}
+                  disabled={isAddingPasskey || passkeysUnavailable !== null}
+                  title={passkeysUnavailable ?? undefined}
                   className="settings-btn-primary"
                   style={{ padding: "8px 14px" }}
                 >
@@ -1089,6 +1097,12 @@ export function Settings({ initialTab }: SettingsProps = {}) {
                 </button>
               </div>
             </div>
+
+            {passkeysUnavailable && (
+              <p className="auth-passkey-note" role="note">
+                {passkeysUnavailable}
+              </p>
+            )}
 
             {passkeysError && (
               <div className="auth-error-banner" style={{ marginBottom: "16px" }}>
