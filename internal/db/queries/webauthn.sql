@@ -82,11 +82,6 @@ SET consumed = 1
 WHERE challenge = ? AND kind = ? AND user_id = ? AND consumed = 0 AND expires_at > ?
 RETURNING *;
 
--- name: ConsumeWebAuthnChallenge :exec
-UPDATE webauthn_challenges
-SET consumed = 1
-WHERE id = ?;
-
 -- name: PurgeExpiredWebAuthnChallenges :exec
 DELETE FROM webauthn_challenges
 WHERE expires_at < ? OR consumed = 1;

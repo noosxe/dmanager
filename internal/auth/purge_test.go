@@ -239,7 +239,13 @@ func TestWebAuthnChallengesPurgeJob(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create consumed challenge: %v", err)
 	}
-	_ = queries.ConsumeWebAuthnChallenge(ctx, consumed.ID)
+	if _, err = queries.ConsumeLoginWebAuthnChallenge(ctx, db.ConsumeLoginWebAuthnChallengeParams{
+		Challenge: consumed.Challenge,
+		Kind:      consumed.Kind,
+		ExpiresAt: now,
+	}); err != nil {
+		t.Fatalf("failed to consume challenge: %v", err)
+	}
 
 	// 3. Expired unconsumed challenge
 	_, err = queries.CreateWebAuthnChallenge(ctx, db.CreateWebAuthnChallengeParams{

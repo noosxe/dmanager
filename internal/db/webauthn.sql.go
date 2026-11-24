@@ -76,17 +76,6 @@ func (q *Queries) ConsumeUserWebAuthnChallenge(ctx context.Context, arg ConsumeU
 	return i, err
 }
 
-const consumeWebAuthnChallenge = `-- name: ConsumeWebAuthnChallenge :exec
-UPDATE webauthn_challenges
-SET consumed = 1
-WHERE id = ?
-`
-
-func (q *Queries) ConsumeWebAuthnChallenge(ctx context.Context, id int64) error {
-	_, err := q.db.ExecContext(ctx, consumeWebAuthnChallenge, id)
-	return err
-}
-
 const countWebAuthnCredentialsByUser = `-- name: CountWebAuthnCredentialsByUser :one
 SELECT COUNT(*) FROM webauthn_credentials
 WHERE user_id = ?
