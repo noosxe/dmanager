@@ -33,13 +33,13 @@ export function isPasskeyCancel(err: unknown): boolean {
 }
 
 /**
- * Message for a failed passkey sign-in. Only messages the server writes for
- * the user (rate limiting, the generic sign-in failure) are shown; anything
+ * Message for a failed passkey sign-in. Only the server's rate-limit message
+ * (it carries the retry time) is shown verbatim; anything
  * else, including browser or library detail, becomes a generic message.
  */
 export function passkeySignInErrorMessage(err: unknown): string {
   if (err instanceof ConnectError) {
-    if (err.code === Code.ResourceExhausted || err.code === Code.Unauthenticated) {
+    if (err.code === Code.ResourceExhausted) {
       return err.rawMessage;
     }
     return "Passkey sign-in failed. Try again or sign in with your password.";
