@@ -587,6 +587,7 @@ describe("Settings Component", () => {
   it("deletes a passkey successfully", async () => {
     vi.mocked(authClient.deletePasskey).mockResolvedValue({
       $typeName: "dmanager.v1.DeletePasskeyResponse",
+      revokedSessions: 0n,
     });
 
     render(
