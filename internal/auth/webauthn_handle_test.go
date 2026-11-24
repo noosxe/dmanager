@@ -82,6 +82,8 @@ func TestLegacyUserKeepsRowIDHandle(t *testing.T) {
 	}
 }
 
+// Pins go-webauthn's own comparison of the returned handle with the
+// credential owner's stored handle; dmanager adds no second check.
 func TestSignInRejectsUnknownOrForeignHandle(t *testing.T) {
 	_, _, svc := newPasskeyService(t)
 	user := newPasskeyUser(t, svc.Queries, "owner")

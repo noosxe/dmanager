@@ -120,26 +120,6 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 	return i, err
 }
 
-const getUserByWebAuthnID = `-- name: GetUserByWebAuthnID :one
-SELECT id, username, password_hash, role, created_at, updated_at, email, webauthn_user_id FROM users WHERE webauthn_user_id = ? LIMIT 1
-`
-
-func (q *Queries) GetUserByWebAuthnID(ctx context.Context, webauthnUserID []byte) (User, error) {
-	row := q.db.QueryRowContext(ctx, getUserByWebAuthnID, webauthnUserID)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Username,
-		&i.PasswordHash,
-		&i.Role,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.Email,
-		&i.WebauthnUserID,
-	)
-	return i, err
-}
-
 const setUserWebAuthnID = `-- name: SetUserWebAuthnID :execrows
 UPDATE users SET webauthn_user_id = ? WHERE id = ? AND webauthn_user_id IS NULL
 `

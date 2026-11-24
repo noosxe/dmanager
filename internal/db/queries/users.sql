@@ -21,9 +21,6 @@ SELECT ?, ?, ?
 WHERE NOT EXISTS (SELECT 1 FROM users)
 RETURNING *;
 
--- name: GetUserByWebAuthnID :one
-SELECT * FROM users WHERE webauthn_user_id = ? LIMIT 1;
-
 -- name: SetUserWebAuthnID :execrows
 -- Stores a user's WebAuthn handle only while none is set, so a handle, once
 -- chosen, never changes.
