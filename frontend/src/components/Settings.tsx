@@ -510,6 +510,10 @@ export function Settings({ initialTab }: SettingsProps = {}) {
         return <span className="auth-event-badge auth-event-badge-error">Login Failed</span>;
       case "rate_limited":
         return <span className="auth-event-badge auth-event-badge-warning">Rate Limited</span>;
+      case "passkey_clone_warning":
+        return (
+          <span className="auth-event-badge auth-event-badge-warning">Passkey Counter Warning</span>
+        );
       case "logout":
         return <span className="auth-event-badge auth-event-badge-info">Logout</span>;
       case "session_revoked":
