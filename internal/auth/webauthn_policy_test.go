@@ -232,9 +232,10 @@ func TestPolicyBackupFlagLifecycle(t *testing.T) {
 
 // TestPolicySignCounterAndCloneDetection pins the counter policy: synced
 // authenticators reporting 0 must never trip clone detection; a real counter
-// must advance monotonically; a regression is flagged and rejected.
+// must advance monotonically; a regression (including N→0) is allowed but
+// flagged, audited, and not counted as a failed login.
 func TestPolicySignCounterAndCloneDetection(t *testing.T) {
-	_, queries, svc := newPasskeyService(t)
+	dbConn, queries, svc := newPasskeyService(t)
 	user := newPasskeyUser(t, svc.Queries, "carol")
 	handle := userHandleFor(user)
 
@@ -252,26 +253,63 @@ func TestPolicySignCounterAndCloneDetection(t *testing.T) {
 	// Counter authenticator: monotonic advance accepted, regression rejected.
 	counter := newFakeAuthenticator(t)
 	enrollFakePasskey(t, svc, user, counter, nil, regFlagsDevice, 7)
-	if row := credentialRow(t, queries, counter.credID); row.SignCount != 7 {
-		t.Fatalf("expected enrolled sign_count=7, got %d", row.SignCount)
+	if r := credentialRow(t, queries, counter.credID); r.SignCount != 7 {
+		t.Fatalf("expected enrolled sign_count=7, got %d", r.SignCount)
 	}
 	if err := finishFakeLogin(t, svc, counter, beginFakeLogin(t, svc), handle, assertFlagsNormal, 9, ""); err != nil {
 		t.Fatalf("monotonic counter 7→9 must be accepted: %v", err)
 	}
-	if row := credentialRow(t, queries, counter.credID); row.SignCount != 9 {
-		t.Errorf("expected persisted sign_count=9, got %d", row.SignCount)
+	if r := credentialRow(t, queries, counter.credID); r.SignCount != 9 {
+		t.Errorf("expected persisted sign_count=9, got %d", r.SignCount)
 	}
 
-	challenge := beginFakeLogin(t, svc)
-	err := finishFakeLogin(t, svc, counter, challenge, handle, assertFlagsNormal, 4, "")
-	if err == nil {
-		t.Fatal("expected counter regression 9→4 to be rejected")
+	// Regression 9→4: allowed, flagged, audited; the new counter is stored.
+	if err := finishFakeLogin(t, svc, counter, beginFakeLogin(t, svc), handle, assertFlagsNormal, 4, ""); err != nil {
+		t.Fatalf("counter regression 9→4 must be allowed: %v", err)
 	}
-	if !strings.Contains(err.Error(), "counter regression") {
-		t.Errorf("expected clone-detection error, got: %v", err)
+	row = credentialRow(t, queries, counter.credID)
+	if row.CloneWarning != 1 || row.SignCount != 4 {
+		t.Errorf("after 9→4 want clone_warning=1 sign_count=4, got %d/%d", row.CloneWarning, row.SignCount)
 	}
-	if row := credentialRow(t, queries, counter.credID); row.CloneWarning != 1 {
-		t.Errorf("expected clone_warning=1 persisted after regression, got %d", row.CloneWarning)
+	var warnings int
+	if err := dbConn.QueryRow(`SELECT COUNT(*) FROM auth_events WHERE event = 'passkey_clone_warning' AND detail LIKE '%test key%'`).Scan(&warnings); err != nil {
+		t.Fatal(err)
+	}
+	if warnings != 1 {
+		t.Errorf("expected one passkey_clone_warning audit event, got %d", warnings)
+	}
+
+	// The flag is sticky: a normal advance 4→5 keeps it and does not re-audit.
+	if err := finishFakeLogin(t, svc, counter, beginFakeLogin(t, svc), handle, assertFlagsNormal, 5, ""); err != nil {
+		t.Fatalf("advance after regression must be accepted: %v", err)
+	}
+	if row := credentialRow(t, queries, counter.credID); row.CloneWarning != 1 || row.SignCount != 5 {
+		t.Errorf("flag must persist and counter advance, got %d/%d", row.CloneWarning, row.SignCount)
+	}
+
+	// N→0 on a counting authenticator is flagged too.
+	zeroed := newFakeAuthenticator(t)
+	enrollFakePasskey(t, svc, user, zeroed, nil, regFlagsDevice, 3)
+	if err := finishFakeLogin(t, svc, zeroed, beginFakeLogin(t, svc), handle, assertFlagsNormal, 0, ""); err != nil {
+		t.Fatalf("counter 3→0 must be allowed: %v", err)
+	}
+	if row := credentialRow(t, queries, zeroed.credID); row.CloneWarning != 1 || row.SignCount != 0 {
+		t.Errorf("after 3→0 want clone_warning=1 sign_count=0, got %d/%d", row.CloneWarning, row.SignCount)
+	}
+}
+
+// TestCounterRegressionDoesNotCountAsFailure: repeated regressions never
+// lock the account, because the rate limiter only sees real failures.
+func TestCounterRegressionDoesNotCountAsFailure(t *testing.T) {
+	_, _, svc := newPasskeyService(t)
+	user := newPasskeyUser(t, svc.Queries, "frank")
+	handle := userHandleFor(user)
+	auth := newFakeAuthenticator(t)
+	enrollFakePasskey(t, svc, user, auth, nil, regFlagsDevice, 50)
+	for i := 0; i < 12; i++ {
+		if err := finishFakeLogin(t, svc, auth, beginFakeLogin(t, svc), handle, assertFlagsNormal, 1, ""); err != nil {
+			t.Fatalf("regression login %d must succeed: %v", i, err)
+		}
 	}
 }
 

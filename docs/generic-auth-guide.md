@@ -203,7 +203,8 @@ the UI hides the button.
    rate-limit check on the resolved username; verify the ceremony (origin,
    RP hash, signature vs stored public key).
 3. **Clone detection:** if the new sign count ≤ stored count and both are
-   nonzero → set `clone_warning`, record a failure, reject.
+   nonzero → set `clone_warning`, store the new count, write an audit
+   event, but allow the login and record no failure.
 4. Success: update sign count / last-used / backup state, reset the
    rate-limit counter, and issue a session through the **same** issuance
    path as password login.
@@ -278,7 +279,8 @@ A dedicated `auth_events` table, written at **every auth decision point**
 by the service and the interceptor:
 
 - Event types: `login_success`, `login_failed`, `logout`, `passkey_added`,
-  `passkey_removed`, `rate_limited`, `session_revoked`, `setup_admin`.
+  `passkey_removed`, `passkey_clone_warning`, `rate_limited`, `session_revoked`,
+  `setup_admin`.
 - Fields: user ID (nullable for pre-auth failures), attempted username,
   event type, detail (method, coarse reason, IP), timestamp.
 - MUST NOT contain credentials, tokens, or challenge bytes.
@@ -356,7 +358,7 @@ All durations accept standard duration strings; validate cross-constraints
 - [ ] Viewer hitting an admin endpoint → `PermissionDenied` + audit entry.
 - [ ] Challenge single-use: replayed registration/login challenge rejected.
 - [ ] Wrong origin / wrong RP / bad signature rejected.
-- [ ] Sign-count regression → clone warning + rejection.
+- [ ] Sign-count regression → clone warning + audit event, login allowed.
 - [ ] Deleting the last login method → `FailedPrecondition`.
 - [ ] Full flow integration: login → slide → revoke → subsequent request
       fails.

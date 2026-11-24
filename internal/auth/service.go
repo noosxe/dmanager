@@ -828,27 +828,26 @@ func (s *Service) FinishPasskeyLogin(ctx context.Context, req *connect.Request[v
 		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("passkey verification failed: %w", err))
 	}
 
-	// Clone detection: counter regression check
-	newCounter := parsedResponse.Response.AuthenticatorData.Counter
-	if credRow.SignCount > 0 && credRow.SignCount <= math.MaxUint32 && newCounter <= uint32(credRow.SignCount) && newCounter != 0 {
-		_ = s.Queries.UpdateWebAuthnCredentialUsage(ctx, db.UpdateWebAuthnCredentialUsageParams{
-			SignCount:    credRow.SignCount,
-			LastUsedAt:   credRow.LastUsedAt,
-			BackupState:  credRow.BackupState,
-			CloneWarning: 1,
-			CredentialID: credRow.CredentialID,
-		})
-		s.rateLimiter.RecordFailure(user.Username, clientIP, time.Now())
-		s.recordAuthEvent(ctx, &user.ID, user.Username, "login_failed", "method: passkey, reason: clone_warning, ip: "+clientIP)
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("authenticator counter regression detected (possible cloned passkey)"))
+	// Counter regression: the library sets CloneWarning (and leaves the
+	// stored counter untouched) when the presented counter is not above the
+	// stored one, including a stored value above zero followed by zero. This
+	// is a signal, not proof: a restored backup or a provider that resets
+	// counters looks the same. The login is allowed, the flag sticks until
+	// the passkey is deleted, and the presented counter becomes the new
+	// baseline so later logins are judged against it.
+	signCount := int64(validCred.Authenticator.SignCount)
+	cloneWarning := credRow.CloneWarning
+	if validCred.Authenticator.CloneWarning {
+		cloneWarning = 1
+		signCount = int64(parsedResponse.Response.AuthenticatorData.Counter)
+		s.recordAuthEvent(ctx, &user.ID, user.Username, "passkey_clone_warning", "name: "+credRow.Name+", ip: "+clientIP)
 	}
 
-	// Update credential usage stats
 	_ = s.Queries.UpdateWebAuthnCredentialUsage(ctx, db.UpdateWebAuthnCredentialUsageParams{
-		SignCount:    int64(validCred.Authenticator.SignCount),
+		SignCount:    signCount,
 		LastUsedAt:   sql.NullTime{Time: time.Now(), Valid: true},
 		BackupState:  boolToInt(validCred.Flags.BackupState),
-		CloneWarning: credRow.CloneWarning,
+		CloneWarning: cloneWarning,
 		CredentialID: credRow.CredentialID,
 	})
 

@@ -327,7 +327,7 @@ Verification rules (enforced via `go-webauthn`, listed for reviewability):
 1. Challenge matches an unconsumed, unexpired `login` row.
 2. Origin ∈ `webauthn.origins`; RP ID hash matches.
 3. Signature validates against the stored public key.
-4. `sign_count`: if the new count ≤ stored count and both are nonzero, set `clone_warning = 1` and reject the login (possible cloned authenticator).
+4. `sign_count`: the library flags a regression when the new count is ≤ the stored count and either is nonzero (this includes a stored count above zero followed by 0). The login is **allowed**: `clone_warning` is set to 1, the presented count becomes the new stored count, a `passkey_clone_warning` audit event (credential name, IP) is written, and the attempt is not counted as a failed login. A regression is a signal, not proof: a restored backup or a provider that resets counters looks the same, and rejecting would lock those users out. The flag is sticky; Settings shows a warning badge on the passkey until it is deleted. Authenticators that always report 0 (most synced passkeys) never trigger it.
 5. If `require_user_verification = required`, `user_verified` must be true.
 6. On success: update `sign_count`, `last_used_at`, `backup_state`; issue the same session cookie as password login (shared code path — one `issueSession(ctx, userID, rememberMe)` helper).
 
@@ -418,7 +418,7 @@ CREATE TABLE auth_events (
     user_id INTEGER,                      -- NULL for pre-auth failures
     username TEXT,                        -- as attempted, for failed logins
     event TEXT NOT NULL,                  -- login_success, login_failed, logout,
-                                          -- passkey_added, passkey_removed, rate_limited,
+                                          -- passkey_added, passkey_removed, passkey_clone_warning, rate_limited,
                                           -- session_revoked, setup_admin, ...
     detail TEXT NOT NULL DEFAULT '',      -- e.g. "passkey", "invalid credentials", IP
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
