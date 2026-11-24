@@ -213,12 +213,12 @@ CREATE TABLE webauthn_credentials (
     aaguid BLOB NOT NULL,                 -- authenticator model for friendly naming
     sign_count INTEGER NOT NULL DEFAULT 0,-- clone detection
     clone_warning INTEGER NOT NULL DEFAULT 0,
-    user_verified INTEGER NOT NULL DEFAULT 1,-- UV flag at registration
     backup_eligible INTEGER NOT NULL DEFAULT 0,  --CredentialFlags
     backup_state INTEGER NOT NULL DEFAULT 0,
     name TEXT NOT NULL DEFAULT '',        -- user-assigned label ("YubiKey 5C")
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     last_used_at DATETIME,
+    user_verified INTEGER NOT NULL DEFAULT 1,-- UV flag at registration (added by a later migration)
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 CREATE INDEX idx_webauthn_credentials_user_id ON webauthn_credentials(user_id);
