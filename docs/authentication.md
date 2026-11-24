@@ -237,7 +237,7 @@ DROP TABLE IF EXISTS webauthn_challenges;
 DROP TABLE IF EXISTS webauthn_credentials;
 ```
 
-**Challenge lifecycle:** generated at `Begin*`, single-use (marked `consumed = 1` at `Finish*`), TTL 120 seconds, deleted by the same purge job as sessions. Storing challenges in SQLite (rather than a cookie) keeps the ceremony state server-authoritative and works across the multiple tabs the dashboard supports.
+**Challenge lifecycle:** generated at `Begin*`, single-use (marked `consumed = 1` at `Finish*`), TTL 120 seconds, looked up through a unique index on `(kind, challenge)`, and purged (expired or consumed rows) every minute, separately from the hourly session and audit-event purge. Together with the begin throttle this bounds the table to roughly the per-IP limit times the TTL per client. Storing challenges in SQLite (rather than a cookie) keeps the ceremony state server-authoritative and works across the multiple tabs the dashboard supports.
 
 ### 4.4. Protocol Additions (`auth.proto`)
 
@@ -388,7 +388,8 @@ In-memory limiter (no schema changes; single-process deployment makes this viabl
 
 * **Window:** sliding 15 minutes.
 * **Threshold:** 5 failures → lockout, exponential: 1 min, 2, 4, … capped at 15 min. Successful login resets the counter.
-* **Scope:** password `Login` failures, passkey `FinishPasskeyLogin` verification failures, and `BeginPasskeyLogin` flood (≥ 20 begins/min/IP) all feed the counter.
+* **Scope:** password `Login` failures and passkey `FinishPasskeyLogin` verification failures feed the counter.
+* **Begin throttle:** `BeginPasskeyLogin` is unauthenticated and stores a challenge per call, so it has a separate per-IP limit of 20 calls per sliding minute. Extra calls get `ResourceExhausted` ("try again in N seconds") and a `rate_limited` audit event. It is independent of the failure lockout above: a flood of begins slows the flooder but never locks anyone out of signing in, and the 20th call is still served normally.
 * **Response:** `ResourceExhausted` with `RetryInfo`-style metadata so the UI can show "try again in N minutes".
 * **Reset on restart** is acceptable (documented limitation); failures are also written to the audit log (§7).
 
