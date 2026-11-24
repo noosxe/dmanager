@@ -508,6 +508,30 @@ describe("Settings Component", () => {
     expect(screen.queryByText("Counter Warning")).not.toBeInTheDocument();
   });
 
+  it("hints at discoverable credentials on NotSupportedError", async () => {
+    const { create } = await import("@github/webauthn-json");
+    vi.mocked(authClient.beginPasskeyRegistration).mockResolvedValue({
+      optionsJson: "{}",
+    } as never);
+    vi.mocked(create).mockRejectedValueOnce(
+      new DOMException("No available authenticator supports resident keys", "NotSupportedError"),
+    );
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <Settings />
+      </ToastProvider>,
+    );
+    await user.click(await screen.findByRole("button", { name: /security & sessions/i }));
+    await user.click(await screen.findByRole("button", { name: /add passkey/i }));
+    await user.click(await screen.findByRole("button", { name: /prompt device authenticator/i }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/works without a username/).length).toBeGreaterThan(0);
+    });
+    expect(authClient.finishPasskeyRegistration).not.toHaveBeenCalled();
+  });
+
   it("deletes a passkey successfully", async () => {
     vi.mocked(authClient.deletePasskey).mockResolvedValue({
       $typeName: "dmanager.v1.DeletePasskeyResponse",

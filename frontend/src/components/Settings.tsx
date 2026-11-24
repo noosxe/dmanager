@@ -431,15 +431,19 @@ export function Settings({ initialTab }: SettingsProps = {}) {
       fetchAuthEvents();
     } catch (err: unknown) {
       console.error("Passkey registration failed:", err);
-      // The browser's DOMException: the authenticator holds an excluded credential.
-      const alreadyRegistered = (err as { name?: string } | null)?.name === "InvalidStateError";
-      const msg = alreadyRegistered
-        ? "This authenticator is already registered."
-        : err instanceof ConnectError
-          ? err.rawMessage
-          : err instanceof Error
-            ? err.message
-            : String(err);
+      // Browser DOMExceptions: InvalidStateError = the authenticator holds an excluded
+      // credential; NotSupportedError = no authenticator can make a resident key.
+      const errName = (err as { name?: string } | null)?.name;
+      const msg =
+        errName === "InvalidStateError"
+          ? "This authenticator is already registered."
+          : errName === "NotSupportedError"
+            ? "This authenticator can't create a passkey that works without a username. Use a passkey provider or a newer security key."
+            : err instanceof ConnectError
+              ? err.rawMessage
+              : err instanceof Error
+                ? err.message
+                : String(err);
       setPasskeysError(msg);
       toast.error(`Passkey registration failed: ${msg}`);
     } finally {
