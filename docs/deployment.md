@@ -147,7 +147,7 @@ Effects:
 
 ### 3.1. Method A: Docker Compose (Recommended)
 
-1. Save the following content to [docker-compose.yml](file:///home/mechsoull/Projects/dmanager/docker-compose.yml):
+1. Save the following content to [docker-compose.yml](../docker-compose.yml):
    ```yaml
    services:
      dmanager:
