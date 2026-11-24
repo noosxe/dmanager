@@ -1,3 +1,4 @@
+import { Code, ConnectError } from "@connectrpc/connect";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -381,6 +382,30 @@ describe("Settings Component", () => {
       expect(screen.getByText("Work MacBook")).toBeInTheDocument();
       expect(screen.getByText("Model: iCloud Keychain")).toBeInTheDocument();
       expect(screen.getByText("Synced Passkey")).toBeInTheDocument();
+    });
+  });
+
+  it("shows the server's message when the authenticator made a non-discoverable passkey", async () => {
+    const message =
+      "This authenticator created a passkey that can't be used for sign-in without a username. Use a passkey provider or a security key that supports discoverable credentials.";
+    vi.mocked(authClient.beginPasskeyRegistration).mockResolvedValue({
+      optionsJson: "{}",
+    } as never);
+    vi.mocked(authClient.finishPasskeyRegistration).mockRejectedValue(
+      new ConnectError(message, Code.FailedPrecondition),
+    );
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <Settings />
+      </ToastProvider>,
+    );
+    await user.click(await screen.findByRole("button", { name: /security & sessions/i }));
+    await user.click(await screen.findByRole("button", { name: /add passkey/i }));
+    await user.click(await screen.findByRole("button", { name: /prompt device authenticator/i }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText(message).length).toBeGreaterThan(0);
     });
   });
 

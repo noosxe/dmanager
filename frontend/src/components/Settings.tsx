@@ -1,3 +1,4 @@
+import { ConnectError } from "@connectrpc/connect";
 import { create as webauthnCreate } from "@github/webauthn-json";
 import { useParams } from "@tanstack/react-router";
 import {
@@ -430,7 +431,12 @@ export function Settings({ initialTab }: SettingsProps = {}) {
       fetchAuthEvents();
     } catch (err: unknown) {
       console.error("Passkey registration failed:", err);
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg =
+        err instanceof ConnectError
+          ? err.rawMessage
+          : err instanceof Error
+            ? err.message
+            : String(err);
       setPasskeysError(msg);
       toast.error(`Passkey registration failed: ${msg}`);
     } finally {

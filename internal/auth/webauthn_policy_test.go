@@ -23,6 +23,9 @@ import (
 // one fails CI instead of production (#306). Real client payload captures
 // complement these synthetics; see docs/passkeys.md for the client matrix.
 
+// extCredProps is the credential properties extension identifier.
+const extCredProps = "credProps"
+
 const (
 	testRPID   = "localhost"
 	testOrigin = "https://localhost:9283"
@@ -160,7 +163,7 @@ func TestPolicyUnsolicitedExtensionOutputRejected(t *testing.T) {
 	// Positive control: requested credProps output accepted (the #305 replay,
 	// full ceremony this time rather than a unit-level probe).
 	enrollFakePasskey(t, svc, user, auth, map[string]any{
-		"credProps": map[string]any{"rk": true},
+		extCredProps: map[string]any{"rk": true},
 	}, regFlagsSynced, 1)
 
 	// Windows Hello has historically returned the uvm extension without the
@@ -357,4 +360,49 @@ func TestRedTeamContextMismatch(t *testing.T) {
 	if err = finishFakeLogin(t, svc, shadow, challenge, handle, assertFlagsNormal, 2, ""); err == nil {
 		t.Fatal("expected wrong-rpIdHash assertion to be rejected")
 	}
+}
+
+// TestPolicyDiscoverableCredentialRequired pins the discoverable-only policy:
+// registration asks for a resident key, a credProps result of rk=false is
+// rejected with a clear message, and a missing credProps is accepted.
+func TestPolicyDiscoverableCredentialRequired(t *testing.T) {
+	_, queries, svc := newPasskeyService(t)
+	user := newPasskeyUser(t, svc.Queries, "carol")
+	authCtx := context.WithValue(context.Background(), userContextKey, user)
+
+	begin, err := svc.BeginPasskeyRegistration(authCtx, connect.NewRequest(&v1.BeginPasskeyRegistrationRequest{}))
+	if err != nil {
+		t.Fatalf("begin registration: %v", err)
+	}
+	var opts struct {
+		AuthenticatorSelection struct {
+			ResidentKey        string `json:"residentKey"`
+			RequireResidentKey bool   `json:"requireResidentKey"`
+		} `json:"authenticatorSelection"`
+	}
+	if err = json.Unmarshal([]byte(begin.Msg.OptionsJson), &opts); err != nil {
+		t.Fatal(err)
+	}
+	if opts.AuthenticatorSelection.ResidentKey != "required" || !opts.AuthenticatorSelection.RequireResidentKey {
+		t.Errorf("expected resident key required, got %+v", opts.AuthenticatorSelection)
+	}
+
+	// rk=false: rejected, nothing stored.
+	bad := newFakeAuthenticator(t)
+	challenge := beginFakeRegistration(t, svc, user)
+	_, err = svc.FinishPasskeyRegistration(authCtx, connect.NewRequest(&v1.FinishPasskeyRegistrationRequest{
+		ResponseJson: bad.RegistrationResponseJSON(challenge, map[string]any{extCredProps: map[string]any{"rk": false}}, regFlagsDevice, 0),
+	}))
+	if connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Fatalf("expected FailedPrecondition, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "discoverable credentials") {
+		t.Errorf("expected user-facing message, got: %v", err)
+	}
+	if _, err := queries.GetWebAuthnCredential(context.Background(), bad.credID); err == nil {
+		t.Error("non-discoverable credential must not be stored")
+	}
+
+	// credProps omitted: accepted.
+	enrollFakePasskey(t, svc, user, newFakeAuthenticator(t), nil, regFlagsSynced, 0)
 }

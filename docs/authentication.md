@@ -296,7 +296,7 @@ sequenceDiagram
 
 Registration requirements:
 
-* `authenticator_selection.resident_key = preferred`, `user_verification = preferred` — discoverable credentials enable the usernameless login flow below.
+* `authenticator_selection.resident_key = required` (and `require_resident_key = true`), `user_verification` per `webauthn.require_user_verification` — sign-in is usernameless, so only discoverable credentials are usable. If the client reports through the `credProps` extension that the credential is not discoverable (`rk = false`), registration fails with a message asking for a passkey provider or security key that supports discoverable credentials. Some clients omit `credProps`; those credentials are accepted, because the authenticator was asked for a resident key and there is no evidence against it.
 * `exclude_credentials` lists the user's existing credentials so the same authenticator doesn't double-register silently; the platform UI handles the "credential already exists" error gracefully.
 * The `name` label can be set at creation or renamed later; friendly device naming derives from the AAGUID (small embedded AAGUID→name table, no network call).
 
