@@ -478,7 +478,12 @@ func (s *Service) RevokeAllOtherSessions(ctx context.Context, req *connect.Reque
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("unauthenticated"))
 	}
 
-	currentSessionID, _ := SessionIDFromContext(ctx)
+	// Fail closed: without a current session ID the query below would match
+	// every session of the user, including the caller's.
+	currentSessionID, ok := SessionIDFromContext(ctx)
+	if !ok || currentSessionID == "" {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("no current session"))
+	}
 
 	rowsAffected, err := s.Queries.DeleteSessionsByUser(ctx, db.DeleteSessionsByUserParams{
 		UserID:    user.ID,
@@ -986,6 +991,13 @@ func (s *Service) DeletePasskey(ctx context.Context, req *connect.Request[v1.Del
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("unauthenticated"))
 	}
 
+	// Checked before anything is deleted: signing out the other sessions
+	// needs the current one, or the revoke would match all of them.
+	currentSessionID, hasSession := SessionIDFromContext(ctx)
+	if req.Msg.SignOutOtherSessions && (!hasSession || currentSessionID == "") {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("no current session"))
+	}
+
 	id := strings.TrimSpace(req.Msg.Id)
 	if id == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("id is required"))
@@ -1026,7 +1038,6 @@ func (s *Service) DeletePasskey(ctx context.Context, req *connect.Request[v1.Del
 
 	var revoked int64
 	if req.Msg.SignOutOtherSessions {
-		currentSessionID, _ := SessionIDFromContext(ctx)
 		revoked, err = s.Queries.DeleteSessionsByUser(ctx, db.DeleteSessionsByUserParams{
 			UserID:    user.ID,
 			SessionID: currentSessionID,
