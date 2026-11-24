@@ -438,6 +438,35 @@ describe("Settings Component", () => {
     expect(authClient.finishPasskeyRegistration).not.toHaveBeenCalled();
   });
 
+  it("flags a passkey with a counter warning and explains it in a tooltip", async () => {
+    vi.mocked(authClient.listPasskeys).mockResolvedValue({
+      passkeys: [
+        {
+          id: "cred-9",
+          name: "Old key",
+          friendlyDeviceName: "Example Security Key",
+          backupEligible: false,
+          cloneWarning: true,
+          createdAt: { seconds: BigInt(1700000000), nanos: 0 },
+          $typeName: "dmanager.v1.Passkey",
+        },
+      ],
+      $typeName: "dmanager.v1.ListPasskeysResponse",
+    } as unknown as ListPasskeysResponse);
+    render(
+      <ToastProvider>
+        <Settings />
+      </ToastProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: /security & sessions/i }));
+
+    const badge = await screen.findByText("Counter Warning");
+    expect(badge.closest("[title]")).toHaveAttribute(
+      "title",
+      expect.stringContaining("until the passkey is deleted"),
+    );
+  });
+
   it("deletes a passkey successfully", async () => {
     vi.mocked(authClient.deletePasskey).mockResolvedValue({
       $typeName: "dmanager.v1.DeletePasskeyResponse",

@@ -425,6 +425,18 @@ export function passkeyFixtures() {
       createdAt: ts(20 * 24 * 60 * MINUTE),
       lastUsedAt: ts(60 * MINUTE),
     },
+    {
+      id: "pk2",
+      name: "Old security key",
+      aaguid: "",
+      friendlyDeviceName: "Example Security Key",
+      backupEligible: false,
+      backupState: false,
+      signCount: 4,
+      cloneWarning: true,
+      createdAt: ts(90 * 24 * 60 * MINUTE),
+      lastUsedAt: ts(3 * 24 * 60 * MINUTE),
+    },
   ];
 }
 

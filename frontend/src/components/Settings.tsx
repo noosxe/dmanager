@@ -1290,8 +1290,12 @@ export function Settings({ initialTab }: SettingsProps = {}) {
                             )}
 
                             {pk.cloneWarning && (
-                              <span className="auth-event-badge auth-event-badge-error">
-                                <span>Clone Warning</span>
+                              <span
+                                className="auth-event-badge auth-event-badge-warning"
+                                title="The authenticator's sign-in counter went backwards or reset, which can mean a copied passkey, but also a restored backup or a provider that resets counters. Sign-in still works and this warning stays until the passkey is deleted. If you don't expect this, delete the passkey and register it again."
+                              >
+                                <ShieldAlert size={12} />
+                                <span>Counter Warning</span>
                               </span>
                             )}
                           </div>
