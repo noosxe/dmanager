@@ -71,8 +71,16 @@ func newPasskeyUser(t *testing.T, queries *db.Queries, name string) db.User {
 	return user
 }
 
-func userHandleFor(user db.User) []byte {
-	return (&WebAuthnUser{ID: user.ID, Username: user.Username, DisplayName: user.Username}).WebAuthnID()
+// userHandleFor returns the user's stored WebAuthn handle, creating it if the
+// user has none yet (random for a user without passkeys). It is stable, so it
+// may be called before or after enrollment.
+func userHandleFor(t *testing.T, svc *Service, user db.User) []byte {
+	t.Helper()
+	handle, err := svc.ensureWebAuthnHandle(context.Background(), user)
+	if err != nil {
+		t.Fatalf("ensure user handle: %v", err)
+	}
+	return handle
 }
 
 // beginFakeRegistration starts a registration ceremony for the user and
@@ -196,7 +204,7 @@ func TestPolicyUnsolicitedExtensionOutputRejected(t *testing.T) {
 func TestPolicyBackupFlagLifecycle(t *testing.T) {
 	_, queries, svc := newPasskeyService(t)
 	user := newPasskeyUser(t, svc.Queries, "bob")
-	handle := userHandleFor(user)
+	handle := userHandleFor(t, svc, user)
 	auth := newFakeAuthenticator(t)
 
 	enrollFakePasskey(t, svc, user, auth, nil, regFlagsSynced, 5)
@@ -239,7 +247,7 @@ func TestPolicyBackupFlagLifecycle(t *testing.T) {
 func TestPolicySignCounterAndCloneDetection(t *testing.T) {
 	dbConn, queries, svc := newPasskeyService(t)
 	user := newPasskeyUser(t, svc.Queries, "carol")
-	handle := userHandleFor(user)
+	handle := userHandleFor(t, svc, user)
 
 	// Synced authenticator: 0 → 0 forever, no clone warning.
 	synced := newFakeAuthenticator(t)
@@ -305,7 +313,7 @@ func TestPolicySignCounterAndCloneDetection(t *testing.T) {
 func TestCounterRegressionDoesNotCountAsFailure(t *testing.T) {
 	_, _, svc := newPasskeyService(t)
 	user := newPasskeyUser(t, svc.Queries, "frank")
-	handle := userHandleFor(user)
+	handle := userHandleFor(t, svc, user)
 	auth := newFakeAuthenticator(t)
 	enrollFakePasskey(t, svc, user, auth, nil, regFlagsDevice, 50)
 	for i := 0; i < 12; i++ {
@@ -321,7 +329,7 @@ func TestCounterRegressionDoesNotCountAsFailure(t *testing.T) {
 func TestRedTeamCeremonyEdges(t *testing.T) {
 	dbConn, _, svc := newPasskeyService(t)
 	user := newPasskeyUser(t, svc.Queries, "dave")
-	handle := userHandleFor(user)
+	handle := userHandleFor(t, svc, user)
 	auth := newFakeAuthenticator(t)
 	enrollFakePasskey(t, svc, user, auth, nil, regFlagsSynced, 1)
 
@@ -382,7 +390,7 @@ func TestRedTeamCeremonyEdges(t *testing.T) {
 func TestRedTeamContextMismatch(t *testing.T) {
 	_, _, svc := newPasskeyService(t)
 	user := newPasskeyUser(t, svc.Queries, "eve")
-	handle := userHandleFor(user)
+	handle := userHandleFor(t, svc, user)
 	auth := newFakeAuthenticator(t)
 	enrollFakePasskey(t, svc, user, auth, nil, regFlagsSynced, 1)
 
@@ -494,7 +502,7 @@ func TestBeginPasskeyLoginIsThrottled(t *testing.T) {
 	if connect.CodeOf(err) != connect.CodeResourceExhausted {
 		t.Fatalf("expected ResourceExhausted after %d begins, got %v", BeginLimit, err)
 	}
-	if err := finishFakeLogin(t, svc, auth, first, userHandleFor(user), assertFlagsSynced, 0, ""); err != nil {
+	if err := finishFakeLogin(t, svc, auth, first, userHandleFor(t, svc, user), assertFlagsSynced, 0, ""); err != nil {
 		t.Fatalf("a throttled client can still finish an open ceremony: %v", err)
 	}
 }
@@ -520,7 +528,7 @@ func TestUserVerificationPolicy(t *testing.T) {
 	t.Run("preferred accepts UV=0 and records it", func(t *testing.T) {
 		svc := newPasskeyServiceWithUV(t, "preferred")
 		user := newPasskeyUser(t, svc.Queries, "hank")
-		handle := userHandleFor(user)
+		handle := userHandleFor(t, svc, user)
 
 		verified := newFakeAuthenticator(t)
 		enrollFakePasskey(t, svc, user, verified, nil, regFlagsDevice, 1)
@@ -548,7 +556,7 @@ func TestUserVerificationPolicy(t *testing.T) {
 	t.Run("required rejects UV=0", func(t *testing.T) {
 		svc := newPasskeyServiceWithUV(t, "required")
 		user := newPasskeyUser(t, svc.Queries, "iris")
-		handle := userHandleFor(user)
+		handle := userHandleFor(t, svc, user)
 		authCtx := context.WithValue(context.Background(), userContextKey, user)
 
 		weak := newFakeAuthenticator(t)
@@ -655,7 +663,7 @@ func TestConcurrentFinishConsumesChallengeOnce(t *testing.T) {
 		user := newPasskeyUser(t, svc.Queries, "jules")
 		auth := newFakeAuthenticator(t)
 		enrollFakePasskey(t, svc, user, auth, nil, regFlagsSynced, 0)
-		response := auth.AssertionResponseJSON(beginFakeLogin(t, svc), userHandleFor(user), nil, assertFlagsSynced, 0, "")
+		response := auth.AssertionResponseJSON(beginFakeLogin(t, svc), userHandleFor(t, svc, user), nil, assertFlagsSynced, 0, "")
 
 		errs := raceAll(parallel, func() error { return finishFakeLoginRaw(t, svc, response) })
 		if got := countNil(errs); got != 1 {

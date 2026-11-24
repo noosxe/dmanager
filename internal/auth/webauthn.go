@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"context"
+	"crypto/rand"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
@@ -21,14 +23,32 @@ type WebAuthnUser struct {
 	Username    string
 	DisplayName string
 	Credentials []webauthn.Credential
+	// Handle is the stored per-user WebAuthn handle (users.webauthn_user_id).
+	// When empty, WebAuthnID falls back to the legacy handle.
+	Handle []byte
 }
 
-func (u *WebAuthnUser) WebAuthnID() []byte {
+// WebAuthnHandleLen is the length of a randomly generated user handle.
+const WebAuthnHandleLen = 32
+
+// legacyWebAuthnHandle is the handle used before per-user random handles: the
+// 8-byte big-endian row ID. Users who registered passkeys back then keep it,
+// because their authenticators stored it.
+func legacyWebAuthnHandle(id int64) []byte {
 	b := make([]byte, 8)
-	if u.ID > 0 {
-		binary.BigEndian.PutUint64(b, uint64(u.ID))
+	if id > 0 {
+		binary.BigEndian.PutUint64(b, uint64(id))
 	}
 	return b
+}
+
+// WebAuthnID returns the stored handle, or the legacy row-ID handle when none
+// is stored.
+func (u *WebAuthnUser) WebAuthnID() []byte {
+	if len(u.Handle) > 0 {
+		return u.Handle
+	}
+	return legacyWebAuthnHandle(u.ID)
 }
 
 func (u *WebAuthnUser) WebAuthnName() string {
@@ -146,4 +166,54 @@ func formatPasskeyProto(c db.WebauthnCredential) *v1.Passkey {
 		CreatedAt:          timestamppb.New(c.CreatedAt),
 		LastUsedAt:         lastUsed,
 	}
+}
+
+// ensureWebAuthnHandle returns the user's WebAuthn handle, choosing and storing
+// one the first time it is needed. A user who already has passkeys gets the
+// legacy row-ID handle (their authenticators hold it); anyone else gets 32
+// random bytes. Whichever is chosen is persisted, so it never changes later.
+func (s *Service) ensureWebAuthnHandle(ctx context.Context, user db.User) ([]byte, error) {
+	if len(user.WebauthnUserID) > 0 {
+		return user.WebauthnUserID, nil
+	}
+
+	count, err := s.Queries.CountWebAuthnCredentialsByUser(ctx, user.ID)
+	if err != nil {
+		return nil, fmt.Errorf("count passkeys: %w", err)
+	}
+	var handle []byte
+	if count > 0 {
+		handle = legacyWebAuthnHandle(user.ID)
+	} else {
+		handle = make([]byte, WebAuthnHandleLen)
+		if _, rerr := rand.Read(handle); rerr != nil {
+			return nil, fmt.Errorf("generate user handle: %w", rerr)
+		}
+	}
+
+	if _, serr := s.Queries.SetUserWebAuthnID(ctx, db.SetUserWebAuthnIDParams{WebauthnUserID: handle, ID: user.ID}); serr != nil {
+		return nil, fmt.Errorf("store user handle: %w", serr)
+	}
+	// Re-read: a concurrent request may have stored a handle first.
+	stored, err := s.Queries.GetUser(ctx, user.ID)
+	if err != nil {
+		return nil, fmt.Errorf("read user handle: %w", err)
+	}
+	return stored.WebauthnUserID, nil
+}
+
+// newWebAuthnUser builds the go-webauthn user for a database user, with the
+// stored handle (created on first use).
+func (s *Service) newWebAuthnUser(ctx context.Context, user db.User, creds []webauthn.Credential) (*WebAuthnUser, error) {
+	handle, err := s.ensureWebAuthnHandle(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+	return &WebAuthnUser{
+		ID:          user.ID,
+		Username:    user.Username,
+		DisplayName: user.Username,
+		Credentials: creds,
+		Handle:      handle,
+	}, nil
 }

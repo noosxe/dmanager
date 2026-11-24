@@ -1,6 +1,7 @@
 package db
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"io/fs"
@@ -185,5 +186,47 @@ func TestMigrationWebAuthnChallengeExtensions(t *testing.T) {
 	}
 	if string(created.Extensions) != `{"credProps":{"rk":true}}` {
 		t.Errorf("created challenge extensions = %q, want persisted JSON", created.Extensions)
+	}
+}
+
+// TestMigrationWebAuthnHandleBackfill pins the #394 upgrade rule: users that
+// already have passkeys get the legacy 8-byte big-endian row-ID handle stored,
+// so their registered authenticators keep working; others stay NULL and get a
+// random handle when one is first needed.
+func TestMigrationWebAuthnHandleBackfill(t *testing.T) {
+	dbConn := newMigrationTestDB(t)
+	if err := goose.UpTo(dbConn, "migrations", 12); err != nil {
+		t.Fatalf("migrate to 12: %v", err)
+	}
+	for _, q := range []string{
+		`INSERT INTO users (id, username, password_hash, role) VALUES (1, 'with_passkey', 'h', 'viewer')`,
+		`INSERT INTO users (id, username, password_hash, role) VALUES (300, 'big_id_passkey', 'h', 'viewer')`,
+		`INSERT INTO users (id, username, password_hash, role) VALUES (2, 'no_passkey', 'h', 'viewer')`,
+		`INSERT INTO webauthn_credentials (credential_id, user_id, public_key, attestation_type, aaguid) VALUES (x'01', 1, x'00', 'none', x'')`,
+		`INSERT INTO webauthn_credentials (credential_id, user_id, public_key, attestation_type, aaguid) VALUES (x'02', 300, x'00', 'none', x'')`,
+	} {
+		if _, err := dbConn.Exec(q); err != nil {
+			t.Fatalf("seed %q: %v", q, err)
+		}
+	}
+	if err := goose.UpTo(dbConn, "migrations", 13); err != nil {
+		t.Fatalf("migrate to 13: %v", err)
+	}
+
+	handle := func(id int) []byte {
+		var h []byte
+		if err := dbConn.QueryRow(`SELECT webauthn_user_id FROM users WHERE id = ?`, id).Scan(&h); err != nil {
+			t.Fatalf("read handle %d: %v", id, err)
+		}
+		return h
+	}
+	if got, want := handle(1), []byte{0, 0, 0, 0, 0, 0, 0, 1}; !bytes.Equal(got, want) {
+		t.Errorf("user 1 handle = %x, want %x", got, want)
+	}
+	if got, want := handle(300), []byte{0, 0, 0, 0, 0, 0, 1, 0x2c}; !bytes.Equal(got, want) {
+		t.Errorf("user 300 handle = %x, want %x", got, want)
+	}
+	if got := handle(2); got != nil {
+		t.Errorf("user without passkeys must keep a NULL handle, got %x", got)
 	}
 }

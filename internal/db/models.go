@@ -65,13 +65,14 @@ type Setting struct {
 }
 
 type User struct {
-	ID           int64
-	Username     string
-	PasswordHash string
-	Role         string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-	Email        sql.NullString
+	ID             int64
+	Username       string
+	PasswordHash   string
+	Role           string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	Email          sql.NullString
+	WebauthnUserID []byte
 }
 
 type WebauthnChallenge struct {
