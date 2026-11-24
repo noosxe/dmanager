@@ -20,6 +20,18 @@ const (
 	// time, so it needs its own limit: it has no failure to count.
 	BeginLimit  = 20
 	BeginWindow = time.Minute
+
+	// BeginMaxTrackedIPs bounds the begin throttle's memory. Once that many
+	// IPs are tracked, new ones share one overflow key, which is limited like
+	// any other IP, so memory does not grow with the request rate or with
+	// spoofed or rotating addresses.
+	BeginMaxTrackedIPs = 10000
+	// BeginAuditPerWindow caps the rate_limited audit rows the begin throttle
+	// may write in total per BeginWindow, so rotating addresses cannot grow
+	// the auth event log either.
+	BeginAuditPerWindow = 30
+
+	beginOverflowKey = "overflow"
 )
 
 type attemptRecord struct {
@@ -40,12 +52,18 @@ type RateLimiter struct {
 	beginHits      map[string][]time.Time
 	beginNotified  map[string]time.Time
 	beginLastSweep time.Time
+	beginMaxKeys   int
+	beginAuditMax  int
+	beginAuditFrom time.Time
+	beginAuditUsed int
 }
 
 func NewRateLimiter(trustedProxy bool) *RateLimiter {
 	return &RateLimiter{
 		beginHits:     make(map[string][]time.Time),
 		beginNotified: make(map[string]time.Time),
+		beginMaxKeys:  BeginMaxTrackedIPs,
+		beginAuditMax: BeginAuditPerWindow,
 		userRecords:   make(map[string]*attemptRecord),
 		ipRecords:     make(map[string]*attemptRecord),
 		window:        RateLimitWindow,
@@ -59,8 +77,10 @@ func NewRateLimiter(trustedProxy bool) *RateLimiter {
 // AllowBegin records a passkey login begin call from ip and reports whether it
 // is within BeginLimit calls per BeginWindow (sliding). When it is not, the
 // call is not recorded and retryAfter says when the oldest hit leaves the
-// window. first is true for only one refusal per IP per window, so callers
-// can audit the throttle without letting a flood grow the audit log. It is independent of the failure lockout, so a flood of begins
+// window. first is true for only one refusal per IP per window, and for at
+// most BeginAuditPerWindow refusals in total, so callers can audit the
+// throttle without letting a flood (even from rotating addresses) grow the
+// audit log. It is independent of the failure lockout, so a flood of begins
 // never locks anyone out of signing in, it only slows the flooder.
 func (rl *RateLimiter) AllowBegin(ip string, now time.Time) (allowed bool, retryAfter time.Duration, first bool) {
 	rl.mu.Lock()
@@ -83,6 +103,10 @@ func (rl *RateLimiter) AllowBegin(ip string, now time.Time) (allowed bool, retry
 		rl.beginLastSweep = now
 	}
 
+	if _, tracked := rl.beginHits[ip]; !tracked && len(rl.beginHits) >= rl.beginMaxKeys {
+		ip = beginOverflowKey
+	}
+
 	hits := rl.beginHits[ip][:0]
 	for _, t := range rl.beginHits[ip] {
 		if t.After(windowStart) {
@@ -94,11 +118,26 @@ func (rl *RateLimiter) AllowBegin(ip string, now time.Time) (allowed bool, retry
 		first = !rl.beginNotified[ip].After(windowStart)
 		if first {
 			rl.beginNotified[ip] = now
+			first = rl.takeBeginAudit(now)
 		}
 		return false, hits[0].Add(BeginWindow).Sub(now), first
 	}
 	rl.beginHits[ip] = append(hits, now)
 	return true, 0, false
+}
+
+// takeBeginAudit spends one of the begin throttle's audit rows for this
+// window, if any are left. The caller holds rl.mu.
+func (rl *RateLimiter) takeBeginAudit(now time.Time) bool {
+	if now.Sub(rl.beginAuditFrom) >= BeginWindow {
+		rl.beginAuditFrom = now
+		rl.beginAuditUsed = 0
+	}
+	if rl.beginAuditUsed >= rl.beginAuditMax {
+		return false
+	}
+	rl.beginAuditUsed++
+	return true
 }
 
 // Check verifies if either the username or client IP is currently rate-limited.

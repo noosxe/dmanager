@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -219,5 +220,60 @@ func TestAllowBeginSlidingWindowPerIP(t *testing.T) {
 	// Begin flooding never feeds the failure lockout.
 	if locked, _ := rl.Check("passkey_login", "203.0.113.1", now); locked {
 		t.Error("refused begins must not lock out sign-in")
+	}
+}
+
+func TestAllowBeginBoundsTrackedIPs(t *testing.T) {
+	rl := NewRateLimiter(false)
+	rl.beginMaxKeys = 3
+	now := time.Now()
+
+	for _, ip := range []string{"198.51.100.1", "198.51.100.2", "198.51.100.3"} {
+		if ok, _, _ := rl.AllowBegin(ip, now); !ok {
+			t.Fatalf("%s must be allowed", ip)
+		}
+	}
+	// New IPs beyond the cap share one overflow key with its own budget.
+	for i := 0; i < BeginLimit; i++ {
+		if ok, _, _ := rl.AllowBegin(fmt.Sprintf("192.0.2.%d", i), now); !ok {
+			t.Fatalf("overflow call %d within the shared budget must be allowed", i)
+		}
+	}
+	if ok, _, _ := rl.AllowBegin("192.0.2.200", now); ok {
+		t.Error("the shared overflow key must be limited")
+	}
+	if len(rl.beginHits) > 4 || len(rl.beginNotified) > 4 {
+		t.Errorf("tracked keys must stay within the cap (+ overflow), got %d/%d", len(rl.beginHits), len(rl.beginNotified))
+	}
+	// A tracked IP keeps its own budget.
+	if ok, _, _ := rl.AllowBegin("198.51.100.1", now); !ok {
+		t.Error("an already tracked IP must keep its own budget")
+	}
+}
+
+func TestAllowBeginCapsAuditedRefusals(t *testing.T) {
+	rl := NewRateLimiter(false)
+	now := time.Now()
+	audited := 0
+	// Many distinct IPs, each pushed over its limit once.
+	for i := 0; i < 200; i++ {
+		ip := fmt.Sprintf("10.0.%d.%d", i/250, i%250)
+		for j := 0; j < BeginLimit; j++ {
+			rl.AllowBegin(ip, now)
+		}
+		if _, _, first := rl.AllowBegin(ip, now); first {
+			audited++
+		}
+	}
+	if audited != BeginAuditPerWindow {
+		t.Errorf("expected %d audited refusals in total, got %d", BeginAuditPerWindow, audited)
+	}
+	// The budget returns with the next window.
+	later := now.Add(BeginWindow + time.Second)
+	for j := 0; j < BeginLimit; j++ {
+		rl.AllowBegin("10.9.9.9", later)
+	}
+	if _, _, first := rl.AllowBegin("10.9.9.9", later); !first {
+		t.Error("the audit budget must recover in the next window")
 	}
 }
