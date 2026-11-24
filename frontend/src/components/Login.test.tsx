@@ -233,14 +233,15 @@ describe("Login Component", () => {
       expect(document.querySelector(".auth-error-banner")).toBeNull();
     });
 
-    it("shows the server's generic failure message", async () => {
+    it("shows a friendly message for a failed passkey sign-in", async () => {
       withPasskeys();
       loginWithPasskeyMock.mockRejectedValueOnce(
         new ConnectError("passkey sign-in failed", Code.Unauthenticated),
       );
       render(<Login />);
       fireEvent.click(screen.getByRole("button", { name: /sign in with passkey/i }));
-      expect(await screen.findByText("passkey sign-in failed")).toBeInTheDocument();
+      expect(await screen.findByText(/Passkey sign-in failed\. Try again/)).toBeInTheDocument();
+      expect(screen.queryByText("passkey sign-in failed")).not.toBeInTheDocument();
     });
 
     it("shows rate-limit info with its retry time", async () => {

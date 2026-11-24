@@ -41,7 +41,7 @@ describe("isPasskeyCancel", () => {
 });
 
 describe("passkeySignInErrorMessage", () => {
-  it("shows the server's rate-limit and generic sign-in messages", () => {
+  it("shows the server's rate-limit message and a friendly sentence for a failed sign-in", () => {
     expect(
       passkeySignInErrorMessage(
         new ConnectError(
@@ -52,7 +52,7 @@ describe("passkeySignInErrorMessage", () => {
     ).toMatch(/try again in 30 seconds/);
     expect(
       passkeySignInErrorMessage(new ConnectError("passkey sign-in failed", Code.Unauthenticated)),
-    ).toBe("passkey sign-in failed");
+    ).toBe(GENERIC);
   });
 
   it("never shows detail from other server or browser errors", () => {
