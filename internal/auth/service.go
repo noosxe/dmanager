@@ -713,9 +713,13 @@ func (s *Service) BeginPasskeyLogin(ctx context.Context, req *connect.Request[v1
 		)
 	}
 
-	if allowed, wait := s.rateLimiter.AllowBegin(clientIP, time.Now()); !allowed {
+	if allowed, wait, first := s.rateLimiter.AllowBegin(clientIP, time.Now()); !allowed {
 		retrySec := max(int(math.Ceil(wait.Seconds())), 1)
-		s.recordAuthEvent(ctx, nil, "unknown", "rate_limited", "method: passkey begin, ip: "+clientIP)
+		// One audit row per IP per window: auth events are kept for 90 days,
+		// so a flood must not be able to grow them.
+		if first {
+			s.recordAuthEvent(ctx, nil, "unknown", "rate_limited", "method: passkey begin, ip: "+clientIP)
+		}
 		return nil, connect.NewError(
 			connect.CodeResourceExhausted,
 			fmt.Errorf("too many passkey sign-in requests, please try again in %d seconds", retrySec),
