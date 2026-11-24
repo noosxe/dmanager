@@ -873,16 +873,25 @@ func (s *Service) FinishPasskeyLogin(ctx context.Context, req *connect.Request[v
 	if validCred.Authenticator.CloneWarning {
 		cloneWarning = 1
 		signCount = int64(parsedResponse.Response.AuthenticatorData.Counter)
-		s.recordAuthEvent(ctx, &user.ID, user.Username, "passkey_clone_warning", "name: "+credRow.Name+", ip: "+clientIP)
 	}
 
-	_ = s.Queries.UpdateWebAuthnCredentialUsage(ctx, db.UpdateWebAuthnCredentialUsageParams{
+	updateErr := s.Queries.UpdateWebAuthnCredentialUsage(ctx, db.UpdateWebAuthnCredentialUsageParams{
 		SignCount:    signCount,
 		LastUsedAt:   sql.NullTime{Time: time.Now(), Valid: true},
 		BackupState:  boolToInt(validCred.Flags.BackupState),
 		CloneWarning: cloneWarning,
 		CredentialID: credRow.CredentialID,
 	})
+	switch {
+	case updateErr != nil:
+		// The login itself was verified, so it still succeeds; but the new
+		// counter and flag were not stored, so no clone warning is audited.
+		if s.logger != nil {
+			s.logger.Error("Failed to store passkey usage after login", "error", updateErr, "user_id", user.ID)
+		}
+	case validCred.Authenticator.CloneWarning:
+		s.recordAuthEvent(ctx, &user.ID, user.Username, "passkey_clone_warning", "name: "+credRow.Name+", ip: "+clientIP)
+	}
 
 	s.rateLimiter.RecordSuccess(user.Username)
 

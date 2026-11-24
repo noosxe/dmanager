@@ -173,8 +173,17 @@ describe("Settings Component", () => {
           createdAt: { seconds: BigInt(1700001000), nanos: 0 },
           $typeName: "dmanager.v1.AuthEvent",
         },
+        {
+          id: BigInt(3),
+          userId: BigInt(1),
+          username: "admin",
+          eventType: "passkey_clone_warning",
+          detail: "name: Work MacBook",
+          createdAt: { seconds: BigInt(1700002000), nanos: 0 },
+          $typeName: "dmanager.v1.AuthEvent",
+        },
       ],
-      totalCount: BigInt(2),
+      totalCount: BigInt(3),
       $typeName: "dmanager.v1.ListAuthEventsResponse",
     } as unknown as ListAuthEventsResponse);
   });
@@ -291,6 +300,9 @@ describe("Settings Component", () => {
       expect(screen.getByText("Safari · iOS")).toBeInTheDocument();
       expect(screen.getByText("Login Success")).toBeInTheDocument();
       expect(screen.getByText("Session Revoked")).toBeInTheDocument();
+      // Known event types get a label, not the raw event string.
+      expect(screen.getByText("Passkey Counter Warning")).toBeInTheDocument();
+      expect(screen.queryByText("passkey_clone_warning")).not.toBeInTheDocument();
     });
   });
 
