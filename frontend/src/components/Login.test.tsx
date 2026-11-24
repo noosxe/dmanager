@@ -1,6 +1,6 @@
 import { Code, ConnectError } from "@connectrpc/connect";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useAuth } from "../hooks/useAuth";
 import { Login } from "./Login";
@@ -192,7 +192,7 @@ describe("Login Component", () => {
   });
 
   it("handles passkey login error by displaying error banner", async () => {
-    const loginWithPasskeyMock = vi.fn().mockRejectedValue(new Error("Passkey cancelled by user"));
+    const loginWithPasskeyMock = vi.fn().mockRejectedValue(new Error("unexpected failure"));
     vi.mocked(useAuth).mockReturnValue({
       login: loginMock,
       loginWithPasskey: loginWithPasskeyMock,
@@ -204,7 +204,73 @@ describe("Login Component", () => {
     fireEvent.click(passkeyBtn);
 
     await waitFor(() => {
-      expect(screen.getByText("Passkey cancelled by user")).toBeInTheDocument();
+      expect(screen.getByText(/Passkey sign-in failed\. Try again/)).toBeInTheDocument();
+    });
+  });
+
+  describe("passkey sign-in", () => {
+    const loginWithPasskeyMock = vi.fn();
+    const withPasskeys = () =>
+      vi.mocked(useAuth).mockReturnValue({
+        login: loginMock,
+        loginWithPasskey: loginWithPasskeyMock,
+        passkeyLoginEnabled: true,
+      } as unknown as ReturnType<typeof useAuth>);
+
+    afterEach(() => {
+      Object.defineProperty(window, "isSecureContext", { value: true, configurable: true });
+    });
+
+    it("stays quiet when the user cancels the browser prompt", async () => {
+      withPasskeys();
+      loginWithPasskeyMock.mockRejectedValueOnce(new DOMException("denied", "NotAllowedError"));
+      render(<Login />);
+      fireEvent.click(screen.getByRole("button", { name: /sign in with passkey/i }));
+      await waitFor(() => expect(loginWithPasskeyMock).toHaveBeenCalled());
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: /sign in with passkey/i })).toBeEnabled(),
+      );
+      expect(document.querySelector(".auth-error-banner")).toBeNull();
+    });
+
+    it("shows the server's generic failure message", async () => {
+      withPasskeys();
+      loginWithPasskeyMock.mockRejectedValueOnce(
+        new ConnectError("passkey sign-in failed", Code.Unauthenticated),
+      );
+      render(<Login />);
+      fireEvent.click(screen.getByRole("button", { name: /sign in with passkey/i }));
+      expect(await screen.findByText("passkey sign-in failed")).toBeInTheDocument();
+    });
+
+    it("shows rate-limit info with its retry time", async () => {
+      withPasskeys();
+      loginWithPasskeyMock.mockRejectedValueOnce(
+        new ConnectError(
+          "too many failed login attempts, please try again in 42 seconds",
+          Code.ResourceExhausted,
+        ),
+      );
+      render(<Login />);
+      fireEvent.click(screen.getByRole("button", { name: /sign in with passkey/i }));
+      expect(await screen.findByText(/try again in 42 seconds/)).toBeInTheDocument();
+    });
+
+    it("hides library or browser detail behind a generic message", async () => {
+      withPasskeys();
+      loginWithPasskeyMock.mockRejectedValueOnce(new TypeError("raw browser detail"));
+      render(<Login />);
+      fireEvent.click(screen.getByRole("button", { name: /sign in with passkey/i }));
+      expect(await screen.findByText(/Passkey sign-in failed\. Try again/)).toBeInTheDocument();
+      expect(screen.queryByText(/raw browser detail/)).not.toBeInTheDocument();
+    });
+
+    it("disables the passkey button with an explanation in an insecure context", () => {
+      Object.defineProperty(window, "isSecureContext", { value: false, configurable: true });
+      withPasskeys();
+      render(<Login />);
+      expect(screen.getByRole("button", { name: /sign in with passkey/i })).toBeDisabled();
+      expect(screen.getByRole("note")).toHaveTextContent(/secure connection/);
     });
   });
 });

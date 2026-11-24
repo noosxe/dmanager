@@ -16,6 +16,7 @@ The UI runs in the browser with fake data, so no backend, Docker or Tailscale is
 2. Open every screen the change touches. Fixtures and the mock server live in `frontend/src/mock/`; mutations (start, stop, upgrade, auto-update) change in-memory state, which resets on reload.
 3. Pick variants with query parameters; they stick for the tab until changed:
    - `?scenario=admin` (default), `viewer` (non-admin: admin-only screens and actions are denied), `login` (logged out), `setup` (first run), `empty` (no containers)
+   - `?webauthn=available` (default), `unavailable` (simulates a page without WebAuthn, such as plain HTTP on a LAN address: passkey buttons are disabled with an explanation)
    - `?tailscale=running` (default), `starting`, `failed`, `disabled`
 4. Where relevant, check light and dark mode and a narrow width (for example 375px).
 5. Take screenshots and save them under `.scratch/<task>/` (gitignored). In the report, list each with its absolute path and a one-line description so the reviewer can look at them.

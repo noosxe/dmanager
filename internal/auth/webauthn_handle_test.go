@@ -3,7 +3,12 @@ package auth
 import (
 	"bytes"
 	"context"
+	"database/sql"
+	"errors"
+	"strings"
 	"testing"
+
+	connect "connectrpc.com/connect"
 
 	"dmanager/internal/db"
 )
@@ -97,4 +102,59 @@ func TestSignInRejectsUnknownOrForeignHandle(t *testing.T) {
 
 func setHandleParams(handle []byte, id int64) db.SetUserWebAuthnIDParams {
 	return db.SetUserWebAuthnIDParams{WebauthnUserID: handle, ID: id}
+}
+
+// TestFinishPasskeyLoginFailuresAreIndistinguishable pins #392: every
+// verification failure returns the same Unauthenticated message, with no
+// library detail; the reason is kept in the audit event.
+func TestFinishPasskeyLoginFailuresAreIndistinguishable(t *testing.T) {
+	_, _, svc := newPasskeyService(t)
+	user := newPasskeyUser(t, svc.Queries, "failures")
+	auth := newFakeAuthenticator(t)
+	enrollFakePasskey(t, svc, user, auth, nil, regFlagsSynced, 0)
+	handle := userHandleFor(t, svc, user)
+
+	cases := map[string]func() error{
+		"unparseable response": func() error {
+			return finishFakeLoginRaw(t, svc, "not json")
+		},
+		"expired or unknown challenge": func() error {
+			return finishFakeLogin(t, svc, auth, "unknown-challenge", handle, assertFlagsSynced, 0, "")
+		},
+		"unknown credential": func() error {
+			return finishFakeLogin(t, svc, newFakeAuthenticator(t), beginFakeLogin(t, svc), handle, assertFlagsSynced, 0, "")
+		},
+		// BE flag differs from enrollment: the library reports a detailed error.
+		"failed assertion": func() error {
+			return finishFakeLogin(t, svc, auth, beginFakeLogin(t, svc), handle, assertFlagsNormal, 0, "")
+		},
+	}
+	for name, run := range cases {
+		err := run()
+		if connect.CodeOf(err) != connect.CodeUnauthenticated {
+			t.Errorf("%s: code = %v, want Unauthenticated (%v)", name, connect.CodeOf(err), err)
+			continue
+		}
+		var cerr *connect.Error
+		if !errors.As(err, &cerr) || cerr.Message() != errPasskeySignInFailed.Error() {
+			t.Errorf("%s: message = %q, want %q", name, err.Error(), errPasskeySignInFailed.Error())
+		}
+	}
+
+	// The specific reason stays in the audit events.
+	events, err := svc.Queries.ListAuthEventsByUser(context.Background(), db.ListAuthEventsByUserParams{
+		UserID: sql.NullInt64{Int64: user.ID, Valid: true}, Limit: 20,
+	})
+	if err != nil {
+		t.Fatalf("list events: %v", err)
+	}
+	var detailed bool
+	for _, e := range events {
+		if e.Event == eventLoginFailed && strings.Contains(e.Detail, "validation failed:") {
+			detailed = true
+		}
+	}
+	if !detailed {
+		t.Error("the failed assertion's reason must be recorded in the audit event")
+	}
 }

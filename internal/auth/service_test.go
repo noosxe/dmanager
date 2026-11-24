@@ -1164,8 +1164,8 @@ func TestFinishPasskeyLoginInvalidPayloadAndMissingChallenge(t *testing.T) {
 		t.Fatalf("expected error on malformed payload")
 	}
 	var connectErr *connect.Error
-	if !errors.As(err, &connectErr) || connectErr.Code() != connect.CodeInvalidArgument {
-		t.Errorf("expected CodeInvalidArgument, got %v", err)
+	if !errors.As(err, &connectErr) || connectErr.Code() != connect.CodeUnauthenticated {
+		t.Errorf("expected CodeUnauthenticated (generic sign-in failure), got %v", err)
 	}
 
 	// 2. Valid WebAuthn structure but challenge not in DB

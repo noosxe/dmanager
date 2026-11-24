@@ -508,6 +508,46 @@ describe("Settings Component", () => {
     expect(screen.queryByText("Counter Warning")).not.toBeInTheDocument();
   });
 
+  it("treats a cancelled browser prompt as a quiet cancel when adding a passkey", async () => {
+    const { create } = await import("@github/webauthn-json");
+    vi.mocked(authClient.beginPasskeyRegistration).mockResolvedValue({
+      optionsJson: "{}",
+    } as never);
+    vi.mocked(create).mockRejectedValueOnce(new DOMException("denied", "NotAllowedError"));
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <Settings />
+      </ToastProvider>,
+    );
+    await user.click(await screen.findByRole("button", { name: /security & sessions/i }));
+    await user.click(await screen.findByRole("button", { name: /add passkey/i }));
+    await user.click(await screen.findByRole("button", { name: /prompt device authenticator/i }));
+
+    await waitFor(() => expect(create).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /prompt device authenticator/i })).toBeEnabled(),
+    );
+    expect(screen.queryByText(/Passkey registration failed/)).not.toBeInTheDocument();
+    expect(authClient.finishPasskeyRegistration).not.toHaveBeenCalled();
+  });
+
+  it("disables Add Passkey with an explanation when WebAuthn is unavailable", async () => {
+    Object.defineProperty(window, "isSecureContext", { value: false, configurable: true });
+    try {
+      render(
+        <ToastProvider>
+          <Settings />
+        </ToastProvider>,
+      );
+      fireEvent.click(await screen.findByRole("button", { name: /security & sessions/i }));
+      expect(await screen.findByRole("button", { name: /add passkey/i })).toBeDisabled();
+      expect(screen.getByRole("note")).toHaveTextContent(/secure connection/);
+    } finally {
+      Object.defineProperty(window, "isSecureContext", { value: true, configurable: true });
+    }
+  });
+
   it("hints at discoverable credentials on NotSupportedError", async () => {
     const { create } = await import("@github/webauthn-json");
     vi.mocked(authClient.beginPasskeyRegistration).mockResolvedValue({
@@ -560,7 +600,7 @@ describe("Settings Component", () => {
     const dialog = screen.getByRole("dialog");
     expect(dialog).toHaveAccessibleName("Delete passkey?");
     expect(dialog).toHaveAccessibleDescription(
-      'Passkey "Work MacBook" will be removed from your account. If it is your only remaining credential, you will be locked out.',
+      'Passkey "Work MacBook" will be removed from your account. You can no longer sign in with it. The last way to sign in cannot be removed.',
     );
     expect(document.activeElement).toBe(within(dialog).getByRole("button", { name: "Cancel" }));
     fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));

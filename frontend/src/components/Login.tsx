@@ -14,6 +14,11 @@ import type React from "react";
 import { useState } from "react";
 
 import { useAuth } from "../hooks/useAuth";
+import {
+  isPasskeyCancel,
+  passkeySignInErrorMessage,
+  passkeysUnavailableReason,
+} from "../lib/passkeys";
 
 export function Login() {
   const { login, loginWithPasskey, passkeyLoginEnabled } = useAuth();
@@ -49,18 +54,18 @@ export function Login() {
     return Object.keys(errors).length === 0;
   };
 
+  const passkeyUnavailable = passkeysUnavailableReason();
+
   const handlePasskeyLogin = async () => {
     setError(null);
     setIsPasskeySubmitting(true);
     try {
       await loginWithPasskey(rememberMe);
     } catch (err: unknown) {
-      console.error(err);
-      if (err instanceof ConnectError) {
-        setError(err.rawMessage || err.message);
-      } else {
-        const message = err instanceof Error ? err.message : String(err);
-        setError(message || "Passkey authentication failed");
+      // Dismissing the browser prompt or a timeout is a quiet cancel.
+      if (!isPasskeyCancel(err)) {
+        console.error(err);
+        setError(passkeySignInErrorMessage(err));
       }
     } finally {
       setIsPasskeySubmitting(false);
@@ -117,7 +122,7 @@ export function Login() {
             <button
               type="button"
               onClick={handlePasskeyLogin}
-              disabled={isSubmitting || isPasskeySubmitting}
+              disabled={isSubmitting || isPasskeySubmitting || passkeyUnavailable !== null}
               className="auth-submit-btn auth-passkey-btn"
             >
               {isPasskeySubmitting ? (
@@ -132,6 +137,11 @@ export function Login() {
                 </>
               )}
             </button>
+            {passkeyUnavailable && (
+              <p className="auth-passkey-note" role="note">
+                {passkeyUnavailable}
+              </p>
+            )}
             <div className="auth-divider">
               <span>or sign in with password</span>
             </div>
