@@ -195,7 +195,8 @@ the UI hides the button.
 
 ### 5.4 Login (usernameless, discoverable)
 
-1. `Begin`: rate-limit check; issue a **discoverable** login (empty
+1. `Begin`: rate-limit check plus a per-IP cap on begin calls (20/min,
+   separate from the failure lockout); issue a **discoverable** login (empty
    allow-credentials) — the browser picker resolves the user. Store
    challenge (kind=login, no user binding, TTL 120s).
 2. `Finish`: parse the assertion; verify the challenge (unconsumed,

@@ -713,6 +713,15 @@ func (s *Service) BeginPasskeyLogin(ctx context.Context, req *connect.Request[v1
 		)
 	}
 
+	if allowed, wait := s.rateLimiter.AllowBegin(clientIP, time.Now()); !allowed {
+		retrySec := max(int(math.Ceil(wait.Seconds())), 1)
+		s.recordAuthEvent(ctx, nil, "unknown", "rate_limited", "method: passkey begin, ip: "+clientIP)
+		return nil, connect.NewError(
+			connect.CodeResourceExhausted,
+			fmt.Errorf("too many passkey sign-in requests, please try again in %d seconds", retrySec),
+		)
+	}
+
 	uv := getUserVerificationRequirement(s.webauthnCfg.RequireUserVerification)
 	options, sessionData, err := s.webauthn.BeginDiscoverableLogin(webauthn.WithUserVerification(uv))
 	if err != nil {

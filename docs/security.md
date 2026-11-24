@@ -54,6 +54,7 @@ graph TD
 ### 2.4. Rate Limiting & Timing Side-Channel Mitigation
 * **Timing Equalization:** `Login` performs a dummy bcrypt hash comparison on username misses to equalize execution duration between valid and non-existent usernames.
 * **Rate Limiting:** Failed login attempts are throttled using in-memory sliding window counters tracked independently per username and per source IP. 5 failures trigger exponential lockout backoff (1m, 2m, 4m, 8m, capped at 15m), returning `ResourceExhausted` with retry metadata.
+* **Passkey Begin Throttle:** `BeginPasskeyLogin` is unauthenticated and stores a challenge per call, so each source IP is limited to 20 calls per sliding minute (`ResourceExhausted`, audited as `rate_limited`). This limit is separate from the failure lockout and never locks a user out. Challenges are purged every minute and looked up through a unique `(kind, challenge)` index.
 
 ### 2.5. WebAuthn & Passkey Security Model
 * **Relying Party (RP) Binding:** `rp_id` and `origins` must be statically pinned in configuration. Origins are never dynamically derived from request headers to prevent DNS rebinding or origin spoofing attacks.

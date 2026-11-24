@@ -474,3 +474,46 @@ func TestRegistrationExcludesExistingCredentials(t *testing.T) {
 		t.Errorf("expected exactly the user's credential excluded, got %+v", opts.Exclude)
 	}
 }
+
+// TestBeginPasskeyLoginIsThrottled: the unauthenticated begin call is capped
+// per IP, and a throttled client can still finish a ceremony it already
+// started (the throttle is not a lockout).
+func TestBeginPasskeyLoginIsThrottled(t *testing.T) {
+	_, _, svc := newPasskeyService(t)
+	user := newPasskeyUser(t, svc.Queries, "gina")
+	auth := newFakeAuthenticator(t)
+	enrollFakePasskey(t, svc, user, auth, nil, regFlagsSynced, 0)
+
+	first := beginFakeLogin(t, svc)
+	for i := 1; i < BeginLimit; i++ {
+		beginFakeLogin(t, svc)
+	}
+	_, err := svc.BeginPasskeyLogin(context.Background(), connect.NewRequest(&v1.BeginPasskeyLoginRequest{}))
+	if connect.CodeOf(err) != connect.CodeResourceExhausted {
+		t.Fatalf("expected ResourceExhausted after %d begins, got %v", BeginLimit, err)
+	}
+	if err := finishFakeLogin(t, svc, auth, first, userHandleFor(user), assertFlagsSynced, 0, ""); err != nil {
+		t.Fatalf("a throttled client can still finish an open ceremony: %v", err)
+	}
+}
+
+// TestChallengeKindAndValueUnique pins the unique index that also serves the
+// finish lookup.
+func TestChallengeKindAndValueUnique(t *testing.T) {
+	_, queries, _ := newPasskeyService(t)
+	params := db.CreateWebAuthnChallengeParams{
+		Challenge: []byte("dup"),
+		Kind:      challengeKindLogin,
+		ExpiresAt: time.Now().Add(time.Minute),
+	}
+	if _, err := queries.CreateWebAuthnChallenge(context.Background(), params); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := queries.CreateWebAuthnChallenge(context.Background(), params); err == nil {
+		t.Fatal("duplicate (kind, challenge) must be rejected")
+	}
+	params.Kind = challengeKindRegistration
+	if _, err := queries.CreateWebAuthnChallenge(context.Background(), params); err != nil {
+		t.Fatalf("same value under another kind is fine: %v", err)
+	}
+}

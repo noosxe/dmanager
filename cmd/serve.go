@@ -159,10 +159,14 @@ var serveCmd = &cobra.Command{
 		authInterceptor := auth.NewInterceptor(queries, logger.With("module", "auth"), cfg.Auth.SessionIdleTimeout, auditor).
 			WithSecureCookies(cfg.Auth.SecureCookies)
 
-		// Start background purge jobs (expired sessions, 90-day auth events, webauthn challenges)
+		// Start background purge jobs (expired sessions, 90-day auth events)
 		auth.StartPurgeJob(srvCtx, logger.With("module", "auth"), time.Hour,
 			auth.SessionPurgeFunc(queries),
 			auth.AuthEventsPurgeFunc(queries, 90*24*time.Hour),
+		)
+		// Challenges live 120 seconds and are written by an unauthenticated
+		// call, so they are purged every minute rather than hourly.
+		auth.StartPurgeJob(srvCtx, logger.With("module", "auth"), time.Minute,
 			auth.WebAuthnChallengesPurgeFunc(queries),
 		)
 

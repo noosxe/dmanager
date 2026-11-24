@@ -14,6 +14,12 @@ const (
 	RateLimitThreshold   = 5
 	RateLimitMaxLockout  = 15 * time.Minute
 	RateLimitBaseLockout = 1 * time.Minute
+
+	// BeginLimit is how many passkey login begin calls one IP may make per
+	// BeginWindow. Begin is unauthenticated and writes a challenge row each
+	// time, so it needs its own limit: it has no failure to count.
+	BeginLimit  = 20
+	BeginWindow = time.Minute
 )
 
 type attemptRecord struct {
@@ -30,10 +36,14 @@ type RateLimiter struct {
 	maxLockout   time.Duration
 	baseLockout  time.Duration
 	trustedProxy bool
+
+	beginHits      map[string][]time.Time
+	beginLastSweep time.Time
 }
 
 func NewRateLimiter(trustedProxy bool) *RateLimiter {
 	return &RateLimiter{
+		beginHits:    make(map[string][]time.Time),
 		userRecords:  make(map[string]*attemptRecord),
 		ipRecords:    make(map[string]*attemptRecord),
 		window:       RateLimitWindow,
@@ -42,6 +52,41 @@ func NewRateLimiter(trustedProxy bool) *RateLimiter {
 		baseLockout:  RateLimitBaseLockout,
 		trustedProxy: trustedProxy,
 	}
+}
+
+// AllowBegin records a passkey login begin call from ip and reports whether it
+// is within BeginLimit calls per BeginWindow (sliding). When it is not, the
+// call is not recorded and retryAfter says when the oldest hit leaves the
+// window. It is independent of the failure lockout, so a flood of begins
+// never locks anyone out of signing in, it only slows the flooder.
+func (rl *RateLimiter) AllowBegin(ip string, now time.Time) (allowed bool, retryAfter time.Duration) {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+
+	windowStart := now.Add(-BeginWindow)
+
+	// Drop idle IPs at most once per window so the map stays bounded.
+	if now.Sub(rl.beginLastSweep) >= BeginWindow {
+		for k, hits := range rl.beginHits {
+			if len(hits) == 0 || !hits[len(hits)-1].After(windowStart) {
+				delete(rl.beginHits, k)
+			}
+		}
+		rl.beginLastSweep = now
+	}
+
+	hits := rl.beginHits[ip][:0]
+	for _, t := range rl.beginHits[ip] {
+		if t.After(windowStart) {
+			hits = append(hits, t)
+		}
+	}
+	if len(hits) >= BeginLimit {
+		rl.beginHits[ip] = hits
+		return false, hits[0].Add(BeginWindow).Sub(now)
+	}
+	rl.beginHits[ip] = append(hits, now)
+	return true, 0
 }
 
 // Check verifies if either the username or client IP is currently rate-limited.

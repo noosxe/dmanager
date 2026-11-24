@@ -184,3 +184,34 @@ func TestExtractClientIP(t *testing.T) {
 		})
 	}
 }
+
+func TestAllowBeginSlidingWindowPerIP(t *testing.T) {
+	rl := NewRateLimiter(false)
+	now := time.Now()
+
+	for i := 0; i < BeginLimit; i++ {
+		if ok, _ := rl.AllowBegin("203.0.113.1", now); !ok {
+			t.Fatalf("begin %d of %d must be allowed", i+1, BeginLimit)
+		}
+	}
+	ok, wait := rl.AllowBegin("203.0.113.1", now)
+	if ok {
+		t.Fatalf("begin %d within the window must be refused", BeginLimit+1)
+	}
+	if wait <= 0 || wait > BeginWindow {
+		t.Errorf("retry-after must be within the window, got %v", wait)
+	}
+
+	// Another IP is unaffected, and the first one recovers after the window.
+	if ok, _ := rl.AllowBegin("203.0.113.2", now); !ok {
+		t.Error("a different IP must not share the budget")
+	}
+	if ok, _ := rl.AllowBegin("203.0.113.1", now.Add(BeginWindow+time.Second)); !ok {
+		t.Error("budget must recover after the window")
+	}
+
+	// Begin flooding never feeds the failure lockout.
+	if locked, _ := rl.Check("passkey_login", "203.0.113.1", now); locked {
+		t.Error("refused begins must not lock out sign-in")
+	}
+}
