@@ -409,6 +409,35 @@ describe("Settings Component", () => {
     });
   });
 
+  it("says the authenticator is already registered on InvalidStateError", async () => {
+    const { create } = await import("@github/webauthn-json");
+    vi.mocked(authClient.beginPasskeyRegistration).mockResolvedValue({
+      optionsJson: "{}",
+    } as never);
+    vi.mocked(create).mockRejectedValueOnce(
+      new DOMException(
+        "The user attempted to register an authenticator that contains one of the credentials already registered",
+        "InvalidStateError",
+      ),
+    );
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <Settings />
+      </ToastProvider>,
+    );
+    await user.click(await screen.findByRole("button", { name: /security & sessions/i }));
+    await user.click(await screen.findByRole("button", { name: /add passkey/i }));
+    await user.click(await screen.findByRole("button", { name: /prompt device authenticator/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.getAllByText(/This authenticator is already registered\./).length,
+      ).toBeGreaterThan(0);
+    });
+    expect(authClient.finishPasskeyRegistration).not.toHaveBeenCalled();
+  });
+
   it("deletes a passkey successfully", async () => {
     vi.mocked(authClient.deletePasskey).mockResolvedValue({
       $typeName: "dmanager.v1.DeletePasskeyResponse",

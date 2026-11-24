@@ -406,3 +406,33 @@ func TestPolicyDiscoverableCredentialRequired(t *testing.T) {
 	// credProps omitted: accepted.
 	enrollFakePasskey(t, svc, user, newFakeAuthenticator(t), nil, regFlagsSynced, 0)
 }
+
+// TestRegistrationExcludesExistingCredentials pins that the creation options
+// list the user's existing credentials, and only theirs.
+func TestRegistrationExcludesExistingCredentials(t *testing.T) {
+	_, _, svc := newPasskeyService(t)
+	user := newPasskeyUser(t, svc.Queries, "dave")
+	other := newPasskeyUser(t, svc.Queries, "erin")
+	authCtx := context.WithValue(context.Background(), userContextKey, user)
+
+	mine := newFakeAuthenticator(t)
+	enrollFakePasskey(t, svc, user, mine, nil, regFlagsSynced, 0)
+	theirs := newFakeAuthenticator(t)
+	enrollFakePasskey(t, svc, other, theirs, nil, regFlagsSynced, 0)
+
+	begin, err := svc.BeginPasskeyRegistration(authCtx, connect.NewRequest(&v1.BeginPasskeyRegistrationRequest{}))
+	if err != nil {
+		t.Fatalf("begin registration: %v", err)
+	}
+	var opts struct {
+		Exclude []struct {
+			ID string `json:"id"`
+		} `json:"excludeCredentials"`
+	}
+	if err := json.Unmarshal([]byte(begin.Msg.OptionsJson), &opts); err != nil {
+		t.Fatal(err)
+	}
+	if len(opts.Exclude) != 1 || opts.Exclude[0].ID != b64url(mine.credID) {
+		t.Errorf("expected exactly the user's credential excluded, got %+v", opts.Exclude)
+	}
+}

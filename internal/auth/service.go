@@ -542,6 +542,9 @@ func (s *Service) BeginPasskeyRegistration(ctx context.Context, req *connect.Req
 			UserVerification:   uv,
 		}),
 		webauthn.WithConveyancePreference(protocol.PreferNoAttestation),
+		// Stops an authenticator that already holds one of the user's
+		// credentials from silently registering a second one.
+		webauthn.WithExclusions(webauthn.Credentials(creds).CredentialDescriptors()),
 		webauthn.WithExtensions(
 			webauthn.WithExtensionCredProps(),
 		),
