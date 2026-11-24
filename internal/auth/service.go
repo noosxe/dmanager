@@ -17,6 +17,7 @@ import (
 	connect "connectrpc.com/connect"
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
+	"github.com/ncruces/go-sqlite3"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -610,7 +611,20 @@ func (s *Service) FinishPasskeyRegistration(ctx context.Context, req *connect.Re
 		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("challenge does not belong to the authenticated user"))
 	}
 
-	_ = s.Queries.ConsumeWebAuthnChallenge(ctx, dbChallenge.ID)
+	// Consume atomically: of several concurrent finish calls for one
+	// challenge only one gets the row, the rest are refused.
+	dbChallenge, err = s.Queries.ConsumeUserWebAuthnChallenge(ctx, db.ConsumeUserWebAuthnChallengeParams{
+		Challenge: []byte(challengeStr),
+		Kind:      challengeKindRegistration,
+		UserID:    sql.NullInt64{Int64: user.ID, Valid: true},
+		ExpiresAt: time.Now(),
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid or expired registration challenge"))
+		}
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to consume challenge: %w", err))
+	}
 
 	dbCreds, err := s.Queries.ListWebAuthnCredentialsByUser(ctx, user.ID)
 	if err != nil {
@@ -685,6 +699,11 @@ func (s *Service) FinishPasskeyRegistration(ctx context.Context, req *connect.Re
 		LastUsedAt:      sql.NullTime{},
 	})
 	if err != nil {
+		// A concurrent finish for the same authenticator can pass the check
+		// above; the primary key then decides.
+		if isDuplicateKey(err) {
+			return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("credential already registered"))
+		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to save credential: %w", err))
 	}
 
@@ -773,7 +792,9 @@ func (s *Service) FinishPasskeyLogin(ctx context.Context, req *connect.Request[v
 	}
 
 	challengeStr := parsedResponse.Response.CollectedClientData.Challenge
-	dbChallenge, err := s.Queries.GetUnconsumedWebAuthnChallenge(ctx, db.GetUnconsumedWebAuthnChallengeParams{
+	// Consume atomically before anything else: a missing, expired, used or
+	// lost-the-race challenge all end the request here.
+	dbChallenge, err := s.Queries.ConsumeLoginWebAuthnChallenge(ctx, db.ConsumeLoginWebAuthnChallengeParams{
 		Challenge: []byte(challengeStr),
 		Kind:      challengeKindLogin,
 		ExpiresAt: time.Now(),
@@ -783,8 +804,6 @@ func (s *Service) FinishPasskeyLogin(ctx context.Context, req *connect.Request[v
 		s.recordAuthEvent(ctx, nil, "unknown", "login_failed", "method: passkey, reason: invalid or expired challenge, ip: "+clientIP)
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid or expired passkey challenge"))
 	}
-
-	_ = s.Queries.ConsumeWebAuthnChallenge(ctx, dbChallenge.ID)
 
 	credRow, err := s.Queries.GetWebAuthnCredential(ctx, parsedResponse.RawID)
 	if err != nil {
@@ -988,6 +1007,12 @@ func (s *Service) DeletePasskey(ctx context.Context, req *connect.Request[v1.Del
 	s.recordAuthEvent(ctx, &user.ID, user.Username, "passkey_removed", "credential_id: "+id[:min(len(id), 8)]+"...")
 
 	return connect.NewResponse(&v1.DeletePasskeyResponse{}), nil
+}
+
+// isDuplicateKey reports whether err is a SQLite primary key violation.
+func isDuplicateKey(err error) bool {
+	var sqliteErr *sqlite3.Error
+	return errors.As(err, &sqliteErr) && sqliteErr.ExtendedCode() == sqlite3.CONSTRAINT_PRIMARYKEY
 }
 
 func boolToInt(b bool) int64 {

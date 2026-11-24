@@ -238,7 +238,7 @@ DROP TABLE IF EXISTS webauthn_challenges;
 DROP TABLE IF EXISTS webauthn_credentials;
 ```
 
-**Challenge lifecycle:** generated at `Begin*`, single-use (marked `consumed = 1` at `Finish*`), TTL 120 seconds, looked up through a unique index on `(kind, challenge)`, and purged (expired or consumed rows) every minute, separately from the hourly session and audit-event purge. Together with the begin throttle this bounds the table to roughly the per-IP limit times the TTL per client. Storing challenges in SQLite (rather than a cookie) keeps the ceremony state server-authoritative and works across the multiple tabs the dashboard supports.
+**Challenge lifecycle:** generated at `Begin*`, single-use (marked `consumed = 1` at `Finish*` by one conditional `UPDATE … WHERE consumed = 0 AND expires_at > now RETURNING …`, so of several concurrent finish calls exactly one succeeds and the rest are refused as invalid or expired; a registration challenge is also bound to its user in that statement), TTL 120 seconds, looked up through a unique index on `(kind, challenge)`, and purged (expired or consumed rows) every minute, separately from the hourly session and audit-event purge. Together with the begin throttle this bounds the table to roughly the per-IP limit times the TTL per client. Storing challenges in SQLite (rather than a cookie) keeps the ceremony state server-authoritative and works across the multiple tabs the dashboard supports.
 
 ### 4.4. Protocol Additions (`auth.proto`)
 
@@ -325,7 +325,7 @@ sequenceDiagram
 
 Verification rules (enforced via `go-webauthn`, listed for reviewability):
 
-1. Challenge matches an unconsumed, unexpired `login` row.
+1. Challenge matches an unconsumed, unexpired `login` row, consumed atomically (a lost race fails the request).
 2. Origin ∈ `webauthn.origins`; RP ID hash matches.
 3. Signature validates against the stored public key.
 4. `sign_count`: the library flags a regression when the new count is ≤ the stored count and either is nonzero (this includes a stored count above zero followed by 0). The login is **allowed**: `clone_warning` is set to 1, the presented count becomes the new stored count, a `passkey_clone_warning` audit event (credential name, IP) is written, and the attempt is not counted as a failed login. A regression is a signal, not proof: a restored backup or a provider that resets counters looks the same, and rejecting would lock those users out. The flag is sticky; Settings shows a warning badge on the passkey until it is deleted. Authenticators that always report 0 (most synced passkeys) never trigger it.
