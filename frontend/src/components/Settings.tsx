@@ -497,7 +497,28 @@ export function Settings({ initialTab }: SettingsProps = {}) {
     } catch (err: unknown) {
       console.error("Failed to delete passkey:", err);
       const msg = err instanceof Error ? err.message : String(err);
-      toast.error(`Failed to delete passkey: ${msg}`);
+      // The server deletes the passkey before it revokes the other sessions,
+      // so a failure may have removed the passkey anyway. Reload both lists
+      // instead of trusting the stale ones.
+      let removed = false;
+      try {
+        const resp = await authClient.listPasskeys({});
+        setPasskeys(resp.passkeys);
+        removed = !resp.passkeys.some((p) => p.id === id);
+      } catch (reloadErr: unknown) {
+        console.error("Failed to reload passkeys:", reloadErr);
+      }
+      if (signOutOthers) {
+        fetchSessions();
+        fetchAuthEvents();
+      }
+      if (removed && signOutOthers) {
+        toast.error(
+          "The passkey was removed, but other sessions could not be signed out. Use “Revoke All Others” to sign them out.",
+        );
+      } else {
+        toast.error(`Failed to delete passkey: ${msg}`);
+      }
     } finally {
       setDeletingPasskeyId(null);
     }
