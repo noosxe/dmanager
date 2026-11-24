@@ -217,8 +217,8 @@ the UI hides the button.
    `Unauthenticated` message; the specific reason goes only into the audit
    event. Failures before the user is known count per IP only.
 6. The WebAuthn user handle is a random per-user value stored on the user
-   (not the row ID); the handle the authenticator returns must resolve to the
-   owner of the credential.
+   (not the row ID); the handle the authenticator returns must equal the stored
+   handle of the credential's owner.
 
 ### 5.5 Lockout guardrail
 

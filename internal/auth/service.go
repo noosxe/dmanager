@@ -857,13 +857,8 @@ func (s *Service) FinishPasskeyLogin(ctx context.Context, req *connect.Request[v
 
 	validCred, err := s.webauthn.ValidateDiscoverableLogin(
 		func(rawID, userHandle []byte) (webauthn.User, error) {
-			// The authenticator returns the handle it stored at registration
-			// (random, or the legacy row-ID one); it must resolve to the user
-			// that owns the credential.
-			owner, lerr := s.Queries.GetUserByWebAuthnID(ctx, userHandle)
-			if lerr != nil || owner.ID != user.ID {
-				return nil, errors.New("user handle does not match the credential owner")
-			}
+			// The library compares userHandle with webUser.WebAuthnID(), the
+			// owner's stored handle, and fails the login on a mismatch.
 			return webUser, nil
 		},
 		sessionData,
