@@ -1015,7 +1015,22 @@ func (s *Service) DeletePasskey(ctx context.Context, req *connect.Request[v1.Del
 
 	s.recordAuthEvent(ctx, &user.ID, user.Username, "passkey_removed", "credential_id: "+id[:min(len(id), 8)]+"...")
 
-	return connect.NewResponse(&v1.DeletePasskeyResponse{}), nil
+	var revoked int64
+	if req.Msg.SignOutOtherSessions {
+		currentSessionID, _ := SessionIDFromContext(ctx)
+		revoked, err = s.Queries.DeleteSessionsByUser(ctx, db.DeleteSessionsByUserParams{
+			UserID:    user.ID,
+			SessionID: currentSessionID,
+		})
+		if err != nil {
+			// The passkey is already gone; tell the caller the sign-out failed
+			// so it can retry through RevokeAllOtherSessions.
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("passkey removed, but failed to revoke other sessions: %w", err))
+		}
+		s.recordAuthEvent(ctx, &user.ID, user.Username, "session_revoked", "action: revoke_all_other, reason: passkey_removed")
+	}
+
+	return connect.NewResponse(&v1.DeletePasskeyResponse{RevokedSessions: revoked}), nil
 }
 
 // isDuplicateKey reports whether err is a SQLite primary key violation.

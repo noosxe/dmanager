@@ -204,7 +204,12 @@ export function createMockTransport(opts: MockOptions) {
         deletePasskey: (req) => {
           requireUser();
           passkeys = passkeys.filter((p) => p.id !== req.id);
-          return {};
+          let revokedSessions = 0n;
+          if (req.signOutOtherSessions) {
+            revokedSessions = BigInt(sessions.filter((s) => !s.isCurrent).length);
+            sessions = sessions.filter((s) => s.isCurrent);
+          }
+          return { revokedSessions };
         },
       });
 

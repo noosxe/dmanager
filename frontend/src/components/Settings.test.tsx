@@ -566,8 +566,42 @@ describe("Settings Component", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
 
     await waitFor(() => {
-      expect(authClient.deletePasskey).toHaveBeenCalledWith({ id: "cred-1" });
+      expect(authClient.deletePasskey).toHaveBeenCalledWith({
+        id: "cred-1",
+        signOutOtherSessions: true,
+      });
       expect(screen.queryByText("Work MacBook")).not.toBeInTheDocument();
+    });
+  });
+
+  it("deletes a passkey without signing out other sessions when the option is unticked", async () => {
+    vi.mocked(authClient.deletePasskey).mockResolvedValue({
+      $typeName: "dmanager.v1.DeletePasskeyResponse",
+      revokedSessions: 0n,
+    });
+
+    render(
+      <ToastProvider>
+        <Settings />
+      </ToastProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: /security & sessions/i }));
+    await screen.findByText("Work MacBook");
+    fireEvent.click(screen.getByRole("button", { name: /^Delete$/i }));
+
+    const dialog = screen.getByRole("dialog");
+    const box = within(dialog).getByRole("checkbox", { name: "Also sign out all other sessions" });
+    expect(box).toBeChecked();
+    fireEvent.click(box);
+    expect(box).not.toBeChecked();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => {
+      expect(authClient.deletePasskey).toHaveBeenCalledWith({
+        id: "cred-1",
+        signOutOtherSessions: false,
+      });
     });
   });
 

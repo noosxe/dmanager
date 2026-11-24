@@ -336,6 +336,7 @@ Rate limiting (§6) applies to `BeginPasskeyLogin`/`FinishPasskeyLogin` per sour
 
 ### 4.7. Lockout Guardrails
 
+* `DeletePasskey` takes `sign_out_other_sessions`: when true, all other sessions of the user are revoked in the same request (current session kept, `session_revoked` audit event with `reason: passkey_removed`, count returned as `revoked_sessions`). The Settings dialog ticks it by default. Adding or deleting passkeys needs no re-authentication.
 * `DeletePasskey` and password changes refuse to leave a user with **zero** usable login methods (no passkey and no password). API: `FailedPrecondition` with an explanatory message.
 * Since users are created via `SetupAdmin` with a password, the password always exists initially; a future "remove password" option must additionally require ≥ 1 `backup_eligible` (synced) passkey.
 * `GetServerStatus` gains a `passkey_login_enabled` hint (derived from `webauthn.rp_id`/`origins` being usable) so the login page can hide the passkey button when unconfigured.
