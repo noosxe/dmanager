@@ -255,7 +255,7 @@ func (s *Service) Login(ctx context.Context, req *connect.Request[v1.LoginReques
 
 	clientIP := ExtractClientIP(req.Header(), req.Peer().Addr, s.trustedProxy)
 
-	locked, retryAfter := s.rateLimiter.Check(username, clientIP, time.Now())
+	locked, retryAfter := s.rateLimiter.Check(MethodPassword, username, clientIP, time.Now())
 	if locked {
 		retrySec := int(math.Ceil(retryAfter.Seconds()))
 		if retrySec < 1 {
@@ -274,7 +274,7 @@ func (s *Service) Login(ctx context.Context, req *connect.Request[v1.LoginReques
 			if len(s.dummyHash) > 0 {
 				_ = bcrypt.CompareHashAndPassword(s.dummyHash, []byte(password))
 			}
-			s.rateLimiter.RecordFailure(username, clientIP, time.Now())
+			s.rateLimiter.RecordFailure(MethodPassword, username, clientIP, time.Now())
 			s.recordAuthEvent(ctx, nil, username, "login_failed", "method: password, reason: invalid credentials, ip: "+clientIP)
 			return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid credentials"))
 		}
@@ -283,12 +283,12 @@ func (s *Service) Login(ctx context.Context, req *connect.Request[v1.LoginReques
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
 	if err != nil {
-		s.rateLimiter.RecordFailure(username, clientIP, time.Now())
+		s.rateLimiter.RecordFailure(MethodPassword, username, clientIP, time.Now())
 		s.recordAuthEvent(ctx, &user.ID, user.Username, "login_failed", "method: password, reason: invalid credentials, ip: "+clientIP)
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid credentials"))
 	}
 
-	s.rateLimiter.RecordSuccess(username)
+	s.rateLimiter.RecordSuccess(MethodPassword, username)
 
 	cookieHeader, err := s.issueSession(ctx, user.ID, req.Msg.RememberMe, req.Header())
 	if err != nil {
@@ -720,7 +720,7 @@ func (s *Service) BeginPasskeyLogin(ctx context.Context, req *connect.Request[v1
 	}
 
 	clientIP := ExtractClientIP(req.Header(), req.Peer().Addr, s.trustedProxy)
-	locked, retryAfter := s.rateLimiter.Check("passkey_login", clientIP, time.Now())
+	locked, retryAfter := s.rateLimiter.Check(MethodPasskey, "", clientIP, time.Now())
 	if locked {
 		retrySec := int(math.Ceil(retryAfter.Seconds()))
 		if retrySec < 1 {
@@ -787,7 +787,7 @@ func (s *Service) FinishPasskeyLogin(ctx context.Context, req *connect.Request[v
 
 	parsedResponse, err := protocol.ParseCredentialRequestResponseBody(strings.NewReader(req.Msg.ResponseJson))
 	if err != nil {
-		s.rateLimiter.RecordFailure("passkey_login", clientIP, time.Now())
+		s.rateLimiter.RecordFailure(MethodPasskey, "", clientIP, time.Now())
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid login assertion response json: %w", err))
 	}
 
@@ -800,25 +800,25 @@ func (s *Service) FinishPasskeyLogin(ctx context.Context, req *connect.Request[v
 		ExpiresAt: time.Now(),
 	})
 	if err != nil {
-		s.rateLimiter.RecordFailure("passkey_login", clientIP, time.Now())
+		s.rateLimiter.RecordFailure(MethodPasskey, "", clientIP, time.Now())
 		s.recordAuthEvent(ctx, nil, "unknown", "login_failed", "method: passkey, reason: invalid or expired challenge, ip: "+clientIP)
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid or expired passkey challenge"))
 	}
 
 	credRow, err := s.Queries.GetWebAuthnCredential(ctx, parsedResponse.RawID)
 	if err != nil {
-		s.rateLimiter.RecordFailure("passkey_login", clientIP, time.Now())
+		s.rateLimiter.RecordFailure(MethodPasskey, "", clientIP, time.Now())
 		s.recordAuthEvent(ctx, nil, "unknown", "login_failed", "method: passkey, reason: credential not found, ip: "+clientIP)
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("passkey credential not found"))
 	}
 
 	user, err := s.Queries.GetUser(ctx, credRow.UserID)
 	if err != nil {
-		s.rateLimiter.RecordFailure("passkey_login", clientIP, time.Now())
+		s.rateLimiter.RecordFailure(MethodPasskey, "", clientIP, time.Now())
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to fetch user: %w", err))
 	}
 
-	locked, retryAfter := s.rateLimiter.Check(user.Username, clientIP, time.Now())
+	locked, retryAfter := s.rateLimiter.Check(MethodPasskey, user.Username, clientIP, time.Now())
 	if locked {
 		retrySec := int(math.Ceil(retryAfter.Seconds()))
 		if retrySec < 1 {
@@ -856,7 +856,7 @@ func (s *Service) FinishPasskeyLogin(ctx context.Context, req *connect.Request[v
 		parsedResponse,
 	)
 	if err != nil {
-		s.rateLimiter.RecordFailure(user.Username, clientIP, time.Now())
+		s.rateLimiter.RecordFailure(MethodPasskey, user.Username, clientIP, time.Now())
 		s.recordAuthEvent(ctx, &user.ID, user.Username, "login_failed", "method: passkey, reason: validation failed, ip: "+clientIP)
 		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("passkey verification failed: %w", err))
 	}
@@ -893,7 +893,7 @@ func (s *Service) FinishPasskeyLogin(ctx context.Context, req *connect.Request[v
 		s.recordAuthEvent(ctx, &user.ID, user.Username, "passkey_clone_warning", "name: "+credRow.Name+", ip: "+clientIP)
 	}
 
-	s.rateLimiter.RecordSuccess(user.Username)
+	s.rateLimiter.RecordSuccess(MethodPasskey, user.Username)
 
 	cookieHeader, err := s.issueSession(ctx, user.ID, req.Msg.RememberMe, req.Header())
 	if err != nil {

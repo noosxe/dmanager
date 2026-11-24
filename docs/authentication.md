@@ -332,7 +332,7 @@ Verification rules (enforced via `go-webauthn`, listed for reviewability):
 5. If `require_user_verification = required`, the assertion's UV flag must be set; under `preferred` or `discouraged` it is not enforced. The UV flag of the registration ceremony is stored per credential (`user_verified`) and shown in Settings; see [Security §2.5](security.md#25-webauthn--passkey-security-model).
 6. On success: update `sign_count`, `last_used_at`, `backup_state`; issue the same session cookie as password login (shared code path — one `issueSession(ctx, userID, rememberMe)` helper).
 
-Rate limiting (§6) applies to `BeginPasskeyLogin`/`FinishPasskeyLogin` per source IP: the challenge table doubles as a natural slowdown, but failed-finish attempts should count toward the same backoff counter as password failures.
+Rate limiting (§6) applies to `BeginPasskeyLogin`/`FinishPasskeyLogin` per source IP: the challenge table doubles as a natural slowdown, but failed-finish attempts count toward the same per-IP backoff counter as password failures. The per-username counter is separate for each method (§6.1).
 
 ### 4.7. Lockout Guardrails
 
@@ -388,7 +388,8 @@ Authorization runs in `Interceptor.WrapUnary` / `WrapStreamingHandler` immediate
 In-memory limiter (no schema changes; single-process deployment makes this viable) keyed on both username and source IP:
 
 * **Window:** sliding 15 minutes.
-* **Threshold:** 5 failures → lockout, exponential: 1 min, 2, 4, … capped at 15 min. Successful login resets the counter.
+* **Threshold:** 5 failures → lockout, exponential: 1 min, 2, 4, … capped at 15 min. Successful login resets the counter of that username and method only.
+* **Per-method username counters:** per-username records are keyed by sign-in method (`password`, `passkey`). Repeated wrong passwords do not block passkey sign-in for that account, a passkey sign-in does not reset the password-failure count, and the reverse. Per-IP records are shared across methods, so an address that fails with either method is limited as a whole.
 * **Scope:** password `Login` failures and passkey `FinishPasskeyLogin` verification failures feed the counter.
 * **Begin throttle:** `BeginPasskeyLogin` is unauthenticated and stores a challenge per call, so it has a separate per-IP limit of 20 calls per sliding minute. Extra calls get `ResourceExhausted` ("try again in N seconds"); at most one `rate_limited` audit event is written per IP per window, so a flood cannot grow the 90-day audit log. It is independent of the failure lockout above: a flood of begins slows the flooder but never locks anyone out of signing in, and the 20th call is still served normally.
 * **Response:** `ResourceExhausted` with `RetryInfo`-style metadata so the UI can show "try again in N minutes".

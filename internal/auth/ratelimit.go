@@ -34,6 +34,21 @@ const (
 	beginOverflowKey = "overflow"
 )
 
+// Sign-in methods. Per-username lockout records are kept per method, so
+// failures with one method never lock out or reset another. Per-IP records
+// are shared across methods.
+const (
+	MethodPassword = "password"
+	MethodPasskey  = "passkey"
+)
+
+func userKey(method, username string) string {
+	if username == "" {
+		return ""
+	}
+	return method + ":" + username
+}
+
 type attemptRecord struct {
 	failures    []time.Time
 	lockedUntil time.Time
@@ -140,15 +155,15 @@ func (rl *RateLimiter) takeBeginAudit(now time.Time) bool {
 	return true
 }
 
-// Check verifies if either the username or client IP is currently rate-limited.
-// Returns (locked bool, retryAfter time.Duration).
-func (rl *RateLimiter) Check(username, ip string, now time.Time) (bool, time.Duration) {
+// Check verifies if either the username (for the given method) or client IP is
+// currently rate-limited. Returns (locked bool, retryAfter time.Duration).
+func (rl *RateLimiter) Check(method, username, ip string, now time.Time) (bool, time.Duration) {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
 	rl.evictExpired(now)
 
-	userWait := rl.checkKey(rl.userRecords, username, now)
+	userWait := rl.checkKey(rl.userRecords, userKey(method, username), now)
 	ipWait := rl.checkKey(rl.ipRecords, ip, now)
 
 	maxWait := userWait
@@ -177,15 +192,15 @@ func (rl *RateLimiter) checkKey(records map[string]*attemptRecord, key string, n
 	return 0
 }
 
-// RecordFailure records a failed login attempt for the given username and IP.
+// RecordFailure records a failed login attempt for the given method, username and IP.
 // Returns the new retry duration if this failure resulted in a lockout.
-func (rl *RateLimiter) RecordFailure(username, ip string, now time.Time) time.Duration {
+func (rl *RateLimiter) RecordFailure(method, username, ip string, now time.Time) time.Duration {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
 	rl.evictExpired(now)
 
-	userWait := rl.recordFailureKey(rl.userRecords, username, now)
+	userWait := rl.recordFailureKey(rl.userRecords, userKey(method, username), now)
 	ipWait := rl.recordFailureKey(rl.ipRecords, ip, now)
 
 	maxWait := userWait
@@ -235,12 +250,13 @@ func (rl *RateLimiter) recordFailureKey(records map[string]*attemptRecord, key s
 	return 0
 }
 
-// RecordSuccess resets the failure counter for the given username.
-func (rl *RateLimiter) RecordSuccess(username string) {
+// RecordSuccess resets the failure counter for the given username and method
+// only; the other method's counter and the IP records are left alone.
+func (rl *RateLimiter) RecordSuccess(method, username string) {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
-	delete(rl.userRecords, username)
+	delete(rl.userRecords, userKey(method, username))
 }
 
 func (rl *RateLimiter) evictExpired(now time.Time) {
