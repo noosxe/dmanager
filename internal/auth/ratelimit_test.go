@@ -320,3 +320,25 @@ func TestIPLockoutAppliesAcrossMethods(t *testing.T) {
 		t.Fatal("per-IP lockout must apply to passkey sign-in too")
 	}
 }
+
+func TestPreUserPasskeyFailuresCountPerIPOnly(t *testing.T) {
+	rl := NewRateLimiter(false)
+	now := time.Now()
+	ipA, ipB := "203.0.113.10", "203.0.113.11"
+
+	// Failures before the user is known (bad challenge, unknown credential)
+	// are recorded with an empty username, so only the IP counts them.
+	for i := 0; i < RateLimitThreshold; i++ {
+		rl.RecordFailure(MethodPasskey, "", ipA, now)
+	}
+	if locked, _ := rl.Check(MethodPasskey, "", ipA, now); !locked {
+		t.Fatal("the failing IP must be locked")
+	}
+	if locked, _ := rl.Check(MethodPasskey, "", ipB, now); locked {
+		t.Fatal("another IP must not be locked by pre-user failures")
+	}
+	// A real user, including one named like the old shared key, is unaffected.
+	if locked, _ := rl.Check(MethodPasskey, "passkey_login", ipB, now); locked {
+		t.Fatal("pre-user failures must not be recorded under a username")
+	}
+}
