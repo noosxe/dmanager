@@ -100,7 +100,7 @@ Operational notes:
   `TAILSCALE_HTTPS_ENABLED=1`) to serve HTTPS on tailnet port 443 with an automatic
   Let's Encrypt certificate for `<hostname>.<tailnet>.ts.net` — see below. This replaces the
   plain-HTTP tailnet listener (`tailscale.port` is then unused); use the `https://` URL in
-  browsers for passkey support.
+  browsers for passkey support (the UI disables the passkey buttons on pages that are not a secure context).
 - The state directory holds the node's private keys: treat it like the database (mounted volume,
   `0700`).
 
@@ -289,6 +289,10 @@ does not conflict with a key file.
 - **Non-discoverable passkeys are not detected.** New registrations now require a discoverable credential and fail with a clear message otherwise. Passkeys registered earlier as non-discoverable are not detected: they never worked for sign-in (which is username-less) and can be deleted in Settings.
 - **Counter regressions no longer block sign-in.** A passkey whose counter goes backwards or resets now signs in and shows a warning badge in Settings (see [Security](security.md#25-webauthn--passkey-security-model)).
 - **Existing passkeys count as user-verified.** The new per-passkey verification flag cannot be recovered for passkeys registered before it was recorded, so they are assumed verified; only new registrations record the real value.
+- **Separate lockout counters.** Per-username lockout is now kept per method: wrong passwords no longer block passkey sign-in for that account, and a passkey sign-in no longer clears the password-failure count (or the reverse). Per-IP limits are unchanged and shared.
+- **User handles.** Migration `00013` adds `users.webauthn_user_id`. Users who already have passkeys keep the legacy handle, so their passkeys keep working; users without passkeys get a random handle when they first register one. Rolling back to an older release keeps working for legacy users only.
+- **Deleting a passkey can sign out other sessions.** The Settings dialog ticks "Also sign out all other sessions" by default.
+- **Generic sign-in error.** Failed passkey sign-ins show one message; the reason is in the audit log.
 - **Set `server.trusted_proxy` behind a reverse proxy.** Passkey sign-in start requests are limited to 20 per minute per client address; without the setting all clients share the proxy's address.
 
 ### To v0.10.0
