@@ -497,6 +497,28 @@ func TestBeginPasskeyLoginIsThrottled(t *testing.T) {
 	}
 }
 
+// TestBeginThrottleAuditsOncePerWindow: a flood past the limit writes a
+// single audit row, so it cannot grow the 90-day auth event log.
+func TestBeginThrottleAuditsOncePerWindow(t *testing.T) {
+	dbConn, _, svc := newPasskeyService(t)
+	for i := 0; i < BeginLimit; i++ {
+		beginFakeLogin(t, svc)
+	}
+	for i := 0; i < 100; i++ {
+		_, err := svc.BeginPasskeyLogin(context.Background(), connect.NewRequest(&v1.BeginPasskeyLoginRequest{}))
+		if connect.CodeOf(err) != connect.CodeResourceExhausted {
+			t.Fatalf("call %d over the limit: expected ResourceExhausted, got %v", i, err)
+		}
+	}
+	var rows int
+	if err := dbConn.QueryRow(`SELECT COUNT(*) FROM auth_events WHERE event = 'rate_limited'`).Scan(&rows); err != nil {
+		t.Fatal(err)
+	}
+	if rows != 1 {
+		t.Errorf("expected exactly one rate_limited audit row for 100 refused calls, got %d", rows)
+	}
+}
+
 // TestChallengeKindAndValueUnique pins the unique index that also serves the
 // finish lookup.
 func TestChallengeKindAndValueUnique(t *testing.T) {

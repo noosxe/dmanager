@@ -190,23 +190,29 @@ func TestAllowBeginSlidingWindowPerIP(t *testing.T) {
 	now := time.Now()
 
 	for i := 0; i < BeginLimit; i++ {
-		if ok, _ := rl.AllowBegin("203.0.113.1", now); !ok {
+		if ok, _, _ := rl.AllowBegin("203.0.113.1", now); !ok {
 			t.Fatalf("begin %d of %d must be allowed", i+1, BeginLimit)
 		}
 	}
-	ok, wait := rl.AllowBegin("203.0.113.1", now)
+	ok, wait, first := rl.AllowBegin("203.0.113.1", now)
 	if ok {
 		t.Fatalf("begin %d within the window must be refused", BeginLimit+1)
+	}
+	if !first {
+		t.Error("the first refusal must be reported for auditing")
+	}
+	if _, _, again := rl.AllowBegin("203.0.113.1", now); again {
+		t.Error("only one refusal per window may be reported")
 	}
 	if wait <= 0 || wait > BeginWindow {
 		t.Errorf("retry-after must be within the window, got %v", wait)
 	}
 
 	// Another IP is unaffected, and the first one recovers after the window.
-	if ok, _ := rl.AllowBegin("203.0.113.2", now); !ok {
+	if ok, _, _ := rl.AllowBegin("203.0.113.2", now); !ok {
 		t.Error("a different IP must not share the budget")
 	}
-	if ok, _ := rl.AllowBegin("203.0.113.1", now.Add(BeginWindow+time.Second)); !ok {
+	if ok, _, _ := rl.AllowBegin("203.0.113.1", now.Add(BeginWindow+time.Second)); !ok {
 		t.Error("budget must recover after the window")
 	}
 

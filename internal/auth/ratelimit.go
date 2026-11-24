@@ -38,28 +38,31 @@ type RateLimiter struct {
 	trustedProxy bool
 
 	beginHits      map[string][]time.Time
+	beginNotified  map[string]time.Time
 	beginLastSweep time.Time
 }
 
 func NewRateLimiter(trustedProxy bool) *RateLimiter {
 	return &RateLimiter{
-		beginHits:    make(map[string][]time.Time),
-		userRecords:  make(map[string]*attemptRecord),
-		ipRecords:    make(map[string]*attemptRecord),
-		window:       RateLimitWindow,
-		threshold:    RateLimitThreshold,
-		maxLockout:   RateLimitMaxLockout,
-		baseLockout:  RateLimitBaseLockout,
-		trustedProxy: trustedProxy,
+		beginHits:     make(map[string][]time.Time),
+		beginNotified: make(map[string]time.Time),
+		userRecords:   make(map[string]*attemptRecord),
+		ipRecords:     make(map[string]*attemptRecord),
+		window:        RateLimitWindow,
+		threshold:     RateLimitThreshold,
+		maxLockout:    RateLimitMaxLockout,
+		baseLockout:   RateLimitBaseLockout,
+		trustedProxy:  trustedProxy,
 	}
 }
 
 // AllowBegin records a passkey login begin call from ip and reports whether it
 // is within BeginLimit calls per BeginWindow (sliding). When it is not, the
 // call is not recorded and retryAfter says when the oldest hit leaves the
-// window. It is independent of the failure lockout, so a flood of begins
+// window. first is true for only one refusal per IP per window, so callers
+// can audit the throttle without letting a flood grow the audit log. It is independent of the failure lockout, so a flood of begins
 // never locks anyone out of signing in, it only slows the flooder.
-func (rl *RateLimiter) AllowBegin(ip string, now time.Time) (allowed bool, retryAfter time.Duration) {
+func (rl *RateLimiter) AllowBegin(ip string, now time.Time) (allowed bool, retryAfter time.Duration, first bool) {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
@@ -70,6 +73,11 @@ func (rl *RateLimiter) AllowBegin(ip string, now time.Time) (allowed bool, retry
 		for k, hits := range rl.beginHits {
 			if len(hits) == 0 || !hits[len(hits)-1].After(windowStart) {
 				delete(rl.beginHits, k)
+			}
+		}
+		for k, t := range rl.beginNotified {
+			if !t.After(windowStart) {
+				delete(rl.beginNotified, k)
 			}
 		}
 		rl.beginLastSweep = now
@@ -83,10 +91,14 @@ func (rl *RateLimiter) AllowBegin(ip string, now time.Time) (allowed bool, retry
 	}
 	if len(hits) >= BeginLimit {
 		rl.beginHits[ip] = hits
-		return false, hits[0].Add(BeginWindow).Sub(now)
+		first = !rl.beginNotified[ip].After(windowStart)
+		if first {
+			rl.beginNotified[ip] = now
+		}
+		return false, hits[0].Add(BeginWindow).Sub(now), first
 	}
 	rl.beginHits[ip] = append(hits, now)
-	return true, 0
+	return true, 0, false
 }
 
 // Check verifies if either the username or client IP is currently rate-limited.
