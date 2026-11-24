@@ -215,7 +215,13 @@ message RenamePasskeyResponse {
 
 message DeletePasskeyRequest {
   string id = 1;
+  // When true, every other session of the user is revoked in the same
+  // request (the current session stays).
+  bool sign_out_other_sessions = 2;
 }
 
-message DeletePasskeyResponse {}
+message DeletePasskeyResponse {
+  // Number of other sessions revoked; 0 unless sign_out_other_sessions was set.
+  int64 revoked_sessions = 1;
+}
 

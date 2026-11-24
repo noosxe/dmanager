@@ -1701,10 +1701,13 @@ func (x *RenamePasskeyResponse) GetPasskey() *Passkey {
 }
 
 type DeletePasskeyRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// When true, every other session of the user is revoked in the same
+	// request (the current session stays).
+	SignOutOtherSessions bool `protobuf:"varint,2,opt,name=sign_out_other_sessions,json=signOutOtherSessions,proto3" json:"sign_out_other_sessions,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *DeletePasskeyRequest) Reset() {
@@ -1744,10 +1747,19 @@ func (x *DeletePasskeyRequest) GetId() string {
 	return ""
 }
 
+func (x *DeletePasskeyRequest) GetSignOutOtherSessions() bool {
+	if x != nil {
+		return x.SignOutOtherSessions
+	}
+	return false
+}
+
 type DeletePasskeyResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Number of other sessions revoked; 0 unless sign_out_other_sessions was set.
+	RevokedSessions int64 `protobuf:"varint,1,opt,name=revoked_sessions,json=revokedSessions,proto3" json:"revoked_sessions,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *DeletePasskeyResponse) Reset() {
@@ -1778,6 +1790,13 @@ func (x *DeletePasskeyResponse) ProtoReflect() protoreflect.Message {
 // Deprecated: Use DeletePasskeyResponse.ProtoReflect.Descriptor instead.
 func (*DeletePasskeyResponse) Descriptor() ([]byte, []int) {
 	return file_proto_dmanager_v1_auth_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *DeletePasskeyResponse) GetRevokedSessions() int64 {
+	if x != nil {
+		return x.RevokedSessions
+	}
+	return 0
 }
 
 var File_proto_dmanager_v1_auth_proto protoreflect.FileDescriptor
@@ -1902,10 +1921,12 @@ const file_proto_dmanager_v1_auth_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\"G\n" +
 	"\x15RenamePasskeyResponse\x12.\n" +
-	"\apasskey\x18\x01 \x01(\v2\x14.dmanager.v1.PasskeyR\apasskey\"&\n" +
+	"\apasskey\x18\x01 \x01(\v2\x14.dmanager.v1.PasskeyR\apasskey\"]\n" +
 	"\x14DeletePasskeyRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\x17\n" +
-	"\x15DeletePasskeyResponse2\xb0\v\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x125\n" +
+	"\x17sign_out_other_sessions\x18\x02 \x01(\bR\x14signOutOtherSessions\"B\n" +
+	"\x15DeletePasskeyResponse\x12)\n" +
+	"\x10revoked_sessions\x18\x01 \x01(\x03R\x0frevokedSessions2\xb0\v\n" +
 	"\vAuthService\x12\\\n" +
 	"\x0fGetServerStatus\x12#.dmanager.v1.GetServerStatusRequest\x1a$.dmanager.v1.GetServerStatusResponse\x12M\n" +
 	"\n" +

@@ -143,6 +143,8 @@ export function Settings({ initialTab }: SettingsProps = {}) {
   // pending target decides title/message/verb; #178 gates passkey deletion,
   // session revocation, and revoke-all-others behind the danger dialog.
   const [pendingDestructive, setPendingDestructive] = useState<PendingDestructive | null>(null);
+  // Passkey delete dialog option; on by default, reset each time the dialog opens.
+  const [signOutOtherSessions, setSignOutOtherSessions] = useState(true);
   const destructiveBusy =
     (pendingDestructive?.kind === "passkey" &&
       deletingPasskeyId === pendingDestructive.passkey.id) ||
@@ -400,7 +402,7 @@ export function Settings({ initialTab }: SettingsProps = {}) {
       return;
     }
     if (pendingDestructive.kind === "passkey") {
-      await handleDeletePasskey(pendingDestructive.passkey.id);
+      await handleDeletePasskey(pendingDestructive.passkey.id, signOutOtherSessions);
     } else if (pendingDestructive.kind === "session") {
       await handleRevokeSession(pendingDestructive.session.sessionId);
     } else {
@@ -471,13 +473,20 @@ export function Settings({ initialTab }: SettingsProps = {}) {
     }
   };
 
-  const handleDeletePasskey = async (id: string) => {
+  const handleDeletePasskey = async (id: string, signOutOthers: boolean) => {
     setDeletingPasskeyId(id);
     try {
-      await authClient.deletePasskey({ id });
+      await authClient.deletePasskey({ id, signOutOtherSessions: signOutOthers });
       setPasskeys((prev) => prev.filter((p) => p.id !== id));
-      toast.success("Passkey removed successfully.");
+      toast.success(
+        signOutOthers
+          ? "Passkey removed and other sessions signed out."
+          : "Passkey removed successfully.",
+      );
       fetchAuthEvents();
+      if (signOutOthers) {
+        fetchSessions();
+      }
     } catch (err: unknown) {
       console.error("Failed to delete passkey:", err);
       const msg = err instanceof Error ? err.message : String(err);
@@ -1338,7 +1347,10 @@ export function Settings({ initialTab }: SettingsProps = {}) {
                       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                         <button
                           type="button"
-                          onClick={() => setPendingDestructive({ kind: "passkey", passkey: pk })}
+                          onClick={() => {
+                            setSignOutOtherSessions(true);
+                            setPendingDestructive({ kind: "passkey", passkey: pk });
+                          }}
                           disabled={deletingPasskeyId === pk.id}
                           className="settings-btn-secondary"
                           style={{
@@ -1706,7 +1718,20 @@ export function Settings({ initialTab }: SettingsProps = {}) {
           variant="danger"
           busy={destructiveBusy}
           {...destructiveDialogCopy(pendingDestructive)}
-        />
+        >
+          {pendingDestructive.kind === "passkey" && (
+            <label className="auth-checkbox-group dialog-option" htmlFor="sign-out-other-sessions">
+              <input
+                id="sign-out-other-sessions"
+                type="checkbox"
+                checked={signOutOtherSessions}
+                onChange={(e) => setSignOutOtherSessions(e.target.checked)}
+                disabled={destructiveBusy}
+              />
+              <span className="auth-checkbox-label">Also sign out all other sessions</span>
+            </label>
+          )}
+        </ConfirmDialog>
       )}
     </div>
   );

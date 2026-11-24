@@ -401,6 +401,10 @@ body {
   cursor: pointer;
 }
 
+.auth-checkbox-group.dialog-option {
+  margin: 0 0 20px;
+}
+
 .auth-checkbox-label {
   font-size: 13px;
   color: var(--text-secondary);

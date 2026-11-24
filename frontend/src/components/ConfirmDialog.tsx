@@ -18,6 +18,8 @@ export interface ConfirmDialogProps {
   variant?: "default" | "danger";
   /** In-flight mutation: spinner on confirm, both buttons disabled, dismissal locked. */
   busy?: boolean;
+  /** Extra content between the message and the buttons (for example an option checkbox). */
+  children?: React.ReactNode;
 }
 
 /**
@@ -36,6 +38,7 @@ export function ConfirmDialog({
   cancelLabel = "Cancel",
   variant = "default",
   busy = false,
+  children,
 }: ConfirmDialogProps) {
   const requestClose = () => {
     if (!busy) {
@@ -50,6 +53,7 @@ export function ConfirmDialog({
       title={title}
       description={message}
       initialFocus={variant === "danger" ? "cancel" : "confirm"}
+      children={children}
       footer={
         <>
           <button

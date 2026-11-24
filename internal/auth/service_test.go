@@ -1183,3 +1183,87 @@ func TestFinishPasskeyLoginInvalidPayloadAndMissingChallenge(t *testing.T) {
 		t.Errorf("expected CodeUnauthenticated or CodeInvalidArgument, got %v", err)
 	}
 }
+
+func TestDeletePasskeySignOutOtherSessions(t *testing.T) {
+	for _, signOut := range []bool{false, true} {
+		t.Run(fmt.Sprintf("sign_out_other_sessions=%v", signOut), func(t *testing.T) {
+			queries := newTestDB(t)
+			svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+			ctx := context.Background()
+
+			user, err := queries.CreateUser(ctx, db.CreateUserParams{Username: "carol", PasswordHash: testDummyHash, Role: viewerRole})
+			if err != nil {
+				t.Fatalf("create user: %v", err)
+			}
+			other, err := queries.CreateUser(ctx, db.CreateUserParams{Username: "dave", PasswordHash: testDummyHash, Role: viewerRole})
+			if err != nil {
+				t.Fatalf("create other user: %v", err)
+			}
+			credID := []byte("cred-signout-1")
+			if _, cerr := queries.CreateWebAuthnCredential(ctx, db.CreateWebAuthnCredentialParams{
+				CredentialID: credID, UserID: user.ID, PublicKey: []byte("pk"),
+				Aaguid: []byte{}, Transport: "usb", Name: "Key", CreatedAt: time.Now(),
+			}); cerr != nil {
+				t.Fatalf("create credential: %v", cerr)
+			}
+
+			now := time.Now()
+			mk := func(id string, uid int64) {
+				if _, serr := queries.CreateSession(ctx, db.CreateSessionParams{
+					SessionID: id, UserID: uid, ExpiresAt: now.Add(time.Hour), LastSeenAt: now,
+					AbsoluteExpiresAt: now.Add(24 * time.Hour),
+				}); serr != nil {
+					t.Fatalf("create session: %v", serr)
+				}
+			}
+			mk("cur", user.ID)
+			mk("old1", user.ID)
+			mk("old2", user.ID)
+			mk("foreign", other.ID)
+
+			authed := WithSessionID(WithUser(ctx, user), "cur")
+			resp, err := svc.DeletePasskey(authed, connect.NewRequest(&v1.DeletePasskeyRequest{
+				Id:                   hex.EncodeToString(credID),
+				SignOutOtherSessions: signOut,
+			}))
+			if err != nil {
+				t.Fatalf("delete passkey: %v", err)
+			}
+
+			exists := func(id string) bool {
+				_, gerr := queries.GetSession(ctx, id)
+				return gerr == nil
+			}
+			wantOthers := !signOut
+			if !exists("cur") || !exists("foreign") {
+				t.Error("the current session and other users' sessions must survive")
+			}
+			if exists("old1") != wantOthers || exists("old2") != wantOthers {
+				t.Errorf("other sessions of the user present = %v, want %v", exists("old1"), wantOthers)
+			}
+			wantRevoked := int64(0)
+			if signOut {
+				wantRevoked = 2
+			}
+			if resp.Msg.RevokedSessions != wantRevoked {
+				t.Errorf("revoked_sessions = %d, want %d", resp.Msg.RevokedSessions, wantRevoked)
+			}
+
+			events, err := queries.ListAuthEventsByUser(ctx, db.ListAuthEventsByUserParams{
+				UserID: sql.NullInt64{Int64: user.ID, Valid: true}, Limit: 20,
+			})
+			if err != nil {
+				t.Fatalf("list events: %v", err)
+			}
+			var revokedEvent bool
+			for _, e := range events {
+				if e.Event == "session_revoked" && strings.Contains(e.Detail, "passkey_removed") {
+					revokedEvent = true
+				}
+			}
+			if revokedEvent != signOut {
+				t.Errorf("session_revoked audit event present = %v, want %v", revokedEvent, signOut)
+			}
+		})
+	}
+}

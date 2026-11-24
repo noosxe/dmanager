@@ -66,6 +66,7 @@ graph TD
   * `required`: every sign-in and registration must carry a user verification (the authenticator's PIN or biometric, or a password manager's unlock check); assertions without it are rejected. Set `webauthn.require_user_verification: required` (or the environment variable) and restart. It applies to new ceremonies, and passkeys that cannot verify a user will stop working, so register verifying ones first.
   * `discouraged`: the verification prompt is not requested.
   * The real flag is stored per passkey at registration, and Settings shows "No User Verification" on passkeys registered without it. Passkeys that existed before this was recorded are assumed to have been verified, because that cannot be checked afterwards.
+* **Sessions on passkey removal:** `DeletePasskeyRequest.sign_out_other_sessions` revokes every other session of the user in the same request (the current session stays) and writes a `session_revoked` audit event (`reason: passkey_removed`). The Settings delete dialog offers it as "Also sign out all other sessions", ticked by default, so a session created with a lost or stolen passkey does not outlive it. Adding or deleting a passkey does not ask for re-authentication; a valid session is enough.
 * **Lockout Guardrails:** Users cannot delete their last remaining authentication factor (e.g. deleting the last passkey when no password exists).
 
 ---
