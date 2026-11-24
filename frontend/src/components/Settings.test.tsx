@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { authClient, settingsClient } from "../client";
-import { ToastProvider } from "../context/ToastContext";
+import { ToastProvider, useToast } from "../context/ToastContext";
 import type {
   GetServerStatusResponse,
   ListAuthEventsResponse,
@@ -71,6 +71,18 @@ vi.mock("../client", () => ({
     listAuthEvents: vi.fn(),
   },
 }));
+
+// Toasts render in DashboardLayout, outside these tests; this prints them.
+function ToastList() {
+  const { toasts } = useToast();
+  return (
+    <ul>
+      {toasts.map((t) => (
+        <li key={t.id}>{t.message}</li>
+      ))}
+    </ul>
+  );
+}
 
 describe("Settings Component", () => {
   beforeEach(() => {
@@ -643,6 +655,42 @@ describe("Settings Component", () => {
         signOutOtherSessions: false,
       });
     });
+  });
+
+  it("reloads the lists and explains a partial failure when the passkey was removed but sessions were not", async () => {
+    vi.mocked(authClient.deletePasskey).mockRejectedValueOnce(
+      new ConnectError("passkey removed, but failed to revoke other sessions: boom", Code.Internal),
+    );
+
+    render(
+      <ToastProvider>
+        <Settings />
+        <ToastList />
+      </ToastProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: /security & sessions/i }));
+    await screen.findByText("Work MacBook");
+
+    // After the failure the server no longer has the passkey.
+    const remaining = (await vi.mocked(authClient.listPasskeys)({})).passkeys.filter(
+      (p) => p.id !== "cred-1",
+    );
+    vi.mocked(authClient.listPasskeys).mockResolvedValue({
+      $typeName: "dmanager.v1.ListPasskeysResponse",
+      passkeys: remaining,
+    } as never);
+
+    fireEvent.click(screen.getByRole("button", { name: /^Delete$/i }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("Work MacBook")).not.toBeInTheDocument();
+    });
+    expect(
+      await screen.findByText(/passkey was removed, but other sessions could not be signed out/i),
+    ).toBeInTheDocument();
+    expect(authClient.listSessions).toHaveBeenCalledTimes(2);
   });
 
   it("does not delete a passkey when the confirmation is cancelled", async () => {
