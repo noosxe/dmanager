@@ -13,5 +13,8 @@ WHERE EXISTS (SELECT 1 FROM webauthn_credentials c WHERE c.user_id = users.id);
 CREATE UNIQUE INDEX idx_users_webauthn_user_id ON users(webauthn_user_id);
 
 -- +goose Down
+-- Rolling back breaks passkeys registered after the upgrade for users that
+-- got a random handle: older releases derive the handle from the row ID, so
+-- those authenticators no longer match. Users with legacy handles are fine.
 DROP INDEX idx_users_webauthn_user_id;
 ALTER TABLE users DROP COLUMN webauthn_user_id;

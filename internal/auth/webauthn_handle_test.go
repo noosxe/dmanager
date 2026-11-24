@@ -7,6 +7,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	connect "connectrpc.com/connect"
 
@@ -158,5 +159,19 @@ func TestFinishPasskeyLoginFailuresAreIndistinguishable(t *testing.T) {
 	}
 	if !detailed {
 		t.Error("the failed assertion's reason must be recorded in the audit event")
+	}
+}
+
+func TestTruncateForAudit(t *testing.T) {
+	if got := truncateForAudit("short", 200); got != "short" {
+		t.Errorf("short text changed: %q", got)
+	}
+	long := strings.Repeat("é", 300) // two bytes per rune
+	got := truncateForAudit(long, 200)
+	if len(got) > 203 || !strings.HasSuffix(got, "...") {
+		t.Errorf("not capped: len %d", len(got))
+	}
+	if !utf8.ValidString(got) {
+		t.Error("cut inside a multi-byte character")
 	}
 }

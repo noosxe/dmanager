@@ -4,7 +4,7 @@ import "@testing-library/jest-dom";
 // capable page by default; the passkey availability tests override these.
 Object.defineProperty(window, "isSecureContext", { value: true, configurable: true });
 Object.defineProperty(window, "PublicKeyCredential", {
-  value: class PublicKeyCredential {},
+  value: function PublicKeyCredential() {},
   configurable: true,
   writable: true,
 });

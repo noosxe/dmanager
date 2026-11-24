@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	connect "connectrpc.com/connect"
 	"github.com/go-webauthn/webauthn/protocol"
@@ -779,6 +780,19 @@ func (s *Service) BeginPasskeyLogin(ctx context.Context, req *connect.Request[v1
 	}), nil
 }
 
+// truncateForAudit caps text that may carry client-supplied strings before it
+// goes into an audit detail.
+func truncateForAudit(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	cut := max
+	for cut > 0 && !utf8.RuneStart(s[cut]) {
+		cut--
+	}
+	return s[:cut] + "..."
+}
+
 // errPasskeySignInFailed is the one message returned for every
 // FinishPasskeyLogin verification failure (unparseable response, bad or
 // expired challenge, unknown credential, failed assertion). The specific
@@ -866,7 +880,7 @@ func (s *Service) FinishPasskeyLogin(ctx context.Context, req *connect.Request[v
 	)
 	if err != nil {
 		s.rateLimiter.RecordFailure(MethodPasskey, user.Username, clientIP, time.Now())
-		s.recordAuthEvent(ctx, &user.ID, user.Username, "login_failed", "method: passkey, reason: validation failed: "+err.Error()+", ip: "+clientIP)
+		s.recordAuthEvent(ctx, &user.ID, user.Username, "login_failed", "method: passkey, reason: validation failed: "+truncateForAudit(err.Error(), 200)+", ip: "+clientIP)
 		return nil, connect.NewError(connect.CodeUnauthenticated, errPasskeySignInFailed)
 	}
 
