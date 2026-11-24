@@ -1410,8 +1410,11 @@ type Passkey struct {
 	CloneWarning       bool                   `protobuf:"varint,8,opt,name=clone_warning,json=cloneWarning,proto3" json:"clone_warning,omitempty"`
 	CreatedAt          *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	LastUsedAt         *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=last_used_at,json=lastUsedAt,proto3,oneof" json:"last_used_at,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// False when the registration ceremony did not verify the user (no PIN or
+	// biometric), which the default "preferred" policy allows.
+	UserVerified  bool `protobuf:"varint,11,opt,name=user_verified,json=userVerified,proto3" json:"user_verified,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Passkey) Reset() {
@@ -1512,6 +1515,13 @@ func (x *Passkey) GetLastUsedAt() *timestamppb.Timestamp {
 		return x.LastUsedAt
 	}
 	return nil
+}
+
+func (x *Passkey) GetUserVerified() bool {
+	if x != nil {
+		return x.UserVerified
+	}
+	return false
 }
 
 type ListPasskeysRequest struct {
@@ -1867,7 +1877,7 @@ const file_proto_dmanager_v1_auth_proto_rawDesc = "" +
 	"\x19FinishPasskeyLoginRequest\x12#\n" +
 	"\rresponse_json\x18\x01 \x01(\tR\fresponseJson\x12\x1f\n" +
 	"\vremember_me\x18\x02 \x01(\bR\n" +
-	"rememberMe\"\x96\x03\n" +
+	"rememberMe\"\xbb\x03\n" +
 	"\aPasskey\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
@@ -1882,7 +1892,8 @@ const file_proto_dmanager_v1_auth_proto_rawDesc = "" +
 	"created_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12A\n" +
 	"\flast_used_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampH\x00R\n" +
-	"lastUsedAt\x88\x01\x01B\x0f\n" +
+	"lastUsedAt\x88\x01\x01\x12#\n" +
+	"\ruser_verified\x18\v \x01(\bR\fuserVerifiedB\x0f\n" +
 	"\r_last_used_at\"\x15\n" +
 	"\x13ListPasskeysRequest\"H\n" +
 	"\x14ListPasskeysResponse\x120\n" +

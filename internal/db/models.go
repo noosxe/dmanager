@@ -98,4 +98,5 @@ type WebauthnCredential struct {
 	Name            string
 	CreatedAt       time.Time
 	LastUsedAt      sql.NullTime
+	UserVerified    int64
 }

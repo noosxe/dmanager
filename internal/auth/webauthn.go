@@ -73,7 +73,7 @@ func dbCredToWebAuthn(c db.WebauthnCredential) webauthn.Credential {
 		Transport:       transports,
 		Flags: webauthn.CredentialFlags{
 			UserPresent:    true,
-			UserVerified:   true,
+			UserVerified:   c.UserVerified == 1,
 			BackupEligible: c.BackupEligible == 1,
 			BackupState:    c.BackupState == 1,
 		},
@@ -142,6 +142,7 @@ func formatPasskeyProto(c db.WebauthnCredential) *v1.Passkey {
 		BackupState:        c.BackupState == 1,
 		SignCount:          signCount32,
 		CloneWarning:       c.CloneWarning == 1,
+		UserVerified:       c.UserVerified == 1,
 		CreatedAt:          timestamppb.New(c.CreatedAt),
 		LastUsedAt:         lastUsed,
 	}

@@ -193,6 +193,9 @@ message Passkey {
   bool clone_warning = 8;
   google.protobuf.Timestamp created_at = 9;
   optional google.protobuf.Timestamp last_used_at = 10;
+  // False when the registration ceremony did not verify the user (no PIN or
+  // biometric), which the default "preferred" policy allows.
+  bool user_verified = 11;
 }
 
 message ListPasskeysRequest {}

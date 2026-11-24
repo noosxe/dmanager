@@ -679,6 +679,7 @@ func (s *Service) FinishPasskeyRegistration(ctx context.Context, req *connect.Re
 		CloneWarning:    0,
 		BackupEligible:  boolToInt(cred.Flags.BackupEligible),
 		BackupState:     boolToInt(cred.Flags.BackupState),
+		UserVerified:    boolToInt(cred.Flags.UserVerified),
 		Name:            name,
 		CreatedAt:       time.Now(),
 		LastUsedAt:      sql.NullTime{},

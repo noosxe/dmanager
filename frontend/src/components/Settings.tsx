@@ -1289,6 +1289,15 @@ export function Settings({ initialTab }: SettingsProps = {}) {
                               </span>
                             )}
 
+                            {!pk.userVerified && (
+                              <span
+                                className="auth-event-badge auth-event-badge-warning"
+                                title="This passkey was registered without a PIN or biometric check, so signing in with it needs only a touch or confirmation. The server's user verification setting allows this; set it to required to ask for a PIN or biometric at every sign-in."
+                              >
+                                <span>No User Verification</span>
+                              </span>
+                            )}
+
                             {pk.cloneWarning && (
                               <span
                                 className="auth-event-badge auth-event-badge-warning"

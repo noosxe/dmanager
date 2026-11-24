@@ -497,6 +497,77 @@ func TestBeginPasskeyLoginIsThrottled(t *testing.T) {
 	}
 }
 
+// newPasskeyServiceWithUV builds a service with the given
+// webauthn.require_user_verification value.
+func newPasskeyServiceWithUV(t *testing.T, uv string) *Service {
+	t.Helper()
+	_, queries, _ := newPasskeyService(t)
+	cfg := testWebAuthnConfig()
+	cfg.RequireUserVerification = uv
+	return NewService(queries, slog.Default(), testAuthConfig(), cfg, false)
+}
+
+// TestUserVerificationPolicy pins what "preferred" and "required" mean: under
+// preferred a registration or assertion without user verification (PIN-less
+// key, an already-unlocked password manager) is accepted and the real flag is
+// stored; under required both are rejected.
+func TestUserVerificationPolicy(t *testing.T) {
+	const noUV = flagUP | flagAT
+	const noUVAssert = flagUP
+
+	t.Run("preferred accepts UV=0 and records it", func(t *testing.T) {
+		svc := newPasskeyServiceWithUV(t, "preferred")
+		user := newPasskeyUser(t, svc.Queries, "hank")
+		handle := userHandleFor(user)
+
+		verified := newFakeAuthenticator(t)
+		enrollFakePasskey(t, svc, user, verified, nil, regFlagsDevice, 1)
+		if credentialRow(t, svc.Queries, verified.credID).UserVerified != 1 {
+			t.Error("a UV=1 registration must be stored as verified")
+		}
+		// UV=0 assertion on a credential that was registered with UV=1.
+		if err := finishFakeLogin(t, svc, verified, beginFakeLogin(t, svc), handle, noUVAssert, 2, ""); err != nil {
+			t.Fatalf("UV=0 assertion must be accepted under preferred: %v", err)
+		}
+
+		weak := newFakeAuthenticator(t)
+		enrollFakePasskey(t, svc, user, weak, nil, noUV, 1)
+		if credentialRow(t, svc.Queries, weak.credID).UserVerified != 0 {
+			t.Error("a UV=0 registration must be stored as not verified")
+		}
+		if err := finishFakeLogin(t, svc, weak, beginFakeLogin(t, svc), handle, noUVAssert, 2, ""); err != nil {
+			t.Fatalf("UV=0 assertion on a UV=0 credential must be accepted under preferred: %v", err)
+		}
+		if credentialRow(t, svc.Queries, weak.credID).UserVerified != 0 {
+			t.Error("a UV=0 assertion must not mark the credential verified")
+		}
+	})
+
+	t.Run("required rejects UV=0", func(t *testing.T) {
+		svc := newPasskeyServiceWithUV(t, "required")
+		user := newPasskeyUser(t, svc.Queries, "iris")
+		handle := userHandleFor(user)
+		authCtx := context.WithValue(context.Background(), userContextKey, user)
+
+		weak := newFakeAuthenticator(t)
+		_, err := svc.FinishPasskeyRegistration(authCtx, connect.NewRequest(&v1.FinishPasskeyRegistrationRequest{
+			ResponseJson: weak.RegistrationResponseJSON(beginFakeRegistration(t, svc, user), nil, noUV, 1),
+		}))
+		if err == nil {
+			t.Fatal("UV=0 registration must be rejected under required")
+		}
+
+		strong := newFakeAuthenticator(t)
+		enrollFakePasskey(t, svc, user, strong, nil, regFlagsDevice, 1)
+		if err := finishFakeLogin(t, svc, strong, beginFakeLogin(t, svc), handle, noUVAssert, 2, ""); err == nil {
+			t.Fatal("UV=0 assertion must be rejected under required")
+		}
+		if err := finishFakeLogin(t, svc, strong, beginFakeLogin(t, svc), handle, assertFlagsNormal, 3, ""); err != nil {
+			t.Fatalf("UV=1 assertion must be accepted under required: %v", err)
+		}
+	})
+}
+
 // TestBeginThrottleAuditsOncePerWindow: a flood past the limit writes a
 // single audit row, so it cannot grow the 90-day auth event log.
 func TestBeginThrottleAuditsOncePerWindow(t *testing.T) {

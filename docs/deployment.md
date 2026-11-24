@@ -39,7 +39,7 @@ This document details the procedure and requirements to deploy the `dmanager` ap
 | `auth.breached_password_check` | `DMANAGER_AUTH_BREACHED_PASSWORD_CHECK` | `false` | Enable HIBP k-anonymity breached password verification on setup. |
 | `webauthn.rp_id` | `DMANAGER_WEBAUTHN_RP_ID` | `""` | Relying Party ID for passkeys (domain without port). |
 | `webauthn.origins` | `DMANAGER_WEBAUTHN_ORIGINS` | `[]` | Allowed origins (scheme+host+port) authorized for passkeys. |
-| `webauthn.require_user_verification` | `DMANAGER_WEBAUTHN_REQUIRE_USER_VERIFICATION` | `preferred` | User verification policy (`preferred` or `required`). |
+| `webauthn.require_user_verification` | `DMANAGER_WEBAUTHN_REQUIRE_USER_VERIFICATION` | `preferred` | User verification policy: `preferred`, `required` or `discouraged`. `required` makes every passkey sign-in ask for a PIN or biometric; `preferred` lets the authenticator decide, so a PIN-less key can sign in with one touch. See [Security](security.md#25-webauthn--passkey-security-model). |
 | `tailscale.enabled` | `DMANAGER_TAILSCALE_ENABLED` / `TAILSCALE_ENABLED` | `false` | Switches the embedded tailnet node on; the only switch. Requires `tailscale.auth_key`. |
 | `tailscale.auth_key` | `DMANAGER_TAILSCALE_AUTHKEY` / `TAILSCALE_AUTHKEY` | `""` | Tailscale auth key. Required when `tailscale.enabled` is `true` (startup fails if empty); ignored when disabled. |
 | `tailscale.auth_key_file` | `DMANAGER_TAILSCALE_AUTHKEY_FILE` / `TAILSCALE_AUTHKEY_FILE` | `""` | Read the auth key from this file instead (see [Secrets from files](#secrets-from-files)). |
