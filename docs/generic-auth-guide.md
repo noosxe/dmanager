@@ -188,9 +188,10 @@ the UI hides the button.
    attestation conveyance. Store challenge (kind=registration, bound to the
    user, TTL 120s).
 2. `Finish`: parse the attestation, verify the challenge is unconsumed,
-   unexpired, and bound to this user; mark it consumed (single-use);
+   unexpired, and bound to this user; mark it consumed (single-use) with one conditional UPDATE and fail on zero rows, so concurrent finishes cannot both pass;
    verify the ceremony (origin, RP hash, user presence); reject duplicate
-   credential IDs; store the credential with sign count and backup flags.
+   credential IDs (also map the primary key violation of a lost race to
+   AlreadyExists); store the credential with sign count and backup flags.
    Default label derives from the AAGUID; user can rename later.
 
 ### 5.4 Login (usernameless, discoverable)

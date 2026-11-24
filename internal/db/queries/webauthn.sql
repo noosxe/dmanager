@@ -67,6 +67,21 @@ SELECT * FROM webauthn_challenges
 WHERE challenge = ? AND kind = ? AND consumed = 0 AND expires_at > ?
 LIMIT 1;
 
+-- Single conditional UPDATE so only one of several concurrent finish calls
+-- can consume a challenge; the others get no row.
+-- name: ConsumeLoginWebAuthnChallenge :one
+UPDATE webauthn_challenges
+SET consumed = 1
+WHERE challenge = ? AND kind = ? AND consumed = 0 AND expires_at > ?
+RETURNING *;
+
+-- Same, for a challenge bound to a user (registration).
+-- name: ConsumeUserWebAuthnChallenge :one
+UPDATE webauthn_challenges
+SET consumed = 1
+WHERE challenge = ? AND kind = ? AND user_id = ? AND consumed = 0 AND expires_at > ?
+RETURNING *;
+
 -- name: ConsumeWebAuthnChallenge :exec
 UPDATE webauthn_challenges
 SET consumed = 1

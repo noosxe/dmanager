@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -608,5 +609,119 @@ func TestChallengeKindAndValueUnique(t *testing.T) {
 	params.Kind = challengeKindRegistration
 	if _, err := queries.CreateWebAuthnChallenge(context.Background(), params); err != nil {
 		t.Fatalf("same value under another kind is fine: %v", err)
+	}
+}
+
+// raceAll runs fn n times in parallel, released together by a barrier, and
+// returns the errors.
+func raceAll(n int, fn func() error) []error {
+	var ready, wg sync.WaitGroup
+	start := make(chan struct{})
+	errs := make([]error, n)
+	ready.Add(n)
+	wg.Add(n)
+	for i := 0; i < n; i++ {
+		go func() {
+			defer wg.Done()
+			ready.Done()
+			<-start
+			errs[i] = fn()
+		}()
+	}
+	ready.Wait()
+	close(start)
+	wg.Wait()
+	return errs
+}
+
+func countNil(errs []error) int {
+	n := 0
+	for _, err := range errs {
+		if err == nil {
+			n++
+		}
+	}
+	return n
+}
+
+// TestConcurrentFinishConsumesChallengeOnce: many parallel finish calls with
+// one challenge produce exactly one success, for login and registration.
+func TestConcurrentFinishConsumesChallengeOnce(t *testing.T) {
+	const parallel = 16
+
+	t.Run("login", func(t *testing.T) {
+		_, _, svc := newPasskeyService(t)
+		user := newPasskeyUser(t, svc.Queries, "jules")
+		auth := newFakeAuthenticator(t)
+		enrollFakePasskey(t, svc, user, auth, nil, regFlagsSynced, 0)
+		response := auth.AssertionResponseJSON(beginFakeLogin(t, svc), userHandleFor(user), nil, assertFlagsSynced, 0, "")
+
+		errs := raceAll(parallel, func() error { return finishFakeLoginRaw(t, svc, response) })
+		if got := countNil(errs); got != 1 {
+			t.Fatalf("expected exactly one successful login finish, got %d (%v)", got, errs)
+		}
+	})
+
+	t.Run("registration", func(t *testing.T) {
+		_, queries, svc := newPasskeyService(t)
+		user := newPasskeyUser(t, svc.Queries, "kira")
+		authCtx := context.WithValue(context.Background(), userContextKey, user)
+		auth := newFakeAuthenticator(t)
+		response := auth.RegistrationResponseJSON(beginFakeRegistration(t, svc, user), nil, regFlagsSynced, 0)
+
+		errs := raceAll(parallel, func() error {
+			_, err := svc.FinishPasskeyRegistration(authCtx, connect.NewRequest(&v1.FinishPasskeyRegistrationRequest{ResponseJson: response}))
+			return err
+		})
+		if got := countNil(errs); got != 1 {
+			t.Fatalf("expected exactly one successful registration finish, got %d (%v)", got, errs)
+		}
+		rows, err := queries.ListWebAuthnCredentialsByUser(context.Background(), user.ID)
+		if err != nil || len(rows) != 1 {
+			t.Errorf("expected exactly one stored credential, got %d (%v)", len(rows), err)
+		}
+	})
+}
+
+// TestRegistrationChallengeBoundToUser: another user cannot finish, or burn,
+// someone else's registration challenge.
+func TestRegistrationChallengeBoundToUser(t *testing.T) {
+	_, _, svc := newPasskeyService(t)
+	owner := newPasskeyUser(t, svc.Queries, "lena")
+	other := newPasskeyUser(t, svc.Queries, "milo")
+	auth := newFakeAuthenticator(t)
+	response := auth.RegistrationResponseJSON(beginFakeRegistration(t, svc, owner), nil, regFlagsSynced, 0)
+
+	otherCtx := context.WithValue(context.Background(), userContextKey, other)
+	_, err := svc.FinishPasskeyRegistration(otherCtx, connect.NewRequest(&v1.FinishPasskeyRegistrationRequest{ResponseJson: response}))
+	if connect.CodeOf(err) != connect.CodePermissionDenied {
+		t.Fatalf("expected PermissionDenied, got %v", err)
+	}
+	// The failed attempt must not have consumed the owner's challenge.
+	ownerCtx := context.WithValue(context.Background(), userContextKey, owner)
+	if _, err := svc.FinishPasskeyRegistration(ownerCtx, connect.NewRequest(&v1.FinishPasskeyRegistrationRequest{ResponseJson: response})); err != nil {
+		t.Fatalf("owner must still be able to finish: %v", err)
+	}
+}
+
+// TestDuplicateCredentialIsPrimaryKeyViolation: the database rejects a second
+// row for one credential ID and isDuplicateKey recognises it, which is what
+// maps a lost registration race to AlreadyExists.
+func TestDuplicateCredentialIsPrimaryKeyViolation(t *testing.T) {
+	_, queries, svc := newPasskeyService(t)
+	user := newPasskeyUser(t, svc.Queries, "nora")
+	auth := newFakeAuthenticator(t)
+	enrollFakePasskey(t, svc, user, auth, nil, regFlagsSynced, 0)
+
+	row := credentialRow(t, queries, auth.credID)
+	_, err := queries.CreateWebAuthnCredential(context.Background(), db.CreateWebAuthnCredentialParams{
+		CredentialID: row.CredentialID, UserID: user.ID, PublicKey: row.PublicKey,
+		AttestationType: row.AttestationType, Aaguid: row.Aaguid, Name: "dup", CreatedAt: time.Now(),
+	})
+	if err == nil || !isDuplicateKey(err) {
+		t.Fatalf("expected a primary key violation, got %v", err)
+	}
+	if isDuplicateKey(sql.ErrNoRows) {
+		t.Error("unrelated errors must not be treated as duplicates")
 	}
 }

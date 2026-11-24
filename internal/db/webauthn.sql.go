@@ -11,6 +11,71 @@ import (
 	"time"
 )
 
+const consumeLoginWebAuthnChallenge = `-- name: ConsumeLoginWebAuthnChallenge :one
+UPDATE webauthn_challenges
+SET consumed = 1
+WHERE challenge = ? AND kind = ? AND consumed = 0 AND expires_at > ?
+RETURNING id, challenge, kind, user_id, expires_at, consumed, extensions
+`
+
+type ConsumeLoginWebAuthnChallengeParams struct {
+	Challenge []byte
+	Kind      string
+	ExpiresAt time.Time
+}
+
+// Single conditional UPDATE so only one of several concurrent finish calls
+// can consume a challenge; the others get no row.
+func (q *Queries) ConsumeLoginWebAuthnChallenge(ctx context.Context, arg ConsumeLoginWebAuthnChallengeParams) (WebauthnChallenge, error) {
+	row := q.db.QueryRowContext(ctx, consumeLoginWebAuthnChallenge, arg.Challenge, arg.Kind, arg.ExpiresAt)
+	var i WebauthnChallenge
+	err := row.Scan(
+		&i.ID,
+		&i.Challenge,
+		&i.Kind,
+		&i.UserID,
+		&i.ExpiresAt,
+		&i.Consumed,
+		&i.Extensions,
+	)
+	return i, err
+}
+
+const consumeUserWebAuthnChallenge = `-- name: ConsumeUserWebAuthnChallenge :one
+UPDATE webauthn_challenges
+SET consumed = 1
+WHERE challenge = ? AND kind = ? AND user_id = ? AND consumed = 0 AND expires_at > ?
+RETURNING id, challenge, kind, user_id, expires_at, consumed, extensions
+`
+
+type ConsumeUserWebAuthnChallengeParams struct {
+	Challenge []byte
+	Kind      string
+	UserID    sql.NullInt64
+	ExpiresAt time.Time
+}
+
+// Same, for a challenge bound to a user (registration).
+func (q *Queries) ConsumeUserWebAuthnChallenge(ctx context.Context, arg ConsumeUserWebAuthnChallengeParams) (WebauthnChallenge, error) {
+	row := q.db.QueryRowContext(ctx, consumeUserWebAuthnChallenge,
+		arg.Challenge,
+		arg.Kind,
+		arg.UserID,
+		arg.ExpiresAt,
+	)
+	var i WebauthnChallenge
+	err := row.Scan(
+		&i.ID,
+		&i.Challenge,
+		&i.Kind,
+		&i.UserID,
+		&i.ExpiresAt,
+		&i.Consumed,
+		&i.Extensions,
+	)
+	return i, err
+}
+
 const consumeWebAuthnChallenge = `-- name: ConsumeWebAuthnChallenge :exec
 UPDATE webauthn_challenges
 SET consumed = 1
