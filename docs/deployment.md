@@ -25,7 +25,7 @@ This document details the procedure and requirements to deploy the `dmanager` ap
 | `server.http.enabled` | `DMANAGER_SERVER_HTTP_ENABLED` | `true` | Serve the plain HTTP listener. May be `false` only when `tailscale.enabled` is `true`; otherwise startup fails because no listener would be up. |
 | `server.db_path` | `DMANAGER_SERVER_DB_PATH` | `/var/lib/dmanager/dmanager.db` | Persistent SQLite path. |
 | `server.allowed_origins` | `DMANAGER_SERVER_ALLOWED_ORIGINS` | `[]` | CORS comma-separated allowed origins list. |
-| `server.trusted_proxy` | `DMANAGER_SERVER_TRUSTED_PROXY` | `false` | When true, trusts `X-Forwarded-For` header for client IP extraction. |
+| `server.trusted_proxy` | `DMANAGER_SERVER_TRUSTED_PROXY` | `false` | When true, trusts `X-Forwarded-For` header for client IP extraction. Set it when running behind a reverse proxy: otherwise every client shares the proxy's address, so login rate limits (including the 20-per-minute passkey sign-in begin limit) apply to all clients together. |
 | `docker.host` | `DMANAGER_DOCKER_HOST` | `unix:///var/run/docker.sock` | Path to Docker unix socket. |
 | `docker.external_label_selectors` | `DMANAGER_DOCKER_EXTERNAL_LABEL_SELECTORS` | `[]` | Label selectors (`key=value` or bare `key`; comma-separated in the env var) that mark containers as externally managed, in addition to the `dmanager.managed-by` label. Such containers are never upgraded by dmanager. |
 | `scheduler.interval_minutes` | `DMANAGER_SCHEDULER_INTERVAL_MINUTES` | `60` | Schedule frequency for registry update checks. |
