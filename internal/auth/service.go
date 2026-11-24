@@ -505,6 +505,8 @@ func getUserVerificationRequirement(uv string) protocol.UserVerificationRequirem
 	}
 }
 
+const errNonDiscoverablePasskey = "This authenticator created a passkey that can't be used for sign-in without a username. Use a passkey provider or a security key that supports discoverable credentials."
+
 func (s *Service) BeginPasskeyRegistration(ctx context.Context, req *connect.Request[v1.BeginPasskeyRegistrationRequest]) (*connect.Response[v1.BeginPasskeyRegistrationResponse], error) {
 	user, ok := UserFromContext(ctx)
 	if !ok {
@@ -535,8 +537,9 @@ func (s *Service) BeginPasskeyRegistration(ctx context.Context, req *connect.Req
 	options, sessionData, err := s.webauthn.BeginRegistration(
 		webUser,
 		webauthn.WithAuthenticatorSelection(protocol.AuthenticatorSelection{
-			ResidentKey:      protocol.ResidentKeyRequirementPreferred,
-			UserVerification: uv,
+			ResidentKey:        protocol.ResidentKeyRequirementRequired,
+			RequireResidentKey: protocol.ResidentKeyRequired(),
+			UserVerification:   uv,
 		}),
 		webauthn.WithConveyancePreference(protocol.PreferNoAttestation),
 		webauthn.WithExtensions(
@@ -636,6 +639,15 @@ func (s *Service) FinishPasskeyRegistration(ctx context.Context, req *connect.Re
 	cred, err := s.webauthn.CreateCredential(webUser, sessionData, parsedResponse)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("failed to verify credential creation: %w", err))
+	}
+
+	// Sign-in is username-less, so only discoverable credentials are usable.
+	// residentKey=required already asks the authenticator for one; the
+	// credProps result tells us whether it complied. Some clients omit
+	// credProps entirely: such credentials are accepted, because the
+	// request was made and there is no evidence against it.
+	if props := parsedResponse.ClientExtensionResults.CredProps; props != nil && props.RK != nil && !*props.RK {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New(errNonDiscoverablePasskey)) //nolint:staticcheck // user-facing sentence, shown verbatim in the UI
 	}
 
 	// Check if already registered

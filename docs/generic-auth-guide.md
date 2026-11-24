@@ -182,7 +182,7 @@ the UI hides the button.
 
 ### 5.3 Registration (authenticated)
 
-1. `Begin`: build options with `resident_key: preferred`,
+1. `Begin`: build options with `resident_key: required`,
    `user_verification: <config>`, `exclude_credentials` = the user's
    existing credentials (prevents silent double registration), prefer no
    attestation conveyance. Store challenge (kind=registration, bound to the

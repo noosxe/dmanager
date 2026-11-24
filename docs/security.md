@@ -57,7 +57,7 @@ graph TD
 
 ### 2.5. WebAuthn & Passkey Security Model
 * **Relying Party (RP) Binding:** `rp_id` and `origins` must be statically pinned in configuration. Origins are never dynamically derived from request headers to prevent DNS rebinding or origin spoofing attacks.
-* **Discoverable Resident Keys:** Usernameless login uses resident keys (`require_resident_key = preferred`) with empty `allow_credentials` on `BeginPasskeyLogin`, allowing platform authenticators to resolve the user handle.
+* **Discoverable Resident Keys:** Usernameless login uses resident keys (`resident_key = required`; a credential reported as non-discoverable via `credProps` is rejected at registration) with empty `allow_credentials` on `BeginPasskeyLogin`, allowing platform authenticators to resolve the user handle.
 * **Challenge Lifetimes & Single-Use:** Cryptographic challenges have a 120-second TTL stored in SQLite, enforced at single-use (`consumed = 1`), and purged periodically.
 * **Clone Detection:** Authenticator signature counter (`sign_count`) is tracked per credential. If a newly asserted count is non-zero and less than or equal to the recorded count, the login is rejected and flagged with `clone_warning = 1`.
 * **Lockout Guardrails:** Users cannot delete their last remaining authentication factor (e.g. deleting the last passkey when no password exists).

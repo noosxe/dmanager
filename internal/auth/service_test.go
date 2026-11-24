@@ -940,7 +940,7 @@ func TestBeginPasskeyRegistration(t *testing.T) {
 	// as Bitwarden return a credProps output the RP never asked for — which the
 	// library's strict unsolicited-output validation rejects.
 	extensions, _ := optMap["extensions"].(map[string]interface{})
-	if _, ok := extensions["credProps"]; !ok {
+	if _, ok := extensions[extCredProps]; !ok {
 		t.Errorf("expected credProps extension request in options_json, got extensions: %v", extensions)
 	}
 
@@ -958,7 +958,7 @@ func TestBeginPasskeyRegistration(t *testing.T) {
 		if err := json.Unmarshal(found.Extensions, &persisted); err != nil {
 			t.Fatalf("failed to unmarshal persisted session extensions: %v", err)
 		}
-		if !slices.Contains(persisted.Requested, "credProps") {
+		if !slices.Contains(persisted.Requested, extCredProps) {
 			t.Errorf("expected credProps in persisted session extensions, got %v", persisted.Requested)
 		}
 	}
@@ -968,7 +968,7 @@ func TestBeginPasskeyRegistration(t *testing.T) {
 // a spec-mandated credProps output; the finish step must accept it because the
 // begin step requested it and the request was persisted with the challenge.
 func TestPersistedSessionExtensionsSolicitCredPropsOutput(t *testing.T) {
-	requested := protocol.SessionExtensions{Requested: []string{"credProps"}}
+	requested := protocol.SessionExtensions{Requested: []string{extCredProps}}
 	b, err := json.Marshal(requested)
 	if err != nil {
 		t.Fatalf("failed to marshal session extensions: %v", err)
