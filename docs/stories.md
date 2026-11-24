@@ -103,7 +103,7 @@ graph TD
 - **Token Estimate:** Input: ~50k | Output: ~3k | Total: ~53k (Actual: ~52k)
 - **Goal:** Set up the database migrations framework and generate initial SQL query wrappers using goose and SQLC.
 - **Tasks:**
-  1. Create database migration script `internal/db/migrations/00001_init.sql` based on [docs/schema.md](file:///home/mechsoull/Projects/dmanager/docs/schema.md).
+  1. Create database migration script `internal/db/migrations/00001_init.sql` based on [docs/schema.md](schema.md).
   2. Configure SQLC via `sqlc.yaml` in the root (matching SQLite driver rules).
   3. Create SQL queries in `internal/db/queries/` (`users.sql`, `sessions.sql`, `containers.sql`).
   4. Generate Go queries code using `sqlc generate`.
@@ -126,7 +126,7 @@ graph TD
 - **Token Estimate:** Input: ~90k | Output: ~6k | Total: ~96k (Actual: ~95k)
 - **Goal:** Implement secure session-based authentication handlers using ConnectRPC.
 - **Tasks:**
-  1. Implement `AuthService` interface defined in [docs/protocol.md](file:///home/mechsoull/Projects/dmanager/docs/protocol.md).
+  1. Implement `AuthService` interface defined in [docs/protocol.md](protocol.md).
   2. Implement `Login` (verify credentials, hash checks with bcrypt, store session in DB, return token).
   3. Implement `GetCurrentUser` (parse Authorization token, fetch session, return user payload).
   4. Implement `Logout` (invalidate session token in DB).
@@ -708,7 +708,7 @@ graph TD
 - **Dependencies:** `STORY-031`
 - **Goal:** Set up database settings table migrations, SQLC query generation, settings service protobuf schema definitions, and RPC logic to get, update, and test settings.
 - **Tasks:**
-  1. Create database migration script `internal/db/migrations/00002_add_settings.sql` matching [docs/schema.md](file:///home/mechsoull/Projects/dmanager/docs/schema.md).
+  1. Create database migration script `internal/db/migrations/00002_add_settings.sql` matching [docs/schema.md](schema.md).
   2. Create SQL query templates in `internal/db/queries/settings.sql` and run `sqlc generate`.
   3. Define settings RPC protobuf endpoints in `proto/dmanager/v1/settings.proto` and run code generation scripts.
   4. Implement `SettingsService` handler handling `GetSettings` and `UpdateSettings` in Go.
