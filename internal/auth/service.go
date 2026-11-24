@@ -527,11 +527,9 @@ func (s *Service) BeginPasskeyRegistration(ctx context.Context, req *connect.Req
 		creds = append(creds, dbCredToWebAuthn(c))
 	}
 
-	webUser := &WebAuthnUser{
-		ID:          user.ID,
-		Username:    user.Username,
-		DisplayName: user.Username,
-		Credentials: creds,
+	webUser, err := s.newWebAuthnUser(ctx, user, creds)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to prepare WebAuthn user: %w", err))
 	}
 
 	uv := getUserVerificationRequirement(s.webauthnCfg.RequireUserVerification)
@@ -635,11 +633,9 @@ func (s *Service) FinishPasskeyRegistration(ctx context.Context, req *connect.Re
 		creds = append(creds, dbCredToWebAuthn(c))
 	}
 
-	webUser := &WebAuthnUser{
-		ID:          user.ID,
-		Username:    user.Username,
-		DisplayName: user.Username,
-		Credentials: creds,
+	webUser, err := s.newWebAuthnUser(ctx, user, creds)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to prepare WebAuthn user: %w", err))
 	}
 
 	sessionData := webauthn.SessionData{
@@ -831,11 +827,9 @@ func (s *Service) FinishPasskeyLogin(ctx context.Context, req *connect.Request[v
 		)
 	}
 
-	webUser := &WebAuthnUser{
-		ID:          user.ID,
-		Username:    user.Username,
-		DisplayName: user.Username,
-		Credentials: []webauthn.Credential{dbCredToWebAuthn(credRow)},
+	webUser, err := s.newWebAuthnUser(ctx, user, []webauthn.Credential{dbCredToWebAuthn(credRow)})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to prepare WebAuthn user: %w", err))
 	}
 
 	sessionData := webauthn.SessionData{
@@ -850,6 +844,13 @@ func (s *Service) FinishPasskeyLogin(ctx context.Context, req *connect.Request[v
 
 	validCred, err := s.webauthn.ValidateDiscoverableLogin(
 		func(rawID, userHandle []byte) (webauthn.User, error) {
+			// The authenticator returns the handle it stored at registration
+			// (random, or the legacy row-ID one); it must resolve to the user
+			// that owns the credential.
+			owner, lerr := s.Queries.GetUserByWebAuthnID(ctx, userHandle)
+			if lerr != nil || owner.ID != user.ID {
+				return nil, errors.New("user handle does not match the credential owner")
+			}
 			return webUser, nil
 		},
 		sessionData,

@@ -24,7 +24,7 @@ const createFirstUser = `-- name: CreateFirstUser :one
 INSERT INTO users (username, password_hash, role)
 SELECT ?, ?, ?
 WHERE NOT EXISTS (SELECT 1 FROM users)
-RETURNING id, username, password_hash, role, created_at, updated_at, email
+RETURNING id, username, password_hash, role, created_at, updated_at, email, webauthn_user_id
 `
 
 type CreateFirstUserParams struct {
@@ -47,6 +47,7 @@ func (q *Queries) CreateFirstUser(ctx context.Context, arg CreateFirstUserParams
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Email,
+		&i.WebauthnUserID,
 	)
 	return i, err
 }
@@ -54,7 +55,7 @@ func (q *Queries) CreateFirstUser(ctx context.Context, arg CreateFirstUserParams
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (username, password_hash, role)
 VALUES (?, ?, ?)
-RETURNING id, username, password_hash, role, created_at, updated_at, email
+RETURNING id, username, password_hash, role, created_at, updated_at, email, webauthn_user_id
 `
 
 type CreateUserParams struct {
@@ -74,12 +75,13 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Email,
+		&i.WebauthnUserID,
 	)
 	return i, err
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, username, password_hash, role, created_at, updated_at, email FROM users WHERE id = ? LIMIT 1
+SELECT id, username, password_hash, role, created_at, updated_at, email, webauthn_user_id FROM users WHERE id = ? LIMIT 1
 `
 
 func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
@@ -93,12 +95,13 @@ func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Email,
+		&i.WebauthnUserID,
 	)
 	return i, err
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, password_hash, role, created_at, updated_at, email FROM users WHERE username = ? LIMIT 1
+SELECT id, username, password_hash, role, created_at, updated_at, email, webauthn_user_id FROM users WHERE username = ? LIMIT 1
 `
 
 func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User, error) {
@@ -112,6 +115,46 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Email,
+		&i.WebauthnUserID,
 	)
 	return i, err
+}
+
+const getUserByWebAuthnID = `-- name: GetUserByWebAuthnID :one
+SELECT id, username, password_hash, role, created_at, updated_at, email, webauthn_user_id FROM users WHERE webauthn_user_id = ? LIMIT 1
+`
+
+func (q *Queries) GetUserByWebAuthnID(ctx context.Context, webauthnUserID []byte) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByWebAuthnID, webauthnUserID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.PasswordHash,
+		&i.Role,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Email,
+		&i.WebauthnUserID,
+	)
+	return i, err
+}
+
+const setUserWebAuthnID = `-- name: SetUserWebAuthnID :execrows
+UPDATE users SET webauthn_user_id = ? WHERE id = ? AND webauthn_user_id IS NULL
+`
+
+type SetUserWebAuthnIDParams struct {
+	WebauthnUserID []byte
+	ID             int64
+}
+
+// Stores a user's WebAuthn handle only while none is set, so a handle, once
+// chosen, never changes.
+func (q *Queries) SetUserWebAuthnID(ctx context.Context, arg SetUserWebAuthnIDParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setUserWebAuthnID, arg.WebauthnUserID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
