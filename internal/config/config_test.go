@@ -42,6 +42,9 @@ func TestConfigDefaults(t *testing.T) {
 	if cfg.Server.TrustedProxy {
 		t.Errorf("expected default trusted_proxy false, got true")
 	}
+	if cfg.Server.TrustedProxyHops != 1 {
+		t.Errorf("expected default trusted_proxy_hops 1, got %d", cfg.Server.TrustedProxyHops)
+	}
 	if cfg.SMTP.Enabled {
 		t.Errorf("expected default smtp.enabled false, got true")
 	}
@@ -135,6 +138,7 @@ webauthn:
 
 func TestConfigEnvOverrides(t *testing.T) {
 	t.Setenv("DMANAGER_SERVER_TRUSTED_PROXY", "true")
+	t.Setenv("DMANAGER_SERVER_TRUSTED_PROXY_HOPS", "2")
 	t.Setenv("DMANAGER_AUTH_SESSION_IDLE_TIMEOUT", "24h")
 	t.Setenv("DMANAGER_AUTH_SESSION_ABSOLUTE_TIMEOUT", "48h")
 	t.Setenv("DMANAGER_AUTH_REMEMBER_ME_IDLE_TIMEOUT", "72h")
@@ -153,6 +157,9 @@ func TestConfigEnvOverrides(t *testing.T) {
 
 	if !cfg.Server.TrustedProxy {
 		t.Errorf("expected env server.trusted_proxy true, got false")
+	}
+	if cfg.Server.TrustedProxyHops != 2 {
+		t.Errorf("expected env server.trusted_proxy_hops 2, got %d", cfg.Server.TrustedProxyHops)
 	}
 	if !cfg.Auth.BreachedPasswordCheck {
 		t.Errorf("expected env auth.breached_password_check true, got false")
@@ -245,6 +252,20 @@ func TestConfigValidation(t *testing.T) {
 			name: "invalid webauthn require_user_verification",
 			mutate: func(c *Config) {
 				c.WebAuthn.RequireUserVerification = "mandatory"
+			},
+			wantErr: true,
+		},
+		{
+			name: "trusted_proxy_hops zero",
+			mutate: func(c *Config) {
+				c.Server.TrustedProxyHops = 0
+			},
+			wantErr: true,
+		},
+		{
+			name: "trusted_proxy_hops negative",
+			mutate: func(c *Config) {
+				c.Server.TrustedProxyHops = -1
 			},
 			wantErr: true,
 		},
@@ -423,7 +444,7 @@ func TestConfigSMTPValidation(t *testing.T) {
 
 func TestConfigSMTPDisabledInert(t *testing.T) {
 	cfg := &Config{
-		Server: ServerConfig{Port: "9283", HTTP: HTTPConfig{Enabled: true}},
+		Server: ServerConfig{Port: "9283", HTTP: HTTPConfig{Enabled: true}, TrustedProxyHops: 1},
 		Auth: AuthConfig{
 			SessionIdleTimeout:        168 * time.Hour,
 			SessionAbsoluteTimeout:    720 * time.Hour,
@@ -918,7 +939,7 @@ func TestConfigHTTPListenerValidation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &Config{
-				Server: ServerConfig{Port: "9283", DBPath: "/var/lib/dmanager/dmanager.db", HTTP: HTTPConfig{Enabled: true}},
+				Server: ServerConfig{Port: "9283", DBPath: "/var/lib/dmanager/dmanager.db", HTTP: HTTPConfig{Enabled: true}, TrustedProxyHops: 1},
 				Auth: AuthConfig{
 					SessionIdleTimeout:        time.Hour,
 					SessionAbsoluteTimeout:    time.Hour,

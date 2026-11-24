@@ -54,7 +54,7 @@ func newPasskeyService(t *testing.T) (*sql.DB, *db.Queries, *Service) {
 		t.Fatalf("failed to run migrations: %v", err)
 	}
 	queries := db.New(dbConn)
-	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false)
+	svc := NewService(queries, slog.Default(), testAuthConfig(), testWebAuthnConfig(), false, 1)
 	return dbConn, queries, svc
 }
 
@@ -515,7 +515,7 @@ func newPasskeyServiceWithUV(t *testing.T, uv string) *Service {
 	_, queries, _ := newPasskeyService(t)
 	cfg := testWebAuthnConfig()
 	cfg.RequireUserVerification = uv
-	return NewService(queries, slog.Default(), testAuthConfig(), cfg, false)
+	return NewService(queries, slog.Default(), testAuthConfig(), cfg, false, 1)
 }
 
 // TestUserVerificationPolicy pins what "preferred" and "required" mean: under

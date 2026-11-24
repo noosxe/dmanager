@@ -25,7 +25,8 @@ This document details the procedure and requirements to deploy the `dmanager` ap
 | `server.http.enabled` | `DMANAGER_SERVER_HTTP_ENABLED` | `true` | Serve the plain HTTP listener. May be `false` only when `tailscale.enabled` is `true`; otherwise startup fails because no listener would be up. |
 | `server.db_path` | `DMANAGER_SERVER_DB_PATH` | `/var/lib/dmanager/dmanager.db` | Persistent SQLite path. |
 | `server.allowed_origins` | `DMANAGER_SERVER_ALLOWED_ORIGINS` | `[]` | CORS comma-separated allowed origins list. |
-| `server.trusted_proxy` | `DMANAGER_SERVER_TRUSTED_PROXY` | `false` | When true, trusts `X-Forwarded-For` header for client IP extraction. Set it when running behind a reverse proxy: otherwise every client shares the proxy's address, so login rate limits (including the 20-per-minute passkey sign-in begin limit) apply to all clients together. |
+| `server.trusted_proxy` | `DMANAGER_SERVER_TRUSTED_PROXY` | `false` | When true, takes the client IP from `X-Forwarded-For`, read from the right (see `server.trusted_proxy_hops`); the proxy must append to the header, not replace it. Set it when running behind a reverse proxy: otherwise every client shares the proxy's address, so login rate limits (including the 20-per-minute passkey sign-in begin limit) apply to all clients together. |
+| `server.trusted_proxy_hops` | `DMANAGER_SERVER_TRUSTED_PROXY_HOPS` | `1` | How many proxies in front of dmanager append to `X-Forwarded-For`. The client IP is the entry that many positions from the right (`1` = rightmost). Use `2` for Cloudflare in front of nginx. Must be at least `1`. |
 | `docker.host` | `DMANAGER_DOCKER_HOST` | `unix:///var/run/docker.sock` | Path to Docker unix socket. |
 | `docker.external_label_selectors` | `DMANAGER_DOCKER_EXTERNAL_LABEL_SELECTORS` | `[]` | Label selectors (`key=value` or bare `key`; comma-separated in the env var) that mark containers as externally managed, in addition to the `dmanager.managed-by` label. Such containers are never upgraded by dmanager. |
 | `scheduler.interval_minutes` | `DMANAGER_SCHEDULER_INTERVAL_MINUTES` | `60` | Schedule frequency for registry update checks. |
@@ -293,7 +294,7 @@ does not conflict with a key file.
 - **User handles.** Migration `00013` adds `users.webauthn_user_id`. Users who already have passkeys keep the legacy handle, so their passkeys keep working; users without passkeys get a random handle when they first register one. Rolling back to an older release keeps working for legacy users only.
 - **Deleting a passkey can sign out other sessions.** The Settings dialog ticks "Also sign out all other sessions" by default.
 - **Generic sign-in error.** Failed passkey sign-ins show one message; the reason is in the audit log.
-- **Set `server.trusted_proxy` behind a reverse proxy.** Passkey sign-in start requests are limited to 20 per minute per client address; without the setting all clients share the proxy's address.
+- **Set `server.trusted_proxy` behind a reverse proxy.** Passkey sign-in start requests are limited to 20 per minute per client address; without the setting all clients share the proxy's address. dmanager trusts only the entries your proxies appended to `X-Forwarded-For`, counted from the right: set `server.trusted_proxy_hops` to the number of proxies (`1` for a single nginx, Caddy or Traefik; `2` for Cloudflare plus nginx). Each proxy must append to the header (nginx: `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`; Caddy and Traefik do by default). A proxy that forwards the client's header unchanged, or too few hops, lets clients choose their own address.
 
 ### To v0.10.0
 

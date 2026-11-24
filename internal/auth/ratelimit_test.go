@@ -127,60 +127,56 @@ func TestRateLimiterWindowSlidingAndEviction(t *testing.T) {
 
 func TestExtractClientIP(t *testing.T) {
 	const (
-		testForwardedIP = "203.0.113.195"
-		testLocalIP     = "192.168.1.10"
-		xForwardedFor   = "X-Forwarded-For"
+		xff       = "X-Forwarded-For"
+		peer      = "10.0.0.1:8080"
+		peerHost  = "10.0.0.1"
+		client    = "203.0.113.195"
+		localHost = "192.168.1.10"
 	)
+	hdr := func(lines ...string) http.Header {
+		h := http.Header{}
+		for _, l := range lines {
+			h.Add(xff, l)
+		}
+		return h
+	}
 
 	tests := []struct {
-		name         string
-		reqHeader    http.Header
-		remoteAddr   string
-		trustedProxy bool
-		wantIP       string
+		name       string
+		header     http.Header
+		remoteAddr string
+		trusted    bool
+		hops       int
+		want       string
 	}{
-		{
-			name:         "remote addr with port without proxy trust",
-			reqHeader:    http.Header{xForwardedFor: []string{testForwardedIP}},
-			remoteAddr:   "192.168.1.10:54321",
-			trustedProxy: false,
-			wantIP:       testLocalIP,
-		},
-		{
-			name:         "remote addr without port",
-			reqHeader:    nil,
-			remoteAddr:   testLocalIP,
-			trustedProxy: false,
-			wantIP:       testLocalIP,
-		},
-		{
-			name:         "trusted proxy with single X-Forwarded-For",
-			reqHeader:    http.Header{xForwardedFor: []string{testForwardedIP}},
-			remoteAddr:   "10.0.0.1:8080",
-			trustedProxy: true,
-			wantIP:       testForwardedIP,
-		},
-		{
-			name:         "trusted proxy with multiple comma-separated X-Forwarded-For",
-			reqHeader:    http.Header{xForwardedFor: []string{"203.0.113.195, 70.41.3.18, 150.172.238.178"}},
-			remoteAddr:   "10.0.0.1:8080",
-			trustedProxy: true,
-			wantIP:       testForwardedIP,
-		},
-		{
-			name:         "empty inputs",
-			reqHeader:    nil,
-			remoteAddr:   "",
-			trustedProxy: true,
-			wantIP:       "",
-		},
+		{"proxy trust off ignores header", hdr(client), localHost + ":54321", false, 1, localHost},
+		{"peer without port", nil, localHost, false, 1, localHost},
+		{"empty inputs", nil, "", true, 1, ""},
+		{"single entry", hdr(client), peer, true, 1, client},
+		{"spoofed leftmost entry ignored with one proxy", hdr("1.2.3.4, 203.0.113.195"), peer, true, 1, client},
+		{"spoofed chain ignored with one proxy", hdr("1.2.3.4, 5.6.7.8, 203.0.113.195"), peer, true, 1, client},
+		{"two hops picks second from right", hdr("1.2.3.4, 203.0.113.195, 198.51.100.7"), peer, true, 2, client},
+		{"fewer entries than hops uses leftmost", hdr(client), peer, true, 3, client},
+		{"fewer entries than hops with two entries", hdr("203.0.113.195, 198.51.100.7"), peer, true, 5, client},
+		{"multiple header lines combined in order", hdr("1.2.3.4, 5.6.7.8", client), peer, true, 1, client},
+		{"multiple header lines with two hops", hdr("1.2.3.4", client, "198.51.100.7"), peer, true, 2, client},
+		{"spaces trimmed", hdr("  1.2.3.4 ,   203.0.113.195  "), peer, true, 1, client},
+		{"ip with port tolerated", hdr("203.0.113.195:4242"), peer, true, 1, client},
+		{"ipv6", hdr("2001:db8::1"), peer, true, 1, "2001:db8::1"},
+		{"bracketed ipv6 with port", hdr("[2001:db8::1]:4242"), peer, true, 1, "2001:db8::1"},
+		{"invalid entry falls back to peer", hdr("1.2.3.4, not-an-ip"), peer, true, 1, peerHost},
+		{"empty trailing entry falls back to peer", hdr("1.2.3.4, "), peer, true, 1, peerHost},
+		{"empty header value falls back to peer", hdr(""), peer, true, 1, peerHost},
+		{"missing header falls back to peer", http.Header{}, peer, true, 1, peerHost},
+		{"invalid chosen entry does not fall through to others", hdr("203.0.113.195, garbage, 198.51.100.7"), peer, true, 2, peerHost},
+		{"non-positive hops treated as one", hdr("1.2.3.4, 203.0.113.195"), peer, true, 0, client},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := ExtractClientIP(tc.reqHeader, tc.remoteAddr, tc.trustedProxy)
-			if got != tc.wantIP {
-				t.Errorf("ExtractClientIP() = %q, want %q", got, tc.wantIP)
+			got := ExtractClientIP(tc.header, tc.remoteAddr, tc.trusted, tc.hops)
+			if got != tc.want {
+				t.Errorf("ExtractClientIP() = %q, want %q", got, tc.want)
 			}
 		})
 	}

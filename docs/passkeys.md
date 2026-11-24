@@ -18,7 +18,7 @@ what has not been tested against real clients. For the design see
 | User handle | Opaque per-user value: 32 random bytes for users that had no passkeys when the handle column was introduced (chosen when they first need it), the legacy 8-byte row-ID value for users that already had passkeys. On sign-in the WebAuthn library checks the returned handle against the credential owner's stored handle. |
 | Counter and flags | A signature counter that does not increase (including N to 0) logs the user in and flags the passkey with a warning badge. Counters that stay at 0 are normal and never flagged. The backup-eligible flag must not change after registration; backup state may change. |
 | Challenges | Single use, 120 seconds, stored server side. |
-| Rate limits | Failed sign-ins are limited per source IP (shared by password and passkey) and per username and method. `BeginPasskeyLogin` has its own per-IP limit. Behind a reverse proxy, set `server.trusted_proxy`. |
+| Rate limits | Failed sign-ins are limited per source IP (shared by password and passkey) and per username and method. `BeginPasskeyLogin` has its own per-IP limit. Behind a reverse proxy, set `server.trusted_proxy` (and `server.trusted_proxy_hops` if more than one proxy is in front). |
 
 ## What the tests pin
 

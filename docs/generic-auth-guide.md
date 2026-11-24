@@ -345,7 +345,8 @@ Failures log a warning; the job never crashes the process.
 | `remember_me_absolute_timeout` | 2160h | ≥ remember idle (validate) |
 | `secure_cookies` | auto | auto / always / never |
 | `bcrypt_cost` | 12 | 4–31 |
-| `trusted_proxy` | false | Enables X-Forwarded-For trust |
+| `trusted_proxy` | false | Enables X-Forwarded-For trust (rightmost entries only) |
+| `trusted_proxy_hops` | 1 | Proxies appending to X-Forwarded-For; client IP is that many entries from the right |
 | `webauthn.rp_id` | — | Required for passkeys |
 | `webauthn.origins` | — | Required for passkeys |
 | `webauthn.require_user_verification` | preferred | |
