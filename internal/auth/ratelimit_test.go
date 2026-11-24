@@ -15,52 +15,52 @@ func TestRateLimiterThresholdAndBackoff(t *testing.T) {
 
 	// 1..4 failures: not locked out
 	for i := 1; i <= 4; i++ {
-		dur := rl.RecordFailure(user, ip, now)
+		dur := rl.RecordFailure(MethodPassword, user, ip, now)
 		if dur != 0 {
 			t.Fatalf("attempt %d should not lock out, got duration %v", i, dur)
 		}
-		locked, _ := rl.Check(user, ip, now)
+		locked, _ := rl.Check(MethodPassword, user, ip, now)
 		if locked {
 			t.Fatalf("attempt %d should not result in Check=locked", i)
 		}
 	}
 
 	// 5th failure: 1 min lockout
-	dur5 := rl.RecordFailure(user, ip, now)
+	dur5 := rl.RecordFailure(MethodPassword, user, ip, now)
 	if dur5 != 1*time.Minute {
 		t.Errorf("5th failure expected 1m lockout, got %v", dur5)
 	}
-	locked, wait := rl.Check(user, ip, now)
+	locked, wait := rl.Check(MethodPassword, user, ip, now)
 	if !locked || wait != 1*time.Minute {
 		t.Errorf("expected Check=locked with 1m wait, got locked=%v, wait=%v", locked, wait)
 	}
 
 	// 6th failure: 2 min lockout
-	dur6 := rl.RecordFailure(user, ip, now)
+	dur6 := rl.RecordFailure(MethodPassword, user, ip, now)
 	if dur6 != 2*time.Minute {
 		t.Errorf("6th failure expected 2m lockout, got %v", dur6)
 	}
 
 	// 7th failure: 4 min lockout
-	dur7 := rl.RecordFailure(user, ip, now)
+	dur7 := rl.RecordFailure(MethodPassword, user, ip, now)
 	if dur7 != 4*time.Minute {
 		t.Errorf("7th failure expected 4m lockout, got %v", dur7)
 	}
 
 	// 8th failure: 8 min lockout
-	dur8 := rl.RecordFailure(user, ip, now)
+	dur8 := rl.RecordFailure(MethodPassword, user, ip, now)
 	if dur8 != 8*time.Minute {
 		t.Errorf("8th failure expected 8m lockout, got %v", dur8)
 	}
 
 	// 9th failure: 15 min cap (not 16m)
-	dur9 := rl.RecordFailure(user, ip, now)
+	dur9 := rl.RecordFailure(MethodPassword, user, ip, now)
 	if dur9 != 15*time.Minute {
 		t.Errorf("9th failure expected 15m cap, got %v", dur9)
 	}
 
 	// 10th failure: still 15 min cap
-	dur10 := rl.RecordFailure(user, ip, now)
+	dur10 := rl.RecordFailure(MethodPassword, user, ip, now)
 	if dur10 != 15*time.Minute {
 		t.Errorf("10th failure expected 15m cap, got %v", dur10)
 	}
@@ -74,25 +74,25 @@ func TestRateLimiterSuccessResetsUsernameOnly(t *testing.T) {
 
 	// 5 failures
 	for i := 1; i <= 5; i++ {
-		rl.RecordFailure(user, ip, now)
+		rl.RecordFailure(MethodPassword, user, ip, now)
 	}
 
-	locked, _ := rl.Check(user, ip, now)
+	locked, _ := rl.Check(MethodPassword, user, ip, now)
 	if !locked {
 		t.Fatalf("expected locked out after 5 failures")
 	}
 
 	// Reset username on success
-	rl.RecordSuccess(user)
+	rl.RecordSuccess(MethodPassword, user)
 
 	// User key alone is now unlocked
-	userLocked, _ := rl.Check(user, "", now)
+	userLocked, _ := rl.Check(MethodPassword, user, "", now)
 	if userLocked {
 		t.Errorf("expected user counter to be cleared after success")
 	}
 
 	// IP key remains locked to prevent credential stuffing across usernames
-	ipLocked, _ := rl.Check("differentUser", ip, now)
+	ipLocked, _ := rl.Check(MethodPassword, "differentUser", ip, now)
 	if !ipLocked {
 		t.Errorf("expected IP to remain locked after username reset")
 	}
@@ -106,20 +106,20 @@ func TestRateLimiterWindowSlidingAndEviction(t *testing.T) {
 
 	// 4 failures at T=0
 	for i := 1; i <= 4; i++ {
-		rl.RecordFailure(user, ip, now)
+		rl.RecordFailure(MethodPassword, user, ip, now)
 	}
 
 	// Move forward 16 minutes (beyond 15m sliding window)
 	future := now.Add(16 * time.Minute)
 
 	// Next failure should be treated as 1st failure (not 5th)
-	dur := rl.RecordFailure(user, ip, future)
+	dur := rl.RecordFailure(MethodPassword, user, ip, future)
 	if dur != 0 {
 		t.Errorf("failure after sliding window should not lock out, got %v", dur)
 	}
 
 	// Verify Check is clean
-	locked, _ := rl.Check(user, ip, future)
+	locked, _ := rl.Check(MethodPassword, user, ip, future)
 	if locked {
 		t.Errorf("expected not locked after window slide")
 	}
@@ -218,7 +218,7 @@ func TestAllowBeginSlidingWindowPerIP(t *testing.T) {
 	}
 
 	// Begin flooding never feeds the failure lockout.
-	if locked, _ := rl.Check("passkey_login", "203.0.113.1", now); locked {
+	if locked, _ := rl.Check(MethodPasskey, "passkey_login", "203.0.113.1", now); locked {
 		t.Error("refused begins must not lock out sign-in")
 	}
 }
@@ -275,5 +275,48 @@ func TestAllowBeginCapsAuditedRefusals(t *testing.T) {
 	}
 	if _, _, first := rl.AllowBegin("10.9.9.9", later); !first {
 		t.Error("the audit budget must recover in the next window")
+	}
+}
+
+func TestLockoutCountersAreSeparatePerMethod(t *testing.T) {
+	rl := NewRateLimiter(false)
+	now := time.Now()
+
+	// Password failures from varying IPs lock the password method only.
+	for i := 0; i < RateLimitThreshold; i++ {
+		rl.RecordFailure(MethodPassword, "alice", "203.0.113."+string(rune('1'+i)), now)
+	}
+	if locked, _ := rl.Check(MethodPassword, "alice", "198.51.100.1", now); !locked {
+		t.Fatal("password method must be locked after the threshold")
+	}
+	if locked, _ := rl.Check(MethodPasskey, "alice", "198.51.100.1", now); locked {
+		t.Fatal("password failures must not lock passkey sign-in")
+	}
+
+	// A passkey success does not reset the password failures.
+	rl.RecordSuccess(MethodPasskey, "alice")
+	if locked, _ := rl.Check(MethodPassword, "alice", "198.51.100.1", now); !locked {
+		t.Fatal("passkey success must not reset the password counter")
+	}
+
+	// And a password success does not reset the passkey failures.
+	for i := 0; i < RateLimitThreshold; i++ {
+		rl.RecordFailure(MethodPasskey, "bob", "198.51.100."+string(rune('1'+i)), now)
+	}
+	rl.RecordSuccess(MethodPassword, "bob")
+	if locked, _ := rl.Check(MethodPasskey, "bob", "192.0.2.1", now); !locked {
+		t.Fatal("password success must not reset the passkey counter")
+	}
+}
+
+func TestIPLockoutAppliesAcrossMethods(t *testing.T) {
+	rl := NewRateLimiter(false)
+	now := time.Now()
+	ip := "203.0.113.9"
+	for i := 0; i < RateLimitThreshold; i++ {
+		rl.RecordFailure(MethodPassword, "user"+string(rune('a'+i)), ip, now)
+	}
+	if locked, _ := rl.Check(MethodPasskey, "someone", ip, now); !locked {
+		t.Fatal("per-IP lockout must apply to passkey sign-in too")
 	}
 }
