@@ -259,7 +259,7 @@ export function ContainerGrid() {
             const hasUpdate = container.updateAvailable;
 
             return (
-              <div key={container.name} className="container-card">
+              <div key={container.id} className="container-card">
                 {/* Header row */}
                 <div className="card-header-row">
                   <div className="card-title-section">

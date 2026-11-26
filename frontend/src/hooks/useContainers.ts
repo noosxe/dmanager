@@ -42,6 +42,9 @@ const STREAM_ERROR_DELAY_MS = 2000;
 const STREAM_MAX_DELAY_MS = 30000;
 // An expired session cannot be fixed by retrying, so wait the longest.
 const STREAM_UNAUTHENTICATED_DELAY_MS = STREAM_MAX_DELAY_MS;
+// How long a deleted container stays listed, so that a replacement with the
+// same name (an upgrade) can take its place without the list jumping.
+const DELETE_DELAY_MS = 300;
 
 export function useContainers() {
   const [containers, setContainers] = useState<Container[]>([]);
@@ -51,7 +54,7 @@ export function useContainers() {
 
   const toast = useToast();
   const isMounted = useRef(true);
-  const pendingDeletes = useRef<Record<string, any>>({});
+  const pendingDeletes = useRef<Record<string, number>>({}); // { containerId: timeoutId }
   const containersRef = useRef<Container[]>([]);
 
   useEffect(() => {
@@ -251,33 +254,25 @@ export function useContainers() {
       const containerId = response.containerId;
       const protoContainer = response.container;
 
-      setContainers((prev) => {
-        if (action === "delete") {
-          const containerToDelete = prev.find((c) => c.id === containerId);
-          if (containerToDelete) {
-            const name = containerToDelete.name;
-            if (pendingDeletes.current[name]) {
-              window.clearTimeout(pendingDeletes.current[name]);
-            }
-            pendingDeletes.current[name] = window.setTimeout(() => {
-              setContainers((p) => p.filter((c) => c.id !== containerId));
-              delete pendingDeletes.current[name];
-            }, 300);
-            return prev;
-          }
-          return prev.filter((c) => c.id !== containerId);
-        }
-        if (action === "save" && protoContainer) {
-          const mapped = mapProtoContainer(protoContainer);
-          if (pendingDeletes.current[mapped.name]) {
-            window.clearTimeout(pendingDeletes.current[mapped.name]);
-            delete pendingDeletes.current[mapped.name];
-          }
-          // Try matching by ID first
+      // Timers are handled outside the state updaters, which must stay pure.
+      if (action === "delete") {
+        // A delete is final: nothing cancels it once scheduled.
+        if (containerId in pendingDeletes.current) return;
+        pendingDeletes.current[containerId] = window.setTimeout(() => {
+          delete pendingDeletes.current[containerId];
+          setContainers((prev) => prev.filter((c) => c.id !== containerId));
+        }, DELETE_DELAY_MS);
+        return;
+      }
+      if (action === "save" && protoContainer) {
+        const mapped = mapProtoContainer(protoContainer);
+        const beingRemoved = new Set(Object.keys(pendingDeletes.current));
+        setContainers((prev) => {
           let idx = prev.findIndex((c) => c.id === mapped.id);
-          // Fallback to matching by name to handle container ID changes on recreation
+          // A new container takes over the place of a same-named one only if
+          // that one is going away. Its delete timer then finds nothing to do.
           if (idx < 0) {
-            idx = prev.findIndex((c) => c.name === mapped.name);
+            idx = prev.findIndex((c) => c.name === mapped.name && beingRemoved.has(c.id));
           }
           if (idx >= 0) {
             const updated = [...prev];
@@ -285,9 +280,8 @@ export function useContainers() {
             return updated;
           }
           return [...prev, mapped];
-        }
-        return prev;
-      });
+        });
+      }
     };
 
     const startStreamSubscription = async () => {
@@ -340,11 +334,8 @@ export function useContainers() {
       isMounted.current = false;
       abortController.abort();
       // Clear all pending delete timeouts on unmount
-      Object.values(pendingDeletes.current).forEach((timeoutId) => {
-        if (timeoutId) {
-          window.clearTimeout(timeoutId);
-        }
-      });
+      Object.values(pendingDeletes.current).forEach((timeoutId) => window.clearTimeout(timeoutId));
+      pendingDeletes.current = {};
     };
   }, [fetchContainers, mapProtoContainer]);
 
