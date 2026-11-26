@@ -42,6 +42,10 @@ export interface MockOptions {
   interceptors?: Interceptor[];
   /** Delay before the scripted state change on the container stream. */
   streamEventDelayMs?: number;
+  /** Replay a Compose-style recreate of one container on the stream. */
+  recreate?: boolean;
+  /** Delay before that recreate. */
+  recreateDelayMs?: number;
 }
 
 const sleep = (ms: number, signal: AbortSignal) =>
@@ -132,6 +136,30 @@ export function createMockTransport(opts: MockOptions) {
     c.state = next;
     publish(c);
     return { id, previousState, currentState: next };
+  };
+  const send = (msg: StreamMessage) => {
+    for (const s of subscribers) s(msg);
+  };
+  // What Compose does when it recreates a container behind dmanager's back: the
+  // replacement is created under a temporary name, the old one is removed, and
+  // the replacement then takes over the name.
+  let recreated = false;
+  const recreateExternally = () => {
+    const index = containers.findIndex((x) => x.id === "a2");
+    if (recreated || index < 0) return;
+    recreated = true;
+    const old = containers[index];
+    const next = { ...old, id: "b2", name: `${old.id}_${old.name}`, state: "created" };
+    containers.push(next);
+    publish(next);
+    old.state = "removing";
+    publish(old);
+    containers.splice(index, 1);
+    send({ action: "delete", containerId: old.id });
+    next.name = old.name;
+    publish(next);
+    next.state = "running";
+    publish(next);
   };
   const noPasskeys = () => {
     throw new ConnectError("passkeys are not available in the mock preview", Code.Unimplemented);
@@ -298,6 +326,9 @@ export function createMockTransport(opts: MockOptions) {
               publish(target);
             }
           }, opts.streamEventDelayMs ?? 4000);
+          const recreate = opts.recreate
+            ? setTimeout(recreateExternally, opts.recreateDelayMs ?? 3000)
+            : undefined;
           ctx.signal.addEventListener("abort", () => wake?.());
           try {
             // Initial snapshot, then live events (mutations plus one scripted change).
@@ -311,6 +342,7 @@ export function createMockTransport(opts: MockOptions) {
             }
           } finally {
             clearTimeout(scripted);
+            clearTimeout(recreate);
             subscribers.delete(push);
           }
         },

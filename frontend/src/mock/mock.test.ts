@@ -96,6 +96,30 @@ describe("mock transport", () => {
     expect(live.toSorted()).toEqual(["a1", "a2"]);
   });
 
+  it("replays an external recreate on the container stream", async () => {
+    const { containers } = clients({ recreate: true, recreateDelayMs: 10 });
+    const ac = new AbortController();
+    const events: string[] = [];
+    for await (const msg of containers.streamContainers({}, { signal: ac.signal })) {
+      if (msg.containerId !== "a2" && msg.containerId !== "b2") continue;
+      events.push(
+        `${msg.action} ${msg.containerId} ${msg.container?.name ?? ""} ${msg.container?.state ?? ""}`.trim(),
+      );
+      if (events.at(-1) === "save b2 app-2-worker running") break;
+    }
+    ac.abort();
+    expect(events).toEqual([
+      "save a2 app-2-worker running",
+      "save b2 a2_app-2-worker created",
+      "save a2 app-2-worker removing",
+      "delete a2",
+      "save b2 app-2-worker created",
+      "save b2 app-2-worker running",
+    ]);
+    const list = (await containers.listContainers({})).containers;
+    expect(list.filter((x) => x.name === "app-2-worker").map((x) => x.id)).toEqual(["b2"]);
+  });
+
   it("streams container logs", async () => {
     const { containers } = clients();
     const lines: string[] = [];

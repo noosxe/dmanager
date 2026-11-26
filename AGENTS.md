@@ -18,6 +18,7 @@ The UI runs in the browser with fake data, so no backend, Docker or Tailscale is
    - `?scenario=admin` (default), `viewer` (non-admin: admin-only screens and actions are denied), `login` (logged out), `setup` (first run), `empty` (no containers)
    - `?webauthn=available` (default), `unavailable` (simulates a page without WebAuthn, such as plain HTTP on a LAN address: passkey buttons are disabled with an explanation)
    - `?tailscale=running` (default), `starting`, `failed`, `disabled`
+   - `?recreate=off` (default), `on` (a few seconds after the containers page loads, `app-2-worker` is recreated as Compose would do it, outside dmanager)
 4. Where relevant, check light and dark mode and a narrow width (for example 375px).
 5. Take screenshots and save them under `.scratch/<task>/` (gitignored). In the report, list each with its absolute path and a one-line description so the reviewer can look at them.
 6. Screenshots never go into the repository or into PR bodies unless asked.

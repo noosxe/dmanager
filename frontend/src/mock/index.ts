@@ -22,6 +22,10 @@ function param<T extends string>(name: string, allowed: readonly T[], fallback: 
 // must show their explanation instead of failing.
 const WEBAUTHN_VARIANTS = ["available", "unavailable"] as const;
 
+// `?recreate=on` replays an external (Compose-style) recreate of `app-2-worker`
+// a few seconds after the containers page subscribes.
+const RECREATE_VARIANTS = ["off", "on"] as const;
+
 /** Transport used by `client.ts` in mock mode (`vite --mode mock`). */
 export function createBrowserMockTransport(interceptors: Interceptor[]) {
   if (param("webauthn", WEBAUTHN_VARIANTS, "available") === "unavailable") {
@@ -30,6 +34,7 @@ export function createBrowserMockTransport(interceptors: Interceptor[]) {
   return createMockTransport({
     scenario: param<Scenario>("scenario", SCENARIOS, "admin"),
     tailscale: param<TailscaleVariant>("tailscale", TAILSCALE_VARIANTS, "running"),
+    recreate: param("recreate", RECREATE_VARIANTS, "off") === "on",
     interceptors,
   });
 }

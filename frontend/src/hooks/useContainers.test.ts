@@ -108,3 +108,165 @@ describe("useContainers stream", () => {
     expect(containerClient.streamContainers).toHaveBeenCalledTimes(3);
   });
 });
+
+// A stream the test feeds by hand; it stays open until unmount.
+const liveStream = () => {
+  const queue: unknown[] = [];
+  let wake = () => {};
+  return {
+    push(message: unknown) {
+      queue.push(message);
+      wake();
+    },
+    async *[Symbol.asyncIterator]() {
+      for (;;) {
+        const next = queue.shift();
+        if (next) yield next;
+        else await new Promise<void>((resolve) => (wake = resolve));
+      }
+    },
+  };
+};
+
+const save = (id: string, name: string, state = "running") => ({
+  action: "save",
+  containerId: id,
+  container: { id, name, state },
+});
+
+const remove = (id: string) => ({ action: "delete", containerId: id });
+
+describe("useContainers events", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  const setup = async (...initial: [id: string, name: string][]) => {
+    containerClient.listContainers.mockResolvedValue({
+      containers: initial.map(([id, name]) => ({ id, name, state: "running" })),
+    });
+    const stream = liveStream();
+    containerClient.streamContainers.mockReturnValue(stream);
+    const hook = renderHook(() => useContainers());
+    await tick(0);
+
+    return {
+      ...hook,
+      emit: async (...messages: unknown[]) => {
+        for (const message of messages) {
+          stream.push(message);
+          await tick(1);
+        }
+      },
+      list: () => hook.result.current.containers.map((c) => `${c.id} ${c.name} ${c.state}`),
+    };
+  };
+
+  it("drops the old card on an external recreate (Compose order)", async () => {
+    const h = await setup(["A", "compar"], ["Z", "other"]);
+
+    await h.emit(
+      save("B", "A_compar", "created"),
+      save("A", "compar", "exited"),
+      save("A", "compar", "removing"),
+      remove("A"),
+      save("B", "compar", "created"),
+      save("B", "compar"),
+    );
+    await tick(1000);
+
+    expect(h.list()).toEqual(["Z other running", "B compar running"]);
+    h.unmount();
+  });
+
+  it("drops the old card when the new one is first saved within the delay", async () => {
+    const h = await setup(["A", "compar"], ["Z", "other"]);
+
+    await h.emit(save("A", "compar", "removing"), remove("A"), save("B", "A_compar", "created"));
+    await h.emit(save("B", "compar"));
+    await tick(1000);
+
+    expect(h.list()).toEqual(["Z other running", "B compar running"]);
+    h.unmount();
+  });
+
+  it("keeps the delete when another same-named container is already listed", async () => {
+    const h = await setup(["A", "compar"], ["B", "compar"]);
+
+    await h.emit(remove("A"), save("B", "compar"));
+    await tick(1000);
+
+    expect(h.list()).toEqual(["B compar running"]);
+    h.unmount();
+  });
+
+  it("swaps a replacement in place after a delete (upgrade)", async () => {
+    const h = await setup(["X", "first"], ["A", "compar"], ["Z", "last"]);
+
+    await h.emit(remove("A"));
+    expect(h.list()).toHaveLength(3);
+    await h.emit(save("B", "compar"));
+    expect(h.list()).toEqual(["X first running", "B compar running", "Z last running"]);
+
+    await tick(1000);
+    expect(h.list()).toEqual(["X first running", "B compar running", "Z last running"]);
+    h.unmount();
+  });
+
+  it("handles an upgrade that renames the old container aside first", async () => {
+    const h = await setup(["A", "compar"]);
+
+    await h.emit(
+      save("A", "compar-old", "exited"),
+      save("B", "compar", "created"),
+      save("B", "compar"),
+      remove("A"),
+      // The server repeats the delete and save once the upgrade is done.
+      remove("A"),
+      save("B", "compar"),
+    );
+    await tick(1000);
+
+    expect(h.list()).toEqual(["B compar running"]);
+    h.unmount();
+  });
+
+  it("does not take over a same-named card that is not being removed", async () => {
+    const h = await setup(["A", "compar"]);
+
+    await h.emit(save("B", "compar"));
+
+    expect(h.list()).toEqual(["A compar running", "B compar running"]);
+    h.unmount();
+  });
+
+  it("removes a deleted container", async () => {
+    const h = await setup(["A", "compar"], ["Z", "other"]);
+
+    await h.emit(remove("A"));
+    await tick(300);
+
+    expect(h.list()).toEqual(["Z other running"]);
+    h.unmount();
+  });
+
+  it("never duplicates a container on repeated saves", async () => {
+    const h = await setup(["A", "compar"]);
+
+    await h.emit(
+      save("A", "compar", "exited"),
+      save("A", "renamed"),
+      save("B", "new", "created"),
+      save("B", "new"),
+      save("B", "new"),
+    );
+
+    expect(h.list()).toEqual(["A renamed running", "B new running"]);
+    h.unmount();
+  });
+});
